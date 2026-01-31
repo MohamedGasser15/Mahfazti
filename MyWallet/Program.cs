@@ -26,10 +26,11 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Identity
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 {
-    options.Password.RequireDigit = true;
-    options.Password.RequireLowercase = true;
+    options.Password.RequireDigit = false;
     options.Password.RequiredLength = 6;
     options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequireUppercase = false;
+    options.Password.RequireLowercase = false;
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();

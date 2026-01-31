@@ -16,9 +16,15 @@ namespace MyWallet.Infrastructure.Data
         {
 
         }
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        protected override void OnModelCreating(ModelBuilder builder)
         {
-            base.OnModelCreating(modelBuilder);
+            base.OnModelCreating(builder);
+
+            // Make PhoneNumber unique
+            builder.Entity<ApplicationUser>()
+                .HasIndex(u => u.PhoneNumber)
+                .IsUnique()
+                .HasFilter("[PhoneNumber] IS NOT NULL");
         }
     }
 }

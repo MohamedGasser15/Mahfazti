@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using MyWallet.Application.ServiceInterfaces;
+using MyWallet.Application.Services;
 
 namespace MyWallet.Application.Configurations
 {
@@ -15,6 +17,9 @@ namespace MyWallet.Application.Configurations
         public static IServiceCollection AddApplicationServices(this IServiceCollection services)
         {
             services.AddMemoryCache();
+            services.AddScoped<IEmailSender, EmailSender>();
+            services.AddScoped<IEmailTemplateService, EmailTemplateService>();
+            services.AddScoped<IAuthService, AuthService>();
             return services;
         }
     }
