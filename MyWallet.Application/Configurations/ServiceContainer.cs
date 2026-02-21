@@ -20,6 +20,8 @@ namespace MyWallet.Application.Configurations
             services.AddScoped<IEmailSender, EmailSender>();
             services.AddScoped<IEmailTemplateService, EmailTemplateService>();
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IWalletService, WalletService>();
+            services.AddScoped<IBudgetService, BudgetService>();
             return services;
         }
     }

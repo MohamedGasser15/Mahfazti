@@ -11,5 +11,7 @@ namespace MyWallet.Application.DTOs.Auth
         public string Code { get; set; } = string.Empty;
         public bool IsLogin { get; set; }
         public bool UserExists { get; set; }
+        public string? DeviceName { get; set; } 
+        public string? IpAddress { get; set; }
     }
 }

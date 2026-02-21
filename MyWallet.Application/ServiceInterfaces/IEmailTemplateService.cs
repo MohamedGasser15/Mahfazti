@@ -8,6 +8,6 @@ namespace MyWallet.Application.ServiceInterfaces
 {
     public interface IEmailTemplateService
     {
-        string GenerateVerificationEmail(string code);
+        string GenerateVerificationEmail(string code, bool isLogin, string? deviceName = null, string? ipAddress = null);
     }
 }

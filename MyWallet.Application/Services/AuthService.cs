@@ -76,13 +76,20 @@ namespace MyWallet.Application.Services
                 {
                     Code = verificationCode,
                     IsLogin = dto.IsLogin,
-                    UserExists = existingUser != null
+                    UserExists = existingUser != null,
+                    DeviceName = dto.DeviceName, 
+                    IpAddress = dto.IpAddress  
                 };
 
                 _cache.Set(cacheKey, cacheData, TimeSpan.FromMinutes(10));
 
                 // Send verification email
-                var emailBody = _emailTemplateService.GenerateVerificationEmail(verificationCode);
+                var emailBody = _emailTemplateService.GenerateVerificationEmail(
+                              code: verificationCode,
+                              isLogin: dto.IsLogin,
+                              deviceName: dto.DeviceName,
+                              ipAddress: dto.IpAddress
+                          );
                 await _emailSender.SendEmailAsync(dto.Email, "رمز التحقق - محفظتي", emailBody);
 
                 return new AuthResponseDto
@@ -312,7 +319,12 @@ namespace MyWallet.Application.Services
             _cache.Set(cacheKey, cacheData, TimeSpan.FromMinutes(10));
 
             // Send email
-            var emailBody = _emailTemplateService.GenerateVerificationEmail(verificationCode);
+            var emailBody = _emailTemplateService.GenerateVerificationEmail(
+    code: verificationCode,
+    isLogin: dto.IsLogin,
+    deviceName: dto.DeviceName,
+    ipAddress: dto.IpAddress
+);
             await _emailSender.SendEmailAsync(dto.Email, "رمز التحقق - محفظتي", emailBody);
 
             return new AuthResponseDto

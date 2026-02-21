@@ -265,6 +265,37 @@ namespace MyWallet.Infrastructure.Persistence.Repository
                 throw;
             }
         }
+        public async Task UpdateAsync(T entity, CancellationToken cancellationToken = default)
+        {
+            const string operationName = "UpdateAsync";
+
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
+
+            try
+            {
+                _logger.LogDebug("Starting {OperationName} for entity type {EntityType}",
+                    operationName, typeof(T).Name);
+
+                dbSet.Update(entity);
+                await SaveAsync(cancellationToken);
+
+                _logger.LogInformation("Successfully updated entity of type {EntityType} in {OperationName}",
+                    typeof(T).Name, operationName);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogWarning("Operation {OperationName} was cancelled for entity type {EntityType}",
+                    operationName, typeof(T).Name);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred in {OperationName} for entity type {EntityType}",
+                    operationName, typeof(T).Name);
+                throw;
+            }
+        }
         #endregion
 
         #region Delete Operations

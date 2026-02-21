@@ -30,7 +30,7 @@ namespace MyWallet.Infrastructure.Persistence.IRepository
         Task DeleteAsync(T entity, CancellationToken cancellationToken = default);
 
         Task DeleteRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default);
-
+        Task UpdateAsync(T entity, CancellationToken cancellationToken = default);
         Task SaveAsync(CancellationToken cancellationToken = default);
     }
 }
