@@ -15,11 +15,18 @@ namespace MyWallet.Application.DTOs.Budget
 
     public class CategoryBudgetDto
     {
-        public string Category { get; set; } = string.Empty;
-        public decimal Budget { get; set; }
+        public int Id { get; set; }
+        public int CategoryId { get; set; }
+        public string CategoryNameAr { get; set; } = string.Empty;
+        public string CategoryNameEn { get; set; } = string.Empty;
+        public decimal BudgetAmount { get; set; }
         public decimal Spent { get; set; }
     }
-
+    public class UpdateCategoryBudgetDto
+    {
+        public int CategoryId { get; set; }
+        public decimal Budget { get; set; }
+    }
     public class UpdateMonthlyBudgetDto
     {
         public decimal MonthlyBudget { get; set; }

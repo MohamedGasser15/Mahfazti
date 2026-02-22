@@ -30,7 +30,13 @@ namespace MyWallet.API.Controllers
             var result = await _budgetService.GetBudgetAsync(userId);
             return Ok(result);
         }
-
+        [HttpPut("category")]
+        public async Task<IActionResult> UpdateCategoryBudget([FromBody] UpdateCategoryBudgetDto dto)
+        {
+            var userId = GetUserId();
+            await _budgetService.UpdateCategoryBudgetAsync(userId, dto.CategoryId, dto.Budget);
+            return NoContent();
+        }
         [HttpPut]
         public async Task<IActionResult> UpdateMonthlyBudget([FromBody] UpdateMonthlyBudgetDto dto)
         {

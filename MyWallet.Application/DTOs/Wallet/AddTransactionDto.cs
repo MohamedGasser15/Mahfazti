@@ -1,4 +1,5 @@
-﻿using System;
+﻿// Application/DTOs/Wallet/AddTransactionDto.cs
+using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace MyWallet.Application.DTOs.Wallet
@@ -18,7 +19,7 @@ namespace MyWallet.Application.DTOs.Wallet
         public string Type { get; set; } = string.Empty;
 
         [Required]
-        public string Category { get; set; } = string.Empty;
+        public int? CategoryId { get; set; }
 
         [Required]
         public DateTime TransactionDate { get; set; }

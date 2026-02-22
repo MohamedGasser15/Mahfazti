@@ -10,8 +10,10 @@ namespace MyWallet.Domain.Entites
     {
         public int Id { get; set; }
         public int UserBudgetId { get; set; }
-        public string Category { get; set; } = string.Empty;
+        public int CategoryId { get; set; }
         public decimal BudgetAmount { get; set; }
+
         public UserBudget UserBudget { get; set; } = null!;
+        public Category Category { get; set; } = null!;
     }
 }

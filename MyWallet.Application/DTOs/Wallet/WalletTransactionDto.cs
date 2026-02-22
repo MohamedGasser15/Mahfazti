@@ -9,7 +9,9 @@ namespace MyWallet.Application.DTOs.Wallet
         public string? Description { get; set; }
         public decimal Amount { get; set; }
         public string Type { get; set; } = string.Empty;
-        public string Category { get; set; } = string.Empty;
+        public int? CategoryId { get; set; }
+        public string? CategoryNameAr { get; set; }
+        public string? CategoryNameEn { get; set; }
         public DateTime TransactionDate { get; set; }
         public bool IsRecurring { get; set; }
         public string? RecurringInterval { get; set; }

@@ -39,9 +39,10 @@ namespace MyWallet.Application.Services
                     isTracking: false
                 )).Count;
 
-                // جلب آخر 5 معاملات فقط
+                // جلب آخر 5 معاملات مع تحميل التصنيفات
                 var recentTransactions = await _transactionRepository.GetAllAsync(
                     filter: t => t.UserId == userId && !t.IsDeleted,
+                    includeProperties: "Category", // تحميل التصنيف
                     orderBy: q => q.OrderByDescending(t => t.TransactionDate),
                     take: 5,
                     isTracking: false
@@ -65,7 +66,6 @@ namespace MyWallet.Application.Services
         {
             try
             {
-                // Get all non-deleted transactions for the user
                 var transactions = await _transactionRepository.GetAllAsync(
                     filter: t => t.UserId == userId && !t.IsDeleted,
                     isTracking: false
@@ -97,6 +97,7 @@ namespace MyWallet.Application.Services
         {
             var transaction = await _transactionRepository.GetAsync(
                 filter: t => t.Id == id && t.UserId == userId && !t.IsDeleted,
+                includeProperties: "Category",
                 isTracking: false
             );
             return transaction == null ? null : MapToDto(transaction);
@@ -104,7 +105,7 @@ namespace MyWallet.Application.Services
 
         public async Task<TransactionListResponseDto> GetTransactionsAsync(string userId, TransactionFilterDto filter)
         {
-            // Build filter expression
+            // بناء الفلتر
             Expression<Func<WalletTransaction, bool>> predicate = t =>
                 t.UserId == userId && !t.IsDeleted;
 
@@ -114,9 +115,9 @@ namespace MyWallet.Application.Services
                 predicate = predicate.AndAlso(t => t.Type == type);
             }
 
-            if (!string.IsNullOrEmpty(filter.Category))
+            if (filter.CategoryId.HasValue)
             {
-                predicate = predicate.AndAlso(t => t.Category == filter.Category);
+                predicate = predicate.AndAlso(t => t.CategoryId == filter.CategoryId.Value);
             }
 
             if (filter.FromDate.HasValue)
@@ -129,25 +130,21 @@ namespace MyWallet.Application.Services
                 predicate = predicate.AndAlso(t => t.TransactionDate <= filter.ToDate.Value);
             }
 
-            // Get total count
-            var totalCount = await _transactionRepository.GetAllAsync(
+            // الحصول على العدد الكلي
+            var totalCount = (await _transactionRepository.GetAllAsync(
                 filter: predicate,
                 isTracking: false
-            );
-            var count = totalCount.Count;
+            )).Count;
 
-            // Get paged results
+            // الحصول على المعاملات مع التصنيفات
             var transactions = await _transactionRepository.GetAllAsync(
                 filter: predicate,
+                includeProperties: "Category",
                 orderBy: q => q.OrderByDescending(t => t.TransactionDate),
-                take: filter.PageSize,
                 isTracking: false
-            // Note: Skip not implemented in generic repo; we need to implement pagination.
-            // For now, we'll fetch all and then skip/take in memory (not ideal).
-            // Better to enhance generic repo with pagination support.
             );
 
-            // Apply pagination in memory (temporary)
+            // تطبيق pagination في الذاكرة (مؤقتاً)
             var paged = transactions
                 .Skip((filter.Page - 1) * filter.PageSize)
                 .Take(filter.PageSize)
@@ -156,7 +153,7 @@ namespace MyWallet.Application.Services
             return new TransactionListResponseDto
             {
                 Transactions = paged.Select(MapToDto).ToList(),
-                TotalCount = count,
+                TotalCount = totalCount,
                 Page = filter.Page,
                 PageSize = filter.PageSize
             };
@@ -171,7 +168,7 @@ namespace MyWallet.Application.Services
                 Description = dto.Description,
                 Amount = dto.Amount,
                 Type = dto.Type,
-                Category = dto.Category,
+                CategoryId = dto.CategoryId, // استخدام CategoryId
                 TransactionDate = dto.TransactionDate,
                 IsRecurring = dto.IsRecurring,
                 RecurringInterval = dto.RecurringInterval,
@@ -180,20 +177,27 @@ namespace MyWallet.Application.Services
             };
 
             await _transactionRepository.CreateAsync(transaction);
-            return MapToDto(transaction);
+
+            // بعد الإضافة، نعيد تحميل المعاملة مع التصنيف
+            var created = await _transactionRepository.GetAsync(
+                filter: t => t.Id == transaction.Id,
+                includeProperties: "Category",
+                isTracking: false
+            );
+
+            return MapToDto(created!);
         }
 
         public async Task<bool> DeleteTransactionAsync(int id, string userId)
         {
             var transaction = await _transactionRepository.GetAsync(
                 filter: t => t.Id == id && t.UserId == userId && !t.IsDeleted,
-                isTracking: true // need tracking to update
+                isTracking: true
             );
 
             if (transaction == null)
                 return false;
 
-            // Soft delete
             transaction.IsDeleted = true;
             transaction.UpdatedAt = DateTime.UtcNow;
 
@@ -203,7 +207,6 @@ namespace MyWallet.Application.Services
 
         public async Task<object> GetSummaryAsync(string userId, DateTime? fromDate, DateTime? toDate)
         {
-            // Build filter
             Expression<Func<WalletTransaction, bool>> predicate = t =>
                 t.UserId == userId && !t.IsDeleted;
 
@@ -212,31 +215,37 @@ namespace MyWallet.Application.Services
             if (toDate.HasValue)
                 predicate = predicate.AndAlso(t => t.TransactionDate <= toDate.Value);
 
+            // جلب المعاملات مع التصنيفات لتجميعها حسب الفئة
             var transactions = await _transactionRepository.GetAllAsync(
                 filter: predicate,
+                includeProperties: "Category",
                 isTracking: false
             );
 
-            // Group by category for expenses (withdrawals)
+            // تجميع المصروفات حسب الفئة
             var expensesByCategory = transactions
                 .Where(t => t.Type == "Withdrawal")
-                .GroupBy(t => t.Category)
+                .GroupBy(t => new { t.CategoryId, t.Category!.NameAr, t.Category!.NameEn })
                 .Select(g => new
                 {
-                    Category = g.Key,
+                    CategoryId = g.Key.CategoryId,
+                    CategoryNameAr = g.Key.NameAr,
+                    CategoryNameEn = g.Key.NameEn,
                     Total = g.Sum(t => t.Amount),
                     Count = g.Count()
                 })
                 .OrderByDescending(g => g.Total)
                 .ToList();
 
-            // Income by category (deposits)
+            // تجميع الإيرادات حسب الفئة
             var incomeByCategory = transactions
                 .Where(t => t.Type == "Deposit")
-                .GroupBy(t => t.Category)
+                .GroupBy(t => new { t.CategoryId, t.Category!.NameAr, t.Category!.NameEn })
                 .Select(g => new
                 {
-                    Category = g.Key,
+                    CategoryId = g.Key.CategoryId,
+                    CategoryNameAr = g.Key.NameAr,
+                    CategoryNameEn = g.Key.NameEn,
                     Total = g.Sum(t => t.Amount),
                     Count = g.Count()
                 })
@@ -257,7 +266,7 @@ namespace MyWallet.Application.Services
             };
         }
 
-        // Helper mapping
+        // دالة التحويل مع تعبئة أسماء التصنيفات
         private static WalletTransactionDto MapToDto(WalletTransaction entity)
         {
             return new WalletTransactionDto
@@ -267,7 +276,9 @@ namespace MyWallet.Application.Services
                 Description = entity.Description,
                 Amount = entity.Amount,
                 Type = entity.Type,
-                Category = entity.Category,
+                CategoryId = entity.CategoryId,
+                CategoryNameAr = entity.Category?.NameAr,
+                CategoryNameEn = entity.Category?.NameEn,
                 TransactionDate = entity.TransactionDate,
                 IsRecurring = entity.IsRecurring,
                 RecurringInterval = entity.RecurringInterval,
@@ -276,7 +287,7 @@ namespace MyWallet.Application.Services
         }
     }
 
-    // Predicate builder helper
+    // Predicate builder helper (كما هو)
     public static class PredicateBuilder
     {
         public static Expression<Func<T, bool>> AndAlso<T>(
