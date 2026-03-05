@@ -200,7 +200,21 @@ Future<Map<String, dynamic>> sendVerification({
     await SharedPrefs.removeKey('verified_code');
     await SharedPrefs.removeKey('is_code_verified');
   }
-  
+  Future<void> setUserCurrency(String currency) async {
+  try {
+    final response = await _apiService.post(
+      ApiEndpoints.setCurrency, // يجب تعريف هذا endpoint
+      {'currency': currency},
+      requiresAuth: true,
+    );
+    final data = _apiService.handleResponse(response);
+    if (data['success'] != true) {
+      throw Exception(data['message'] ?? 'Failed to set currency');
+    }
+  } catch (e) {
+    rethrow;
+  }
+}
   // Logout
   Future<void> logout() async {
     try {

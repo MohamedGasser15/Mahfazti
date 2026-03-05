@@ -272,7 +272,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get fullName => 'الاسم الكامل';
 
   @override
-  String get userName => 'جون دو';
+  String get userName => 'اسم المستخدم';
 
   @override
   String get phoneNumber => 'رقم الهاتف';
@@ -722,4 +722,38 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get noDataAvailable => 'لا توجد بيانات';
+
+  @override
+  String get selectCurrency => 'اختر العملة';
+
+  @override
+  String get selectCurrencyDescription =>
+      'اختر العملة التي تريد استخدامها في محفظتك';
+
+  @override
+  String get selectCurrencyWarning => 'الرجاء اختيار العملة';
+
+  @override
+  String get failedToSaveCurrency => 'فشل حفظ العملة';
+
+  @override
+  String get currencyUSD => 'دولار أمريكي';
+
+  @override
+  String get currencyEUR => 'يورو';
+
+  @override
+  String get currencyEGP => 'جنيه مصري';
+
+  @override
+  String get currencySAR => 'ريال سعودي';
+
+  @override
+  String get currencyAED => 'درهم إماراتي';
+
+  @override
+  String get currencyKWD => 'دينار كويتي';
+
+  @override
+  String get currencySavedSuccess => 'تم حفظ العملة بنجاح';
 }

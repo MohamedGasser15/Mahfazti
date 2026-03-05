@@ -724,4 +724,38 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noDataAvailable => 'No data available';
+
+  @override
+  String get selectCurrency => 'Select Currency';
+
+  @override
+  String get selectCurrencyDescription =>
+      'Choose the currency you want to use in your wallet';
+
+  @override
+  String get selectCurrencyWarning => 'Please select a currency';
+
+  @override
+  String get failedToSaveCurrency => 'Failed to save currency';
+
+  @override
+  String get currencyUSD => 'US Dollar';
+
+  @override
+  String get currencyEUR => 'Euro';
+
+  @override
+  String get currencyEGP => 'Egyptian Pound';
+
+  @override
+  String get currencySAR => 'Saudi Riyal';
+
+  @override
+  String get currencyAED => 'UAE Dirham';
+
+  @override
+  String get currencyKWD => 'Kuwaiti Dinar';
+
+  @override
+  String get currencySavedSuccess => 'Currency saved successfully';
 }

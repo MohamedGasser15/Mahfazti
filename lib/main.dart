@@ -7,6 +7,7 @@ import 'package:my_wallet/core/themes/app_theme.dart';
 import 'package:my_wallet/core/utils/language_service.dart';
 import 'package:my_wallet/core/utils/navigation_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
+import 'package:my_wallet/features/auth/presentation/screens/currency_selection_screen.dart';
 import 'package:my_wallet/features/auth/presentation/screens/email_screen.dart';
 import 'package:my_wallet/features/auth/presentation/screens/passcode_screen.dart';
 import 'package:my_wallet/features/auth/presentation/screens/pin_screen.dart';
@@ -137,64 +138,67 @@ class _MyWalletAppState extends State<MyWalletApp> {
                 ),
               );
             },
-            onGenerateRoute: (settings) {
-              switch (settings.name) {
-                case '/':
-                  return MaterialPageRoute(
-                    builder: (context) => SplashScreen(onLocaleChanged: _changeLocale),
-                  );
-                case '/onboarding':
-                  return MaterialPageRoute(
-                    builder: (context) => OnboardingScreen(onLocaleChanged: _changeLocale),
-                  );
-                case '/email':
-                  return MaterialPageRoute(
-                    builder: (context) => const EmailScreen(),
-                  );
-                case '/verification':
-                  final args = settings.arguments as Map<String, dynamic>;
-                  return MaterialPageRoute(
-                    builder: (context) => VerificationScreen(
-                      email: args['email'],
-                      isLogin: args['isLogin'],
-                    ),
-                  );
-                case '/passcode':
-                  final args = settings.arguments as Map<String, dynamic>;
-                  return MaterialPageRoute(
-                    builder: (context) => PasscodeScreen(
-                      email: args['email'],
-                      verificationCode: args['verificationCode'],
-                      isLogin: args['isLogin'],
-                    ),
-                  );
-                case '/register':
-                  final args = settings.arguments as Map<String, dynamic>;
-                  return MaterialPageRoute(
-                    builder: (context) => RegisterScreen(
-                      email: args['email'],
-                      verificationCode: args['verificationCode'],
-                      passcode: args['passcode'],
-                    ),
-                  );
-                case '/home':
-                  return MaterialPageRoute(
-                    builder: (context) => const HomeScreen(),
-                  );
-                case '/pin':
-                  final args = settings.arguments as Map<String, dynamic>?;
-                  return MaterialPageRoute(
-                    builder: (context) => PinScreen(
-                      isFirstTime: args?['isFirstTime'] ?? false,
-                    ),
-                  );
-                default:
-                  return MaterialPageRoute(
-                    builder: (context) => SplashScreen(onLocaleChanged: _changeLocale),
-                  );
-              }
-            },
-          );
+onGenerateRoute: (settings) {
+  switch (settings.name) {
+    case '/':
+      return MaterialPageRoute(
+        builder: (context) => SplashScreen(onLocaleChanged: _changeLocale),
+      );
+    case '/onboarding':
+      return MaterialPageRoute(
+        builder: (context) => OnboardingScreen(onLocaleChanged: _changeLocale),
+      );
+    case '/email':
+      return MaterialPageRoute(
+        builder: (context) => const EmailScreen(),
+      );
+    case '/verification':
+      final args = settings.arguments as Map<String, dynamic>;
+      return MaterialPageRoute(
+        builder: (context) => VerificationScreen(
+          email: args['email'],
+          isLogin: args['isLogin'],
+        ),
+      );
+    case '/passcode':
+      final args = settings.arguments as Map<String, dynamic>;
+      return MaterialPageRoute(
+        builder: (context) => PasscodeScreen(
+          email: args['email'],
+          verificationCode: args['verificationCode'],
+          isLogin: args['isLogin'],
+        ),
+      );
+    case '/register':
+      final args = settings.arguments as Map<String, dynamic>;
+      return MaterialPageRoute(
+        builder: (context) => RegisterScreen(
+          email: args['email'],
+          verificationCode: args['verificationCode'],
+          passcode: args['passcode'],
+        ),
+      );
+    case '/currency-selection':  // <-- أضف هذا
+      return MaterialPageRoute(
+        builder: (context) => const CurrencySelectionScreen(),
+      );
+    case '/home':
+      return MaterialPageRoute(
+        builder: (context) => const HomeScreen(),
+      );
+    case '/pin':
+      final args = settings.arguments as Map<String, dynamic>?;
+      return MaterialPageRoute(
+        builder: (context) => PinScreen(
+          isFirstTime: args?['isFirstTime'] ?? false,
+        ),
+      );
+    default:
+      return MaterialPageRoute(
+        builder: (context) => SplashScreen(onLocaleChanged: _changeLocale),
+      );
+  }
+},);
         },
       ),
     );

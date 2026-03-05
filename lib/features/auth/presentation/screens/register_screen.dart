@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 import 'package:my_wallet/features/onboarding/presentation/screens/onboarding_screen.dart';
@@ -37,50 +38,47 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
   
-  Future<void> _onComplete() async {
-    // التحقق من ملء جميع الحقول
-    if (_fullNameController.text.isEmpty ||
-        _userNameController.text.isEmpty ||
-        _phoneNumberController.text.isEmpty) {
-      MessageService.showError('Please fill all fields');
-      return;
-    }
-    
-    setState(() {
-      _isLoading = true;
-    });
-    
-    try {
-      final result = await _authRepository.completeRegistration(
-        email: widget.email,
-        verificationCode: widget.verificationCode,
-        password: widget.passcode,
-        fullName: _fullNameController.text,
-        userName: _userNameController.text,
-        phoneNumber: _phoneNumberController.text,
-      );
-      
-      if (result['success'] == true) {
-        // عرض رسالة نجاح ثم الانتقال للصفحة الرئيسية
-        MessageService.showSuccess('Registration completed successfully!');
-        // تأخير بسيط للسماح برؤية الرسالة
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) {
-            Navigator.pushReplacementNamed(context, '/home');
-          }
-        });
-      } else {
-        MessageService.showError(result['message'] ?? 'Registration failed');
-      }
-    } catch (e) {
-      MessageService.showError('Failed: ${e.toString()}');
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
+Future<void> _onComplete() async {
+  // التحقق من ملء جميع الحقول
+  if (_fullNameController.text.isEmpty ||
+      _userNameController.text.isEmpty ||
+      _phoneNumberController.text.isEmpty) {
+    MessageService.showError('Please fill all fields');
+    return;
   }
   
+  setState(() {
+    _isLoading = true;
+  });
+  
+  try {
+    final result = await _authRepository.completeRegistration(
+      email: widget.email,
+      verificationCode: widget.verificationCode,
+      password: widget.passcode,
+      fullName: _fullNameController.text,
+      userName: _userNameController.text,
+      phoneNumber: _phoneNumberController.text,
+    );
+    
+    if (result['success'] == true) {
+      MessageService.showSuccess('Registration completed successfully!');
+      
+      // ✅ التوجيه لشاشة اختيار العملة بدلاً من الانتقال المباشر للصفحة الرئيسية
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/currency-selection');
+      }
+    } else {
+      MessageService.showError(result['message'] ?? 'Registration failed');
+    }
+  } catch (e) {
+    MessageService.showError('Failed: ${e.toString()}');
+  } finally {
+    setState(() {
+      _isLoading = false;
+    });
+  }
+}
   @override
   void dispose() {
     _fullNameController.dispose();
@@ -164,16 +162,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 16),
             
             // Phone Number
-            TextField(
-              controller: _phoneNumberController,
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                labelText: context.l10n.phoneNumber,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
+           TextField(
+  controller: _phoneNumberController,
+  keyboardType: TextInputType.phone,
+  maxLength: 11,
+  inputFormatters: [
+    FilteringTextInputFormatter.digitsOnly,
+    LengthLimitingTextInputFormatter(11),
+  ],
+  decoration: InputDecoration(
+    labelText: context.l10n.phoneNumber,
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+    ),
+    counterText: "", 
+  ),
+),
             
             const SizedBox(height: 40),
             

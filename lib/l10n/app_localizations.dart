@@ -1483,6 +1483,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No data available'**
   String get noDataAvailable;
+
+  /// No description provided for @selectCurrency.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Currency'**
+  String get selectCurrency;
+
+  /// No description provided for @selectCurrencyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the currency you want to use in your wallet'**
+  String get selectCurrencyDescription;
+
+  /// No description provided for @selectCurrencyWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a currency'**
+  String get selectCurrencyWarning;
+
+  /// No description provided for @failedToSaveCurrency.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save currency'**
+  String get failedToSaveCurrency;
+
+  /// No description provided for @currencyUSD.
+  ///
+  /// In en, this message translates to:
+  /// **'US Dollar'**
+  String get currencyUSD;
+
+  /// No description provided for @currencyEUR.
+  ///
+  /// In en, this message translates to:
+  /// **'Euro'**
+  String get currencyEUR;
+
+  /// No description provided for @currencyEGP.
+  ///
+  /// In en, this message translates to:
+  /// **'Egyptian Pound'**
+  String get currencyEGP;
+
+  /// No description provided for @currencySAR.
+  ///
+  /// In en, this message translates to:
+  /// **'Saudi Riyal'**
+  String get currencySAR;
+
+  /// No description provided for @currencyAED.
+  ///
+  /// In en, this message translates to:
+  /// **'UAE Dirham'**
+  String get currencyAED;
+
+  /// No description provided for @currencyKWD.
+  ///
+  /// In en, this message translates to:
+  /// **'Kuwaiti Dinar'**
+  String get currencyKWD;
+
+  /// No description provided for @currencySavedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Currency saved successfully'**
+  String get currencySavedSuccess;
 }
 
 class _AppLocalizationsDelegate

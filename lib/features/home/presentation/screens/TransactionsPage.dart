@@ -6,6 +6,8 @@ import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
+import 'package:my_wallet/core/utils/shared_prefs.dart'; // <-- أضف هذا
+import 'package:intl/intl.dart'; // <-- أضف هذا
 import 'package:shimmer/shimmer.dart';
 
 class TransactionsTab extends StatefulWidget {
@@ -34,12 +36,27 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
   DateTime? _fromDate;
   DateTime? _toDate;
 
+  // متغيرات العملة
+  String? _currencyCode;
+  bool _currencyLoaded = false;
+
+  // خريطة رموز العملات (مطابقة لـ HomeScreen)
+  static const Map<String, String> currencySymbols = {
+    'USD': '\$',
+    'EUR': '€',
+    'EGP': 'E£',
+    'SAR': '﷼',
+    'AED': 'د.إ',
+    'KWD': 'د.ك',
+  };
+
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
+    _loadCurrency();
     _loadTransactions();
     _scrollController.addListener(_onScroll);
     _searchController.addListener(_onSearchChanged);
@@ -64,8 +81,26 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
     super.dispose();
   }
 
+  // تحميل العملة المحفوظة
+  Future<void> _loadCurrency() async {
+    final code = await SharedPrefs.getCurrency();
+    if (mounted) {
+      setState(() {
+        _currencyCode = code ?? 'USD'; // القيمة الافتراضية
+        _currencyLoaded = true;
+      });
+    }
+  }
+
+  // دالة تنسيق المبلغ مع رمز العملة
+  String _formatAmount(double amount) {
+    final symbol = currencySymbols[_currencyCode] ?? '\$';
+    final formatter = NumberFormat('#,##0', 'en_US'); // بدون منازل عشرية (كما في HomeScreen)
+    return '$symbol ${formatter.format(amount)}';
+  }
+
   void _onSearchChanged() {
-    if (!mounted) return; // ✅ التحقق من mounted
+    if (!mounted) return;
     setState(() {
       _searchQuery = _searchController.text;
       _applySearchFilter();
@@ -73,7 +108,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
   }
 
   Future<void> _loadTransactions({int page = 1}) async {
-    if (!mounted) return; // ✅ التحقق الأولي
+    if (!mounted) return;
 
     if (page == 1) {
       setState(() {
@@ -95,7 +130,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
         toDate: _toDate,
       );
 
-      if (!mounted) return; // ✅ التحقق بعد await
+      if (!mounted) return;
 
       setState(() {
         if (page == 1) {
@@ -110,7 +145,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
         _isLoadingMore = false;
       });
     } catch (e) {
-      if (!mounted) return; // ✅ التحقق في catch
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'Failed to load transactions: $e';
         _isLoading = false;
@@ -704,12 +739,12 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
                       ],
                     ),
                   ),
-                  // المبلغ
+                  // المبلغ (معدل لاستخدام العملة المحفوظة)
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        transaction.formattedAmount,
+                        _formatAmount(transaction.amount), // استخدام التنسيق المحلي بدلاً من formattedAmount
                         style: TextStyle(
                           color: isIncome ? Colors.green[700] : Colors.red[700],
                           fontWeight: FontWeight.w800,
@@ -745,49 +780,49 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
     );
   }
 
-void _showDeleteDialog(WalletTransaction transaction) {
-  final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
-      title: Text(
-        'Delete Transaction',
-        style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
-      ),
-      content: Text(
-        'Are you sure you want to delete "${transaction.title}"?',
-        style: TextStyle(color: isDarkMode ? Colors.grey[300] : Colors.grey[700]),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(
-            'Cancel',
-            style: TextStyle(color: isDarkMode ? Colors.grey[300] : Colors.grey[700]),
-          ),
+  void _showDeleteDialog(WalletTransaction transaction) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
+        title: Text(
+          'Delete Transaction',
+          style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
         ),
-        TextButton(
-          onPressed: () async {
-            Navigator.pop(context); // إغلاق الـ dialog
-            try {
-              await _walletRepository.deleteTransaction(transaction.id);
-              await _refreshData(); // تحديث القائمة
-              // ✅ استخدام MessageService بدلاً من SnackBar
-              MessageService.showSuccess('Transaction deleted successfully');
-            } catch (e) {
-              MessageService.showError('Failed to delete: $e');
-            }
-          },
-          child: const Text(
-            'Delete',
-            style: TextStyle(color: Colors.red),
-          ),
+        content: Text(
+          'Are you sure you want to delete "${transaction.title}"?',
+          style: TextStyle(color: isDarkMode ? Colors.grey[300] : Colors.grey[700]),
         ),
-      ],
-    ),
-  );
-}
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: isDarkMode ? Colors.grey[300] : Colors.grey[700]),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                await _walletRepository.deleteTransaction(transaction.id);
+                await _refreshData();
+                MessageService.showSuccess('Transaction deleted successfully');
+              } catch (e) {
+                MessageService.showError('Failed to delete: $e');
+              }
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _formatDate(DateTime date, BuildContext context, {required bool short}) {
     if (short) {
       return '${date.day}/${date.month}';

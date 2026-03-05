@@ -4,6 +4,7 @@ import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.da
 import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
 import 'package:intl/intl.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
+import 'package:my_wallet/core/utils/shared_prefs.dart'; // <-- أضف هذا
 
 // enum لأنواع الرسوم البيانية
 enum ChartType { line, bar }
@@ -27,14 +28,38 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   ChartType _expensesChartType = ChartType.line;
   ChartType _incomeChartType = ChartType.line;
 
-  // للتجميل - سنستخدم دالة التنسيق الجديدة بدلاً من NumberFormat.currency
+  // متغيرات العملة
+  String? _currencyCode;
+  bool _currencyLoaded = false;
+
+  // خريطة رموز العملات (مطابقة للشاشات الأخرى)
+  static const Map<String, String> currencySymbols = {
+    'USD': '\$',
+    'EUR': '€',
+    'EGP': 'E£',
+    'SAR': '﷼',
+    'AED': 'د.إ',
+    'KWD': 'د.ك',
+  };
+
   final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
-  // NumberFormat _currencyFormat = NumberFormat.currency(symbol: '\$'); // لن نستخدمه بعد الآن
 
   @override
   void initState() {
     super.initState();
-    _loadSummary();
+    _loadCurrency();
+  }
+
+  // تحميل العملة المحفوظة
+  Future<void> _loadCurrency() async {
+    final code = await SharedPrefs.getCurrency();
+    if (mounted) {
+      setState(() {
+        _currencyCode = code ?? 'USD';
+        _currencyLoaded = true;
+      });
+      _loadSummary(); // تحميل البيانات بعد معرفة العملة
+    }
   }
 
   Future<void> _loadSummary() async {
@@ -66,10 +91,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     }
   }
 
-  // دالة تنسيق العملة بدون منازل عشرية وتضيف فاصلة للألاف (مثل اللي في HomeScreen)
+  // دالة تنسيق العملة مع الرمز (بدون منازل عشرية)
   String _formatCurrency(double amount) {
-    final formatter = NumberFormat('#,##0', 'en_US'); // بدون منازل عشرية
-    return formatter.format(amount);
+    final symbol = currencySymbols[_currencyCode] ?? '\$';
+    final formatter = NumberFormat('#,##0', 'en_US');
+    return '$symbol ${formatter.format(amount)}';
   }
 
   @override
@@ -113,7 +139,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                               Expanded(
                                 child: _buildStatCard(
                                   title: context.l10n.totalIncome,
-                                  value: '\$${_formatCurrency(_summaryData!['totalIncome'])}', // تعديل هنا
+                                  value: _formatCurrency(_summaryData!['totalIncome']), // تعديل هنا
                                   icon: Icons.trending_up,
                                   color: Colors.green,
                                   isDarkMode: isDarkMode,
@@ -123,7 +149,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                               Expanded(
                                 child: _buildStatCard(
                                   title: context.l10n.totalExpenses,
-                                  value: '\$${_formatCurrency(_summaryData!['totalExpenses'])}', // تعديل هنا
+                                  value: _formatCurrency(_summaryData!['totalExpenses']), // تعديل هنا
                                   icon: Icons.trending_down,
                                   color: Colors.red,
                                   isDarkMode: isDarkMode,
@@ -343,7 +369,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       ? cat.categoryNameAr
                       : cat.categoryNameEn;
                   return BarTooltipItem(
-                    '$name\n\$${_formatCurrency(rod.toY)}', // تعديل هنا
+                    '$name\n${_formatCurrency(rod.toY)}', // تعديل هنا
                     const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   );
                 },
@@ -359,7 +385,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   reservedSize: 40,
                   getTitlesWidget: (value, meta) {
                     return Text(
-                      _formatCurrency(value), // تعديل هنا
+                      _formatCurrency(value).replaceAll(RegExp(r'[^0-9,]'), ''), // تعديل هنا (نحذف الرمز)
                       style: TextStyle(
                         color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                         fontSize: 10,
@@ -411,7 +437,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   reservedSize: 40,
                   getTitlesWidget: (value, meta) {
                     return Text(
-                      _formatCurrency(value), // تعديل هنا
+                      _formatCurrency(value).replaceAll(RegExp(r'[^0-9,]'), ''), // تعديل هنا
                       style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600], fontSize: 10),
                     );
                   },
@@ -446,7 +472,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         ? cat.categoryNameAr
                         : cat.categoryNameEn;
                     return LineTooltipItem(
-                      '$name\n\$${_formatCurrency(touchedSpot.y)}', // تعديل هنا
+                      '$name\n${_formatCurrency(touchedSpot.y)}', // تعديل هنا
                       const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                     );
                   }).toList();
@@ -459,7 +485,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     }
   }
 
-  // باقي الدوال كما هي ( _buildStatCard, _buildNetSavingsCard, _buildCategoryDetails )
+  // دالة لبناء بطاقة الإحصاء
   Widget _buildStatCard({
     required String title,
     required String value,
@@ -501,6 +527,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
+  // دالة لبناء بطاقة صافي التوفير
   Widget _buildNetSavingsCard({required double netSavings, required bool isDarkMode}) {
     final color = netSavings >= 0 ? Colors.green : Colors.red;
     return Container(
@@ -520,7 +547,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           Text(context.l10n.netSavings, style: const TextStyle(color: Colors.white, fontSize: 16)),
           const SizedBox(height: 8),
           Text(
-            '\$${_formatCurrency(netSavings)}', // تعديل هنا
+            _formatCurrency(netSavings), // تعديل هنا
             style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w800),
           ),
         ],
@@ -528,7 +555,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  // قائمة تفصيلية بالفئات (بأيقونة بدلاً من الدائرة)
+  // قائمة تفصيلية بالفئات
   Widget _buildCategoryDetails(List<dynamic> categories, bool isDarkMode, {bool isIncome = false}) {
     if (categories.isEmpty) {
       return const SizedBox.shrink();
@@ -556,7 +583,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               const SizedBox(width: 12),
               Expanded(child: Text(name, style: TextStyle(color: isDarkMode ? Colors.white : Colors.black))),
               Text(
-                '\$${_formatCurrency(cat.total)}', // تعديل هنا
+                _formatCurrency(cat.total), // تعديل هنا
                 style: TextStyle(
                   color: isIncome ? Colors.green[800] : Colors.red[800],
                   fontWeight: FontWeight.w700,

@@ -187,7 +187,7 @@
   "paymentMethods": "طرق الدفع",
   "notifications": "الإشعارات",
   "helpSupport": "المساعدة والدعم",
-  "userName": "جون دو",
+  "userName": "اسم المستخدم",
   "userEmail": "john.doe@email.com",
   "logoutConfirmationDescription": "هل أنت متأكد أنك تريد تسجيل الخروج؟",
   "monthlyBudget": "الميزانية الشهرية",
@@ -243,5 +243,16 @@
   "incomeByCategory": "الإيرادات حسب الفئة",
   "noExpensesInPeriod": "لا توجد مصروفات في هذه الفترة",
   "noIncomeInPeriod": "لا توجد إيرادات في هذه الفترة",
-  "noDataAvailable": "لا توجد بيانات"
+  "noDataAvailable": "لا توجد بيانات",
+    "selectCurrency": "اختر العملة",
+  "selectCurrencyDescription": "اختر العملة التي تريد استخدامها في محفظتك",
+  "selectCurrencyWarning": "الرجاء اختيار العملة",
+  "failedToSaveCurrency": "فشل حفظ العملة",
+  "currencyUSD": "دولار أمريكي",
+  "currencyEUR": "يورو",
+  "currencyEGP": "جنيه مصري",
+  "currencySAR": "ريال سعودي",
+  "currencyAED": "درهم إماراتي",
+  "currencyKWD": "دينار كويتي",
+    "currencySavedSuccess": "تم حفظ العملة بنجاح"
 }

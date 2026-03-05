@@ -243,5 +243,16 @@
   "incomeByCategory": "Income by Category",
   "noExpensesInPeriod": "No expenses in this period",
   "noIncomeInPeriod": "No income in this period",
-  "noDataAvailable": "No data available"
+  "noDataAvailable": "No data available",
+    "selectCurrency": "Select Currency",
+  "selectCurrencyDescription": "Choose the currency you want to use in your wallet",
+  "selectCurrencyWarning": "Please select a currency",
+  "failedToSaveCurrency": "Failed to save currency",
+  "currencyUSD": "US Dollar",
+  "currencyEUR": "Euro",
+  "currencyEGP": "Egyptian Pound",
+  "currencySAR": "Saudi Riyal",
+  "currencyAED": "UAE Dirham",
+  "currencyKWD": "Kuwaiti Dinar",
+    "currencySavedSuccess": "Currency saved successfully"
 }

@@ -28,7 +28,15 @@ class SharedPrefs {
   static Future<void> setAuthToken(String token) async {
     await _prefs.setString(AppConstants.authTokenKey, token);
   }
-  
+  static const String _currencyKey = 'selected_currency';
+
+static Future<String?> getCurrency() async {
+  return _prefs.getString(_currencyKey);
+}
+
+static Future<void> setCurrency(String currency) async {
+  await _prefs.setString(_currencyKey, currency);
+}
   static Future<void> removeAuthToken() async {
     await _prefs.remove(AppConstants.authTokenKey);
   }

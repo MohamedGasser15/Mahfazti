@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:my_wallet/core/services/hide_balance_service.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/utils/api_error_handler.dart';
+import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/home/presentation/screens/TransactionsPage.dart';
 import 'package:my_wallet/features/wallet/data/models/category_model.dart';
 import 'package:my_wallet/features/wallet/data/presentation/screens/analytics_screen.dart';
@@ -201,12 +202,41 @@ class _HomeTabState extends State<HomeTab> {
   List<Category> _categories = [];
   bool _isLoadingCategories = false;
 
-  @override
-  void initState() {
-    super.initState();
+  // متغيرات العملة
+  String? _currencyCode;
+  bool _currencyLoaded = false;
+
+  // خريطة رموز العملات
+  static const Map<String, String> currencySymbols = {
+    'USD': '\$',
+    'EUR': '€',
+    'EGP': 'E£',
+    'SAR': '﷼',
+    'AED': 'د.إ',
+    'KWD': 'د.ك',
+  };
+
+Future<void> _loadCurrency() async {
+  final code = await SharedPrefs.getCurrency();
+  print('🪙 Currency loaded from SharedPrefs: $code'); // ← هذا سيطبع في الـ console
+  setState(() {
+    _currencyCode = code ?? 'USD';
+    _currencyLoaded = true;
+  });
+  print('🪙 Currency after setState: $_currencyCode');
+}
+
+@override
+void initState() {
+  super.initState();
+  _loadCurrency().then((_) {
+    print('🪙 Loading home data now');
     _loadHomeData();
-    _loadCategories();
-  }
+  });
+  _loadCategories();
+}
+
+
 
 Future<void> _loadCategories() async {
   setState(() => _isLoadingCategories = true);
@@ -286,763 +316,782 @@ Future<void> _loadHomeData() async {
         [];
   }
 
-  void _showAddTransactionDialog(TransactionType type) {
-    final isIncome = type == TransactionType.income;
+void _showAddTransactionDialog(TransactionType type) {
+  final isIncome = type == TransactionType.income;
 
-    final titleController = TextEditingController();
-    final amountController = TextEditingController();
-    final descriptionController = TextEditingController();
+  final titleController = TextEditingController();
+  final amountController = TextEditingController();
+  final descriptionController = TextEditingController();
 
-    int? selectedCategoryId = _categories.isNotEmpty ? _categories.first.id : null;
-    DateTime selectedDate = DateTime.now();
-    TimeOfDay selectedTime = TimeOfDay.now();
+  int? selectedCategoryId = _categories.isNotEmpty ? _categories.first.id : null;
+  DateTime selectedDate = DateTime.now();
+  TimeOfDay selectedTime = TimeOfDay.now();
 
-    bool isRecurring = false;
-    String? recurringInterval;
-    DateTime? recurringEndDate;
+  bool isRecurring = false;
+  String? recurringInterval;
+  DateTime? recurringEndDate;
 
-    bool _isSubmitting = false;
-    double? _previewAmount;
+  bool _isSubmitting = false;
+  double? _previewAmount;
 
-    Future<void> _pickDate() async {
-      final date = await showDatePicker(
-        context: context,
-        initialDate: selectedDate,
-        firstDate: DateTime(2000),
-        lastDate: DateTime.now().add(const Duration(days: 365)),
-      );
-      if (date != null) {
-        setState(() {
-          selectedDate = DateTime(
-            date.year,
-            date.month,
-            date.day,
-            selectedTime.hour,
-            selectedTime.minute,
-          );
-        });
-      }
-    }
+  // استخدام العملة المخزنة
+  final currencyCode = _currencyCode ?? 'USD';
+  final currencySymbol = currencySymbols[currencyCode] ?? '\$';
 
-    Future<void> _pickTime() async {
-      final time = await showTimePicker(
-        context: context,
-        initialTime: selectedTime,
-      );
-      if (time != null) {
-        setState(() {
-          selectedTime = time;
-          selectedDate = DateTime(
-            selectedDate.year,
-            selectedDate.month,
-            selectedDate.day,
-            time.hour,
-            time.minute,
-          );
-        });
-      }
-    }
-
-    showModalBottomSheet(
+  // دوال اختيار التاريخ والوقت (كما هي)
+  Future<void> _pickDate() async {
+    final date = await showDatePicker(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+      initialDate: selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (date != null) {
+      setState(() {
+        selectedDate = DateTime(
+          date.year,
+          date.month,
+          date.day,
+          selectedTime.hour,
+          selectedTime.minute,
+        );
+      });
+    }
+  }
 
-            return Container(
-              decoration: BoxDecoration(
-                color: isDarkMode ? Colors.black : Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
-                ),
+  Future<void> _pickTime() async {
+    final time = await showTimePicker(
+      context: context,
+      initialTime: selectedTime,
+    );
+    if (time != null) {
+      setState(() {
+        selectedTime = time;
+        selectedDate = DateTime(
+          selectedDate.year,
+          selectedDate.month,
+          selectedDate.day,
+          time.hour,
+          time.minute,
+        );
+      });
+    }
+  }
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setState) {
+          final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+          return Container(
+            decoration: BoxDecoration(
+              color: isDarkMode ? Colors.black : Colors.white,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(24),
+                topRight: Radius.circular(24),
               ),
-              child: Padding(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).viewInsets.bottom,
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        height: 4,
-                        width: 40,
-                        margin: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color:
-                              isDarkMode ? Colors.grey[800] : Colors.grey[300],
-                          borderRadius: BorderRadius.circular(2),
-                        ),
+            ),
+            child: Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // مقبض السحب
+                    Container(
+                      height: 4,
+                      width: 40,
+                      margin: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: isIncome
-                                    ? Colors.green.withOpacity(0.1)
-                                    : Colors.red.withOpacity(0.1),
-                                shape: BoxShape.circle,
+                    ),
+                    
+                    // العنوان والأيقونة
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: isIncome
+                                  ? Colors.green.withOpacity(0.1)
+                                  : Colors.red.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isIncome
+                                  ? Icons.arrow_downward
+                                  : Icons.arrow_upward,
+                              color: isIncome
+                                  ? Colors.green[800]
+                                  : Colors.red[800],
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Text(
+                              isIncome
+                                  ? context.l10n.addDeposit
+                                  : context.l10n.addWithdrawal,
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                color: isDarkMode
+                                    ? Colors.white
+                                    : Colors.black,
                               ),
-                              child: Icon(
-                                isIncome
-                                    ? Icons.arrow_downward
-                                    : Icons.arrow_upward,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // معاينة المبلغ (تستخدم رمز العملة)
+                    if (_previewAmount != null && _previewAmount! > 0)
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 24),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: (isIncome ? Colors.green : Colors.red)
+                              .withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isIncome
+                                ? Colors.green[800]!
+                                : Colors.red[800]!,
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              context.l10n.amount,
+                              style: TextStyle(
+                                color: isDarkMode
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600],
+                              ),
+                            ),
+                            Text(
+                              '${isIncome ? '+' : '-'}$currencySymbol${_previewAmount!.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
                                 color: isIncome
                                     ? Colors.green[800]
                                     : Colors.red[800],
-                                size: 24,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Text(
-                                isIncome
-                                    ? context.l10n.addDeposit
-                                    : context.l10n.addWithdrawal,
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w700,
-                                  color: isDarkMode
-                                      ? Colors.white
-                                      : Colors.black,
-                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      if (_previewAmount != null && _previewAmount! > 0)
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 24),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: (isIncome ? Colors.green : Colors.red)
-                                .withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isIncome
-                                  ? Colors.green[800]!
-                                  : Colors.red[800]!,
-                              width: 1,
-                            ),
+                    const SizedBox(height: 16),
+
+                    // حقل العنوان
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: TextFormField(
+                        controller: titleController,
+                        decoration: InputDecoration(
+                          labelText: context.l10n.title,
+                          labelStyle: TextStyle(
+                            color: isDarkMode
+                                ? Colors.grey[400]
+                                : Colors.grey[600],
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                context.l10n.amount,
-                                style: TextStyle(
-                                  color: isDarkMode
-                                      ? Colors.grey[400]
-                                      : Colors.grey[600],
-                                ),
-                              ),
-                              Text(
-                                '${isIncome ? '+' : '-'}\$${_previewAmount!.toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w800,
-                                  color: isIncome
-                                      ? Colors.green[800]
-                                      : Colors.red[800],
-                                ),
-                              ),
-                            ],
+                          prefixIcon: Icon(
+                            Icons.title,
+                            color: isDarkMode
+                                ? Colors.grey[400]
+                                : Colors.grey[600],
                           ),
-                        ),
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: TextFormField(
-                          controller: titleController,
-                          decoration: InputDecoration(
-                            labelText: context.l10n.title,
-                            labelStyle: TextStyle(
-                              color: isDarkMode
-                                  ? Colors.grey[400]
-                                  : Colors.grey[600],
-                            ),
-                            prefixIcon: Icon(
-                              Icons.title,
-                              color: isDarkMode
-                                  ? Colors.grey[400]
-                                  : Colors.grey[600],
-                            ),
-                            filled: true,
-                            fillColor:
-                                isDarkMode ? Colors.grey[900] : Colors.grey[50],
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 16,
-                              horizontal: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: TextFormField(
-                          controller: amountController,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(
-                                RegExp(r'^\d*\.?\d*$')),
-                          ],
-                          onChanged: (value) {
-                            setState(() {
-                              _previewAmount = double.tryParse(value);
-                            });
-                          },
-                          decoration: InputDecoration(
-                            labelText: context.l10n.amount,
-                            labelStyle: TextStyle(
-                              color: isDarkMode
-                                  ? Colors.grey[400]
-                                  : Colors.grey[600],
-                            ),
-                            prefixIcon: Icon(
-                              Icons.attach_money,
-                              color: isDarkMode
-                                  ? Colors.grey[400]
-                                  : Colors.grey[600],
-                            ),
-                            filled: true,
-                            fillColor:
-                                isDarkMode ? Colors.grey[900] : Colors.grey[50],
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 16,
-                              horizontal: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Row(
-                          children: (isIncome ? [50, 100, 500, 1000] : [
-                            10, 20, 50, 100, 200
-                          ]).map((value) {
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: FilterChip(
-                                label: Text('\$$value'),
-                                onSelected: (_) {
-                                  setState(() {
-                                    amountController.text = value.toString();
-                                    _previewAmount = value.toDouble();
-                                  });
-                                },
-                                backgroundColor:
-                                    isDarkMode ? Colors.grey[800] : Colors.grey[100],
-                                selected: false,
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color:
-                                isDarkMode ? Colors.grey[900] : Colors.grey[50],
+                          filled: true,
+                          fillColor:
+                              isDarkMode ? Colors.grey[900] : Colors.grey[50],
+                          border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
                           ),
-                          child: _isLoadingCategories
-                              ? const Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(16.0),
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                )
-                              : DropdownButtonFormField<int>(
-                                  value: selectedCategoryId,
-                                  decoration: InputDecoration(
-                                    labelText: context.l10n.category,
-                                    labelStyle: TextStyle(
-                                      color: isDarkMode
-                                          ? Colors.grey[400]
-                                          : Colors.grey[600],
-                                    ),
-                                    prefixIcon: Icon(
-                                      Icons.category,
-                                      color: isDarkMode
-                                          ? Colors.grey[400]
-                                          : Colors.grey[600],
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                    filled: true,
-                                    fillColor: Colors.transparent,
-                                  ),
-                                  items: _categories.map((category) {
-                                    return DropdownMenuItem<int>(
-                                      value: category.id,
-                                      child: Text(
-                                        Localizations.localeOf(context)
-                                                    .languageCode ==
-                                                'ar'
-                                            ? category.nameAr
-                                            : category.nameEn,
-                                        style: TextStyle(
-                                          color: isDarkMode
-                                              ? Colors.white
-                                              : Colors.black,
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
-                                  onChanged: (value) {
-                                    setState(() {
-                                      selectedCategoryId = value;
-                                    });
-                                  },
-                                  hint: Text(
-                                    context.l10n.selectCategory,
-                                    style: TextStyle(
-                                      color: isDarkMode
-                                          ? Colors.grey[500]
-                                          : Colors.grey[400],
-                                    ),
-                                  ),
-                                ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                            horizontal: 16,
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              flex: 3,
-                              child: InkWell(
-                                onTap: _pickDate,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 16, horizontal: 16),
-                                  decoration: BoxDecoration(
-                                    color: isDarkMode
-                                        ? Colors.grey[900]
-                                        : Colors.grey[50],
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.calendar_today,
-                                          size: 20,
-                                          color: isDarkMode
-                                              ? Colors.grey[400]
-                                              : Colors.grey[600]),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}',
-                                          style: TextStyle(
-                                              color: isDarkMode
-                                                  ? Colors.white
-                                                  : Colors.black),
-                                        ),
-                                      ),
-                                      Icon(Icons.arrow_drop_down,
-                                          color: isDarkMode
-                                              ? Colors.grey[400]
-                                              : Colors.grey[600]),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              flex: 2,
-                              child: InkWell(
-                                onTap: _pickTime,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 16, horizontal: 12),
-                                  decoration: BoxDecoration(
-                                    color: isDarkMode
-                                        ? Colors.grey[900]
-                                        : Colors.grey[50],
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.access_time,
-                                          size: 20,
-                                          color: isDarkMode
-                                              ? Colors.grey[400]
-                                              : Colors.grey[600]),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}',
-                                          style: TextStyle(
-                                              color: isDarkMode
-                                                  ? Colors.white
-                                                  : Colors.black),
-                                        ),
-                                      ),
-                                      Icon(Icons.arrow_drop_down,
-                                          color: isDarkMode
-                                              ? Colors.grey[400]
-                                              : Colors.grey[600]),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // حقل المبلغ
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: TextFormField(
+                        controller: amountController,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d*\.?\d*$')),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _previewAmount = double.tryParse(value);
+                          });
+                        },
+                        decoration: InputDecoration(
+                          labelText: context.l10n.amount,
+                          labelStyle: TextStyle(
+                            color: isDarkMode
+                                ? Colors.grey[400]
+                                : Colors.grey[600],
+                          ),
+                          prefixIcon: Icon(
+                            Icons.attach_money,
+                            color: isDarkMode
+                                ? Colors.grey[400]
+                                : Colors.grey[600],
+                          ),
+                          filled: true,
+                          fillColor:
+                              isDarkMode ? Colors.grey[900] : Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                            horizontal: 16,
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Column(
-                          children: [
-                            SwitchListTile(
-                              value: isRecurring,
-                              onChanged: (value) {
+                    ),
+                    const SizedBox(height: 16),
+
+                    // أزرار المبالغ المقترحة (تستخدم رمز العملة)
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Row(
+                        children: (isIncome ? [50, 100, 500, 1000] : [
+                          10, 20, 50, 100, 200
+                        ]).map((value) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FilterChip(
+                              label: Text('$currencySymbol$value'),
+                              onSelected: (_) {
                                 setState(() {
-                                  isRecurring = value;
-                                  if (!value) {
-                                    recurringInterval = null;
-                                    recurringEndDate = null;
-                                  }
+                                  amountController.text = value.toString();
+                                  _previewAmount = value.toDouble();
                                 });
                               },
-                              title: Text(
-                                context.l10n.recurringTransaction,
+                              backgroundColor:
+                                  isDarkMode ? Colors.grey[800] : Colors.grey[100],
+                              selected: false,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // اختيار التصنيف (كما هو)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: _isLoadingCategories
+                            ? const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: CircularProgressIndicator(),
+                                ),
+                              )
+                            : DropdownButtonFormField<int>(
+                                value: selectedCategoryId,
+                                decoration: InputDecoration(
+                                  labelText: context.l10n.category,
+                                  labelStyle: TextStyle(
+                                    color: isDarkMode
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600],
+                                  ),
+                                  prefixIcon: Icon(
+                                    Icons.category,
+                                    color: isDarkMode
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600],
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.transparent,
+                                ),
+                                items: _categories.map((category) {
+                                  return DropdownMenuItem<int>(
+                                    value: category.id,
+                                    child: Text(
+                                      Localizations.localeOf(context)
+                                                  .languageCode ==
+                                              'ar'
+                                          ? category.nameAr
+                                          : category.nameEn,
+                                      style: TextStyle(
+                                        color: isDarkMode
+                                            ? Colors.white
+                                            : Colors.black,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    selectedCategoryId = value;
+                                  });
+                                },
+                                hint: Text(
+                                  context.l10n.selectCategory,
+                                  style: TextStyle(
+                                    color: isDarkMode
+                                        ? Colors.grey[500]
+                                        : Colors.grey[400],
+                                  ),
+                                ),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // اختيار التاريخ والوقت (كما هو)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: InkWell(
+                              onTap: _pickDate,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 16, horizontal: 16),
+                                decoration: BoxDecoration(
+                                  color: isDarkMode
+                                      ? Colors.grey[900]
+                                      : Colors.grey[50],
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.calendar_today,
+                                        size: 20,
+                                        color: isDarkMode
+                                            ? Colors.grey[400]
+                                            : Colors.grey[600]),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}',
+                                        style: TextStyle(
+                                            color: isDarkMode
+                                                ? Colors.white
+                                                : Colors.black),
+                                      ),
+                                    ),
+                                    Icon(Icons.arrow_drop_down,
+                                        color: isDarkMode
+                                            ? Colors.grey[400]
+                                            : Colors.grey[600]),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            flex: 2,
+                            child: InkWell(
+                              onTap: _pickTime,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 16, horizontal: 12),
+                                decoration: BoxDecoration(
+                                  color: isDarkMode
+                                      ? Colors.grey[900]
+                                      : Colors.grey[50],
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.access_time,
+                                        size: 20,
+                                        color: isDarkMode
+                                            ? Colors.grey[400]
+                                            : Colors.grey[600]),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}',
+                                        style: TextStyle(
+                                            color: isDarkMode
+                                                ? Colors.white
+                                                : Colors.black),
+                                      ),
+                                    ),
+                                    Icon(Icons.arrow_drop_down,
+                                        color: isDarkMode
+                                            ? Colors.grey[400]
+                                            : Colors.grey[600]),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // قسم المعاملة المتكررة (كما هو)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        children: [
+                          SwitchListTile(
+                            value: isRecurring,
+                            onChanged: (value) {
+                              setState(() {
+                                isRecurring = value;
+                                if (!value) {
+                                  recurringInterval = null;
+                                  recurringEndDate = null;
+                                }
+                              });
+                            },
+                            title: Text(
+                              context.l10n.recurringTransaction,
+                              style: TextStyle(
+                                color: isDarkMode ? Colors.white : Colors.black,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            subtitle: Text(
+                              context.l10n.recurringTransactionDescription,
+                              style: TextStyle(
+                                color: isDarkMode
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600],
+                                fontSize: 12,
+                              ),
+                            ),
+                            secondary: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: isDarkMode
+                                    ? Colors.grey[800]
+                                    : Colors.grey[200],
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.repeat,
+                                color: isDarkMode ? Colors.white : Colors.black,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                          if (isRecurring) ...[
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    value: recurringInterval ?? 'monthly',
+                                    items: const [
+                                      DropdownMenuItem(
+                                          value: 'daily', child: Text('Daily')),
+                                      DropdownMenuItem(
+                                          value: 'weekly', child: Text('Weekly')),
+                                      DropdownMenuItem(
+                                          value: 'monthly',
+                                          child: Text('Monthly')),
+                                      DropdownMenuItem(
+                                          value: 'yearly',
+                                          child: Text('Yearly')),
+                                    ],
+                                    onChanged: (value) {
+                                      setState(() {
+                                        recurringInterval = value;
+                                      });
+                                    },
+                                    decoration: InputDecoration(
+                                      labelText: context.l10n.recurringInterval,
+                                      filled: true,
+                                      fillColor: isDarkMode
+                                          ? Colors.grey[900]
+                                          : Colors.grey[50],
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: () async {
+                                      final date = await showDatePicker(
+                                        context: context,
+                                        initialDate: recurringEndDate ??
+                                            selectedDate
+                                                .add(const Duration(days: 365)),
+                                        firstDate: selectedDate,
+                                        lastDate: DateTime(2100),
+                                      );
+                                      if (date != null) {
+                                        setState(() {
+                                          recurringEndDate = date;
+                                        });
+                                      }
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 16, horizontal: 12),
+                                      decoration: BoxDecoration(
+                                        color: isDarkMode
+                                            ? Colors.grey[900]
+                                            : Colors.grey[50],
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.calendar_today,
+                                            size: 16,
+                                            color: isDarkMode
+                                                ? Colors.grey[400]
+                                                : Colors.grey[600],
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              recurringEndDate == null
+                                                  ? context.l10n.endDate
+                                                  : '${recurringEndDate!.day}/${recurringEndDate!.month}/${recurringEndDate!.year}',
+                                              style: TextStyle(
+                                                color: recurringEndDate == null
+                                                    ? (isDarkMode
+                                                        ? Colors.grey[500]
+                                                        : Colors.grey[600])
+                                                    : (isDarkMode
+                                                        ? Colors.white
+                                                        : Colors.black),
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // حقل الوصف (كما هو)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: TextFormField(
+                        controller: descriptionController,
+                        maxLines: 2,
+                        decoration: InputDecoration(
+                          labelText: context.l10n.descriptionOptional,
+                          labelStyle: TextStyle(
+                            color: isDarkMode
+                                ? Colors.grey[400]
+                                : Colors.grey[600],
+                          ),
+                          prefixIcon: Icon(
+                            Icons.description,
+                            color: isDarkMode
+                                ? Colors.grey[400]
+                                : Colors.grey[600],
+                          ),
+                          filled: true,
+                          fillColor:
+                              isDarkMode ? Colors.grey[900] : Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                            horizontal: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // أزرار الإضافة والإلغاء (كما هي)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: _isSubmitting
+                                  ? null
+                                  : () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(
+                                  color: isDarkMode
+                                      ? Colors.grey[700]!
+                                      : Colors.grey[300]!,
+                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Text(
+                                context.l10n.cancel,
                                 style: TextStyle(
                                   color:
                                       isDarkMode ? Colors.white : Colors.black,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              subtitle: Text(
-                                context.l10n.recurringTransactionDescription,
-                                style: TextStyle(
-                                  color: isDarkMode
-                                      ? Colors.grey[400]
-                                      : Colors.grey[600],
-                                  fontSize: 12,
-                                ),
-                              ),
-                              secondary: Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: isDarkMode
-                                      ? Colors.grey[800]
-                                      : Colors.grey[200],
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.repeat,
-                                  color: isDarkMode
-                                      ? Colors.white
-                                      : Colors.black,
-                                  size: 20,
-                                ),
-                              ),
-                            ),
-                            if (isRecurring) ...[
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: DropdownButtonFormField<String>(
-                                      value: recurringInterval ?? 'monthly',
-                                      items: const [
-                                        DropdownMenuItem(
-                                            value: 'daily', child: Text('Daily')),
-                                        DropdownMenuItem(
-                                            value: 'weekly', child: Text('Weekly')),
-                                        DropdownMenuItem(
-                                            value: 'monthly',
-                                            child: Text('Monthly')),
-                                        DropdownMenuItem(
-                                            value: 'yearly',
-                                            child: Text('Yearly')),
-                                      ],
-                                      onChanged: (value) {
-                                        setState(() {
-                                          recurringInterval = value;
-                                        });
-                                      },
-                                      decoration: InputDecoration(
-                                        labelText: context.l10n.recurringInterval,
-                                        filled: true,
-                                        fillColor: isDarkMode
-                                            ? Colors.grey[900]
-                                            : Colors.grey[50],
-                                        border: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          borderSide: BorderSide.none,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: InkWell(
-                                      onTap: () async {
-                                        final date = await showDatePicker(
-                                          context: context,
-                                          initialDate: recurringEndDate ??
-                                              selectedDate
-                                                  .add(const Duration(days: 365)),
-                                          firstDate: selectedDate,
-                                          lastDate: DateTime(2100),
-                                        );
-                                        if (date != null) {
-                                          setState(() {
-                                            recurringEndDate = date;
-                                          });
-                                        }
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 16, horizontal: 12),
-                                        decoration: BoxDecoration(
-                                          color: isDarkMode
-                                              ? Colors.grey[900]
-                                              : Colors.grey[50],
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              Icons.calendar_today,
-                                              size: 16,
-                                              color: isDarkMode
-                                                  ? Colors.grey[400]
-                                                  : Colors.grey[600],
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Text(
-                                                recurringEndDate == null
-                                                    ? context.l10n.endDate
-                                                    : '${recurringEndDate!.day}/${recurringEndDate!.month}/${recurringEndDate!.year}',
-                                                style: TextStyle(
-                                                  color: recurringEndDate == null
-                                                      ? (isDarkMode
-                                                          ? Colors.grey[500]
-                                                          : Colors.grey[600])
-                                                      : (isDarkMode
-                                                          ? Colors.white
-                                                          : Colors.black),
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: TextFormField(
-                          controller: descriptionController,
-                          maxLines: 2,
-                          decoration: InputDecoration(
-                            labelText: context.l10n.descriptionOptional,
-                            labelStyle: TextStyle(
-                              color: isDarkMode
-                                  ? Colors.grey[400]
-                                  : Colors.grey[600],
-                            ),
-                            prefixIcon: Icon(
-                              Icons.description,
-                              color: isDarkMode
-                                  ? Colors.grey[400]
-                                  : Colors.grey[600],
-                            ),
-                            filled: true,
-                            fillColor:
-                                isDarkMode ? Colors.grey[900] : Colors.grey[50],
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 16,
-                              horizontal: 16,
                             ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: _isSubmitting
-                                    ? null
-                                    : () => Navigator.pop(context),
-                                style: OutlinedButton.styleFrom(
-                                  side: BorderSide(
-                                    color: isDarkMode
-                                        ? Colors.grey[700]!
-                                        : Colors.grey[300]!,
-                                  ),
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: Text(
-                                  context.l10n.cancel,
-                                  style: TextStyle(
-                                    color:
-                                        isDarkMode ? Colors.white : Colors.black,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: _isSubmitting
-                                    ? null
-                                    : () async {
-                                        if (titleController.text.isEmpty) {
-                                          MessageService.showError(
-                                              context.l10n.enterTitle);
-                                          return;
-                                        }
-                                        if (amountController.text.isEmpty) {
-                                          MessageService.showError(
-                                              context.l10n.enterAmount);
-                                          return;
-                                        }
-                                        final amount = double.tryParse(
-                                            amountController.text);
-                                        if (amount == null || amount <= 0) {
-                                          MessageService.showError(
-                                              context.l10n.enterValidAmount);
-                                          return;
-                                        }
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: _isSubmitting
+                                  ? null
+                                  : () async {
+                                      // نفس منطق الإضافة السابق
+                                      if (titleController.text.isEmpty) {
+                                        MessageService.showError(
+                                            context.l10n.enterTitle);
+                                        return;
+                                      }
+                                      if (amountController.text.isEmpty) {
+                                        MessageService.showError(
+                                            context.l10n.enterAmount);
+                                        return;
+                                      }
+                                      final amount = double.tryParse(
+                                          amountController.text);
+                                      if (amount == null || amount <= 0) {
+                                        MessageService.showError(
+                                            context.l10n.enterValidAmount);
+                                        return;
+                                      }
 
+                                      setState(() {
+                                        _isSubmitting = true;
+                                      });
+
+                                      try {
+                                        await _walletRepository.addTransaction(
+                                          title: titleController.text,
+                                          description:
+                                              descriptionController.text,
+                                          amount: amount,
+                                          type: isIncome
+                                              ? 'Deposit'
+                                              : 'Withdrawal',
+                                          categoryId: selectedCategoryId!,
+                                          transactionDate: selectedDate,
+                                          isRecurring: isRecurring,
+                                          recurringInterval: recurringInterval,
+                                          recurringEndDate: recurringEndDate,
+                                        );
+
+                                        Navigator.pop(context);
+                                        await _loadHomeData();
+
+                                        MessageService.showSuccess(
+                                          isIncome
+                                              ? context.l10n.depositAddedSuccess
+                                              : context.l10n
+                                                  .withdrawalAddedSuccess,
+                                        );
+                                      } catch (e) {
+                                        MessageService.showError(context.l10n
+                                            .failedToAddTransaction(
+                                                e.toString()));
+                                      } finally {
                                         setState(() {
-                                          _isSubmitting = true;
+                                          _isSubmitting = false;
                                         });
-
-                                        try {
-                                          await _walletRepository.addTransaction(
-                                            title: titleController.text,
-                                            description:
-                                                descriptionController.text,
-                                            amount: amount,
-                                            type: isIncome
-                                                ? 'Deposit'
-                                                : 'Withdrawal',
-                                            categoryId: selectedCategoryId!,
-                                            transactionDate: selectedDate,
-                                            isRecurring: isRecurring,
-                                            recurringInterval: recurringInterval,
-                                            recurringEndDate: recurringEndDate,
-                                          );
-
-                                          Navigator.pop(context);
-                                          await _loadHomeData();
-
-                                          MessageService.showSuccess(
-                                            isIncome
-                                                ? context.l10n.depositAddedSuccess
-                                                : context.l10n
-                                                    .withdrawalAddedSuccess,
-                                          );
-                                        } catch (e) {
-                                          MessageService.showError(context.l10n
-                                              .failedToAddTransaction(
-                                                  e.toString()));
-                                        } finally {
-                                          setState(() {
-                                            _isSubmitting = false;
-                                          });
-                                        }
-                                      },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: isIncome
-                                      ? Colors.green[800]
-                                      : Colors.red[800],
-                                  foregroundColor: Colors.white,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
+                                      }
+                                    },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isIncome
+                                    ? Colors.green[800]
+                                    : Colors.red[800],
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: _isSubmitting
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          color: Colors.white,
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : Text(
-                                        context.l10n.add,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
                               ),
+                              child: _isSubmitting
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : Text(
+                                      context.l10n.add,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
                 ),
               ),
-            );
-          },
-        );
-      },
-    );
-  }
-
+            ),
+          );
+        },
+      );
+    },
+  );
+}
   void _showDeleteConfirmationDialog(WalletTransaction transaction) {
     showDialog(
       context: context,
@@ -1470,17 +1519,18 @@ Future<void> _loadHomeData() async {
     );
   }
 
-  Widget _buildBlurrableNumber(String text, TextStyle style, bool blurred) {
+  Widget _buildBlurrableNumber(double amount, TextStyle style, bool blurred) {
+    final formatted = _formatAmount(amount);
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: blurred ? 0 : 8, end: blurred ? 8 : 0),
       duration: const Duration(milliseconds: 300),
       builder: (context, sigma, child) {
         if (sigma == 0) {
-          return Text(text, style: style);
+          return Text(formatted, style: style);
         }
         return ImageFiltered(
           imageFilter: ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-          child: Text(text, style: style),
+          child: Text(formatted, style: style),
         );
       },
     );
@@ -1635,7 +1685,7 @@ Future<void> _loadHomeData() async {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
 _buildBlurrableNumber(
-  '\$${_formatCurrency(_homeData!.balance.totalBalance)}',
+ _homeData!.balance.totalBalance,
   TextStyle(
     color: isDarkMode ? Colors.white : Colors.black,
     fontSize: 40,
@@ -1678,7 +1728,7 @@ _buildBlurrableNumber(
                                     ),
                                     const SizedBox(height: 8),
 _buildBlurrableNumber(
-  '\$${_formatCurrency(_homeData!.balance.totalDeposits)}',
+   _homeData!.balance.totalDeposits,
   TextStyle(
     color: Colors.green.shade800,
     fontSize: 24,
@@ -1720,7 +1770,7 @@ _buildBlurrableNumber(
                                     ),
                                     const SizedBox(height: 8),
 _buildBlurrableNumber(
-  '\$${_formatCurrency(_homeData!.balance.totalWithdrawals)}',
+ _homeData!.balance.totalWithdrawals,
   TextStyle(
     color: Colors.red.shade800,
     fontSize: 24,
@@ -2075,8 +2125,8 @@ Widget _buildErrorWidget(bool isDarkMode) {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-              _buildBlurrableNumber(
-  _formatCurrency(transaction.amount), // بدون رمز الدولار لأنه مضاف مسبقاً في formattedAmount
+             _buildBlurrableNumber(
+        transaction.amount, // بدون رمز الدولار لأنه مضاف مسبقاً في formattedAmount
   TextStyle(
     color: isIncome ? Colors.green[800] : Colors.red[800],
     fontWeight: FontWeight.w800,
@@ -2129,6 +2179,12 @@ Widget _buildErrorWidget(bool isDarkMode) {
       ),
     );
   }
+String _formatAmount(double amount) {
+  // استخدم رمز العملة إذا كان محملاً، وإلا استخدم '$' مؤقتاً
+  final symbol = _currencyCode != null ? (currencySymbols[_currencyCode] ?? '\$') : '\$';
+  final formatter = NumberFormat('#,##0', 'en_US');
+  return '$symbol ${formatter.format(amount)}';
+}
 String _formatCurrency(double amount) {
   final formatter = NumberFormat('#,##0', 'en_US'); // بدون منازل عشرية
   return formatter.format(amount);

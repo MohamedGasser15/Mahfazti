@@ -6,6 +6,7 @@ import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/features/wallet/data/models/budget_models.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
+import 'package:my_wallet/core/utils/shared_prefs.dart'; // <-- أضف هذا
 import 'package:shimmer/shimmer.dart';
 
 class BudgetPage extends StatefulWidget {
@@ -21,16 +22,43 @@ class _BudgetPageState extends State<BudgetPage> {
   String? _errorMessage;
   BudgetDto? _budget;
 
-  // دالة تنسيق العملة (بدون منازل عشرية)
-  String _formatCurrency(double amount) {
-    final formatter = NumberFormat('#,##0', 'en_US');
-    return formatter.format(amount);
-  }
+  // متغيرات العملة
+  String? _currencyCode;
+  bool _currencyLoaded = false;
+
+  // خريطة رموز العملات (مطابقة للشاشات الأخرى)
+  static const Map<String, String> currencySymbols = {
+    'USD': '\$',
+    'EUR': '€',
+    'EGP': 'E£',
+    'SAR': '﷼',
+    'AED': 'د.إ',
+    'KWD': 'د.ك',
+  };
 
   @override
   void initState() {
     super.initState();
-    _loadBudget();
+    _loadCurrency();
+  }
+
+  // تحميل العملة المحفوظة
+  Future<void> _loadCurrency() async {
+    final code = await SharedPrefs.getCurrency();
+    if (mounted) {
+      setState(() {
+        _currencyCode = code ?? 'USD';
+        _currencyLoaded = true;
+      });
+      _loadBudget(); // تحميل البيانات بعد معرفة العملة
+    }
+  }
+
+  // دالة تنسيق العملة مع الرمز (بدون منازل عشرية)
+  String _formatCurrency(double amount) {
+    final symbol = currencySymbols[_currencyCode] ?? '\$';
+    final formatter = NumberFormat('#,##0', 'en_US');
+    return '$symbol ${formatter.format(amount)}';
   }
 
   Future<void> _loadBudget() async {
@@ -85,7 +113,7 @@ class _BudgetPageState extends State<BudgetPage> {
     final maxAllowed = (monthlyBudget - otherCategoriesTotal).clamp(0.0, double.infinity);
     
     final TextEditingController budgetController = TextEditingController(
-      text: _formatCurrency(category.budget), // استخدام التنسيق الجديد
+      text: _formatCurrency(category.budget).replaceAll(RegExp(r'[^0-9,]'), ''), // نحتفظ بالأرقام فقط للتحرير
     );
     bool isSubmitting = false;
     String? errorText;
@@ -170,7 +198,7 @@ class _BudgetPageState extends State<BudgetPage> {
                               child: Align(
                                 alignment: Alignment.centerLeft,
                                 child: Text(
-                                  'Maximum allowed: \$${_formatCurrency(maxAllowed)}',
+                                  'Maximum allowed: ${_formatCurrency(maxAllowed)}',
                                   style: TextStyle(
                                     color: maxAllowed <= 0 
                                         ? Colors.red[700] 
@@ -224,7 +252,7 @@ class _BudgetPageState extends State<BudgetPage> {
                                               return;
                                             }
                                             if (newBudget > maxAllowed) {
-                                              setState(() => errorText = 'Amount exceeds monthly budget limit (\$${_formatCurrency(maxAllowed)})');
+                                              setState(() => errorText = 'Amount exceeds monthly budget limit (${_formatCurrency(maxAllowed)})');
                                               return;
                                             }
 
@@ -282,7 +310,7 @@ class _BudgetPageState extends State<BudgetPage> {
 
   void _showEditBudgetDialog() {
     final TextEditingController budgetController = TextEditingController(
-      text: _formatCurrency(_budget?.monthlyBudget ?? 3000),
+      text: _formatCurrency(_budget?.monthlyBudget ?? 3000).replaceAll(RegExp(r'[^0-9,]'), ''),
     );
     bool isSubmitting = false;
 
@@ -528,7 +556,7 @@ class _BudgetPageState extends State<BudgetPage> {
                       style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
                     ),
                     Text(
-                      '\$${_formatCurrency(budget.monthlyBudget)}',
+                      _formatCurrency(budget.monthlyBudget),
                       style: TextStyle(
                         color: isDarkMode ? Colors.white : Colors.black,
                         fontSize: 18,
@@ -567,7 +595,7 @@ class _BudgetPageState extends State<BudgetPage> {
                       children: [
                         Text(context.l10n.spent, style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600])),
                         Text(
-                          '\$${_formatCurrency(budget.currentSpending)}',
+                          _formatCurrency(budget.currentSpending),
                           style: TextStyle(
                             color: isOverBudget ? Colors.red[800] : Colors.green[800],
                             fontSize: 20,
@@ -581,7 +609,7 @@ class _BudgetPageState extends State<BudgetPage> {
                       children: [
                         Text(context.l10n.left, style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600])),
                         Text(
-                          '\$${_formatCurrency(remainingBudget.abs())}',
+                          _formatCurrency(remainingBudget.abs()),
                           style: TextStyle(
                             color: remainingBudget >= 0 ? Colors.green[800] : Colors.red[800],
                             fontSize: 20,
@@ -711,7 +739,7 @@ class _BudgetPageState extends State<BudgetPage> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              '\$${_formatCurrency(cat.spent)} / \$${_formatCurrency(cat.budget)}',
+                              '${_formatCurrency(cat.spent)} / ${_formatCurrency(cat.budget)}',
                               style: TextStyle(
                                 color: isDarkMode ? Colors.white : Colors.black,
                                 fontWeight: FontWeight.w600,

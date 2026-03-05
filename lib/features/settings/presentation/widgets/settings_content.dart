@@ -7,6 +7,7 @@ import 'package:my_wallet/core/services/hide_balance_service.dart';
 import 'package:my_wallet/core/services/theme_service.dart';
 import 'package:my_wallet/core/utils/language_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
+import 'package:my_wallet/features/auth/presentation/screens/currency_selection_screen.dart';
 import 'package:my_wallet/features/profile/presentation/screens/profile_edit_screen.dart';
 import 'package:my_wallet/features/settings/presentation/screens/app_icon_screen.dart';
 import 'package:provider/provider.dart';
@@ -29,12 +30,12 @@ class _SettingsContentState extends State<SettingsContent> {
   bool _hideBalances = false;
   bool _isEnglish = true;
   String _currentTheme = 'system';
-
+  String _currencyCode = 'USD';
   @override
   void initState() {
     super.initState();
     _loadSettings();
-    
+    _loadCurrency();
     // الاستماع لتغييرات الثيم
     ThemeService.themeNotifier.addListener(() {
       if (mounted) {
@@ -48,7 +49,26 @@ class _SettingsContentState extends State<SettingsContent> {
     ThemeService.themeNotifier.removeListener(() {});
     super.dispose();
   }
+// دالة لتحميل العملة
+Future<void> _loadCurrency() async {
+  final code = await SharedPrefs.getCurrency();
+  setState(() {
+    _currencyCode = code ?? 'USD';
+  });
+}
 
+// دالة لفتح شاشة اختيار العملة
+Future<void> _openCurrencySelection() async {
+  final result = await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const CurrencySelectionScreen(),
+    ),
+  );
+  if (result != null) {
+    await _loadCurrency(); // إعادة تحميل العملة المعروضة
+  }
+}
   Future<void> _loadSettings() async {
     // تحميل إعدادات البايومتريك
     final hasSupport = await BiometricService.hasBiometricSupport();
@@ -679,6 +699,47 @@ ListTile(
                 ),
                 trailing: _buildThemeButton(),
               ),
+            Divider(
+  height: 1,
+  color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+),
+
+// Currency
+ListTile(
+  leading: Container(
+    width: 40,
+    height: 40,
+    decoration: BoxDecoration(
+      color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+      shape: BoxShape.circle,
+    ),
+    child: Icon(
+      Icons.attach_money,
+      color: isDarkMode ? Colors.white : Colors.black,
+      size: 20,
+    ),
+  ),
+  title: Text(
+    context.l10n.currency,
+    style: TextStyle(
+      color: isDarkMode ? Colors.white : Colors.black,
+      fontWeight: FontWeight.w600,
+    ),
+  ),
+  subtitle: Text(
+    _getCurrencyName(_currencyCode),
+    style: TextStyle(
+      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+      fontSize: 12,
+    ),
+  ),
+  trailing: Icon(
+    Icons.chevron_right,
+    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+    size: 20,
+  ),
+  onTap: _openCurrencySelection,
+),
             ],
           ),
         ),
@@ -687,7 +748,17 @@ ListTile(
   }
 
 // في قسم _buildProfileSettings نغير ListTile الخاص بـ App Language
-
+String _getCurrencyName(String code) {
+  switch (code) {
+    case 'USD': return context.l10n.currencyUSD;
+    case 'EUR': return context.l10n.currencyEUR;
+    case 'EGP': return context.l10n.currencyEGP;
+    case 'SAR': return context.l10n.currencySAR;
+    case 'AED': return context.l10n.currencyAED;
+    case 'KWD': return context.l10n.currencyKWD;
+    default: return code;
+  }
+}
 Widget _buildProfileSettings(bool isDarkMode) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
