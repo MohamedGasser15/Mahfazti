@@ -1549,6 +1549,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Currency saved successfully'**
   String get currencySavedSuccess;
+
+  /// No description provided for @editDeposit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Deposit'**
+  String get editDeposit;
+
+  /// No description provided for @editWithdrawal.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Withdrawal'**
+  String get editWithdrawal;
+
+  /// No description provided for @update.
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get update;
+
+  /// No description provided for @transactionUpdatedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction updated successfully!'**
+  String get transactionUpdatedSuccess;
 }
 
 class _AppLocalizationsDelegate

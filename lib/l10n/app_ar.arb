@@ -254,5 +254,11 @@
   "currencySAR": "ريال سعودي",
   "currencyAED": "درهم إماراتي",
   "currencyKWD": "دينار كويتي",
-    "currencySavedSuccess": "تم حفظ العملة بنجاح"
+    "currencySavedSuccess": "تم حفظ العملة بنجاح",
+      "addDeposit": "إضافة إيداع",
+  "addWithdrawal": "إضافة سحب",
+  "editDeposit": "تعديل إيداع",
+  "editWithdrawal": "تعديل سحب",
+  "update": "تحديث",
+  "transactionUpdatedSuccess": "تم تحديث المعاملة بنجاح!"
 }

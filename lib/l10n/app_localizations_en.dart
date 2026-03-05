@@ -758,4 +758,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get currencySavedSuccess => 'Currency saved successfully';
+
+  @override
+  String get editDeposit => 'Edit Deposit';
+
+  @override
+  String get editWithdrawal => 'Edit Withdrawal';
+
+  @override
+  String get update => 'Update';
+
+  @override
+  String get transactionUpdatedSuccess => 'Transaction updated successfully!';
 }

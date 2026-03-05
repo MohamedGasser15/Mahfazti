@@ -254,5 +254,11 @@
   "currencySAR": "Saudi Riyal",
   "currencyAED": "UAE Dirham",
   "currencyKWD": "Kuwaiti Dinar",
-    "currencySavedSuccess": "Currency saved successfully"
+    "currencySavedSuccess": "Currency saved successfully",
+      "addDeposit": "Add Deposit",
+  "addWithdrawal": "Add Withdrawal",
+  "editDeposit": "Edit Deposit",
+  "editWithdrawal": "Edit Withdrawal",
+  "update": "Update",
+  "transactionUpdatedSuccess": "Transaction updated successfully!"
 }

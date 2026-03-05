@@ -17,6 +17,7 @@ class ApiEndpoints {
   static const String walletSummary = 'api/wallet/summary';
   static const String budget = 'api/budget';
   static const String setCurrency = 'api/auth/set-currency';
+  static const String walletUpdateTransaction = 'api/wallet/transactions/update';
   // Category
   static const String categories = 'api/Category';
   static const String categoryById = 'api/Category/';

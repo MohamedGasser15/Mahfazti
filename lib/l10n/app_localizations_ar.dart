@@ -756,4 +756,16 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get currencySavedSuccess => 'تم حفظ العملة بنجاح';
+
+  @override
+  String get editDeposit => 'تعديل إيداع';
+
+  @override
+  String get editWithdrawal => 'تعديل سحب';
+
+  @override
+  String get update => 'تحديث';
+
+  @override
+  String get transactionUpdatedSuccess => 'تم تحديث المعاملة بنجاح!';
 }

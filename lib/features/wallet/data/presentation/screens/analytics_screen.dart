@@ -4,7 +4,8 @@ import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.da
 import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
 import 'package:intl/intl.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
-import 'package:my_wallet/core/utils/shared_prefs.dart'; // <-- أضف هذا
+import 'package:my_wallet/core/utils/shared_prefs.dart';
+import 'package:shimmer/shimmer.dart'; // تأكد من إضافة الحزمة في pubspec.yaml
 
 // enum لأنواع الرسوم البيانية
 enum ChartType { line, bar }
@@ -20,7 +21,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   final WalletRepository _repository = WalletRepository();
   DateTime _fromDate = DateTime.now().subtract(const Duration(days: 30));
   DateTime _toDate = DateTime.now();
-  bool _isLoading = false;
+  bool _isLoading = true; // بدأ بـ true
   Map<String, dynamic>? _summaryData;
   String? _errorMessage;
 
@@ -81,13 +82,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           'expensesByCategory': data.expensesByCategory,
           'incomeByCategory': data.incomeByCategory,
         };
+        _isLoading = false; // إنهاء التحميل
       });
     } catch (e) {
       setState(() {
         _errorMessage = 'Failed to load analytics: $e';
+        _isLoading = false;
       });
-    } finally {
-      setState(() => _isLoading = false);
     }
   }
 
@@ -97,6 +98,194 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     final formatter = NumberFormat('#,##0', 'en_US');
     return '$symbol ${formatter.format(amount)}';
   }
+
+  // ================== دوال Skeleton المستوحاة من HomeTab ==================
+  Widget _buildShimmerStatCard(bool isDarkMode) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: const BoxDecoration(
+                  color: Colors.white, // سيتم تلوينه بواسطة Shimmer
+                  shape: BoxShape.circle,
+                ),
+              ),
+              Container(
+                width: 20,
+                height: 20,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: 80,
+            height: 14,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.all(Radius.circular(4)),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            width: 100,
+            height: 24,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.all(Radius.circular(6)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShimmerNetSavingsCard(bool isDarkMode) {
+    return Container(
+      width: double.infinity,
+      height: 100,
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+        borderRadius: BorderRadius.circular(20),
+      ),
+    );
+  }
+
+  Widget _buildShimmerChartSection(bool isDarkMode) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Container(
+              width: 150,
+              height: 20,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.all(Radius.circular(4)),
+              ),
+            ),
+            Container(
+              width: 100,
+              height: 30,
+              decoration: BoxDecoration(
+                color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Container(
+          height: 250,
+          decoration: BoxDecoration(
+            color: isDarkMode ? Colors.grey[900] : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildShimmerCategoryItem(bool isDarkMode) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.grey[800] : Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 16,
+            height: 16,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Container(
+              height: 16,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.all(Radius.circular(4)),
+              ),
+            ),
+          ),
+          Container(
+            width: 60,
+            height: 16,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.all(Radius.circular(4)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShimmerLoading(bool isDarkMode) {
+    return Shimmer.fromColors(
+      baseColor: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
+      highlightColor: isDarkMode ? Colors.grey[700]! : Colors.grey[100]!,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // صف البطاقتين
+            Row(
+              children: [
+                Expanded(child: _buildShimmerStatCard(isDarkMode)),
+                const SizedBox(width: 12),
+                Expanded(child: _buildShimmerStatCard(isDarkMode)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // بطاقة صافي التوفير
+            _buildShimmerNetSavingsCard(isDarkMode),
+            const SizedBox(height: 24),
+            // قسم المصروفات مع خيارات النوع
+            _buildShimmerChartSection(isDarkMode),
+            const SizedBox(height: 16),
+            // قائمة تفصيلية
+            ...List.generate(3, (i) => _buildShimmerCategoryItem(isDarkMode)),
+            const SizedBox(height: 24),
+            // قسم الإيرادات مع خيارات النوع
+            _buildShimmerChartSection(isDarkMode),
+            const SizedBox(height: 16),
+            ...List.generate(3, (i) => _buildShimmerCategoryItem(isDarkMode)),
+          ],
+        ),
+      ),
+    );
+  }
+  // =======================================================================
 
   @override
   Widget build(BuildContext context) {
@@ -111,7 +300,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         centerTitle: true,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? _buildShimmerLoading(isDarkMode) // استخدام الـ Skeleton بدلاً من CircularProgressIndicator
           : _errorMessage != null
               ? Center(
                   child: Column(
@@ -139,7 +328,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                               Expanded(
                                 child: _buildStatCard(
                                   title: context.l10n.totalIncome,
-                                  value: _formatCurrency(_summaryData!['totalIncome']), // تعديل هنا
+                                  value: _formatCurrency(_summaryData!['totalIncome']),
                                   icon: Icons.trending_up,
                                   color: Colors.green,
                                   isDarkMode: isDarkMode,
@@ -149,7 +338,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                               Expanded(
                                 child: _buildStatCard(
                                   title: context.l10n.totalExpenses,
-                                  value: _formatCurrency(_summaryData!['totalExpenses']), // تعديل هنا
+                                  value: _formatCurrency(_summaryData!['totalExpenses']),
                                   icon: Icons.trending_down,
                                   color: Colors.red,
                                   isDarkMode: isDarkMode,
@@ -369,7 +558,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       ? cat.categoryNameAr
                       : cat.categoryNameEn;
                   return BarTooltipItem(
-                    '$name\n${_formatCurrency(rod.toY)}', // تعديل هنا
+                    '$name\n${_formatCurrency(rod.toY)}',
                     const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   );
                 },
@@ -385,7 +574,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   reservedSize: 40,
                   getTitlesWidget: (value, meta) {
                     return Text(
-                      _formatCurrency(value).replaceAll(RegExp(r'[^0-9,]'), ''), // تعديل هنا (نحذف الرمز)
+                      _formatCurrency(value).replaceAll(RegExp(r'[^0-9,]'), ''),
                       style: TextStyle(
                         color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                         fontSize: 10,
@@ -437,7 +626,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   reservedSize: 40,
                   getTitlesWidget: (value, meta) {
                     return Text(
-                      _formatCurrency(value).replaceAll(RegExp(r'[^0-9,]'), ''), // تعديل هنا
+                      _formatCurrency(value).replaceAll(RegExp(r'[^0-9,]'), ''),
                       style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600], fontSize: 10),
                     );
                   },
@@ -472,7 +661,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         ? cat.categoryNameAr
                         : cat.categoryNameEn;
                     return LineTooltipItem(
-                      '$name\n${_formatCurrency(touchedSpot.y)}', // تعديل هنا
+                      '$name\n${_formatCurrency(touchedSpot.y)}',
                       const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                     );
                   }).toList();
@@ -547,7 +736,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           Text(context.l10n.netSavings, style: const TextStyle(color: Colors.white, fontSize: 16)),
           const SizedBox(height: 8),
           Text(
-            _formatCurrency(netSavings), // تعديل هنا
+            _formatCurrency(netSavings),
             style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w800),
           ),
         ],
@@ -574,7 +763,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           ),
           child: Row(
             children: [
-              // أيقونة صغيرة بدلاً من الدائرة
               Icon(
                 isIncome ? Icons.arrow_upward : Icons.arrow_downward,
                 size: 16,
@@ -583,7 +771,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               const SizedBox(width: 12),
               Expanded(child: Text(name, style: TextStyle(color: isDarkMode ? Colors.white : Colors.black))),
               Text(
-                _formatCurrency(cat.total), // تعديل هنا
+                _formatCurrency(cat.total),
                 style: TextStyle(
                   color: isIncome ? Colors.green[800] : Colors.red[800],
                   fontWeight: FontWeight.w700,

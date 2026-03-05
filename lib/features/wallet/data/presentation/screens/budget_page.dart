@@ -6,7 +6,7 @@ import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/features/wallet/data/models/budget_models.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
-import 'package:my_wallet/core/utils/shared_prefs.dart'; // <-- أضف هذا
+import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:shimmer/shimmer.dart';
 
 class BudgetPage extends StatefulWidget {
@@ -450,6 +450,305 @@ class _BudgetPageState extends State<BudgetPage> {
     );
   }
 
+  // ================== دوال Skeleton المستوحاة من HomeTab ==================
+  Widget _buildShimmerMonthlyBudgetCard(bool isDarkMode) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                width: 100,
+                height: 16,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.all(Radius.circular(4)),
+                ),
+              ),
+              Container(
+                width: 80,
+                height: 20,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.all(Radius.circular(4)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            height: 12,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.all(Radius.circular(6)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 50,
+                    height: 12,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.all(Radius.circular(4)),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    width: 80,
+                    height: 20,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.all(Radius.circular(4)),
+                    ),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    width: 30,
+                    height: 12,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.all(Radius.circular(4)),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    width: 80,
+                    height: 20,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.all(Radius.circular(4)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: 120,
+            height: 14,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.all(Radius.circular(4)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShimmerCategoryHeader(bool isDarkMode) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Container(
+            width: 100,
+            height: 20,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.all(Radius.circular(4)),
+            ),
+          ),
+          Container(
+            width: 120,
+            height: 16,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.all(Radius.circular(4)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShimmerCategoryItem(bool isDarkMode) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 120,
+                  height: 16,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.all(Radius.circular(4)),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  height: 4,
+                  width: 150,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.all(Radius.circular(2)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Container(
+                width: 100,
+                height: 16,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.all(Radius.circular(4)),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                width: 80,
+                height: 12,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.all(Radius.circular(4)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 8),
+          Container(
+            width: 30,
+            height: 30,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShimmerTipsCard(bool isDarkMode) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 100,
+                  height: 16,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.all(Radius.circular(4)),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  width: 200,
+                  height: 12,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.all(Radius.circular(4)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShimmerLoading(bool isDarkMode) {
+    return Shimmer.fromColors(
+      baseColor: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
+      highlightColor: isDarkMode ? Colors.grey[700]! : Colors.grey[100]!,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            _buildShimmerMonthlyBudgetCard(isDarkMode),
+            _buildShimmerCategoryHeader(isDarkMode),
+            Container(
+              decoration: BoxDecoration(
+                color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+                ),
+              ),
+              child: Column(
+                children: List.generate(
+                  4,
+                  (index) => _buildShimmerCategoryItem(isDarkMode),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            _buildShimmerTipsCard(isDarkMode),
+            const SizedBox(height: 40),
+          ],
+        ),
+      ),
+    );
+  }
+  // =======================================================================
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -483,23 +782,6 @@ class _BudgetPageState extends State<BudgetPage> {
           : _errorMessage != null
               ? _buildErrorState(isDarkMode)
               : _buildContent(isDarkMode),
-    );
-  }
-
-  Widget _buildShimmerLoading(bool isDarkMode) {
-    return Shimmer.fromColors(
-      baseColor: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
-      highlightColor: isDarkMode ? Colors.grey[700]! : Colors.grey[100]!,
-      child: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Container(height: 100, color: Colors.white),
-          const SizedBox(height: 20),
-          Container(height: 200, color: Colors.white),
-          const SizedBox(height: 20),
-          Container(height: 300, color: Colors.white),
-        ],
-      ),
     );
   }
 

@@ -6,8 +6,8 @@ import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
-import 'package:my_wallet/core/utils/shared_prefs.dart'; // <-- أضف هذا
-import 'package:intl/intl.dart'; // <-- أضف هذا
+import 'package:my_wallet/core/utils/shared_prefs.dart';
+import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
 
 class TransactionsTab extends StatefulWidget {
@@ -40,7 +40,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
   String? _currencyCode;
   bool _currencyLoaded = false;
 
-  // خريطة رموز العملات (مطابقة لـ HomeScreen)
+  // خريطة رموز العملات
   static const Map<String, String> currencySymbols = {
     'USD': '\$',
     'EUR': '€',
@@ -86,7 +86,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
     final code = await SharedPrefs.getCurrency();
     if (mounted) {
       setState(() {
-        _currencyCode = code ?? 'USD'; // القيمة الافتراضية
+        _currencyCode = code ?? 'USD';
         _currencyLoaded = true;
       });
     }
@@ -95,7 +95,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
   // دالة تنسيق المبلغ مع رمز العملة
   String _formatAmount(double amount) {
     final symbol = currencySymbols[_currencyCode] ?? '\$';
-    final formatter = NumberFormat('#,##0', 'en_US'); // بدون منازل عشرية (كما في HomeScreen)
+    final formatter = NumberFormat('#,##0', 'en_US');
     return '$symbol ${formatter.format(amount)}';
   }
 
@@ -316,50 +316,177 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
     );
   }
 
+  // =============== دوال Skeleton المستوحاة من HomeTab ===============
+  Widget _buildShimmerAppBar(bool isDarkMode) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, right: 20, left: 20, bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Container(
+            width: 100,
+            height: 40,
+            decoration: BoxDecoration(
+              color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+              borderRadius: BorderRadius.circular(30),
+            ),
+          ),
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShimmerSearchBar(bool isDarkMode) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Container(
+        height: 50,
+        decoration: BoxDecoration(
+          color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShimmerFilterChips(bool isDarkMode) {
+    return Container(
+      height: 50,
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Row(
+        children: List.generate(3, (index) {
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Container(
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildShimmerTransactionCard(bool isDarkMode) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 120,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: 80,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Container(
+                width: 60,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                width: 40,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildShimmerLoading() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Shimmer.fromColors(
       baseColor: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
       highlightColor: isDarkMode ? Colors.grey[700]! : Colors.grey[100]!,
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        itemCount: 6,
-        itemBuilder: (context, index) {
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              children: [
-                Container(width: 40, height: 40, decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white)),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(width: 120, height: 16, color: Colors.white),
-                      const SizedBox(height: 8),
-                      Container(width: 80, height: 12, color: Colors.white),
-                    ],
-                  ),
-                ),
-                Column(
-                  children: [
-                    Container(width: 60, height: 16, color: Colors.white),
-                    const SizedBox(height: 4),
-                    Container(width: 40, height: 12, color: Colors.white),
-                  ],
-                ),
-              ],
-            ),
-          );
-        },
+      child: SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        child: Column(
+          children: [
+            _buildShimmerAppBar(isDarkMode),
+            _buildShimmerSearchBar(isDarkMode),
+            _buildShimmerFilterChips(isDarkMode),
+            const SizedBox(height: 8),
+            ...List.generate(6, (index) => _buildShimmerTransactionCard(isDarkMode)),
+          ],
+        ),
       ),
     );
   }
+  // =================================================================
 
   @override
   Widget build(BuildContext context) {
@@ -388,7 +515,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
       body: SafeArea(
         child: Column(
           children: [
-            // Search Bar
+            // Search Bar (يظهر دائمًا)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: Container(
@@ -439,7 +566,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
               ),
             ),
 
-            // Type Filter Chips with animation
+            // Type Filter Chips with animation (تظهر دائمًا)
             FadeTransition(
               opacity: _fadeAnimation,
               child: Container(
@@ -458,7 +585,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
               ),
             ),
 
-            // Results count
+            // Results count (يظهر فقط عندما لا يكون تحميل)
             if (!_isLoading && _filteredTransactions.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
@@ -478,7 +605,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
 
             const SizedBox(height: 4),
 
-            // Main content
+            // Main content: إما Shimmer أو القائمة
             Expanded(
               child: _isLoading
                   ? _buildShimmerLoading()
@@ -701,7 +828,6 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                // اختيار اللغة المناسبة
                                 Localizations.localeOf(context).languageCode == 'ar'
                                     ? (transaction.categoryNameAr ?? transaction.categoryNameEn ?? '')
                                     : (transaction.categoryNameEn ?? transaction.categoryNameAr ?? ''),
@@ -739,12 +865,12 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
                       ],
                     ),
                   ),
-                  // المبلغ (معدل لاستخدام العملة المحفوظة)
+                  // المبلغ
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        _formatAmount(transaction.amount), // استخدام التنسيق المحلي بدلاً من formattedAmount
+                        _formatAmount(transaction.amount),
                         style: TextStyle(
                           color: isIncome ? Colors.green[700] : Colors.red[700],
                           fontWeight: FontWeight.w800,

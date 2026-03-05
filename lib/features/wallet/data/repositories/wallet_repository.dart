@@ -16,7 +16,6 @@ class WalletRepository {
         requiresAuth: true,
       );
       
-      // الـ API يعيد WalletHomeData مباشرة بدون غلاف
       return WalletHomeData.fromJson(response.data);
     } on DioException catch (e) {
       throw _handleDioError(e);
@@ -42,94 +41,145 @@ class WalletRepository {
   }
   
   // جلب قائمة المعاملات مع إمكانية التصفية والصفحات
-Future<TransactionListResponse> getTransactions({
-  int page = 1,
-  int pageSize = 20,
-  DateTime? fromDate,
-  DateTime? toDate,
-  String? type,
-  int? categoryId, // تغيير من String? إلى int?
-}) async {
-  try {
-    final queryParams = <String, dynamic>{
-      'page': page,
-      'pageSize': pageSize,
-    };
+  Future<TransactionListResponse> getTransactions({
+    int page = 1,
+    int pageSize = 20,
+    DateTime? fromDate,
+    DateTime? toDate,
+    String? type,
+    int? categoryId,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{
+        'page': page,
+        'pageSize': pageSize,
+      };
 
-    if (fromDate != null) {
-      queryParams['fromDate'] = fromDate.toIso8601String();
-    }
-    if (toDate != null) {
-      queryParams['toDate'] = toDate.toIso8601String();
-    }
-    if (type != null && type.isNotEmpty) {
-      queryParams['type'] = type;
-    }
-    if (categoryId != null) { // تعديل الشرط
-      queryParams['categoryId'] = categoryId;
-    }
+      if (fromDate != null) {
+        queryParams['fromDate'] = fromDate.toIso8601String();
+      }
+      if (toDate != null) {
+        queryParams['toDate'] = toDate.toIso8601String();
+      }
+      if (type != null && type.isNotEmpty) {
+        queryParams['type'] = type;
+      }
+      if (categoryId != null) {
+        queryParams['categoryId'] = categoryId;
+      }
 
-    final response = await _apiService.get(
-      ApiEndpoints.walletTransactions,
-      queryParams: queryParams,
-      requiresAuth: true,
-    );
+      final response = await _apiService.get(
+        ApiEndpoints.walletTransactions,
+        queryParams: queryParams,
+        requiresAuth: true,
+      );
 
-    return TransactionListResponse.fromJson(response.data);
-  } on DioException catch (e) {
-    throw _handleDioError(e);
-  } catch (e) {
-    throw Exception('Failed to load transactions: $e');
+      return TransactionListResponse.fromJson(response.data);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      throw Exception('Failed to load transactions: $e');
+    }
   }
-}
+  
   // إضافة معاملة جديدة
-// إضافة معاملة جديدة
-Future<WalletTransaction> addTransaction({
-  required String title,
-  String? description,
-  required double amount,
-  required String type, // "Deposit" أو "Withdrawal"
-  required int categoryId, // تغيير من String إلى int
-  DateTime? transactionDate,
-  bool isRecurring = false,
-  String? recurringInterval,
-  DateTime? recurringEndDate,
-}) async {
-  try {
-    final body = <String, dynamic>{
-      'title': title,
-      'amount': amount,
-      'type': type,
-      'categoryId': categoryId, // إرسال categoryId بدلاً من category
-      'isRecurring': isRecurring,
-    };
+  Future<WalletTransaction> addTransaction({
+    required String title,
+    String? description,
+    required double amount,
+    required String type, // "Deposit" أو "Withdrawal"
+    required int categoryId,
+    DateTime? transactionDate,
+    bool isRecurring = false,
+    String? recurringInterval,
+    DateTime? recurringEndDate,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'title': title,
+        'amount': amount,
+        'type': type,
+        'categoryId': categoryId,
+        'isRecurring': isRecurring,
+      };
 
-    if (description != null && description.isNotEmpty) {
-      body['description'] = description;
-    }
-    if (transactionDate != null) {
-      body['transactionDate'] = transactionDate.toIso8601String();
-    }
-    if (recurringInterval != null) {
-      body['recurringInterval'] = recurringInterval;
-    }
-    if (recurringEndDate != null) {
-      body['recurringEndDate'] = recurringEndDate.toIso8601String();
-    }
+      if (description != null && description.isNotEmpty) {
+        body['description'] = description;
+      }
+      if (transactionDate != null) {
+        body['transactionDate'] = transactionDate.toIso8601String();
+      }
+      if (recurringInterval != null) {
+        body['recurringInterval'] = recurringInterval;
+      }
+      if (recurringEndDate != null) {
+        body['recurringEndDate'] = recurringEndDate.toIso8601String();
+      }
 
-    final response = await _apiService.post(
-      ApiEndpoints.walletAddTransaction,
-      body,
-      requiresAuth: true,
-    );
+      final response = await _apiService.post(
+        ApiEndpoints.walletAddTransaction,
+        body,
+        requiresAuth: true,
+      );
 
-    return WalletTransaction.fromJson(response.data);
-  } on DioException catch (e) {
-    throw _handleDioError(e);
-  } catch (e) {
-    throw Exception('Failed to add transaction: $e');
+      return WalletTransaction.fromJson(response.data);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      throw Exception('Failed to add transaction: $e');
+    }
   }
-}
+  
+  // تحديث معاملة موجودة
+  Future<WalletTransaction> updateTransaction(
+    int transactionId, {
+    required String title,
+    String? description,
+    required double amount,
+    required String type, // "Deposit" أو "Withdrawal"
+    required int categoryId,
+    DateTime? transactionDate,
+    bool isRecurring = false,
+    String? recurringInterval,
+    DateTime? recurringEndDate,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'title': title,
+        'amount': amount,
+        'type': type,
+        'categoryId': categoryId,
+        'isRecurring': isRecurring,
+      };
+
+      if (description != null && description.isNotEmpty) {
+        body['description'] = description;
+      }
+      if (transactionDate != null) {
+        body['transactionDate'] = transactionDate.toIso8601String();
+      }
+      if (recurringInterval != null) {
+        body['recurringInterval'] = recurringInterval;
+      }
+      if (recurringEndDate != null) {
+        body['recurringEndDate'] = recurringEndDate.toIso8601String();
+      }
+
+      // استخدم endpoint التحديث المناسب (غالباً PUT على نفس مسار الإضافة مع id)
+      final response = await _apiService.put(
+        '${ApiEndpoints.walletUpdateTransaction}/$transactionId', // تأكد من صحة الـ endpoint
+        body,
+        requiresAuth: true,
+      );
+
+      return WalletTransaction.fromJson(response.data);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      throw Exception('Failed to update transaction: $e');
+    }
+  }
+  
   // حذف معاملة (soft delete)
   Future<bool> deleteTransaction(int transactionId) async {
     try {
@@ -137,71 +187,76 @@ Future<WalletTransaction> addTransaction({
         '${ApiEndpoints.walletDeleteTransaction}/$transactionId',
         requiresAuth: true,
       );
-      return true; // إذا لم يرمي استثناء، فالحذف ناجح
+      return true;
     } on DioException catch (e) {
       if (e.response?.statusCode == 204 || e.response?.statusCode == 200) {
-        return true; // في حالة نجاح بدون محتوى
+        return true;
       }
       throw _handleDioError(e);
     } catch (e) {
       throw Exception('Failed to delete transaction: $e');
     }
   }
-Future<BudgetDto> getBudget() async {
-  try {
-    final response = await _apiService.get(
-      ApiEndpoints.budget,
-      requiresAuth: true,
-    );
-    return BudgetDto.fromJson(response.data);
-  } on DioException catch (e) {
-    throw _handleDioError(e);
+  
+  Future<BudgetDto> getBudget() async {
+    try {
+      final response = await _apiService.get(
+        ApiEndpoints.budget,
+        requiresAuth: true,
+      );
+      return BudgetDto.fromJson(response.data);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
   }
-}
-
-Future<void> updateMonthlyBudget(double monthlyBudget) async {
-  try {
-    await _apiService.put(
-      ApiEndpoints.budget,
-      {'monthlyBudget': monthlyBudget},
-      requiresAuth: true,
-    );
-  } on DioException catch (e) {
-    throw _handleDioError(e);
+  
+  Future<void> updateMonthlyBudget(double monthlyBudget) async {
+    try {
+      await _apiService.put(
+        ApiEndpoints.budget,
+        {'monthlyBudget': monthlyBudget},
+        requiresAuth: true,
+      );
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
   }
-}Future<void> updateCategoryBudget(int categoryId, double budget) async {
-  try {
-    await _apiService.put(
-      'api/Budget/category',
-      {'categoryId': categoryId, 'budget': budget}, // تأكد من أن المفتاح 'budget' مطابق لـ DTO
-      requiresAuth: true,
-    );
-  } on DioException catch (e) {
-    throw _handleDioError(e);
+  
+  Future<void> updateCategoryBudget(int categoryId, double budget) async {
+    try {
+      await _apiService.put(
+        'api/Budget/category',
+        {'categoryId': categoryId, 'budget': budget},
+        requiresAuth: true,
+      );
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
   }
-}
+  
   // جلب ملخص للتحليلات
-Future<WalletSummary> getSummary({
-  required DateTime fromDate,
-  required DateTime toDate,
-}) async {
-  try {
-    final response = await _apiService.get(
-      ApiEndpoints.walletSummary,
-      queryParams: {
-        'fromDate': fromDate.toIso8601String(),
-        'toDate': toDate.toIso8601String(),
-      },
-      requiresAuth: true,
-    );
+  Future<WalletSummary> getSummary({
+    required DateTime fromDate,
+    required DateTime toDate,
+  }) async {
+    try {
+      final response = await _apiService.get(
+        ApiEndpoints.walletSummary,
+        queryParams: {
+          'fromDate': fromDate.toIso8601String(),
+          'toDate': toDate.toIso8601String(),
+        },
+        requiresAuth: true,
+      );
 
-    return WalletSummary.fromJson(response.data);
-  } on DioException catch (e) {
-    throw _handleDioError(e);
-  } catch (e) {
-    throw Exception('Failed to load summary: $e');
+      return WalletSummary.fromJson(response.data);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      throw Exception('Failed to load summary: $e');
+    }
   }
-}
+  
   // معالجة أخطاء Dio
   String _handleDioError(DioException e) {
     if (e.response != null) {
