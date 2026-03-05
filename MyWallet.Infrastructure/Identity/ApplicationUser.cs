@@ -16,5 +16,6 @@ namespace MyWallet.Infrastructure.Identity
         public bool IsDeleted { get; set; } = false;
 
         public string? ImagePath { get; set; }
+        public string? Currency { get; set; }
     }
 }

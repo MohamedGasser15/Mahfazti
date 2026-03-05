@@ -90,5 +90,18 @@ namespace MyWallet.Controllers
                 return BadRequest(new { message = "حدث خطأ", error = ex.Message });
             }
         }
+
+        [Authorize]
+        [HttpPost("set-currency")]
+        public async Task<IActionResult> SetCurrency([FromBody] SetCurrencyDto dto)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var result = await _authService.SetUserCurrencyAsync(userId, dto.Currency);
+
+            if (!result.Success)
+                return BadRequest(result);
+
+            return Ok(result);
+        }
     }
 }

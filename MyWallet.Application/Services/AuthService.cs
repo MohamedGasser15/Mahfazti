@@ -363,6 +363,49 @@ namespace MyWallet.Application.Services
             var user = await _userManager.FindByEmailAsync(email);
             return user != null;
         }
+        public async Task<AuthResponseDto> SetUserCurrencyAsync(string userId, string currency)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return new AuthResponseDto
+                    {
+                        Success = false,
+                        Message = "المستخدم غير موجود"
+                    };
+                }
+
+                user.Currency = currency;
+                var result = await _userManager.UpdateAsync(user);
+
+                if (!result.Succeeded)
+                {
+                    return new AuthResponseDto
+                    {
+                        Success = false,
+                        Message = "فشل تحديث العملة",
+                        Errors = result.Errors.Select(e => e.Description).ToList()
+                    };
+                }
+
+                return new AuthResponseDto
+                {
+                    Success = true,
+                    Message = "تم تحديث العملة بنجاح"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new AuthResponseDto
+                {
+                    Success = false,
+                    Message = "حدث خطأ أثناء تحديث العملة",
+                    Errors = new List<string> { ex.Message }
+                };
+            }
+        }
         private async Task<string> GenerateJwtToken(ApplicationUser user)
         {
             var claims = new List<Claim>

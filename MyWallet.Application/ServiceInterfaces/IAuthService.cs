@@ -15,5 +15,6 @@ namespace MyWallet.Application.ServiceInterfaces
         Task<bool> CheckEmailExists(string email);
         Task<AuthResponseDto> ResendVerificationCodeAsync(SendVerificationDto dto);
         Task<AuthResponseDto> VerifyCodeAsync(VerifyCodeDto dto);
+        Task<AuthResponseDto> SetUserCurrencyAsync(string userId, string currency);
     }
 }
