@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:my_wallet/core/constants/api_constants.dart';
 import 'package:my_wallet/core/services/api_service.dart';
 import 'package:my_wallet/features/wallet/data/models/budget_models.dart';
+import 'package:my_wallet/features/wallet/data/models/voice_expense_model.dart';
 import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
 
 class WalletRepository {
@@ -83,52 +84,32 @@ class WalletRepository {
   }
   
   // إضافة معاملة جديدة
-  Future<WalletTransaction> addTransaction({
-    required String title,
-    String? description,
-    required double amount,
-    required String type, // "Deposit" أو "Withdrawal"
-    required int categoryId,
-    DateTime? transactionDate,
-    bool isRecurring = false,
-    String? recurringInterval,
-    DateTime? recurringEndDate,
-  }) async {
-    try {
-      final body = <String, dynamic>{
-        'title': title,
-        'amount': amount,
-        'type': type,
-        'categoryId': categoryId,
-        'isRecurring': isRecurring,
-      };
-
-      if (description != null && description.isNotEmpty) {
-        body['description'] = description;
-      }
-      if (transactionDate != null) {
-        body['transactionDate'] = transactionDate.toIso8601String();
-      }
-      if (recurringInterval != null) {
-        body['recurringInterval'] = recurringInterval;
-      }
-      if (recurringEndDate != null) {
-        body['recurringEndDate'] = recurringEndDate.toIso8601String();
-      }
-
-      final response = await _apiService.post(
-        ApiEndpoints.walletAddTransaction,
-        body,
-        requiresAuth: true,
-      );
-
-      return WalletTransaction.fromJson(response.data);
-    } on DioException catch (e) {
-      throw _handleDioError(e);
-    } catch (e) {
-      throw Exception('Failed to add transaction: $e');
+Future<WalletTransaction> addTransaction({
+  String? description,
+  required double amount,
+  required String type,
+  required int categoryId,
+}) async {
+  try {
+    final body = <String, dynamic>{
+      'amount': amount,
+      'type': type,
+      'categoryId': categoryId,
+    };
+    if (description != null && description.isNotEmpty) {
+      body['description'] = description;
     }
+
+    final response = await _apiService.post(
+      ApiEndpoints.walletAddTransaction,
+      body,
+      requiresAuth: true,
+    );
+    return WalletTransaction.fromJson(response.data);
+  } on DioException catch (e) {
+    throw _handleDioError(e);
   }
+}
   
   // تحديث معاملة موجودة
   Future<WalletTransaction> updateTransaction(
@@ -179,7 +160,19 @@ class WalletRepository {
       throw Exception('Failed to update transaction: $e');
     }
   }
-  
+  // في wallet_repository.dart - أضف الميثود دي
+Future<VoiceExpenseResult> parseVoiceText(String text, {String language = 'ar'}) async {
+  try {
+    final response = await _apiService.post(
+      'api/wallet/voice-parse',
+      {'text': text, 'language': language},
+      requiresAuth: true,
+    );
+    return VoiceExpenseResult.fromJson(response.data);
+  } on DioException catch (e) {
+    throw _handleDioError(e);
+  }
+}
   // حذف معاملة (soft delete)
   Future<bool> deleteTransaction(int transactionId) async {
     try {
