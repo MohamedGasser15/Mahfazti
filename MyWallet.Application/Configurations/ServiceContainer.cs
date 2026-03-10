@@ -23,6 +23,7 @@ namespace MyWallet.Application.Configurations
             services.AddScoped<IWalletService, WalletService>();
             services.AddScoped<IBudgetService, BudgetService>();
             services.AddScoped<ICategoryService, CategoryService>();
+            services.AddScoped<IVoiceExpenseService, VoiceExpenseService>();
             return services;
         }
     }

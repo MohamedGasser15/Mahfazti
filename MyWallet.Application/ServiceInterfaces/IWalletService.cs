@@ -20,7 +20,8 @@ namespace MyWallet.Application.ServiceInterfaces
         Task<TransactionListResponseDto> GetTransactionsAsync(string userId, TransactionFilterDto filter);
         Task<WalletTransactionDto> AddTransactionAsync(string userId, AddTransactionDto dto);
         Task<bool> DeleteTransactionAsync(int id, string userId); // soft delete
-
+        Task<WalletTransactionDto> UpdateTransactionAsync(
+            int id, string userId, AddTransactionDto dto);
         // Summary for analytics
         Task<object> GetSummaryAsync(string userId, DateTime? fromDate, DateTime? toDate);
     }

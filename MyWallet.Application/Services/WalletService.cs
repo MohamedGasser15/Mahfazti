@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using MyWallet.Application.DTOs.Wallet;
 using MyWallet.Application.ServiceInterfaces;
+using MyWallet.Domain.Entites;
 using MyWallet.Infrastructure.Entities;
 using MyWallet.Infrastructure.Persistence.IRepository;
 using System;
@@ -15,13 +16,16 @@ namespace MyWallet.Application.Services
     public class WalletService : IWalletService
     {
         private readonly IRepository<WalletTransaction> _transactionRepository;
+        private readonly IRepository<Category> _categoryRepository;  
         private readonly ILogger<WalletService> _logger;
 
         public WalletService(
             IRepository<WalletTransaction> transactionRepository,
+            IRepository<Category> categoryRepository,              
             ILogger<WalletService> logger)
         {
             _transactionRepository = transactionRepository;
+            _categoryRepository = categoryRepository;             
             _logger = logger;
         }
 
@@ -161,24 +165,26 @@ namespace MyWallet.Application.Services
 
         public async Task<WalletTransactionDto> AddTransactionAsync(string userId, AddTransactionDto dto)
         {
+            var category = await _categoryRepository.GetAsync(
+                filter: c => c.Id == dto.CategoryId,
+                isTracking: false
+            );
+
             var transaction = new WalletTransaction
             {
                 UserId = userId,
-                Title = dto.Title,
+                Title = GenerateTitle(dto.Type, category),
                 Description = dto.Description,
                 Amount = dto.Amount,
                 Type = dto.Type,
-                CategoryId = dto.CategoryId, // استخدام CategoryId
-                TransactionDate = dto.TransactionDate,
-                IsRecurring = dto.IsRecurring,
-                RecurringInterval = dto.RecurringInterval,
-                RecurringEndDate = dto.RecurringEndDate,
+                CategoryId = dto.CategoryId,
+                TransactionDate = DateTime.UtcNow,
+                IsRecurring = false,
                 CreatedAt = DateTime.UtcNow
             };
 
             await _transactionRepository.CreateAsync(transaction);
 
-            // بعد الإضافة، نعيد تحميل المعاملة مع التصنيف
             var created = await _transactionRepository.GetAsync(
                 filter: t => t.Id == transaction.Id,
                 includeProperties: "Category",
@@ -188,6 +194,67 @@ namespace MyWallet.Application.Services
             return MapToDto(created!);
         }
 
+        public async Task<WalletTransactionDto> UpdateTransactionAsync(
+            int id, string userId, AddTransactionDto dto)
+        {
+            var transaction = await _transactionRepository.GetAsync(
+                filter: t => t.Id == id && t.UserId == userId && !t.IsDeleted,
+                isTracking: true
+            );
+
+            if (transaction == null)
+                throw new KeyNotFoundException("Transaction not found");
+
+            var category = await _categoryRepository.GetAsync(
+                filter: c => c.Id == dto.CategoryId,
+                isTracking: false
+            );
+
+            transaction.Title = GenerateTitle(dto.Type, category);
+            transaction.Description = dto.Description;
+            transaction.Amount = dto.Amount;
+            transaction.Type = dto.Type;
+            transaction.CategoryId = dto.CategoryId;
+            transaction.UpdatedAt = DateTime.UtcNow;
+
+            await _transactionRepository.SaveAsync();
+
+            var updated = await _transactionRepository.GetAsync(
+                filter: t => t.Id == transaction.Id,
+                includeProperties: "Category",
+                isTracking: false
+            );
+
+            return MapToDto(updated!);
+        }
+
+        // ✅ دالة توليد العنوان الذكي
+        private static string GenerateTitle(string type, Category? category)
+        {
+            if (category == null)
+                return type == "Deposit" ? "General Income" : "General Expense";
+
+            return category.NameEn switch
+            {
+                // ===== Income Categories =====
+                "Salary" => "Work Income",
+                "Bonus" => "Extra Earnings",
+                "Income" => "Money Received",
+
+                // ===== Expense Categories =====
+                "Food" => "Food & Drinks",
+                "Transport" => "Transport",
+                "Shopping" => "Shopping",
+                "Entertainment" => "Entertainment",
+                "Health" => "Health & Care",
+                "Bills" => "Bills & Utilities",
+                "Education" => "Education",
+                "Other" => type == "Deposit" ? "Other Income" : "Other Expense",
+
+                // fallback
+                _ => type == "Deposit" ? "Income" : "Expense"
+            };
+        }
         public async Task<bool> DeleteTransactionAsync(int id, string userId)
         {
             var transaction = await _transactionRepository.GetAsync(
@@ -280,9 +347,6 @@ namespace MyWallet.Application.Services
                 CategoryNameAr = entity.Category?.NameAr,
                 CategoryNameEn = entity.Category?.NameEn,
                 TransactionDate = entity.TransactionDate,
-                IsRecurring = entity.IsRecurring,
-                RecurringInterval = entity.RecurringInterval,
-                RecurringEndDate = entity.RecurringEndDate
             };
         }
     }

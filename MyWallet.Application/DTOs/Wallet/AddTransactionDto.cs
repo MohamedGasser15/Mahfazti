@@ -6,9 +6,6 @@ namespace MyWallet.Application.DTOs.Wallet
 {
     public class AddTransactionDto
     {
-        [Required]
-        public string Title { get; set; } = string.Empty;
-
         public string? Description { get; set; }
 
         [Required]
@@ -20,12 +17,5 @@ namespace MyWallet.Application.DTOs.Wallet
 
         [Required]
         public int? CategoryId { get; set; }
-
-        [Required]
-        public DateTime TransactionDate { get; set; }
-
-        public bool IsRecurring { get; set; }
-        public string? RecurringInterval { get; set; }
-        public DateTime? RecurringEndDate { get; set; }
     }
 }

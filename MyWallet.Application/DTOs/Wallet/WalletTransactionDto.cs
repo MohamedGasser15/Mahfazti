@@ -13,9 +13,6 @@ namespace MyWallet.Application.DTOs.Wallet
         public string? CategoryNameAr { get; set; }
         public string? CategoryNameEn { get; set; }
         public DateTime TransactionDate { get; set; }
-        public bool IsRecurring { get; set; }
-        public string? RecurringInterval { get; set; }
-        public DateTime? RecurringEndDate { get; set; }
 
         public bool IsDeposit => Type == "Deposit";
         public bool IsWithdrawal => Type == "Withdrawal";

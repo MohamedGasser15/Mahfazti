@@ -14,10 +14,12 @@ namespace MyWallet.Controllers
     public class WalletController : ControllerBase
     {
         private readonly IWalletService _walletService;
+        private readonly IVoiceExpenseService _voiceService;
 
-        public WalletController(IWalletService walletService)
+        public WalletController(IWalletService walletService, IVoiceExpenseService voiceService)
         {
             _walletService = walletService;
+            _voiceService = voiceService;
         }
 
         private string GetUserId()
@@ -83,7 +85,14 @@ namespace MyWallet.Controllers
                 return NotFound();
             return NoContent();
         }
-
+        [HttpPost("voice-parse")]
+        public async Task<IActionResult> ParseVoiceExpense(
+    [FromBody] VoiceExpenseRequestDto dto,
+    [FromServices] IVoiceExpenseService voiceService)
+        {
+            var result = await _voiceService.ParseVoiceTextAsync(dto.Text, dto.Language);
+            return Ok(result);
+        }
         // GET: api/wallet/summary
         [HttpGet("summary")]
         public async Task<IActionResult> GetSummary([FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate)

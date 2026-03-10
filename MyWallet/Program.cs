@@ -6,6 +6,7 @@ using Microsoft.OpenApi.Models;
 using MyWallet.Application.Configurations;
 using MyWallet.Infrastructure.Configurations;
 using MyWallet.Infrastructure.Data;
+using MyWallet.Infrastructure.Data.Seeders;
 using MyWallet.Infrastructure.Identity;
 using Scalar.AspNetCore;
 using System.Security.Claims;
@@ -180,5 +181,10 @@ app.MapGet("/", context =>
     context.Response.Redirect("/scalar");
     return Task.CompletedTask;
 });
-
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await db.Database.MigrateAsync();
+    await CategorySeeder.SeedAsync(db); // ✅
+}
 app.Run();
