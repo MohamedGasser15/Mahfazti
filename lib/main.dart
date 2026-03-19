@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:my_wallet/core/services/hide_balance_service.dart'; // <-- أضف هذا
 import 'package:my_wallet/core/services/theme_service.dart';
+import 'package:my_wallet/core/services/watch_service.dart';
 import 'package:my_wallet/core/themes/app_theme.dart';
 import 'package:my_wallet/core/utils/language_service.dart';
 import 'package:my_wallet/core/utils/navigation_service.dart';
@@ -33,7 +34,7 @@ void main() async {
     systemNavigationBarColor: Colors.black,
     systemNavigationBarIconBrightness: Brightness.light,
   ));
-  
+  WatchService.initialize();
   await SharedPrefs.init();
   await ThemeService.init();
   await LanguageService.init();

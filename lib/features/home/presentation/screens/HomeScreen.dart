@@ -7,6 +7,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:my_wallet/core/services/hide_balance_service.dart';
 import 'package:my_wallet/core/services/message_service.dart';
+import 'package:my_wallet/core/services/watch_service.dart';
 import 'package:my_wallet/core/utils/api_error_handler.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/home/presentation/screens/TransactionsPage.dart';
@@ -265,31 +266,31 @@ class _HomeTabState extends State<HomeTab> {
     }
   }
 
-  Future<void> _loadHomeData() async {
+Future<void> _loadHomeData() async {
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
+  try {
+    final data = await _walletRepository.getHomeData();
     setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+      _homeData = data;
     });
-
-    try {
-      final data = await _walletRepository.getHomeData();
-      setState(() {
-        _homeData = data;
-      });
-    } catch (e) {
-      final errorMsg = ApiErrorHandler.getErrorMessage(e);
-      setState(() {
-        _errorMessage = errorMsg;
-      });
-      if (!ApiErrorHandler.isNetworkError(e)) {
-        MessageService.showError(errorMsg);
-      }
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
+  } catch (e) {
+    final errorMsg = ApiErrorHandler.getErrorMessage(e);
+    setState(() {
+      _errorMessage = errorMsg;
+    });
+    if (!ApiErrorHandler.isNetworkError(e)) {
+      MessageService.showError(errorMsg);
     }
+  } finally {
+    setState(() {
+      _isLoading = false;
+    });
+    WatchService.pushDataToWatch(); // ✅ ده بس اللي اتضاف
   }
+}
 
   Future<void> _refreshData() async {
     await _loadHomeData();
