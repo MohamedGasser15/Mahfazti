@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -36,29 +37,32 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   final PageController _pageController = PageController();
 
-  @override
-  Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
-    return Scaffold(
-      backgroundColor: isDarkMode ? Colors.black : Colors.white,
-      extendBody: true,
-      body: Stack(
-        children: [
-          PageView(
-            controller: _pageController,
-            onPageChanged: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
-            },
-            children: [
-              HomeTab(pageController: _pageController),
-              const AnalyticsScreen(),
-              const TransactionsTab(),
-              const BudgetPage(),
-            ],
-          ),
+@override
+Widget build(BuildContext context) {
+  final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+  final isIOS = Platform.isIOS;
+
+  return Scaffold(
+    backgroundColor: isDarkMode ? Colors.black : Colors.white,
+    extendBody: isIOS, // Only extend body on iOS for floating overlay
+    bottomNavigationBar: isIOS ? null : _buildAndroidBottomNav(isDarkMode),
+    body: Stack(
+      children: [
+        PageView(
+          controller: _pageController,
+          onPageChanged: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
+          },
+          children: [
+            HomeTab(pageController: _pageController),
+            const AnalyticsScreen(),
+            const TransactionsTab(),
+            const BudgetPage(),
+          ],
+        ),
+        if (isIOS)
           Align(
             alignment: Alignment.bottomCenter,
             child: Padding(
@@ -66,10 +70,107 @@ class _HomeScreenState extends State<HomeScreen> {
               child: _buildFloatingNav(isDarkMode),
             ),
           ),
+      ],
+    ),
+  );
+}
+
+// Android bottom navigation bar (solid with top border)
+Widget _buildAndroidBottomNav(bool isDarkMode) {
+  return Container(
+    height: 70,
+    decoration: BoxDecoration(
+      color: isDarkMode ? Colors.black : Colors.white,
+      border: Border(
+        top: BorderSide(
+          color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+          width: 1,
+        ),
+      ),
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        _buildAndroidNavItem(
+          0,
+          FontAwesomeIcons.house,
+          FontAwesomeIcons.solidHouse,
+          isDarkMode,
+        ),
+        _buildAndroidNavItem(
+          1,
+          FontAwesomeIcons.chartSimple,
+          FontAwesomeIcons.chartSimple,
+          isDarkMode,
+        ),
+        _buildAndroidNavItem(
+          2,
+          FontAwesomeIcons.receipt,
+          FontAwesomeIcons.receipt,
+          isDarkMode,
+        ),
+        _buildAndroidNavItem(
+          3,
+          FontAwesomeIcons.wallet,
+          FontAwesomeIcons.wallet,
+          isDarkMode,
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildAndroidNavItem(
+  int index,
+  IconData outlineIcon,
+  IconData filledIcon,
+  bool isDarkMode,
+) {
+  final isSelected = _currentIndex == index;
+
+  return GestureDetector(
+    onTap: () {
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    },
+    child: Container(
+      width: 70,
+      height: 70,
+      decoration: BoxDecoration(
+        color: isSelected
+            ? (isDarkMode ? Colors.grey[900] : Colors.grey[100])
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            isSelected ? filledIcon : outlineIcon,
+            size: 24,
+            color: isSelected
+                ? (isDarkMode ? Colors.white : Colors.black)
+                : (isDarkMode ? Colors.grey[600] : Colors.grey[400]),
+          ),
+          if (isSelected)
+            Container(
+              width: 4,
+              height: 4,
+              margin: const EdgeInsets.only(top: 4),
+              decoration: BoxDecoration(
+                color: isDarkMode ? Colors.white : Colors.black,
+                shape: BoxShape.circle,
+              ),
+            ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   Widget _buildFloatingNav(bool isDarkMode) {
     return ClipRRect(
@@ -2225,26 +2326,26 @@ Row(
         ),
       ),
        Positioned(
-          bottom: 105,
-          left: 0,
-          right: 0,
-          child: Center(
-            child: VoiceExpenseButton(
-              isDarkMode: isDarkMode,
-              onResult: (result) {
-                if (result.isSuccess) {
-                  final type = result.transactionType == 'Deposit'
-                      ? TransactionType.income
-                      : TransactionType.expense;
-                  _showAddTransactionDialog(type, prefillFromVoice: result);
-                } else {
-                  MessageService.showError(
-                      result.errorMessage ?? 'فشل تحليل الصوت');
-                }
-              },
-            ),
-          ),
-        ),
+  bottom: Platform.isIOS ? 100 : 20,
+  left: 0,
+  right: 0,
+  child: Center(
+    child: VoiceExpenseButton(
+      isDarkMode: isDarkMode,
+      onResult: (result) {
+        if (result.isSuccess) {
+          final type = result.transactionType == 'Deposit'
+              ? TransactionType.income
+              : TransactionType.expense;
+          _showAddTransactionDialog(type, prefillFromVoice: result);
+        } else {
+          MessageService.showError(
+              result.errorMessage ?? 'فشل تحليل الصوت');
+        }
+      },
+    ),
+  ),
+),
       ],
     )
   );}
