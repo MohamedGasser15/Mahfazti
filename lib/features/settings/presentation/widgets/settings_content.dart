@@ -8,6 +8,8 @@ import 'package:my_wallet/core/services/theme_service.dart';
 import 'package:my_wallet/core/utils/language_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/auth/presentation/screens/currency_selection_screen.dart';
+import 'package:my_wallet/features/profile/data/models/user_profile.dart';
+import 'package:my_wallet/features/profile/data/repositories/profile_repository.dart';
 import 'package:my_wallet/features/profile/presentation/screens/profile_edit_screen.dart';
 import 'package:my_wallet/features/settings/presentation/screens/app_icon_screen.dart';
 import 'package:provider/provider.dart';
@@ -31,11 +33,14 @@ class _SettingsContentState extends State<SettingsContent> {
   bool _isEnglish = true;
   String _currentTheme = 'system';
   String _currencyCode = 'USD';
+  UserProfile? _profile;
+  bool _isLoadingProfile = true;
   @override
   void initState() {
     super.initState();
     _loadSettings();
     _loadCurrency();
+     _loadProfile();
     // الاستماع لتغييرات الثيم
     ThemeService.themeNotifier.addListener(() {
       if (mounted) {
@@ -56,7 +61,36 @@ Future<void> _loadCurrency() async {
     _currencyCode = code ?? 'USD';
   });
 }
+Future<void> _loadProfile({bool forceRefresh = false}) async {
+  // If we already have data and not forcing refresh, do nothing
+  if (_profile != null && !forceRefresh) return;
 
+  // Try to load from cache immediately
+  final cached = await ProfileRepository().getCachedProfile();
+  if (cached != null && !forceRefresh) {
+    setState(() {
+      _profile = cached;
+      _isLoadingProfile = false;
+    });
+  } else {
+    setState(() => _isLoadingProfile = true);
+  }
+
+  // Then refresh from API (always when forceRefresh or if no cache)
+  try {
+    final fresh = await ProfileRepository().getProfile();
+    if (mounted && fresh != _profile) {
+      setState(() => _profile = fresh);
+    }
+  } catch (e) {
+    // If API fails, keep the cached data (if any)
+  } finally {
+    if (mounted) {
+      setState(() => _isLoadingProfile = false);
+    }
+  }
+}
+  
 // دالة لفتح شاشة اختيار العملة
 Future<void> _openCurrencySelection() async {
   final result = await Navigator.push(
@@ -508,95 +542,106 @@ Future<void> _openCurrencySelection() async {
       ),
     );
   }
+void _onProfileUpdated() {
+  _loadProfile(forceRefresh: true);
+}
+// features/settings/presentation/widgets/settings_content.dart
 
-  Widget _buildProfileHeader(bool isDarkMode) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: const BoxDecoration(
-              color: Colors.blueAccent,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.person,
-              size: 40,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'John Doe',
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.white : Colors.black,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'john.doe@email.com',
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                GestureDetector(
-onTap: () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => ProfileEditScreen(
-        onProfileUpdated: () {
-          // تحديث البيانات في الهيدر بعد الرجوع
-          setState(() {
-            // ممكن تعيد تحميل البيانات من SharedPrefs هنا
-          });
-        },
-      ),
+Widget _buildProfileHeader(bool isDarkMode) {
+  final iconColor = isDarkMode ? Colors.white : Colors.black;
+  final bgColor = isDarkMode ? Colors.grey[900] : Colors.grey[50];
+  final borderColor = isDarkMode ? Colors.grey[800]! : Colors.grey[200]!;
+
+  return Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: bgColor,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: borderColor),
     ),
-  );
-},
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isDarkMode ? Colors.grey[800] : Colors.grey[100],
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      context.l10n.manage,
-                      style: TextStyle(
-                        color: isDarkMode ? Colors.white : Colors.black,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+    child: Row(
+      children: [
+        Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isDarkMode ? Colors.grey[800] : Colors.grey[200], // subtle background
+            border: Border.all(color: borderColor, width: 1),
+            image: _profile?.profileImageUrl != null
+                ? DecorationImage(
+                    image: NetworkImage(_profile!.profileImageUrl!),
+                    fit: BoxFit.cover,
+                  )
+                : null,
+          ),
+          child: _profile?.profileImageUrl == null
+              ? Icon(
+                  Icons.person,
+                  size: 40,
+                  color: iconColor,
+                )
+              : null,
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _isLoadingProfile
+                    ? 'Loading...'
+                    : (_profile?.fullName ?? 'User'),
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white : Colors.black,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _profile?.email ?? 'email@example.com',
+                style: TextStyle(
+                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProfileEditScreen(
+                        onProfileUpdated: _onProfileUpdated,
                       ),
                     ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isDarkMode ? Colors.grey[800] : Colors.grey[100],
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    context.l10n.manage,
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.white : Colors.black,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAppSettings(bool isDarkMode) {
+        ),
+      ],
+    ),
+  );
+} 
+Widget _buildAppSettings(bool isDarkMode) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

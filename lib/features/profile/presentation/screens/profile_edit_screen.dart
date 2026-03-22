@@ -15,8 +15,7 @@ class ProfileEditScreen extends StatefulWidget {
   State<ProfileEditScreen> createState() => _ProfileEditScreenState();
 }
 
-class _ProfileEditScreenState extends State<ProfileEditScreen>
-    with SingleTickerProviderStateMixin {
+class _ProfileEditScreenState extends State<ProfileEditScreen> {
   final _formKey = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
   final _userNameController = TextEditingController();
@@ -27,36 +26,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
   bool _isSaving = false;
   String? _errorMessage;
 
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-
   final ProfileRepository _profileRepository = ProfileRepository();
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
-    _initAnimations();
-  }
-
-  void _initAnimations() {
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOut,
-    );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOut,
-    ));
-    _animationController.forward();
   }
 
   Future<void> _loadProfile() async {
@@ -130,7 +105,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
 
   @override
   void dispose() {
-    _animationController.dispose();
     _fullNameController.dispose();
     _userNameController.dispose();
     _phoneController.dispose();
@@ -141,7 +115,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDarkMode = theme.brightness == Brightness.dark;
     final l10n = context.l10n;
 
     return Scaffold(
@@ -166,270 +139,106 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : FadeTransition(
-              opacity: _fadeAnimation,
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.all(24),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      // Profile picture section with creative design
-                      _buildProfilePictureSection(theme, isDarkMode),
-
-                      const SizedBox(height: 32),
-
-                      // Form fields with card design
-                      _buildAnimatedField(
-                        index: 0,
-                        child: CustomTextField(
-                          controller: _fullNameController,
-                          label: l10n.fullName,
-                          hintText: l10n.enterFullName,
-                          prefixIcon: Icon(
-                            Icons.person_outline,
-                            color: theme.colorScheme.primary,
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return l10n.pleaseEnterFullName;
-                            }
-                            return null;
-                          },
+          : SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.all(24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    CustomTextField(
+                      controller: _fullNameController,
+                      label: l10n.fullName,
+                      hintText: l10n.enterFullName,
+                      prefixIcon: Icon(
+                        Icons.person_outline,
+                        color: theme.colorScheme.primary,
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return l10n.pleaseEnterFullName;
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    CustomTextField(
+                      controller: _userNameController,
+                      label: l10n.userName,
+                      hintText: l10n.enterUserName,
+                      prefixIcon: Icon(
+                        Icons.alternate_email,
+                        color: theme.colorScheme.primary,
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return l10n.pleaseEnterUserName;
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    CustomTextField(
+                      controller: _phoneController,
+                      label: l10n.phoneNumber,
+                      hintText: l10n.enterPhoneNumber,
+                      keyboardType: TextInputType.phone,
+                      prefixIcon: Icon(
+                        Icons.phone_outlined,
+                        color: theme.colorScheme.primary,
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return l10n.pleaseEnterPhoneNumber;
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    CustomTextField(
+                      controller: _emailController,
+                      label: l10n.email,
+                      hintText: l10n.email,
+                      prefixIcon: Icon(
+                        Icons.email_outlined,
+                        color: theme.colorScheme.primary.withOpacity(0.5),
+                      ),
+                      enabled: false,
+                    ),
+                    const SizedBox(height: 32),
+                    if (_errorMessage != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.error.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: theme.colorScheme.error.withOpacity(0.5)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.error_outline, color: theme.colorScheme.error),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _errorMessage!,
+                                style: TextStyle(color: theme.colorScheme.error),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-
-                      const SizedBox(height: 16),
-
-                      _buildAnimatedField(
-                        index: 1,
-                        child: CustomTextField(
-                          controller: _userNameController,
-                          label: l10n.userName,
-                          hintText: l10n.enterUserName,
-                          prefixIcon: Icon(
-                            Icons.alternate_email,
-                            color: theme.colorScheme.primary,
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return l10n.pleaseEnterUserName;
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      _buildAnimatedField(
-                        index: 2,
-                        child: CustomTextField(
-                          controller: _phoneController,
-                          label: l10n.phoneNumber,
-                          hintText: l10n.enterPhoneNumber,
-                          keyboardType: TextInputType.phone,
-                          prefixIcon: Icon(
-                            Icons.phone_outlined,
-                            color: theme.colorScheme.primary,
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return l10n.pleaseEnterPhoneNumber;
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      _buildAnimatedField(
-                        index: 3,
-                        child: CustomTextField(
-                          controller: _emailController,
-                          label: l10n.email,
-                          hintText: l10n.email,
-                          prefixIcon: Icon(
-                            Icons.email_outlined,
-                            color: theme.colorScheme.primary.withOpacity(0.5),
-                          ),
-                          enabled: false,
-                        ),
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // Error message if any
-                      if (_errorMessage != null)
-                        _buildErrorContainer(theme),
-
-                      const SizedBox(height: 16),
-
-                      // Save button with creative animation
-                      _buildSaveButton(theme),
-                    ],
-                  ),
+                    const SizedBox(height: 16),
+                    CustomButton(
+                      text: l10n.save,
+                      onPressed: _saveProfile,
+                      isLoading: _isSaving,
+                      backgroundColor: theme.colorScheme.primary,
+                      textColor: theme.colorScheme.onPrimary,
+                    ),
+                  ],
                 ),
               ),
             ),
-    );
-  }
-
-  Widget _buildProfilePictureSection(ThemeData theme, bool isDarkMode) {
-    return Center(
-      child: Stack(
-        children: [
-          // Profile image with gradient border
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: SweepGradient(
-                colors: [
-                  theme.colorScheme.primary,
-                  theme.colorScheme.secondary,
-                  theme.colorScheme.primary.withOpacity(0.5),
-                  theme.colorScheme.primary,
-                ],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: theme.colorScheme.primary.withOpacity(0.3),
-                  blurRadius: 20,
-                  spreadRadius: 5,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(3), // border width
-              child: Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: theme.scaffoldBackgroundColor,
-                ),
-                child: const Icon(
-                  Icons.person,
-                  size: 60,
-                  color: Colors.grey,
-                ),
-              ),
-            ),
-          ),
-
-         // Camera button with animation
-Positioned(
-  bottom: 0,
-  right: 0,
-  child: TweenAnimationBuilder<double>(
-    tween: Tween(begin: 0.0, end: 1.0),
-    duration: const Duration(milliseconds: 500),
-    curve: Curves.elasticOut,
-    builder: (context, value, child) {
-      return Transform.scale(
-        scale: value,
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primary,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: theme.scaffoldBackgroundColor,
-              width: 3,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: theme.colorScheme.primary.withOpacity(0.4),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: IconButton(
-            icon: Icon(
-              Icons.camera_alt,
-              size: 18,
-              color: isDarkMode ? Colors.black : Colors.white, // <= هنا
-            ),
-            padding: EdgeInsets.zero,
-            onPressed: () {
-              // TODO: Implement image picker
-            },
-          ),
-        ),
-      );
-    },
-  ),
-),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAnimatedField({required int index, required Widget child}) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: Duration(milliseconds: 400 + index * 100),
-      curve: Curves.easeOutQuad,
-      builder: (context, value, childWidget) {
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(0, 20 * (1 - value)),
-            child: childWidget,
-          ),
-        );
-      },
-      child: child,
-    );
-  }
-
-  Widget _buildErrorContainer(ThemeData theme) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.error.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: theme.colorScheme.error.withOpacity(0.5)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline, color: theme.colorScheme.error),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              _errorMessage!,
-              style: TextStyle(color: theme.colorScheme.error),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSaveButton(ThemeData theme) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 700),
-      curve: Curves.easeOutBack,
-      builder: (context, value, child) {
-        return Transform.scale(
-          scale: value,
-          child: child,
-        );
-      },
-      child: CustomButton(
-        text: context.l10n.save,
-        onPressed: _saveProfile,
-        isLoading: _isSaving,
-        backgroundColor: theme.colorScheme.primary,
-        textColor: theme.colorScheme.onPrimary,
-      ),
     );
   }
 }
