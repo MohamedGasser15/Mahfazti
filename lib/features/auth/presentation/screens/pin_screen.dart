@@ -157,16 +157,16 @@ class _PinScreenState extends State<PinScreen>
     }
   }
 
-  void _showBiometricBottomSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => BiometricBottomSheet(biometricName: _biometricName),
-    ).then((enabled) {
-      if (enabled == true) _navigateToHome();
-    });
-  }
+void _showBiometricBottomSheet() {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => BiometricBottomSheet(biometricName: _biometricName),
+  ).then((_) {
+    _navigateToHome();
+  });
+}
 
   void _onForgotPin() {
     showDialog(

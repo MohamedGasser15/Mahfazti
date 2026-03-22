@@ -37,6 +37,8 @@ class _SettingsContentState extends State<SettingsContent> {
   String _currencyCode = 'USD';
   UserProfile? _profile;
   bool _isLoadingProfile = true;
+  bool _hasBiometricSupport = false;
+String _biometricType = ''; // 'face' or 'fingerprint'
   @override
   void initState() {
     super.initState();
@@ -105,22 +107,26 @@ Future<void> _openCurrencySelection() async {
     await _loadCurrency(); // إعادة تحميل العملة المعروضة
   }
 }
-  Future<void> _loadSettings() async {
-    // تحميل إعدادات البايومتريك
-    final hasSupport = await BiometricService.hasBiometricSupport();
-    final isEnabled = await BiometricService.isBiometricEnabled();
-    
-    // تحميل اللغة الحالية
-    final locale = await LanguageService.getSavedLocale();
-    
-    // تحميل الثيم الحالي
-    await _loadCurrentTheme();
-    
-    setState(() {
-      _biometricEnabled = hasSupport && isEnabled;
-      _isEnglish = LanguageService.isEnglish(locale);
-    });
+Future<void> _loadSettings() async {
+  // تحميل إعدادات البايومتريك
+  _hasBiometricSupport = await BiometricService.hasBiometricSupport();
+  if (_hasBiometricSupport) {
+    final biometricName = await BiometricService.getBiometricName();
+    _biometricType = biometricName.toLowerCase();
   }
+  final isEnabled = await BiometricService.isBiometricEnabled();
+  
+  // تحميل اللغة الحالية
+  final locale = await LanguageService.getSavedLocale();
+  
+  // تحميل الثيم الحالي
+  await _loadCurrentTheme();
+  
+  setState(() {
+    _biometricEnabled = _hasBiometricSupport && isEnabled;
+    _isEnglish = LanguageService.isEnglish(locale);
+  });
+}
 
   Future<void> _loadCurrentTheme() async {
     final theme = await ThemeService.getSavedTheme();
@@ -1143,59 +1149,59 @@ Widget _buildSecuritySettings(bool isDarkMode) {
             ),
             
             // Sign with Face ID / Fingerprint
-           SwitchListTile(
-  value: _biometricEnabled,
-  onChanged: (value) async {
-    if (value) {
-      final success = await BiometricService.enableBiometric();
-      if (success) {
-        setState(() {
-          _biometricEnabled = true;
-        });
-      } else {
-        // Optionally show an error message
-        MessageService.showError('Could not enable biometric authentication');
-      }
-    } else {
-      await BiometricService.disableBiometric();
-      setState(() {
-        _biometricEnabled = false;
-      });
-    }
-  },
-  title: Text(
-    context.l10n.signWithFaceIDFingerprint,
-    style: TextStyle(
-      color: isDarkMode ? Colors.white : Colors.black,
-      fontWeight: FontWeight.w600,
-    ),
-  ),
-  subtitle: Text(
-    context.l10n.useBiometricAuthentication,
-    style: TextStyle(
-      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-      fontSize: 12,
-    ),
-  ),
-  secondary: Container(
-    width: 40,
-    height: 40,
-    decoration: BoxDecoration(
-      color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-      shape: BoxShape.circle,
-    ),
-    child: Icon(
-      Icons.fingerprint,
-      color: isDarkMode ? Colors.white : Colors.black,
-      size: 20,
-    ),
-  ),
-),
-            Divider(
-              height: 1,
-              color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-            ),
-            
+            if (_hasBiometricSupport) ...[
+              SwitchListTile(
+                value: _biometricEnabled,
+                onChanged: (value) async {
+                  if (value) {
+                    final success = await BiometricService.enableBiometric();
+                    if (success) {
+                      setState(() {
+                        _biometricEnabled = true;
+                      });
+                    } else {
+                      MessageService.showError('Could not enable biometric authentication');
+                    }
+                  } else {
+                    await BiometricService.disableBiometric();
+                    setState(() {
+                      _biometricEnabled = false;
+                    });
+                  }
+                },
+                title: Text(
+                  context.l10n.signWithFaceIDFingerprint,
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.white : Colors.black,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: Text(
+                  context.l10n.useBiometricAuthentication,
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                    fontSize: 12,
+                  ),
+                ),
+                secondary: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    _biometricType.contains('face') ? Icons.face : Icons.fingerprint,
+                    color: isDarkMode ? Colors.white : Colors.black,
+                    size: 20,
+                  ),
+                ),
+              ),
+              Divider(
+                height: 1,
+                color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+              ),
+            ],
             // Hide Balances
             SwitchListTile(
               value: hideService.isHidden,
