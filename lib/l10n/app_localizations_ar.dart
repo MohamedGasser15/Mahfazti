@@ -404,6 +404,42 @@ class AppLocalizationsAr extends AppLocalizations {
   String get selectLanguage => 'اختر اللغة';
 
   @override
+  String get enterCurrentPasscode => 'أدخل رمز المرور الحالي';
+
+  @override
+  String get currentPasscode => 'رمز المرور الحالي';
+
+  @override
+  String get enterNewPasscode => 'أدخل رمز المرور الجديد';
+
+  @override
+  String get newPasscode => 'رمز المرور الجديد';
+
+  @override
+  String get confirmNewPasscode => 'تأكيد رمز المرور الجديد';
+
+  @override
+  String get confirmPasscode => 'تأكيد رمز المرور';
+
+  @override
+  String get pleaseEnterCurrentPasscode => 'الرجاء إدخال رمز المرور الحالي';
+
+  @override
+  String get pleaseEnterNewPasscode => 'الرجاء إدخال رمز مرور جديد';
+
+  @override
+  String get pleaseConfirmNewPasscode => 'الرجاء تأكيد رمز المرور الجديد';
+
+  @override
+  String get passcodeMustBe6Digits => 'يجب أن يتكون رمز المرور من 6 أرقام';
+
+  @override
+  String get passcodesDoNotMatch => 'رمزا المرور غير متطابقين';
+
+  @override
+  String get passcodeChangedSuccess => 'تم تغيير رمز المرور بنجاح!';
+
+  @override
   String get welcomeBack => 'مرحبًا بعودتك،';
 
   @override

@@ -25,5 +25,6 @@ class ApiEndpoints {
   // Profile
   static const String profileGet = 'api/Profile/get';
   static const String profileUpdate = 'api/Profile/update';
+  static const String changePassword = 'api/Profile/change-password';
   static const String hideBalancesKey = 'hideBalances';
 }

@@ -617,7 +617,7 @@ abstract class AppLocalizations {
   /// No description provided for @userName.
   ///
   /// In en, this message translates to:
-  /// **'John Doe'**
+  /// **'Username'**
   String get userName;
 
   /// No description provided for @phoneNumber.
@@ -871,6 +871,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select Language'**
   String get selectLanguage;
+
+  /// No description provided for @enterCurrentPasscode.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter current passcode'**
+  String get enterCurrentPasscode;
+
+  /// No description provided for @currentPasscode.
+  ///
+  /// In en, this message translates to:
+  /// **'Current passcode'**
+  String get currentPasscode;
+
+  /// No description provided for @enterNewPasscode.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter new passcode'**
+  String get enterNewPasscode;
+
+  /// No description provided for @newPasscode.
+  ///
+  /// In en, this message translates to:
+  /// **'New passcode'**
+  String get newPasscode;
+
+  /// No description provided for @confirmNewPasscode.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm new passcode'**
+  String get confirmNewPasscode;
+
+  /// No description provided for @confirmPasscode.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm passcode'**
+  String get confirmPasscode;
+
+  /// No description provided for @pleaseEnterCurrentPasscode.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your current passcode'**
+  String get pleaseEnterCurrentPasscode;
+
+  /// No description provided for @pleaseEnterNewPasscode.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a new passcode'**
+  String get pleaseEnterNewPasscode;
+
+  /// No description provided for @pleaseConfirmNewPasscode.
+  ///
+  /// In en, this message translates to:
+  /// **'Please confirm your new passcode'**
+  String get pleaseConfirmNewPasscode;
+
+  /// No description provided for @passcodeMustBe6Digits.
+  ///
+  /// In en, this message translates to:
+  /// **'Passcode must be 6 digits'**
+  String get passcodeMustBe6Digits;
+
+  /// No description provided for @passcodesDoNotMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passcodes do not match'**
+  String get passcodesDoNotMatch;
+
+  /// No description provided for @passcodeChangedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Passcode changed successfully!'**
+  String get passcodeChangedSuccess;
 
   /// No description provided for @welcomeBack.
   ///

@@ -90,24 +90,37 @@ static Future<bool> authenticateWithFallback({
   }
 
   // Enable biometrics
-  static Future<void> enableBiometric() async {
-    try {
-      // First authenticate once
-      final authenticated = await _auth.authenticate(
-        localizedReason: 'Enable biometric authentication',
-        options: const AuthenticationOptions(
-          stickyAuth: true,
-          biometricOnly: true,
-        ),
-      );
-
-      if (authenticated) {
-        await SharedPrefs.setBool('biometric_enabled', true);
-      }
-    } on PlatformException catch (e) {
-      print('Error enabling biometrics: $e');
-    }
+// Add this method
+static Future<bool> authenticateDirectly() async {
+  try {
+    final authenticated = await _auth.authenticate(
+      localizedReason: 'Authenticate to enable biometric login',
+      options: const AuthenticationOptions(
+        stickyAuth: true,
+        biometricOnly: true,
+      ),
+    );
+    return authenticated;
+  } on PlatformException catch (e) {
+    print('Error during direct authentication: $e');
+    return false;
   }
+}
+
+// Modify enableBiometric to use direct authentication and return success
+static Future<bool> enableBiometric() async {
+  try {
+    final authenticated = await authenticateDirectly();
+    if (authenticated) {
+      await SharedPrefs.setBool('biometric_enabled', true);
+      return true;
+    }
+    return false;
+  } on PlatformException catch (e) {
+    print('Error enabling biometrics: $e');
+    return false;
+  }
+}
 
   // Disable biometrics
   static Future<void> disableBiometric() async {

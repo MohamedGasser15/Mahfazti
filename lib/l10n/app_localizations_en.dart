@@ -274,7 +274,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fullName => 'Full Name';
 
   @override
-  String get userName => 'John Doe';
+  String get userName => 'Username';
 
   @override
   String get phoneNumber => 'Phone Number';
@@ -403,6 +403,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get selectLanguage => 'Select Language';
+
+  @override
+  String get enterCurrentPasscode => 'Enter current passcode';
+
+  @override
+  String get currentPasscode => 'Current passcode';
+
+  @override
+  String get enterNewPasscode => 'Enter new passcode';
+
+  @override
+  String get newPasscode => 'New passcode';
+
+  @override
+  String get confirmNewPasscode => 'Confirm new passcode';
+
+  @override
+  String get confirmPasscode => 'Confirm passcode';
+
+  @override
+  String get pleaseEnterCurrentPasscode => 'Please enter your current passcode';
+
+  @override
+  String get pleaseEnterNewPasscode => 'Please enter a new passcode';
+
+  @override
+  String get pleaseConfirmNewPasscode => 'Please confirm your new passcode';
+
+  @override
+  String get passcodeMustBe6Digits => 'Passcode must be 6 digits';
+
+  @override
+  String get passcodesDoNotMatch => 'Passcodes do not match';
+
+  @override
+  String get passcodeChangedSuccess => 'Passcode changed successfully!';
 
   @override
   String get welcomeBack => 'Welcome back,';

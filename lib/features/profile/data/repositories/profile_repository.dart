@@ -30,6 +30,45 @@ class ProfileRepository {
       rethrow;
     }
   }
+  Future<void> changePassword({
+  required String currentPassword,
+  required String newPassword,
+  required String confirmPassword,
+}) async {
+  if (newPassword != confirmPassword) {
+    throw Exception('New passwords do not match');
+  }
+
+  final response = await _apiService.post(
+    ApiEndpoints.changePassword,
+    {
+      'currentPassword': currentPassword,
+      'newPassword': newPassword,
+      'confirmPassword': confirmPassword,
+    },
+    requiresAuth: true,
+  );
+
+  // Handle different response formats
+  bool success = false;
+  if (response.data is bool) {
+    success = response.data as bool;
+  } else if (response.data is String) {
+    success = response.data.toLowerCase() == 'true';
+  } else if (response.data is Map<String, dynamic>) {
+    success = response.data['success'] == true;
+  }
+
+  if (!success) {
+    final message = (response.data is Map && response.data['message'] != null)
+        ? response.data['message']
+        : 'Failed to change password';
+    throw Exception(message);
+  }
+
+  // Update local passcode
+  await SharedPrefs.setString('user_password', newPassword);
+}
 Future<UserProfile?> getCachedProfile() async {
   final userDataString = SharedPrefs.userData;
   if (userDataString != null) {

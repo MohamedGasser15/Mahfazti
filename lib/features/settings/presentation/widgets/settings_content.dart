@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/biometric_service.dart';
 import 'package:my_wallet/core/services/hide_balance_service.dart';
+import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/services/theme_service.dart';
 import 'package:my_wallet/core/utils/language_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
+import 'package:my_wallet/features/auth/presentation/screens/change_passcode_screen.dart';
 import 'package:my_wallet/features/auth/presentation/screens/currency_selection_screen.dart';
 import 'package:my_wallet/features/profile/data/models/user_profile.dart';
 import 'package:my_wallet/features/profile/data/repositories/profile_repository.dart';
@@ -545,7 +547,6 @@ Future<void> _openCurrencySelection() async {
 void _onProfileUpdated() {
   _loadProfile(forceRefresh: true);
 }
-// features/settings/presentation/widgets/settings_content.dart
 
 Widget _buildProfileHeader(bool isDarkMode) {
   final iconColor = isDarkMode ? Colors.white : Colors.black;
@@ -861,9 +862,17 @@ Widget _buildProfileSettings(bool isDarkMode) {
                 color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                 size: 20,
               ),
-              onTap: () {
-                _showComingSoonSnackbar();
-              },
+onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProfileEditScreen(
+                        onProfileUpdated: _onProfileUpdated,
+                      ),
+                    ),
+                  );
+                },
+              
             ),
             Divider(
               height: 1,
@@ -1121,8 +1130,11 @@ Widget _buildSecuritySettings(bool isDarkMode) {
                 color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                 size: 20,
               ),
-              onTap: () {
-                _showComingSoonSnackbar();
+             onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ChangePasscodeScreen()),
+                );
               },
             ),
             Divider(
@@ -1131,52 +1143,54 @@ Widget _buildSecuritySettings(bool isDarkMode) {
             ),
             
             // Sign with Face ID / Fingerprint
-            SwitchListTile(
-              value: _biometricEnabled,
-              onChanged: (value) async {
-                if (value) {
-                  final authenticated = await BiometricService.authenticate();
-                  if (authenticated) {
-                    await BiometricService.enableBiometric();
-                    setState(() {
-                      _biometricEnabled = true;
-                    });
-                  }
-                } else {
-                  await BiometricService.disableBiometric();
-                  setState(() {
-                    _biometricEnabled = false;
-                  });
-                }
-              },
-              title: Text(
-                context.l10n.signWithFaceIDFingerprint,
-                style: TextStyle(
-                  color: isDarkMode ? Colors.white : Colors.black,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              subtitle: Text(
-                context.l10n.useBiometricAuthentication,
-                style: TextStyle(
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  fontSize: 12,
-                ),
-              ),
-              secondary: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.fingerprint,
-                  color: isDarkMode ? Colors.white : Colors.black,
-                  size: 20,
-                ),
-              ),
-            ),
+           SwitchListTile(
+  value: _biometricEnabled,
+  onChanged: (value) async {
+    if (value) {
+      final success = await BiometricService.enableBiometric();
+      if (success) {
+        setState(() {
+          _biometricEnabled = true;
+        });
+      } else {
+        // Optionally show an error message
+        MessageService.showError('Could not enable biometric authentication');
+      }
+    } else {
+      await BiometricService.disableBiometric();
+      setState(() {
+        _biometricEnabled = false;
+      });
+    }
+  },
+  title: Text(
+    context.l10n.signWithFaceIDFingerprint,
+    style: TextStyle(
+      color: isDarkMode ? Colors.white : Colors.black,
+      fontWeight: FontWeight.w600,
+    ),
+  ),
+  subtitle: Text(
+    context.l10n.useBiometricAuthentication,
+    style: TextStyle(
+      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+      fontSize: 12,
+    ),
+  ),
+  secondary: Container(
+    width: 40,
+    height: 40,
+    decoration: BoxDecoration(
+      color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+      shape: BoxShape.circle,
+    ),
+    child: Icon(
+      Icons.fingerprint,
+      color: isDarkMode ? Colors.white : Colors.black,
+      size: 20,
+    ),
+  ),
+),
             Divider(
               height: 1,
               color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
