@@ -1,0 +1,21 @@
+﻿using System;
+
+namespace MyWallet.Application.DTOs.Wallet
+{
+    public class WalletTransactionDto
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public decimal Amount { get; set; }
+        public string Type { get; set; } = string.Empty;
+        public int? CategoryId { get; set; }
+        public string? CategoryNameAr { get; set; }
+        public string? CategoryNameEn { get; set; }
+        public DateTime TransactionDate { get; set; }
+
+        public bool IsDeposit => Type == "Deposit";
+        public bool IsWithdrawal => Type == "Withdrawal";
+        public string FormattedAmount => IsDeposit ? $"+{Amount:F2}" : $"-{Amount:F2}";
+    }
+}
