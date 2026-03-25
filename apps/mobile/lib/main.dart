@@ -104,7 +104,7 @@ class _MyWalletAppState extends State<MyWalletApp> {
         valueListenable: ThemeService.themeNotifier,
         builder: (context, themeMode, child) {
           return MaterialApp(
-            title: 'Mahfazati',
+            title: 'Mahfazti',
             debugShowCheckedModeBanner: false,
             navigatorKey: NavigationService.navigatorKey,
             locale: _currentLocale,

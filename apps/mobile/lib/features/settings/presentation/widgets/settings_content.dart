@@ -14,7 +14,6 @@ import 'package:my_wallet/features/onboarding/presentation/screens/onboarding_sc
 import 'package:my_wallet/features/profile/data/models/user_profile.dart';
 import 'package:my_wallet/features/profile/data/repositories/profile_repository.dart';
 import 'package:my_wallet/features/profile/presentation/screens/profile_edit_screen.dart';
-import 'package:my_wallet/features/settings/presentation/screens/app_icon_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -672,55 +671,6 @@ Widget _buildAppSettings(bool isDarkMode) {
           ),
           child: Column(
             children: [
-              // App Icon
-// في _buildAppSettings، بعد الـ Divider بتاع App Icon
-ListTile(
-  leading: Container(
-    width: 40,
-    height: 40,
-    decoration: BoxDecoration(
-      color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-      shape: BoxShape.circle,
-    ),
-    child: Icon(
-      Icons.apps,
-      color: isDarkMode ? Colors.white : Colors.black,
-      size: 20,
-    ),
-  ),
-  title: Text(
-    context.l10n.appIcon,
-    style: TextStyle(
-      color: isDarkMode ? Colors.white : Colors.black,
-      fontWeight: FontWeight.w600,
-    ),
-  ),
-  subtitle: Text(
-    context.l10n.changeAppIcon,
-    style: TextStyle(
-      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-      fontSize: 12,
-    ),
-  ),
-  trailing: Icon(
-    Icons.chevron_right,
-    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-    size: 20,
-  ),
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const AppIconScreen(),
-      ),
-    );
-  },
-),
-              Divider(
-                height: 1,
-                color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-              ),
-              
               // Display Mode
               ListTile(
                 leading: Container(

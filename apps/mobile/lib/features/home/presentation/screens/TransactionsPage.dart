@@ -622,7 +622,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
   padding: EdgeInsets.only(
     left: 20,
     right: 20,
-    bottom: Platform.isIOS ? 110 : 20,
+    bottom: Platform.isIOS ? 75 : 20,
   ),
   itemCount: _filteredTransactions.length + (_isLoadingMore ? 1 : 0),
                                 itemBuilder: (context, index) {
