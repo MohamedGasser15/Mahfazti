@@ -5,7 +5,7 @@ import 'package:my_wallet/core/services/biometric_service.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/auth/presentation/widgets/biometric_bottom_sheet.dart';
-import 'package:my_wallet/features/home/presentation/screens/HomeScreen.dart';
+import 'package:my_wallet/features/wallet/presentation/screens/HomeScreen.dart';
 
 class PinScreen extends StatefulWidget {
   final bool isFirstTime;

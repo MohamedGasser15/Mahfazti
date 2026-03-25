@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:my_wallet/core/services/hide_balance_service.dart'; // <-- أضف هذا
+import 'package:my_wallet/core/services/hide_balance_service.dart';
 import 'package:my_wallet/core/services/theme_service.dart';
 import 'package:my_wallet/core/services/watch_service.dart';
 import 'package:my_wallet/core/themes/app_theme.dart';
@@ -14,11 +14,11 @@ import 'package:my_wallet/features/auth/presentation/screens/passcode_screen.dar
 import 'package:my_wallet/features/auth/presentation/screens/pin_screen.dart';
 import 'package:my_wallet/features/auth/presentation/screens/register_screen.dart';
 import 'package:my_wallet/features/auth/presentation/screens/verification_screen.dart';
-import 'package:my_wallet/features/home/presentation/screens/HomeScreen.dart';
 import 'package:my_wallet/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:my_wallet/features/splash/presentation/screens/splash_screen.dart';
+import 'package:my_wallet/features/wallet/presentation/screens/HomeScreen.dart';
 import 'package:my_wallet/l10n/app_localizations.dart';
-import 'package:provider/provider.dart'; // <-- أضف هذا
+import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

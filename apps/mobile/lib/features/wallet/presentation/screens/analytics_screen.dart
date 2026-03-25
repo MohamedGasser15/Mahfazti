@@ -3,13 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:my_wallet/core/services/wallet_cache_service.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
-import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
 import 'package:intl/intl.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
-import 'package:shimmer/shimmer.dart'; // تأكد من إضافة الحزمة في pubspec.yaml
+import 'package:shimmer/shimmer.dart';
 
-// enum لأنواع الرسوم البيانية
 enum ChartType { line, bar }
 
 class AnalyticsScreen extends StatefulWidget {
@@ -23,19 +21,16 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   final WalletRepository _repository = WalletRepository();
   DateTime _fromDate = DateTime.now().subtract(const Duration(days: 30));
   DateTime _toDate = DateTime.now();
-  bool _isLoading = true; // بدأ بـ true
+  bool _isLoading = true;
   Map<String, dynamic>? _summaryData;
   String? _errorMessage;
 
-  // متغيرات لتخزين نوع الرسم المختار
   ChartType _expensesChartType = ChartType.line;
   ChartType _incomeChartType = ChartType.line;
 
-  // متغيرات العملة
   String? _currencyCode;
   bool _currencyLoaded = false;
 
-  // خريطة رموز العملات (مطابقة للشاشات الأخرى)
   static const Map<String, String> currencySymbols = {
     'USD': '\$',
     'EUR': '€',
@@ -65,21 +60,18 @@ Future<void> _loadCurrency() async {
 }
 
 Future<void> _loadSummary({bool forceRefresh = false}) async {
-  // 1. جرب تجيب من الـ cache الأول
   if (!forceRefresh) {
     final cached = await WalletCacheService.getSummary();
     if (cached != null) {
       setState(() {
         _summaryData = cached;
-        _isLoading = false; // مفيش skeleton لأن عندنا data
+        _isLoading = false;
       });
-      // رفرش في الخلفية بدون skeleton
       _refreshInBackground();
       return;
     }
   }
 
-  // 2. مفيش cache → شغّل skeleton
   setState(() {
     _isLoading = true;
     _errorMessage = null;
@@ -91,7 +83,6 @@ Future<void> _refreshInBackground() async {
   try {
     await _fetchFromApi(silent: true);
   } catch (_) {
-    // فشل الـ background refresh → مش مهم، عندنا cache
   }
 }
 
@@ -122,7 +113,6 @@ Future<void> _fetchFromApi({bool silent = false}) async {
           .toList(),
     };
 
-    // احفظ في الـ cache
     await WalletCacheService.saveSummary(mapped);
 
     if (mounted) {
@@ -140,7 +130,6 @@ Future<void> _fetchFromApi({bool silent = false}) async {
     }
   }
 }
-  // دالة تنسيق العملة مع الرمز (بدون منازل عشرية)
   String _formatCurrency(double amount) {
     final symbol = currencySymbols[_currencyCode] ?? '\$';
     final formatter = NumberFormat('#,##0', 'en_US');
