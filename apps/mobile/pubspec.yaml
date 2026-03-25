@@ -1,5 +1,5 @@
-name: mahfazti
-description: "Mahfazti - A personal finance app to track your expenses and income with voice input and Apple Watch support."
+name: my_wallet
+description: "A new Flutter project."
 publish_to: 'none'
 
 version: 1.0.0+1
