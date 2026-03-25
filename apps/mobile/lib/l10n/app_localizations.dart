@@ -101,13 +101,13 @@ abstract class AppLocalizations {
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:
-  /// **'Mahfazati'**
+  /// **'Mahfazti'**
   String get appTitle;
 
   /// No description provided for @welcome.
   ///
   /// In en, this message translates to:
-  /// **'Welcome to Mahfazati'**
+  /// **'Welcome to Mahfazti'**
   String get welcome;
 
   /// No description provided for @welcomeDescription.
