@@ -1,4 +1,5 @@
 // features/wallet/presentation/screens/budget_page.dart
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -718,9 +719,14 @@ class _BudgetPageState extends State<BudgetPage> {
     return Shimmer.fromColors(
       baseColor: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
       highlightColor: isDarkMode ? Colors.grey[700]! : Colors.grey[100]!,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
+    child: SingleChildScrollView(
+  padding: EdgeInsets.only(
+    left: 20,
+    right: 20,
+    top: 20,
+    bottom: Platform.isIOS ? 110 : 40,
+  ),
+  child: Column(
           children: [
             _buildShimmerMonthlyBudgetCard(isDarkMode),
             _buildShimmerCategoryHeader(isDarkMode),
@@ -816,9 +822,14 @@ class _BudgetPageState extends State<BudgetPage> {
     final progress = budget.currentSpending / budget.monthlyBudget;
     final isOverBudget = budget.currentSpending > budget.monthlyBudget;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
+return SingleChildScrollView(
+  padding: EdgeInsets.only(
+    left: 20,
+    right: 20,
+    top: 20,
+    bottom: Platform.isIOS ? 75 : 5,
+  ),
+  child: Column(
         children: [
           // Monthly Budget Card
           Container(
@@ -944,8 +955,11 @@ class _BudgetPageState extends State<BudgetPage> {
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!),
             ),
-            child: Column(
-              children: budget.categoryBudgets.map((cat) {
+child: Column(
+  children: ([
+    ...budget.categoryBudgets.where((c) => c.spent > 0),
+    ...budget.categoryBudgets.where((c) => c.spent == 0),
+  ]).map((cat) {
                 // تجنب القسمة على صفر
                 final categoryProgress = cat.budget > 0 
                     ? (cat.spent / cat.budget).clamp(0.0, 1.0)

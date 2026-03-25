@@ -1,4 +1,5 @@
 // features/home/presentation/screens/TransactionsPage.dart (TransactionsTab)
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -617,9 +618,13 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
                               onRefresh: _refreshData,
                               color: isDarkMode ? Colors.white : Colors.black,
                               child: ListView.builder(
-                                controller: _scrollController,
-                                padding: const EdgeInsets.symmetric(horizontal: 20),
-                                itemCount: _filteredTransactions.length + (_isLoadingMore ? 1 : 0),
+  controller: _scrollController,
+  padding: EdgeInsets.only(
+    left: 20,
+    right: 20,
+    bottom: Platform.isIOS ? 110 : 20,
+  ),
+  itemCount: _filteredTransactions.length + (_isLoadingMore ? 1 : 0),
                                 itemBuilder: (context, index) {
                                   if (index < _filteredTransactions.length) {
                                     final transaction = _filteredTransactions[index];

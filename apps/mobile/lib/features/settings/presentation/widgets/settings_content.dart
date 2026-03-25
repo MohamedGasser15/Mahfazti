@@ -10,6 +10,7 @@ import 'package:my_wallet/core/utils/language_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/auth/presentation/screens/change_passcode_screen.dart';
 import 'package:my_wallet/features/auth/presentation/screens/currency_selection_screen.dart';
+import 'package:my_wallet/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:my_wallet/features/profile/data/models/user_profile.dart';
 import 'package:my_wallet/features/profile/data/repositories/profile_repository.dart';
 import 'package:my_wallet/features/profile/presentation/screens/profile_edit_screen.dart';
@@ -1653,7 +1654,15 @@ Widget _buildSecuritySettings(bool isDarkMode) {
     await SharedPrefs.removeAuthToken();
     await SharedPrefs.removeUserData();
     
-    // إعادة التوجيه لشاشة الدخول
-    Navigator.pushNamedAndRemoveUntil(context, '/email', (route) => false);
+Navigator.pushAndRemoveUntil(
+  context,
+  MaterialPageRoute(
+    builder: (_) => OnboardingScreen(
+      onLocaleChanged: (locale) {
+      },
+    ),
+  ),
+  (route) => false,
+);
   }
 }

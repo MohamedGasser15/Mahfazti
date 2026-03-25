@@ -690,42 +690,50 @@ void _showAddTransactionDialog(
                           const SizedBox(width: 16),
                           Expanded(
                             child: ElevatedButton(
-                              onPressed: _isSubmitting
-                                  ? null
-                                  : () async {
-                                      if (amountController.text.isEmpty) {
-                                        MessageService.showError(context.l10n.enterAmount);
-                                        return;
-                                      }
-                                      final amount = double.tryParse(amountController.text);
-                                      if (amount == null || amount <= 0) {
-                                        MessageService.showError(context.l10n.enterValidAmount);
-                                        return;
-                                      }
-                                      if (selectedCategoryId == null) {
-                                        MessageService.showError('اختر فئة');
-                                        return;
-                                      }
+onPressed: _isSubmitting
+    ? null
+    : () async {
+        if (amountController.text.isEmpty) {
+          MessageService.showError(context.l10n.enterAmount);
+          return;
+        }
+        final amount = double.tryParse(amountController.text);
+        if (amount == null || amount <= 0) {
+          MessageService.showError(context.l10n.enterValidAmount);
+          return;
+        }
+        if (selectedCategoryId == null) {
+          MessageService.showError('اختر فئة');
+          return;
+        }
 
-                                      setState(() => _isSubmitting = true);
-                                      try {
-                                        await _walletRepository.addTransaction(
-                                          description: descriptionController.text,
-                                          amount: amount,
-                                          type: isIncome ? 'Deposit' : 'Withdrawal',
-                                          categoryId: selectedCategoryId!,
-                                        );
-                                        Navigator.pop(context);
-                                        await _loadHomeData();
-                                        MessageService.showSuccess(isIncome
-                                            ? context.l10n.depositAddedSuccess
-                                            : context.l10n.withdrawalAddedSuccess);
-                                      } catch (e) {
-                                        MessageService.showError(e.toString());
-                                      } finally {
-                                        setState(() => _isSubmitting = false);
-                                      }
-                                    },
+        setState(() => _isSubmitting = true);
+        bool shouldPop = false;
+
+        try {
+          await _walletRepository.addTransaction(
+            description: descriptionController.text,
+            amount: amount,
+            type: isIncome ? 'Deposit' : 'Withdrawal',
+            categoryId: selectedCategoryId!,
+          );
+          shouldPop = true;
+          await _loadHomeData();
+          MessageService.showSuccess(
+            isIncome
+                ? context.l10n.depositAddedSuccess
+                : context.l10n.withdrawalAddedSuccess,
+          );
+        } catch (e) {
+          MessageService.showError(e.toString());
+        } finally {
+          if (shouldPop) {
+            Navigator.pop(context);   // ✅ modal closed – no setState needed
+          } else {
+            setState(() => _isSubmitting = false); // ✅ only when modal stays open
+          }
+        }
+      },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: isIncome ? Colors.green[800] : Colors.red[800],
                                 foregroundColor: Colors.white,
@@ -1016,46 +1024,52 @@ void _showEditTransactionDialog(WalletTransaction transaction) {
                           const SizedBox(width: 16),
                           Expanded(
                             child: ElevatedButton(
-                              onPressed: _isSubmitting
-                                  ? null
-                                  : () async {
-                                      if (amountController.text.isEmpty) {
-                                        MessageService.showError(context.l10n.enterAmount);
-                                        return;
-                                      }
-                                      final amount = double.tryParse(amountController.text);
-                                      if (amount == null || amount <= 0) {
-                                        MessageService.showError(context.l10n.enterValidAmount);
-                                        return;
-                                      }
-                                      if (selectedCategoryId == null) {
-                                        MessageService.showError('اختر فئة');
-                                        return;
-                                      }
+onPressed: _isSubmitting
+    ? null
+    : () async {
+        if (amountController.text.isEmpty) {
+          MessageService.showError(context.l10n.enterAmount);
+          return;
+        }
+        final amount = double.tryParse(amountController.text);
+        if (amount == null || amount <= 0) {
+          MessageService.showError(context.l10n.enterValidAmount);
+          return;
+        }
+        if (selectedCategoryId == null) {
+          MessageService.showError('اختر فئة');
+          return;
+        }
 
-                                      setState(() => _isSubmitting = true);
-                                      try {
-                                        await _walletRepository.updateTransaction(
-                                          transaction.id,
-                                          title: transaction.title, // ✅ بيحتفظ بالـ title القديم
-                                          description: descriptionController.text,
-                                          amount: amount,
-                                          type: isIncome ? 'Deposit' : 'Withdrawal',
-                                          categoryId: selectedCategoryId!,
-                                          transactionDate: transaction.transactionDate, // ✅ بيحتفظ بالتاريخ
-                                          isRecurring: transaction.isRecurring ?? false,
-                                          recurringInterval: transaction.recurringInterval,
-                                          recurringEndDate: transaction.recurringEndDate,
-                                        );
-                                        Navigator.pop(context);
-                                        await _loadHomeData();
-                                        MessageService.showSuccess(context.l10n.transactionUpdatedSuccess);
-                                      } catch (e) {
-                                        MessageService.showError(e.toString());
-                                      } finally {
-                                        setState(() => _isSubmitting = false);
-                                      }
-                                    },
+        setState(() => _isSubmitting = true);
+        bool shouldPop = false;
+
+        try {
+          await _walletRepository.updateTransaction(
+            transaction.id,
+            title: transaction.title,
+            description: descriptionController.text,
+            amount: amount,
+            type: isIncome ? 'Deposit' : 'Withdrawal',
+            categoryId: selectedCategoryId!,
+            transactionDate: transaction.transactionDate,
+            isRecurring: transaction.isRecurring ?? false,
+            recurringInterval: transaction.recurringInterval,
+            recurringEndDate: transaction.recurringEndDate,
+          );
+          shouldPop = true;
+          await _loadHomeData();
+          MessageService.showSuccess(context.l10n.transactionUpdatedSuccess);
+        } catch (e) {
+          MessageService.showError(e.toString());
+        } finally {
+          if (shouldPop) {
+            Navigator.pop(context);
+          } else {
+            setState(() => _isSubmitting = false);
+          }
+        }
+      },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: isIncome ? Colors.green[800] : Colors.red[800],
                                 foregroundColor: Colors.white,

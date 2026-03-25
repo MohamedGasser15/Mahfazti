@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
@@ -317,9 +318,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 )
               : _summaryData == null
                   ? Center(child: Text(context.l10n.noDataAvailable))
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
+: SingleChildScrollView(
+    padding: EdgeInsets.only(
+      left: 16,
+      right: 16,
+      top: 16,
+      bottom: Platform.isIOS ? 75 : 5,
+    ),
+    child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // بطاقات الإحصائيات الأساسية
