@@ -8,6 +8,7 @@ import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/services/theme_service.dart';
 import 'package:my_wallet/core/utils/language_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
+import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 import 'package:my_wallet/features/auth/presentation/screens/change_passcode_screen.dart';
 import 'package:my_wallet/features/auth/presentation/screens/currency_selection_screen.dart';
 import 'package:my_wallet/features/onboarding/presentation/screens/onboarding_screen.dart';
@@ -95,17 +96,226 @@ Future<void> _loadProfile({bool forceRefresh = false}) async {
   }
 }
   
-// دالة لفتح شاشة اختيار العملة
-Future<void> _openCurrencySelection() async {
-  final result = await Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => const CurrencySelectionScreen(),
-    ),
+void _openCurrencySelection() {
+  final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      String? tempSelected = _currencyCode;
+
+      final List<Map<String, String>> currencies = [
+        {'code': 'USD', 'flag': '🇺🇸', 'name': 'US Dollar'},
+        {'code': 'EUR', 'flag': '🇪🇺', 'name': 'Euro'},
+        {'code': 'EGP', 'flag': '🇪🇬', 'name': 'Egyptian Pound'},
+        {'code': 'SAR', 'flag': '🇸🇦', 'name': 'Saudi Riyal'},
+        {'code': 'AED', 'flag': '🇦🇪', 'name': 'UAE Dirham'},
+        {'code': 'KWD', 'flag': '🇰🇼', 'name': 'Kuwaiti Dinar'},
+      ];
+bool _isSubmitting = false;
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return Container(
+            decoration: BoxDecoration(
+              color: isDarkMode ? Colors.black : Colors.white,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(24),
+                topRight: Radius.circular(24),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle
+                Container(
+                  height: 4,
+                  width: 40,
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+
+                // Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        context.l10n.selectCurrency,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: isDarkMode ? Colors.white : Colors.black,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(
+                          Icons.close,
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Currency List
+                ...currencies.map((currency) {
+                  final isSelected = tempSelected == currency['code'];
+                  return GestureDetector(
+                    onTap: () => setState(() => tempSelected = currency['code']),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? (isDarkMode
+                                ? Colors.white.withOpacity(0.08)
+                                : Colors.black.withOpacity(0.05))
+                            : (isDarkMode ? Colors.grey[900] : Colors.grey[50]),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isSelected
+                              ? (isDarkMode ? Colors.white : Colors.black)
+                              : (isDarkMode ? Colors.grey[800]! : Colors.grey[200]!),
+                          width: isSelected ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          // Flag
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: isDarkMode ? Colors.grey[800] : Colors.grey[100],
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                currency['flag']!,
+                                style: const TextStyle(fontSize: 22),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          // Name & Code
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  currency['name']!,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                    color: isDarkMode ? Colors.white : Colors.black,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  currency['code']!,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Check
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            child: isSelected
+                                ? Container(
+                                    key: const ValueKey('check'),
+                                    width: 26,
+                                    height: 26,
+                                    decoration: BoxDecoration(
+                                      color: isDarkMode ? Colors.white : Colors.black,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.check,
+                                      size: 16,
+                                      color: isDarkMode ? Colors.black : Colors.white,
+                                    ),
+                                  )
+                                : const SizedBox(key: ValueKey('empty'), width: 26),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+
+                // Save Button
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    20,
+                    20,
+                    MediaQuery.of(context).padding.bottom + 20,
+                  ),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+onPressed: _isSubmitting
+    ? null
+    : () async {
+        if (tempSelected == null) return;
+        setState(() => _isSubmitting = true);
+        try {
+          await AuthRepository().setUserCurrency(tempSelected!);
+          await SharedPrefs.setCurrency(tempSelected!);
+          this.setState(() => _currencyCode = tempSelected!);
+          if (mounted) {
+            Navigator.pop(context);
+            MessageService.showSuccess(context.l10n.currencySavedSuccess);
+          }
+        } catch (e) {
+          MessageService.showError(e.toString());
+          setState(() => _isSubmitting = false);
+        }
+      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDarkMode ? Colors.white : Colors.black,
+                        foregroundColor: isDarkMode ? Colors.black : Colors.white,
+                        minimumSize: const Size(double.infinity, 52),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: _isSubmitting
+    ? const SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      )
+    : Text(
+        context.l10n.save,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    },
   );
-  if (result != null) {
-    await _loadCurrency(); // إعادة تحميل العملة المعروضة
-  }
 }
 Future<void> _loadSettings() async {
   // تحميل إعدادات البايومتريك

@@ -88,8 +88,11 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
       await Future.delayed(const Duration(milliseconds: 500));
 
       if (mounted) {
-        // نعيد النتيجة إلى الشاشة السابقة (مثل الإعدادات) بدلاً من الانتقال المباشر
-        Navigator.pop(context, _selectedCurrency);
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/home',
+          (route) => false,
+        );
       }
     } catch (e) {
       MessageService.showError('${context.l10n.failedToSaveCurrency}: ${e.toString()}');
