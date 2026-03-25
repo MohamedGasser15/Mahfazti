@@ -32,13 +32,9 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: isIOS ? null : _buildAndroidBottomNav(isDarkMode),
       body: Stack(
         children: [
-          PageView(
-            controller: _pageController,
-            onPageChanged: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
-            },
+PageView(
+  controller: _pageController,
+  physics: const NeverScrollableScrollPhysics(),
             children: const [
               HomeTab(),
               AnalyticsScreen(),
@@ -113,6 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return GestureDetector(
       onTap: () {
+        setState(() => _currentIndex = index); // ← أضف السطر ده
         _pageController.animateToPage(
           index,
           duration: const Duration(milliseconds: 300),
@@ -218,13 +215,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return GestureDetector(
-      onTap: () {
-        _pageController.animateToPage(
-          index,
-          duration: const Duration(milliseconds: 350),
-          curve: Curves.easeInOut,
-        );
-      },
+     onTap: () {
+  setState(() => _currentIndex = index); // ← أضف السطر ده
+  _pageController.animateToPage(
+    index,
+    duration: const Duration(milliseconds: 350),
+    curve: Curves.easeInOut,
+  );
+},
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
