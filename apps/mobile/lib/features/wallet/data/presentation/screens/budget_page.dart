@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
+import 'package:my_wallet/core/services/wallet_cache_service.dart';
 import 'package:my_wallet/features/wallet/data/models/budget_models.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
@@ -27,7 +28,6 @@ class _BudgetPageState extends State<BudgetPage> {
   String? _currencyCode;
   bool _currencyLoaded = false;
 
-  // خريطة رموز العملات (مطابقة للشاشات الأخرى)
   static const Map<String, String> currencySymbols = {
     'USD': '\$',
     'EUR': '€',
@@ -43,7 +43,7 @@ class _BudgetPageState extends State<BudgetPage> {
     _loadCurrency();
   }
 
-  // تحميل العملة المحفوظة
+  // ==================  Cache & API Logic (Stale-While-Revalidate) ==================
   Future<void> _loadCurrency() async {
     final code = await SharedPrefs.getCurrency();
     if (mounted) {
@@ -51,44 +51,119 @@ class _BudgetPageState extends State<BudgetPage> {
         _currencyCode = code ?? 'USD';
         _currencyLoaded = true;
       });
-      _loadBudget(); // تحميل البيانات بعد معرفة العملة
+      _loadBudget(); // load budget after currency
     }
   }
 
-  // دالة تنسيق العملة مع الرمز (بدون منازل عشرية)
-  String _formatCurrency(double amount) {
-    final symbol = currencySymbols[_currencyCode] ?? '\$';
-    final formatter = NumberFormat('#,##0', 'en_US');
-    return '$symbol ${formatter.format(amount)}';
-  }
-
-  Future<void> _loadBudget() async {
+  /// Load budget data with cache-first strategy.
+  Future<void> _loadBudget({bool forceRefresh = false}) async {
     if (!mounted) return;
+
+    // 1. If not forced, try to get from cache
+    if (!forceRefresh) {
+      final cachedMap = await WalletCacheService.getBudget();
+      if (cachedMap != null) {
+        try {
+          final cachedBudget = _budgetFromMap(cachedMap);
+          setState(() {
+            _budget = cachedBudget;
+            _isLoading = false;
+            _errorMessage = null;
+          });
+          // Refresh in background without blocking UI
+          _refreshInBackground();
+          return;
+        } catch (e) {
+          debugPrint('Error parsing cached budget: $e');
+        }
+      }
+    }
+
+    // 2. No cache or forced refresh → show shimmer and fetch from API
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
+    await _fetchFromApi();
+  }
 
+  /// Fetch fresh data from API and update cache.
+  Future<void> _fetchFromApi({bool silent = false}) async {
     try {
       final budget = await _walletRepository.getBudget();
-      if (!mounted) return;
-      setState(() {
-        _budget = budget;
-        _isLoading = false;
-      });
+      final budgetMap = _budgetToMap(budget);
+      await WalletCacheService.saveBudget(budgetMap);
+
+      if (mounted && !silent) {
+        setState(() {
+          _budget = budget;
+          _isLoading = false;
+        });
+      } else if (mounted && silent) {
+        setState(() {
+          _budget = budget;
+        });
+      }
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = 'Failed to load budget: $e';
-        _isLoading = false;
-      });
+      if (mounted && !silent) {
+        setState(() {
+          _errorMessage = 'Failed to load budget: $e';
+          _isLoading = false;
+        });
+      }
     }
   }
 
+  /// Background refresh after displaying cached data.
+  Future<void> _refreshInBackground() async {
+    try {
+      await _fetchFromApi(silent: true);
+    } catch (_) {
+      // Ignore background refresh errors
+    }
+  }
+
+  // ==================  Data Conversion Helpers ==================
+  
+  Map<String, dynamic> _budgetToMap(BudgetDto budget) {
+    return {
+      'monthlyBudget': budget.monthlyBudget,
+      'currentSpending': budget.currentSpending,
+      'categoryBudgets': budget.categoryBudgets.map((cat) => {
+        'categoryId': cat.categoryId,
+        'categoryNameAr': cat.categoryNameAr,
+        'categoryNameEn': cat.categoryNameEn,
+        'budget': cat.budget,
+        'spent': cat.spent,
+      }).toList(),
+    };
+  }
+
+  BudgetDto _budgetFromMap(Map<String, dynamic> map) {
+    final categoryList = (map['categoryBudgets'] as List).map((catMap) {
+    return CategoryBudgetDto(
+      id: catMap['id'] ?? 0,
+      categoryId: catMap['categoryId'],
+      categoryNameAr: catMap['categoryNameAr'],
+      categoryNameEn: catMap['categoryNameEn'],
+      budget: (catMap['budget'] as num).toDouble(),
+      spent: (catMap['spent'] as num).toDouble(),
+    );
+    }).toList();
+
+    return BudgetDto(
+      monthlyBudget: (map['monthlyBudget'] as num).toDouble(),
+      currentSpending: (map['currentSpending'] as num).toDouble(),
+      categoryBudgets: categoryList,
+    );
+  }
+
+  // ==================  Update Methods (Force Refresh) ==================
+  
   Future<void> _updateMonthlyBudget(double newBudget) async {
     try {
       await _walletRepository.updateMonthlyBudget(newBudget);
-      await _loadBudget();
+      await _loadBudget(forceRefresh: true);
       if (mounted) {
         MessageService.showSuccess('Budget updated successfully');
       }
@@ -99,22 +174,33 @@ class _BudgetPageState extends State<BudgetPage> {
     }
   }
 
+  Future<void> _updateCategoryBudget(int categoryId, double newBudget) async {
+    try {
+      await _walletRepository.updateCategoryBudget(categoryId, newBudget);
+      await _loadBudget(forceRefresh: true);
+      if (mounted) {
+        MessageService.showSuccess('Budget updated');
+      }
+    } catch (e) {
+      if (mounted) {
+        MessageService.showError('Failed: $e');
+      }
+    }
+  }
+
+  // ==================  Dialog Methods (unchanged except calling new update methods) ==================
+  
   void _showEditCategoryBudgetDialog(CategoryBudgetDto category) {
-    // التأكد من وجود بيانات الميزانية
     if (_budget == null) return;
-    
+
     final monthlyBudget = _budget!.monthlyBudget;
-    
-    // حساب مجموع ميزانيات التصنيفات الأخرى
     final otherCategoriesTotal = _budget!.categoryBudgets
         .where((c) => c.categoryId != category.categoryId)
         .fold(0.0, (sum, c) => sum + c.budget);
-    
-    // الحد الأقصى المسموح به لهذا التصنيف
     final maxAllowed = (monthlyBudget - otherCategoriesTotal).clamp(0.0, double.infinity);
-    
+
     final TextEditingController budgetController = TextEditingController(
-      text: _formatCurrency(category.budget).replaceAll(RegExp(r'[^0-9,]'), ''), // نحتفظ بالأرقام فقط للتحرير
+      text: _formatCurrency(category.budget).replaceAll(RegExp(r'[^0-9,]'), ''),
     );
     bool isSubmitting = false;
     String? errorText;
@@ -137,9 +223,7 @@ class _BudgetPageState extends State<BudgetPage> {
                 ),
               ),
               child: Padding(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).viewInsets.bottom,
-                ),
+                padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
                 child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -187,13 +271,11 @@ class _BudgetPageState extends State<BudgetPage> {
                                 errorText: errorText,
                               ),
                               onChanged: (_) {
-                                // مسح الخطأ عند التغيير
                                 if (errorText != null) {
                                   setState(() => errorText = null);
                                 }
                               },
                             ),
-                            // عرض الحد الأقصى
                             Padding(
                               padding: const EdgeInsets.only(top: 8, left: 12),
                               child: Align(
@@ -201,8 +283,8 @@ class _BudgetPageState extends State<BudgetPage> {
                                 child: Text(
                                   'Maximum allowed: ${_formatCurrency(maxAllowed)}',
                                   style: TextStyle(
-                                    color: maxAllowed <= 0 
-                                        ? Colors.red[700] 
+                                    color: maxAllowed <= 0
+                                        ? Colors.red[700]
                                         : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
                                     fontSize: 12,
                                   ),
@@ -214,9 +296,7 @@ class _BudgetPageState extends State<BudgetPage> {
                               children: [
                                 Expanded(
                                   child: OutlinedButton(
-                                    onPressed: isSubmitting
-                                        ? null
-                                        : () => Navigator.pop(context),
+                                    onPressed: isSubmitting ? null : () => Navigator.pop(context),
                                     style: OutlinedButton.styleFrom(
                                       side: BorderSide(
                                         color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
@@ -237,7 +317,6 @@ class _BudgetPageState extends State<BudgetPage> {
                                     onPressed: isSubmitting
                                         ? null
                                         : () async {
-                                            // التحقق من المدخلات
                                             final input = budgetController.text.trim();
                                             if (input.isEmpty) {
                                               setState(() => errorText = 'Please enter an amount');
@@ -258,23 +337,8 @@ class _BudgetPageState extends State<BudgetPage> {
                                             }
 
                                             setState(() => isSubmitting = true);
-                                            try {
-                                              await _walletRepository.updateCategoryBudget(
-                                                category.categoryId,
-                                                newBudget,
-                                              );
-                                              await _loadBudget(); // إعادة تحميل البيانات
-                                              if (mounted) {
-                                                MessageService.showSuccess('Budget updated');
-                                              }
-                                              if (mounted) Navigator.pop(context);
-                                            } catch (e) {
-                                              if (mounted) {
-                                                MessageService.showError('Failed: $e');
-                                              }
-                                            } finally {
-                                              setState(() => isSubmitting = false);
-                                            }
+                                            await _updateCategoryBudget(category.categoryId, newBudget);
+                                            if (mounted) Navigator.pop(context);
                                           },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: isDarkMode ? Colors.white : Colors.black,
@@ -333,9 +397,7 @@ class _BudgetPageState extends State<BudgetPage> {
                 ),
               ),
               child: Padding(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).viewInsets.bottom,
-                ),
+                padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
                 child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -387,9 +449,7 @@ class _BudgetPageState extends State<BudgetPage> {
                               children: [
                                 Expanded(
                                   child: OutlinedButton(
-                                    onPressed: isSubmitting
-                                        ? null
-                                        : () => Navigator.pop(context),
+                                    onPressed: isSubmitting ? null : () => Navigator.pop(context),
                                     style: OutlinedButton.styleFrom(
                                       side: BorderSide(
                                         color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
@@ -451,7 +511,16 @@ class _BudgetPageState extends State<BudgetPage> {
     );
   }
 
-  // ================== دوال Skeleton المستوحاة من HomeTab ==================
+  // ==================  Helper Functions (Currency, etc.) ==================
+  
+  String _formatCurrency(double amount) {
+    final symbol = currencySymbols[_currencyCode] ?? '\$';
+    final formatter = NumberFormat('#,##0', 'en_US');
+    return '$symbol ${formatter.format(amount)}';
+  }
+
+  // ==================  Shimmer Skeleton (unchanged) ==================
+  
   Widget _buildShimmerMonthlyBudgetCard(bool isDarkMode) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -719,14 +788,14 @@ class _BudgetPageState extends State<BudgetPage> {
     return Shimmer.fromColors(
       baseColor: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
       highlightColor: isDarkMode ? Colors.grey[700]! : Colors.grey[100]!,
-    child: SingleChildScrollView(
-  padding: EdgeInsets.only(
-    left: 20,
-    right: 20,
-    top: 20,
-    bottom: Platform.isIOS ? 110 : 40,
-  ),
-  child: Column(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: Platform.isIOS ? 110 : 40,
+        ),
+        child: Column(
           children: [
             _buildShimmerMonthlyBudgetCard(isDarkMode),
             _buildShimmerCategoryHeader(isDarkMode),
@@ -753,8 +822,9 @@ class _BudgetPageState extends State<BudgetPage> {
       ),
     );
   }
-  // =======================================================================
 
+  // ==================  Build Methods ==================
+  
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -803,7 +873,7 @@ class _BudgetPageState extends State<BudgetPage> {
             Text(_errorMessage!, textAlign: TextAlign.center),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: _loadBudget,
+              onPressed: () => _loadBudget(forceRefresh: true),
               style: ElevatedButton.styleFrom(
                 backgroundColor: isDarkMode ? Colors.white : Colors.black,
                 foregroundColor: isDarkMode ? Colors.black : Colors.white,
@@ -822,14 +892,14 @@ class _BudgetPageState extends State<BudgetPage> {
     final progress = budget.currentSpending / budget.monthlyBudget;
     final isOverBudget = budget.currentSpending > budget.monthlyBudget;
 
-return SingleChildScrollView(
-  padding: EdgeInsets.only(
-    left: 20,
-    right: 20,
-    top: 20,
-    bottom: Platform.isIOS ? 75 : 5,
-  ),
-  child: Column(
+    return SingleChildScrollView(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: Platform.isIOS ? 75 : 5,
+      ),
+      child: Column(
         children: [
           // Monthly Budget Card
           Container(
@@ -955,18 +1025,17 @@ return SingleChildScrollView(
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!),
             ),
-child: Column(
-  children: ([
-    ...budget.categoryBudgets.where((c) => c.spent > 0),
-    ...budget.categoryBudgets.where((c) => c.spent == 0),
-  ]).map((cat) {
-                // تجنب القسمة على صفر
-                final categoryProgress = cat.budget > 0 
+            child: Column(
+              children: ([
+                ...budget.categoryBudgets.where((c) => c.spent > 0),
+                ...budget.categoryBudgets.where((c) => c.spent == 0),
+              ]).map((cat) {
+                final categoryProgress = cat.budget > 0
                     ? (cat.spent / cat.budget).clamp(0.0, 1.0)
                     : 0.0;
                 final isCategoryOverBudget = cat.spent > cat.budget;
                 final categoryNameForIcon = cat.categoryNameEn.isNotEmpty ? cat.categoryNameEn : cat.categoryNameAr;
-                
+
                 return Container(
                   decoration: BoxDecoration(
                     border: Border(
@@ -1003,7 +1072,6 @@ child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 4),
-                        // شريط التقدم
                         Stack(
                           children: [
                             Container(

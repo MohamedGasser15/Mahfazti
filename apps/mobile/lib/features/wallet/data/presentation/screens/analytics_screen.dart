@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:my_wallet/core/services/wallet_cache_service.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
 import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
 import 'package:intl/intl.dart';
@@ -52,47 +53,93 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     _loadCurrency();
   }
 
-  // تحميل العملة المحفوظة
-  Future<void> _loadCurrency() async {
-    final code = await SharedPrefs.getCurrency();
-    if (mounted) {
+Future<void> _loadCurrency() async {
+  final code = await SharedPrefs.getCurrency();
+  if (mounted) {
+    setState(() {
+      _currencyCode = code ?? 'USD';
+      _currencyLoaded = true;
+    });
+    _loadSummary();
+  }
+}
+
+Future<void> _loadSummary({bool forceRefresh = false}) async {
+  // 1. جرب تجيب من الـ cache الأول
+  if (!forceRefresh) {
+    final cached = await WalletCacheService.getSummary();
+    if (cached != null) {
       setState(() {
-        _currencyCode = code ?? 'USD';
-        _currencyLoaded = true;
+        _summaryData = cached;
+        _isLoading = false; // مفيش skeleton لأن عندنا data
       });
-      _loadSummary(); // تحميل البيانات بعد معرفة العملة
+      // رفرش في الخلفية بدون skeleton
+      _refreshInBackground();
+      return;
     }
   }
 
-  Future<void> _loadSummary() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  // 2. مفيش cache → شغّل skeleton
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
+  await _fetchFromApi();
+}
 
-    try {
-      final data = await _repository.getSummary(
-        fromDate: _fromDate,
-        toDate: _toDate,
-      );
+Future<void> _refreshInBackground() async {
+  try {
+    await _fetchFromApi(silent: true);
+  } catch (_) {
+    // فشل الـ background refresh → مش مهم، عندنا cache
+  }
+}
+
+Future<void> _fetchFromApi({bool silent = false}) async {
+  try {
+    final data = await _repository.getSummary(
+      fromDate: _fromDate,
+      toDate: _toDate,
+    );
+
+    final mapped = {
+      'totalIncome': data.totalIncome,
+      'totalExpenses': data.totalExpenses,
+      'netSavings': data.netSavings,
+      'expensesByCategory': data.expensesByCategory
+          .map((e) => {
+                'categoryNameAr': e.categoryNameAr,
+                'categoryNameEn': e.categoryNameEn,
+                'total': e.total,
+              })
+          .toList(),
+      'incomeByCategory': data.incomeByCategory
+          .map((e) => {
+                'categoryNameAr': e.categoryNameAr,
+                'categoryNameEn': e.categoryNameEn,
+                'total': e.total,
+              })
+          .toList(),
+    };
+
+    // احفظ في الـ cache
+    await WalletCacheService.saveSummary(mapped);
+
+    if (mounted) {
       setState(() {
-        _summaryData = {
-          'totalIncome': data.totalIncome,
-          'totalExpenses': data.totalExpenses,
-          'netSavings': data.netSavings,
-          'expensesByCategory': data.expensesByCategory,
-          'incomeByCategory': data.incomeByCategory,
-        };
-        _isLoading = false; // إنهاء التحميل
+        _summaryData = mapped;
+        _isLoading = false;
       });
-    } catch (e) {
+    }
+  } catch (e) {
+    if (mounted && !silent) {
       setState(() {
         _errorMessage = 'Failed to load analytics: $e';
         _isLoading = false;
       });
     }
   }
-
+}
   // دالة تنسيق العملة مع الرمز (بدون منازل عشرية)
   String _formatCurrency(double amount) {
     final symbol = currencySymbols[_currencyCode] ?? '\$';
@@ -520,166 +567,167 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   // دالة موحدة لبناء الرسم البياني (خطي أو أعمدة)
-  Widget _buildChart(List<dynamic> categories, ChartType type, Color color, bool isDarkMode) {
-    if (categories.isEmpty) {
-      return Container(
-        height: 200,
-        alignment: Alignment.center,
-        child: Text(
-          type == ChartType.line ? 'No expenses in this period' : 'No expenses in this period',
-          style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
-        ),
-      );
-    }
+Widget _buildChart(List<dynamic> categories, ChartType type, Color color, bool isDarkMode) {
+  if (categories.isEmpty) {
+    return Container(
+      height: 200,
+      alignment: Alignment.center,
+      child: Text(
+        'No data in this period',
+        style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+      ),
+    );
+  }
 
-    // إنشاء نقاط البيانات
-    final spots = <FlSpot>[];
-    for (int i = 0; i < categories.length; i++) {
-      spots.add(FlSpot(i.toDouble(), categories[i].total));
-    }
+  // Create spots (same for both chart types)
+  final spots = <FlSpot>[];
+  for (int i = 0; i < categories.length; i++) {
+    final cat = categories[i];
+    final total = (cat is Map ? cat['total'] : cat.total).toDouble(); // safe
+    spots.add(FlSpot(i.toDouble(), total));
+  }
 
-    final maxY = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
-    final minY = 0.0;
+  final maxY = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
+  final minY = 0.0;
 
-    // إذا كان النوع أعمدة
-    if (type == ChartType.bar) {
-      return Container(
-        height: 250,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDarkMode ? Colors.grey[900] : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!),
-        ),
-        child: BarChart(
-          BarChartData(
-            alignment: BarChartAlignment.spaceAround,
-            maxY: maxY * 1.1,
-            barTouchData: BarTouchData(
-              enabled: true,
-              touchTooltipData: BarTouchTooltipData(
-                getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                  final cat = categories[group.x.toInt()];
-                  final name = Localizations.localeOf(context).languageCode == 'ar'
-                      ? cat.categoryNameAr
-                      : cat.categoryNameEn;
-                  return BarTooltipItem(
-                    '$name\n${_formatCurrency(rod.toY)}',
-                    const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+  if (type == ChartType.bar) {
+    return Container(
+      height: 250,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.grey[900] : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!),
+      ),
+      child: BarChart(
+        BarChartData(
+          alignment: BarChartAlignment.spaceAround,
+          maxY: maxY * 1.1,
+          barTouchData: BarTouchData(
+            enabled: true,
+            touchTooltipData: BarTouchTooltipData(
+              getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                final cat = categories[group.x.toInt()];
+                final name = Localizations.localeOf(context).languageCode == 'ar'
+                    ? (cat is Map ? cat['categoryNameAr'] : cat.categoryNameAr)
+                    : (cat is Map ? cat['categoryNameEn'] : cat.categoryNameEn);
+                return BarTooltipItem(
+                  '$name\n${_formatCurrency(rod.toY)}',
+                  const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                );
+              },
+            ),
+          ),
+          titlesData: FlTitlesData(
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 40,
+                getTitlesWidget: (value, meta) {
+                  return Text(
+                    _formatCurrency(value).replaceAll(RegExp(r'[^0-9,]'), ''),
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                      fontSize: 10,
+                    ),
                   );
                 },
               ),
             ),
-            titlesData: FlTitlesData(
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-              leftTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 40,
-                  getTitlesWidget: (value, meta) {
-                    return Text(
-                      _formatCurrency(value).replaceAll(RegExp(r'[^0-9,]'), ''),
-                      style: TextStyle(
-                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                        fontSize: 10,
-                      ),
-                    );
-                  },
-                ),
-              ),
-              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            ),
-            borderData: FlBorderData(show: false),
-            barGroups: List.generate(categories.length, (i) {
-              return BarChartGroupData(
-                x: i,
-                barRods: [
-                  BarChartRodData(
-                    toY: categories[i].total,
-                    color: color.withOpacity(0.7),
-                    width: 22,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ],
-              );
-            }),
+            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           ),
-        ),
-      );
-    } else {
-      // رسم بياني خطي
-      return Container(
-        height: 250,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDarkMode ? Colors.grey[900] : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!),
-        ),
-        child: LineChart(
-          LineChartData(
-            gridData: FlGridData(show: true, drawVerticalLine: false),
-            titlesData: FlTitlesData(
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-              leftTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 40,
-                  getTitlesWidget: (value, meta) {
-                    return Text(
-                      _formatCurrency(value).replaceAll(RegExp(r'[^0-9,]'), ''),
-                      style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600], fontSize: 10),
-                    );
-                  },
+          borderData: FlBorderData(show: false),
+          barGroups: List.generate(categories.length, (i) {
+            final total = (categories[i] is Map ? categories[i]['total'] : categories[i].total).toDouble();
+            return BarChartGroupData(
+              x: i,
+              barRods: [
+                BarChartRodData(
+                  toY: total,
+                  color: color.withOpacity(0.7),
+                  width: 22,
+                  borderRadius: BorderRadius.circular(4),
                 ),
-              ),
-              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              ],
+            );
+          }),
+        ),
+      ),
+    );
+  } else {
+    // Line chart
+    return Container(
+      height: 250,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.grey[900] : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!),
+      ),
+      child: LineChart(
+        LineChartData(
+          gridData: FlGridData(show: true, drawVerticalLine: false),
+          titlesData: FlTitlesData(
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
             ),
-            borderData: FlBorderData(show: false),
-            minX: 0,
-            maxX: (categories.length - 1).toDouble(),
-            minY: minY,
-            maxY: maxY * 1.1,
-            lineBarsData: [
-              LineChartBarData(
-                spots: spots,
-                isCurved: false,
-                color: color,
-                barWidth: 3,
-                isStrokeCapRound: true,
-                dotData: FlDotData(show: true),
-                belowBarData: BarAreaData(show: false),
-              ),
-            ],
-            lineTouchData: LineTouchData(
-              touchTooltipData: LineTouchTooltipData(
-                getTooltipItems: (touchedSpots) {
-                  return touchedSpots.map((touchedSpot) {
-                    final index = touchedSpot.spotIndex;
-                    final cat = categories[index];
-                    final name = Localizations.localeOf(context).languageCode == 'ar'
-                        ? cat.categoryNameAr
-                        : cat.categoryNameEn;
-                    return LineTooltipItem(
-                      '$name\n${_formatCurrency(touchedSpot.y)}',
-                      const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                    );
-                  }).toList();
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 40,
+                getTitlesWidget: (value, meta) {
+                  return Text(
+                    _formatCurrency(value).replaceAll(RegExp(r'[^0-9,]'), ''),
+                    style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600], fontSize: 10),
+                  );
                 },
               ),
             ),
+            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          ),
+          borderData: FlBorderData(show: false),
+          minX: 0,
+          maxX: (categories.length - 1).toDouble(),
+          minY: minY,
+          maxY: maxY * 1.1,
+          lineBarsData: [
+            LineChartBarData(
+              spots: spots,
+              isCurved: false,
+              color: color,
+              barWidth: 3,
+              isStrokeCapRound: true,
+              dotData: FlDotData(show: true),
+              belowBarData: BarAreaData(show: false),
+            ),
+          ],
+          lineTouchData: LineTouchData(
+            touchTooltipData: LineTouchTooltipData(
+              getTooltipItems: (touchedSpots) {
+                return touchedSpots.map((touchedSpot) {
+                  final index = touchedSpot.spotIndex;
+                  final cat = categories[index];
+                  final name = Localizations.localeOf(context).languageCode == 'ar'
+                      ? (cat is Map ? cat['categoryNameAr'] : cat.categoryNameAr)
+                      : (cat is Map ? cat['categoryNameEn'] : cat.categoryNameEn);
+                  return LineTooltipItem(
+                    '$name\n${_formatCurrency(touchedSpot.y)}',
+                    const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  );
+                }).toList();
+              },
+            ),
           ),
         ),
-      );
-    }
+      ),
+    );
   }
-
+}
   // دالة لبناء بطاقة الإحصاء
   Widget _buildStatCard({
     required String title,
@@ -759,7 +807,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     return Column(
       children: categories.map<Widget>((cat) {
         final locale = Localizations.localeOf(context).languageCode;
-        final name = locale == 'ar' ? cat.categoryNameAr : cat.categoryNameEn;
+       final name = locale == 'ar'
+    ? (cat is Map ? cat['categoryNameAr'] : cat.categoryNameAr)
+    : (cat is Map ? cat['categoryNameEn'] : cat.categoryNameEn);
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -777,7 +827,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               const SizedBox(width: 12),
               Expanded(child: Text(name, style: TextStyle(color: isDarkMode ? Colors.white : Colors.black))),
               Text(
-                _formatCurrency(cat.total),
+                _formatCurrency((cat is Map ? cat['total'] : cat.total).toDouble()),
                 style: TextStyle(
                   color: isIncome ? Colors.green[800] : Colors.red[800],
                   fontWeight: FontWeight.w700,

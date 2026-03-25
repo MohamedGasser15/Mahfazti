@@ -1,10 +1,12 @@
 // features/home/presentation/screens/TransactionsPage.dart (TransactionsTab)
 import 'dart:io';
+import 'dart:convert'; // for cache key hashing
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
+import 'package:my_wallet/core/services/wallet_cache_service.dart';
 import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
@@ -58,7 +60,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
   void initState() {
     super.initState();
     _loadCurrency();
-    _loadTransactions();
+    _loadTransactions(); // will use cache if available
     _scrollController.addListener(_onScroll);
     _searchController.addListener(_onSearchChanged);
 
@@ -82,7 +84,8 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
     super.dispose();
   }
 
-  // تحميل العملة المحفوظة
+  // ==================  Helper Methods ==================
+
   Future<void> _loadCurrency() async {
     final code = await SharedPrefs.getCurrency();
     if (mounted) {
@@ -93,35 +96,72 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
     }
   }
 
-  // دالة تنسيق المبلغ مع رمز العملة
   String _formatAmount(double amount) {
     final symbol = currencySymbols[_currencyCode] ?? '\$';
     final formatter = NumberFormat('#,##0', 'en_US');
     return '$symbol ${formatter.format(amount)}';
   }
 
-  void _onSearchChanged() {
-    if (!mounted) return;
-    setState(() {
-      _searchQuery = _searchController.text;
-      _applySearchFilter();
-    });
+  // Generate a unique key for the current filter state (first page only)
+  String _getCacheKey() {
+    final typeKey = _selectedType ?? 'all';
+    final fromKey = _fromDate != null ? _fromDate!.toIso8601String() : 'none';
+    final toKey = _toDate != null ? _toDate!.toIso8601String() : 'none';
+    return 'type_${typeKey}_from_${fromKey}_to_${toKey}_page1';
   }
 
-  Future<void> _loadTransactions({int page = 1}) async {
+  // ==================  Cache & API Logic (Stale-While-Revalidate) ==================
+
+  /// Load transactions with cache-first strategy (only for page 1).
+  Future<void> _loadTransactions({int page = 1, bool forceRefresh = false}) async {
     if (!mounted) return;
 
-    if (page == 1) {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
-    } else {
-      setState(() {
-        _isLoadingMore = true;
-      });
+    // We only cache the first page. For page > 1, always fetch fresh.
+    if (page > 1) {
+      await _fetchMoreTransactions(page);
+      return;
     }
 
+    // For page 1:
+    if (!forceRefresh) {
+      final cacheKey = _getCacheKey();
+      final cached = await WalletCacheService.getTransactions(filterKey: cacheKey);
+      if (cached != null) {
+        try {
+          // Parse cached data
+          final transactionsJson = cached['transactions'] as List;
+          final transactions = transactionsJson.map((t) => WalletTransaction.fromJson(t)).toList();
+          final totalPages = cached['totalPages'] as int;
+          final currentPage = cached['currentPage'] as int;
+
+          setState(() {
+            _transactions = transactions;
+            _filteredTransactions = List.from(transactions);
+            _currentPage = currentPage;
+            _totalPages = totalPages;
+            _isLoading = false;
+            _errorMessage = null;
+          });
+          // Trigger background refresh
+          _refreshInBackground();
+          return;
+        } catch (e) {
+          debugPrint('Error parsing cached transactions: $e');
+          // Fall through to fetch fresh
+        }
+      }
+    }
+
+    // No cache or forced refresh → show shimmer and fetch from API
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    await _fetchFromApi(page: page);
+  }
+
+  /// Fetch fresh data from API for given page (usually page 1) and update cache.
+  Future<void> _fetchFromApi({int page = 1, bool silent = false}) async {
     try {
       final response = await _walletRepository.getTransactions(
         page: page,
@@ -133,26 +173,106 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
 
       if (!mounted) return;
 
-      setState(() {
-        if (page == 1) {
+      // If this is the first page, update cache
+      if (page == 1) {
+        final cacheKey = _getCacheKey();
+        final cacheData = {
+          'transactions': response.transactions.map((t) => t.toJson()).toList(),
+          'totalPages': response.totalPages,
+          'currentPage': response.page,
+        };
+        await WalletCacheService.saveTransactions(cacheData, filterKey: cacheKey);
+      }
+
+      if (!silent) {
+        setState(() {
+          if (page == 1) {
+            _transactions = response.transactions;
+            _applySearchFilter(); // re-apply search after new data
+            _currentPage = response.page;
+            _totalPages = response.totalPages;
+            _isLoading = false;
+          } else {
+            // This case is handled by _fetchMoreTransactions, but we keep for safety
+            _transactions.addAll(response.transactions);
+            _applySearchFilter();
+            _isLoadingMore = false;
+          }
+        });
+      } else {
+        // Silent refresh: replace entire list with fresh first page
+        setState(() {
           _transactions = response.transactions;
-        } else {
-          _transactions.addAll(response.transactions);
-        }
+          _applySearchFilter();
+          _currentPage = response.page;
+          _totalPages = response.totalPages;
+          // Don't change loading flags
+        });
+      }
+    } catch (e) {
+      if (mounted && !silent) {
+        setState(() {
+          _errorMessage = 'Failed to load transactions: $e';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  /// Fetch more pages for infinite scroll (always fresh, no cache)
+  Future<void> _fetchMoreTransactions(int page) async {
+    if (_isLoadingMore) return;
+    setState(() {
+      _isLoadingMore = true;
+    });
+    try {
+      final response = await _walletRepository.getTransactions(
+        page: page,
+        pageSize: 20,
+        type: _selectedType,
+        fromDate: _fromDate,
+        toDate: _toDate,
+      );
+      if (!mounted) return;
+      setState(() {
+        _transactions.addAll(response.transactions);
         _applySearchFilter();
         _currentPage = response.page;
         _totalPages = response.totalPages;
-        _isLoading = false;
         _isLoadingMore = false;
       });
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = 'Failed to load transactions: $e';
-        _isLoading = false;
-        _isLoadingMore = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
+        });
+        MessageService.showError('Failed to load more: $e');
+      }
     }
+  }
+
+  /// Background refresh after displaying cached data.
+  Future<void> _refreshInBackground() async {
+    try {
+      await _fetchFromApi(page: 1, silent: true);
+    } catch (_) {
+      // Ignore background refresh errors
+    }
+  }
+
+  /// Refresh data when user pulls down (force refresh)
+  Future<void> _refreshData() async {
+    await _loadTransactions(page: 1, forceRefresh: true);
+  }
+
+  // ==================  Search & Filter ==================
+
+  void _onSearchChanged() {
+    if (!mounted) return;
+    setState(() {
+      _searchQuery = _searchController.text;
+      _applySearchFilter();
+    });
   }
 
   void _applySearchFilter() {
@@ -169,20 +289,6 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
     }
   }
 
-  void _onScroll() {
-    if (_scrollController.position.pixels >=
-            _scrollController.position.maxScrollExtent - 200 &&
-        !_isLoadingMore &&
-        _currentPage < _totalPages) {
-      _loadTransactions(page: _currentPage + 1);
-    }
-  }
-
-  Future<void> _refreshData() async {
-    _currentPage = 1;
-    await _loadTransactions(page: 1);
-  }
-
   void _clearSearch() {
     _searchController.clear();
     _searchFocusNode.unfocus();
@@ -196,6 +302,8 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
       builder: (context) => _buildFilterSheet(),
     );
   }
+
+  // ==================  Filter Sheet (unchanged except it triggers fresh load) ==================
 
   Widget _buildFilterSheet() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -299,7 +407,8 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
                         _fromDate = tempFromDate;
                         _toDate = tempToDate;
                       });
-                      _loadTransactions(page: 1);
+                      // Reset to page 1 and force fresh load (cache key changed)
+                      _loadTransactions(page: 1, forceRefresh: true);
                       Navigator.pop(context);
                     },
                     style: ElevatedButton.styleFrom(
@@ -317,7 +426,19 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
     );
   }
 
-  // =============== دوال Skeleton المستوحاة من HomeTab ===============
+  // ==================  Scroll Handling ==================
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 200 &&
+        !_isLoadingMore &&
+        _currentPage < _totalPages) {
+      _fetchMoreTransactions(_currentPage + 1);
+    }
+  }
+
+  // ==================  Shimmer Skeleton (unchanged) ==================
+
   Widget _buildShimmerAppBar(bool isDarkMode) {
     return Padding(
       padding: const EdgeInsets.only(top: 8, right: 20, left: 20, bottom: 8),
@@ -487,7 +608,8 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
       ),
     );
   }
-  // =================================================================
+
+  // ==================  Build Methods ==================
 
   @override
   Widget build(BuildContext context) {
@@ -516,7 +638,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
       body: SafeArea(
         child: Column(
           children: [
-            // Search Bar (يظهر دائمًا)
+            // Search Bar (always visible)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: Container(
@@ -567,7 +689,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
               ),
             ),
 
-            // Type Filter Chips with animation (تظهر دائمًا)
+            // Type Filter Chips with animation
             FadeTransition(
               opacity: _fadeAnimation,
               child: Container(
@@ -586,7 +708,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
               ),
             ),
 
-            // Results count (يظهر فقط عندما لا يكون تحميل)
+            // Results count
             if (!_isLoading && _filteredTransactions.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
@@ -606,7 +728,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
 
             const SizedBox(height: 4),
 
-            // Main content: إما Shimmer أو القائمة
+            // Main content: Shimmer, Error, Empty, or List
             Expanded(
               child: _isLoading
                   ? _buildShimmerLoading()
@@ -618,13 +740,13 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
                               onRefresh: _refreshData,
                               color: isDarkMode ? Colors.white : Colors.black,
                               child: ListView.builder(
-  controller: _scrollController,
-  padding: EdgeInsets.only(
-    left: 20,
-    right: 20,
-    bottom: Platform.isIOS ? 75 : 20,
-  ),
-  itemCount: _filteredTransactions.length + (_isLoadingMore ? 1 : 0),
+                                controller: _scrollController,
+                                padding: EdgeInsets.only(
+                                  left: 20,
+                                  right: 20,
+                                  bottom: Platform.isIOS ? 75 : 20,
+                                ),
+                                itemCount: _filteredTransactions.length + (_isLoadingMore ? 1 : 0),
                                 itemBuilder: (context, index) {
                                   if (index < _filteredTransactions.length) {
                                     final transaction = _filteredTransactions[index];
@@ -662,7 +784,8 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
         setState(() {
           _selectedType = value;
           _currentPage = 1;
-          _loadTransactions(page: 1);
+          // Force refresh with new filter (cache key changed)
+          _loadTransactions(page: 1, forceRefresh: true);
         });
       },
       backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
@@ -782,13 +905,12 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
           child: InkWell(
             borderRadius: BorderRadius.circular(20),
             onTap: () {
-              // عرض تفاصيل المعاملة
+              // عرض تفاصيل المعاملة (if needed)
             },
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  // أيقونة الفئة
                   Container(
                     width: 48,
                     height: 48,
@@ -810,7 +932,6 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
                     ),
                   ),
                   const SizedBox(width: 16),
-                  // التفاصيل
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -870,7 +991,6 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
                       ],
                     ),
                   ),
-                  // المبلغ
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
@@ -938,7 +1058,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
               Navigator.pop(context);
               try {
                 await _walletRepository.deleteTransaction(transaction.id);
-                await _refreshData();
+                await _refreshData(); // force refresh after deletion
                 MessageService.showSuccess('Transaction deleted successfully');
               } catch (e) {
                 MessageService.showError('Failed to delete: $e');

@@ -8,6 +8,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:my_wallet/core/services/hide_balance_service.dart';
 import 'package:my_wallet/core/services/message_service.dart';
+import 'package:my_wallet/core/services/wallet_cache_service.dart';
 import 'package:my_wallet/core/services/watch_service.dart';
 import 'package:my_wallet/core/utils/api_error_handler.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
@@ -341,7 +342,34 @@ class _HomeTabState extends State<HomeTab> {
       _currencyLoaded = true;
     });
   }
+Map<String, dynamic> _homeDataToMap(WalletHomeData data) {
+  return {
+    'balance': {
+      'totalBalance': data.balance.totalBalance,
+      'totalDeposits': data.balance.totalDeposits,
+      'totalWithdrawals': data.balance.totalWithdrawals,
+    },
+    'recentTransactions': data.recentTransactions.map((t) => t.toJson()).toList(),
+    'totalTransactionCount': data.totalTransactionCount,
+  };
+}
 
+WalletHomeData _homeDataFromMap(Map<String, dynamic> map) {
+  final balanceMap = map['balance'] as Map<String, dynamic>;
+  final balance = WalletBalance(
+    totalBalance: (balanceMap['totalBalance'] as num).toDouble(),
+    totalDeposits: (balanceMap['totalDeposits'] as num).toDouble(),
+    totalWithdrawals: (balanceMap['totalWithdrawals'] as num).toDouble(),
+  );
+  final transactions = (map['recentTransactions'] as List)
+      .map((t) => WalletTransaction.fromJson(t))
+      .toList();
+  return WalletHomeData(
+    balance: balance,
+    recentTransactions: transactions,
+    totalTransactionCount: map['totalTransactionCount'] as int,
+  );
+}
   Future<void> _loadCategories() async {
     setState(() => _isLoadingCategories = true);
     try {
@@ -367,35 +395,73 @@ class _HomeTabState extends State<HomeTab> {
     }
   }
 
-Future<void> _loadHomeData() async {
+Future<void> _loadHomeData({bool forceRefresh = false}) async {
+  if (!forceRefresh) {
+    final cached = await WalletCacheService.getHome();
+    if (cached != null) {
+      try {
+        final cachedData = _homeDataFromMap(cached);
+        setState(() {
+          _homeData = cachedData;
+          _isLoading = false;
+          _errorMessage = null;
+        });
+        // Refresh in background
+        _refreshInBackground();
+        return;
+      } catch (e) {
+        debugPrint('Error parsing cached home data: $e');
+      }
+    }
+  }
+
+  // No cache or forced refresh → show shimmer and fetch from API
   setState(() {
     _isLoading = true;
     _errorMessage = null;
   });
+  await _fetchHomeFromApi();
+}
+Future<void> _fetchHomeFromApi({bool silent = false}) async {
   try {
     final data = await _walletRepository.getHomeData();
-    setState(() {
-      _homeData = data;
-    });
+    final cacheMap = _homeDataToMap(data);
+    await WalletCacheService.saveHome(cacheMap);
+
+    if (mounted && !silent) {
+      setState(() {
+        _homeData = data;
+        _isLoading = false;
+      });
+    } else if (mounted && silent) {
+      setState(() {
+        _homeData = data;
+      });
+    }
   } catch (e) {
     final errorMsg = ApiErrorHandler.getErrorMessage(e);
-    setState(() {
-      _errorMessage = errorMsg;
-    });
+    if (mounted && !silent) {
+      setState(() {
+        _errorMessage = errorMsg;
+        _isLoading = false;
+      });
+    }
     if (!ApiErrorHandler.isNetworkError(e)) {
       MessageService.showError(errorMsg);
     }
-  } finally {
-    setState(() {
-      _isLoading = false;
-    });
-    WatchService.pushDataToWatch(); // ✅ ده بس اللي اتضاف
   }
 }
 
-  Future<void> _refreshData() async {
-    await _loadHomeData();
+Future<void> _refreshInBackground() async {
+  try {
+    await _fetchHomeFromApi(silent: true);
+  } catch (_) {
+    // ignore
   }
+}
+Future<void> _refreshData() async {
+  await _loadHomeData(forceRefresh: true);
+}
   //#endregion
 
   //#region Filter Helpers
