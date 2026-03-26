@@ -20,5 +20,7 @@ namespace MyWallet.Application.ServiceInterfaces
         Task<AuthResponseDto> VerifyPasswordForRecoveryAsync(VerifyPasswordForRecoveryDto dto);
         Task<AuthResponseDto> RequestEmailChangeAsync(RequestEmailChangeDto dto);
         Task<AuthResponseDto> ConfirmEmailChangeAsync(ConfirmEmailChangeDto dto);
+        Task<AuthResponseDto> SendPasscodeResetOtpAsync(string userId);
+        Task<AuthResponseDto> ResetPasscodeAsync(ResetPasscodeDto dto);
     }
 }

@@ -612,5 +612,103 @@ namespace MyWallet.Application.Services
                 }
             };
         }
+
+        public async Task<AuthResponseDto> SendPasscodeResetOtpAsync(string userId)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                    return new AuthResponseDto { Success = false, Message = "المستخدم غير موجود" };
+
+                var otp = new Random().Next(100000, 999999).ToString();
+                var cacheKey = $"PasscodeReset_{userId}";
+
+                _cache.Set(cacheKey, otp, TimeSpan.FromMinutes(10));
+
+                var emailBody = _emailTemplateService.GenerateVerificationEmail(
+                    code: otp,
+                    isLogin: false,
+                    deviceName: null,
+                    ipAddress: null
+                );
+
+                await _emailSender.SendEmailAsync(
+                    user.Email!,
+                    "إعادة تعيين الرمز السري - محفظتي",
+                    emailBody
+                );
+
+                return new AuthResponseDto
+                {
+                    Success = true,
+                    Message = "تم إرسال رمز التحقق إلى بريدك الإلكتروني"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new AuthResponseDto
+                {
+                    Success = false,
+                    Message = "حدث خطأ",
+                    Errors = new List<string> { ex.Message }
+                };
+            }
+        }
+
+        public async Task<AuthResponseDto> ResetPasscodeAsync(ResetPasscodeDto dto)
+        {
+            try
+            {
+                var cacheKey = $"PasscodeReset_{dto.UserId}";
+
+                if (!_cache.TryGetValue(cacheKey, out string? cachedOtp))
+                    return new AuthResponseDto
+                    {
+                        Success = false,
+                        Message = "رمز التحقق منتهي الصلاحية"
+                    };
+
+                if (cachedOtp != dto.OtpCode)
+                    return new AuthResponseDto
+                    {
+                        Success = false,
+                        Message = "رمز التحقق غير صحيح"
+                    };
+
+                var user = await _userManager.FindByIdAsync(dto.UserId);
+                if (user == null)
+                    return new AuthResponseDto { Success = false, Message = "المستخدم غير موجود" };
+
+                // Reset password using Identity
+                var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var result = await _userManager.ResetPasswordAsync(user, resetToken, dto.NewPasscode);
+
+                if (!result.Succeeded)
+                    return new AuthResponseDto
+                    {
+                        Success = false,
+                        Message = "فشل تغيير الرمز السري",
+                        Errors = result.Errors.Select(e => e.Description).ToList()
+                    };
+
+                _cache.Remove(cacheKey);
+
+                return new AuthResponseDto
+                {
+                    Success = true,
+                    Message = "تم تغيير الرمز السري بنجاح"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new AuthResponseDto
+                {
+                    Success = false,
+                    Message = "حدث خطأ",
+                    Errors = new List<string> { ex.Message }
+                };
+            }
+        }
     }
 }

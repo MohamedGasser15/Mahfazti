@@ -135,5 +135,26 @@ namespace MyWallet.Controllers
             if (!result.Success) return BadRequest(result);
             return Ok(result);
         }
+        [Authorize]
+        [HttpPost("passcode/forgot")]
+        public async Task<IActionResult> ForgotPasscode()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var result = await _authService.SendPasscodeResetOtpAsync(userId);
+            if (!result.Success) return BadRequest(result);
+            return Ok(result);
+        }
+
+        [Authorize]
+        [HttpPost("passcode/reset")]
+        public async Task<IActionResult> ResetPasscode([FromBody] ResetPasscodeDto dto)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            dto.UserId = userId!;
+
+            var result = await _authService.ResetPasscodeAsync(dto);
+            if (!result.Success) return BadRequest(result);
+            return Ok(result);
+        }
     }
 }
