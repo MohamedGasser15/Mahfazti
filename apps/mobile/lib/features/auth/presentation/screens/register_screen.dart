@@ -3,8 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 import 'package:my_wallet/features/onboarding/presentation/screens/onboarding_screen.dart';
-import 'package:my_wallet/core/services/message_service.dart'; // إضافة
-import 'package:my_wallet/core/enums/message_type.dart'; // إضافة
+import 'package:my_wallet/core/services/message_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   final String email;
@@ -39,11 +38,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
   
 Future<void> _onComplete() async {
-  // التحقق من ملء جميع الحقول
   if (_fullNameController.text.isEmpty ||
       _userNameController.text.isEmpty ||
       _phoneNumberController.text.isEmpty) {
-    MessageService.showError('Please fill all fields');
+    MessageService.showError(context.l10n.pleaseFillAllFields);
     return;
   }
   
@@ -62,17 +60,17 @@ Future<void> _onComplete() async {
     );
     
     if (result['success'] == true) {
-      MessageService.showSuccess('Registration completed successfully!');
+      MessageService.showSuccess(context.l10n.registrationCompletedSuccessfully);
       
-      // ✅ التوجيه لشاشة اختيار العملة بدلاً من الانتقال المباشر للصفحة الرئيسية
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/currency-selection');
       }
     } else {
-      MessageService.showError(result['message'] ?? 'Registration failed');
+      MessageService.showError(result['message'] ?? context.l10n.registrationFailed);
+
     }
   } catch (e) {
-    MessageService.showError('Failed: ${e.toString()}');
+   MessageService.showError(context.l10n.failedWithDetails(e.toString()));
   } finally {
     setState(() {
       _isLoading = false;
@@ -133,8 +131,6 @@ Future<void> _onComplete() async {
             
             const SizedBox(height: 40),
             
-            // تم إزالة قسم عرض _errorMessage
-            
             // Full Name
             TextField(
               controller: _fullNameController,
@@ -163,21 +159,21 @@ Future<void> _onComplete() async {
             
             // Phone Number
            TextField(
-  controller: _phoneNumberController,
-  keyboardType: TextInputType.phone,
-  maxLength: 11,
-  inputFormatters: [
-    FilteringTextInputFormatter.digitsOnly,
-    LengthLimitingTextInputFormatter(11),
-  ],
-  decoration: InputDecoration(
-    labelText: context.l10n.phoneNumber,
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-    ),
-    counterText: "", 
-  ),
-),
+            controller: _phoneNumberController,
+            keyboardType: TextInputType.phone,
+            maxLength: 11,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(11),
+            ],
+            decoration: InputDecoration(
+              labelText: context.l10n.phoneNumber,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              counterText: "", 
+            ),
+          ),
             
             const SizedBox(height: 40),
             

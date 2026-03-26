@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 
@@ -43,10 +44,10 @@ class _RecoveryCheckUserScreenState extends State<RecoveryCheckUserScreen> {
           );
         }
       } else {
-        MessageService.showError(result['message'] ?? 'User not found');
+       MessageService.showError(result['message'] ?? context.l10n.userNotFound);
       }
     } catch (e) {
-      MessageService.showError('Something went wrong');
+     MessageService.showError(context.l10n.somethingWentWrong);
     } finally {
       setState(() => _isLoading = false);
     }
@@ -92,7 +93,7 @@ class _RecoveryCheckUserScreenState extends State<RecoveryCheckUserScreen> {
                   const SizedBox(height: 24),
 
                   Text(
-                    'Lost access to email?',
+                    context.l10n.lostAccessToEmail,
                     style: theme.textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -101,7 +102,7 @@ class _RecoveryCheckUserScreenState extends State<RecoveryCheckUserScreen> {
                   const SizedBox(height: 12),
 
                   Text(
-                    'Enter your username or email address to recover your account.',
+                   context.l10n.recoveryEnterUsernameOrEmail,
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: theme.colorScheme.onBackground.withOpacity(0.6),
                       height: 1.5,
@@ -115,7 +116,7 @@ class _RecoveryCheckUserScreenState extends State<RecoveryCheckUserScreen> {
                     textInputAction: TextInputAction.done,
                     onSubmitted: (_) { if (_isValid) _onContinue(); },
                     decoration: InputDecoration(
-                      hintText: 'Username or email',
+                     hintText: context.l10n.usernameOrEmail,
                       hintStyle: TextStyle(
                         color: theme.colorScheme.onBackground.withOpacity(0.4),
                       ),
@@ -185,7 +186,7 @@ class _RecoveryCheckUserScreenState extends State<RecoveryCheckUserScreen> {
                       ),
                     )
                   : Text(
-                      'Continue',
+                     context.l10n.continueText,
                       style: theme.textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: theme.colorScheme.onPrimary,

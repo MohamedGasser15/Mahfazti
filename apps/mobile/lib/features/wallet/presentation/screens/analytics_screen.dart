@@ -76,7 +76,7 @@ Future<void> _loadSummary({bool forceRefresh = false}) async {
     _isLoading = true;
     _errorMessage = null;
   });
-  await _fetchFromApi();
+  await _fetchFromApi(silent: true, context: context);
 }
 
 Future<void> _refreshInBackground() async {
@@ -86,7 +86,7 @@ Future<void> _refreshInBackground() async {
   }
 }
 
-Future<void> _fetchFromApi({bool silent = false}) async {
+Future<void> _fetchFromApi({bool silent = false, BuildContext? context}) async {
   try {
     final data = await _repository.getSummary(
       fromDate: _fromDate,
@@ -122,9 +122,10 @@ Future<void> _fetchFromApi({bool silent = false}) async {
       });
     }
   } catch (e) {
-    if (mounted && !silent) {
+     if (mounted && !silent) {
+      final l10n = context?.l10n ?? this.context.l10n;
       setState(() {
-        _errorMessage = 'Failed to load analytics: $e';
+        _errorMessage = l10n.failedToLoadAnalytics(e.toString());
         _isLoading = false;
       });
     }
@@ -136,7 +137,7 @@ Future<void> _fetchFromApi({bool silent = false}) async {
     return '$symbol ${formatter.format(amount)}';
   }
 
-  // ================== دوال Skeleton المستوحاة من HomeTab ==================
+  // ================== HomeTab ==================
   Widget _buildShimmerStatCard(bool isDarkMode) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -157,7 +158,7 @@ Future<void> _fetchFromApi({bool silent = false}) async {
                 width: 40,
                 height: 40,
                 decoration: const BoxDecoration(
-                  color: Colors.white, // سيتم تلوينه بواسطة Shimmer
+                  color: Colors.white,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -295,7 +296,6 @@ Future<void> _fetchFromApi({bool silent = false}) async {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // صف البطاقتين
             Row(
               children: [
                 Expanded(child: _buildShimmerStatCard(isDarkMode)),
@@ -304,16 +304,12 @@ Future<void> _fetchFromApi({bool silent = false}) async {
               ],
             ),
             const SizedBox(height: 16),
-            // بطاقة صافي التوفير
             _buildShimmerNetSavingsCard(isDarkMode),
             const SizedBox(height: 24),
-            // قسم المصروفات مع خيارات النوع
             _buildShimmerChartSection(isDarkMode),
             const SizedBox(height: 16),
-            // قائمة تفصيلية
             ...List.generate(3, (i) => _buildShimmerCategoryItem(isDarkMode)),
             const SizedBox(height: 24),
-            // قسم الإيرادات مع خيارات النوع
             _buildShimmerChartSection(isDarkMode),
             const SizedBox(height: 16),
             ...List.generate(3, (i) => _buildShimmerCategoryItem(isDarkMode)),
@@ -337,7 +333,7 @@ Future<void> _fetchFromApi({bool silent = false}) async {
         centerTitle: true,
       ),
       body: _isLoading
-          ? _buildShimmerLoading(isDarkMode) // استخدام الـ Skeleton بدلاً من CircularProgressIndicator
+          ? _buildShimmerLoading(isDarkMode)
           : _errorMessage != null
               ? Center(
                   child: Column(
@@ -354,17 +350,16 @@ Future<void> _fetchFromApi({bool silent = false}) async {
                 )
               : _summaryData == null
                   ? Center(child: Text(context.l10n.noDataAvailable))
-: SingleChildScrollView(
-    padding: EdgeInsets.only(
-      left: 16,
-      right: 16,
-      top: 16,
-      bottom: Platform.isIOS ? 75 : 5,
-    ),
-    child: Column(
+                  : SingleChildScrollView(
+                      padding: EdgeInsets.only(
+                        left: 16,
+                        right: 16,
+                        top: 16,
+                        bottom: Platform.isIOS ? 75 : 5,
+                      ),
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // بطاقات الإحصائيات الأساسية
                           Row(
                             children: [
                               Expanded(
@@ -391,7 +386,6 @@ Future<void> _fetchFromApi({bool silent = false}) async {
 
                           const SizedBox(height: 16),
 
-                          // بطاقة صافي التوفير
                           _buildNetSavingsCard(
                             netSavings: _summaryData!['netSavings'],
                             isDarkMode: isDarkMode,
@@ -399,7 +393,6 @@ Future<void> _fetchFromApi({bool silent = false}) async {
 
                           const SizedBox(height: 24),
 
-                          // قسم المصروفات مع اختيار نوع الرسم
                           _buildChartSection(
                             title: context.l10n.expensesByCategory,
                             categories: _summaryData!['expensesByCategory'] as List,
@@ -415,7 +408,6 @@ Future<void> _fetchFromApi({bool silent = false}) async {
 
                           const SizedBox(height: 16),
 
-                          // قائمة تفصيلية للمصروفات
                           _buildCategoryDetails(
                             _summaryData!['expensesByCategory'] as List,
                             isDarkMode,
@@ -424,7 +416,6 @@ Future<void> _fetchFromApi({bool silent = false}) async {
 
                           const SizedBox(height: 24),
 
-                          // قسم الإيرادات مع اختيار نوع الرسم
                           _buildChartSection(
                             title: context.l10n.incomeByCategory,
                             categories: _summaryData!['incomeByCategory'] as List,
@@ -440,7 +431,6 @@ Future<void> _fetchFromApi({bool silent = false}) async {
 
                           const SizedBox(height: 16),
 
-                          // قائمة تفصيلية للإيرادات
                           _buildCategoryDetails(
                             _summaryData!['incomeByCategory'] as List,
                             isDarkMode,
@@ -451,10 +441,9 @@ Future<void> _fetchFromApi({bool silent = false}) async {
                         ],
                       ),
                     ),
-    );
-  }
+                  );
+                }
 
-  // دالة مساعدة لبناء قسم الرسم البياني مع خيارات النوع
   Widget _buildChartSection({
     required String title,
     required List<dynamic> categories,
@@ -477,7 +466,6 @@ Future<void> _fetchFromApi({bool silent = false}) async {
                 color: isDarkMode ? Colors.white : Colors.black,
               ),
             ),
-            // خيارات اختيار نوع الرسم
             Container(
               decoration: BoxDecoration(
                 color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
@@ -487,14 +475,14 @@ Future<void> _fetchFromApi({bool silent = false}) async {
                 children: [
                   _buildTypeChip(
                     icon: Icons.show_chart,
-                    label: 'Line',
+                    label: context.l10n.line,
                     isSelected: chartType == ChartType.line,
                     onSelected: () => onChartTypeChanged(ChartType.line),
                     isDarkMode: isDarkMode,
                   ),
                   _buildTypeChip(
                     icon: Icons.bar_chart,
-                    label: 'Bar',
+                    label: context.l10n.bar,
                     isSelected: chartType == ChartType.bar,
                     onSelected: () => onChartTypeChanged(ChartType.bar),
                     isDarkMode: isDarkMode,
@@ -505,13 +493,11 @@ Future<void> _fetchFromApi({bool silent = false}) async {
           ],
         ),
         const SizedBox(height: 16),
-        // بناء الرسم البياني حسب النوع
         _buildChart(categories, chartType, color, isDarkMode),
       ],
     );
   }
 
-  // دالة مساعدة لبناء خيارات النوع مع أيقونة
   Widget _buildTypeChip({
     required IconData icon,
     required String label,
@@ -555,14 +541,13 @@ Future<void> _fetchFromApi({bool silent = false}) async {
     );
   }
 
-  // دالة موحدة لبناء الرسم البياني (خطي أو أعمدة)
 Widget _buildChart(List<dynamic> categories, ChartType type, Color color, bool isDarkMode) {
   if (categories.isEmpty) {
     return Container(
       height: 200,
       alignment: Alignment.center,
       child: Text(
-        'No data in this period',
+         context.l10n.noDataInPeriod,
         style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
       ),
     );
@@ -759,7 +744,6 @@ Widget _buildChart(List<dynamic> categories, ChartType type, Color color, bool i
     );
   }
 
-  // دالة لبناء بطاقة صافي التوفير
   Widget _buildNetSavingsCard({required double netSavings, required bool isDarkMode}) {
     final color = netSavings >= 0 ? Colors.green : Colors.red;
     return Container(
@@ -787,7 +771,6 @@ Widget _buildChart(List<dynamic> categories, ChartType type, Color color, bool i
     );
   }
 
-  // قائمة تفصيلية بالفئات
   Widget _buildCategoryDetails(List<dynamic> categories, bool isDarkMode, {bool isIncome = false}) {
     if (categories.isEmpty) {
       return const SizedBox.shrink();

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
@@ -90,7 +91,6 @@ class _ResetPasscodeScreenState extends State<ResetPasscodeScreen>
     final entered = _passcode.join();
 
     if (_step == _ResetStep.enterNew) {
-      // حفظ الـ passcode الأول والانتقال لشاشة الـ confirm
       _firstPasscode = entered;
       setState(() {
         _passcode = [];
@@ -100,13 +100,11 @@ class _ResetPasscodeScreenState extends State<ResetPasscodeScreen>
       return;
     }
 
-    // Confirm step
     if (entered != _firstPasscode) {
       _triggerError();
       return;
     }
 
-    // كل حاجة تمام — نبعت للـ backend
     setState(() => _isLoading = true);
 
     try {
@@ -116,7 +114,6 @@ class _ResetPasscodeScreenState extends State<ResetPasscodeScreen>
       );
 
       if (result['success'] == true) {
-        // تحديث الـ passcode المحفوظ محلياً
         await SharedPrefs.setString('user_password', entered);
 
         if (mounted) {
@@ -124,8 +121,7 @@ class _ResetPasscodeScreenState extends State<ResetPasscodeScreen>
         }
       } else {
         if (mounted) {
-          MessageService.showError(result['message'] ?? 'Failed to reset passcode');
-          // نرجع لأول شاشة عشان يحاول تاني
+         MessageService.showError(result['message'] ?? context.l10n.failedToResetPasscode);
           setState(() {
             _passcode = [];
             _firstPasscode = '';
@@ -135,7 +131,7 @@ class _ResetPasscodeScreenState extends State<ResetPasscodeScreen>
       }
     } catch (e) {
       if (mounted) {
-        MessageService.showError('Something went wrong');
+        MessageService.showError(context.l10n.somethingWentWrong);
         setState(() {
           _passcode = [];
           _firstPasscode = '';
@@ -182,14 +178,14 @@ class _ResetPasscodeScreenState extends State<ResetPasscodeScreen>
             ),
             const SizedBox(height: 20),
             Text(
-              'Passcode updated!',
+              context.l10n.passcodeUpdated,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Your passcode has been changed successfully.',
+             context.l10n.passcodeChangedSuccessfully,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context)
@@ -203,20 +199,20 @@ class _ResetPasscodeScreenState extends State<ResetPasscodeScreen>
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-  Navigator.pop(ctx); // close dialog بـ ctx
-  Navigator.pushAndRemoveUntil(
-    context,
-    MaterialPageRoute(builder: (_) => const HomeScreen()),
-    (route) => false,
-  );
-},
+                    Navigator.pop(ctx);
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const HomeScreen()),
+                      (route) => false,
+                    );
+                  },
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text('Done'),
+                child: Text(context.l10n.done),
               ),
             ),
           ],
@@ -244,7 +240,6 @@ class _ResetPasscodeScreenState extends State<ResetPasscodeScreen>
           ),
           onPressed: () {
             if (isConfirm) {
-              // رجوع لشاشة الـ enter
               setState(() {
                 _passcode = [];
                 _firstPasscode = '';
@@ -297,9 +292,7 @@ class _ResetPasscodeScreenState extends State<ResetPasscodeScreen>
                       duration: const Duration(milliseconds: 300),
                       child: Text(
                         key: ValueKey(_step),
-                        isConfirm
-                            ? 'Confirm new passcode'
-                            : 'Enter new passcode',
+                        isConfirm ? context.l10n.confirmNewPasscode : context.l10n.enterNewPasscode,
                         style: theme.textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
@@ -312,9 +305,9 @@ class _ResetPasscodeScreenState extends State<ResetPasscodeScreen>
                       duration: const Duration(milliseconds: 300),
                       child: Text(
                         key: ValueKey(_step),
-                        isConfirm
-                            ? 'Re-enter your new passcode to confirm'
-                            : 'Choose a new 6-digit passcode',
+                      isConfirm 
+                        ? context.l10n.confirmNewPasscodeDescription
+                        : context.l10n.chooseNewPasscodeDescription,
                         style: theme.textTheme.bodyLarge?.copyWith(
                           color:
                               theme.colorScheme.onBackground.withOpacity(0.6),
@@ -409,8 +402,8 @@ class _ResetPasscodeScreenState extends State<ResetPasscodeScreen>
                           color: Colors.red.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(30),
                         ),
-                        child: const Text(
-                          'Passcodes don\'t match, try again',
+                        child: Text(
+                          context.l10n.passcodesDoNotMatch,
                           style: TextStyle(color: Colors.red, fontSize: 14),
                         ),
                       ),

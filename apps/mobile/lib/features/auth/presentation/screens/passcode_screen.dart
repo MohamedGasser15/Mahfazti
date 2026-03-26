@@ -134,7 +134,7 @@ class _PasscodeScreenState extends State<PasscodeScreen> with TickerProviderStat
           await SharedPrefs.setString('user_password', passcode);
           _navigateToHome();
         } else {
-          _showErrorState('Invalid passcode');
+         _showErrorState(context.l10n.invalidPasscode);
         }
       } else {
         // Save passcode locally before navigating to register
@@ -150,7 +150,7 @@ class _PasscodeScreenState extends State<PasscodeScreen> with TickerProviderStat
         );
       }
     } catch (e) {
-      _showErrorState('An error occurred');
+     _showErrorState(context.l10n.somethingWentWrong);
     } finally {
       setState(() {
         _isLoading = false;
@@ -222,14 +222,14 @@ class _PasscodeScreenState extends State<PasscodeScreen> with TickerProviderStat
           ),
           const SizedBox(height: 16),
           Text(
-            'Reset Passcode',
+            context.l10n.resetPasscode,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'A new verification code will be sent to your email.',
+           context.l10n.resetPasscodeDescription,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
@@ -247,7 +247,7 @@ class _PasscodeScreenState extends State<PasscodeScreen> with TickerProviderStat
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text('Cancel'),
+                  child: Text(context.l10n.cancel),
                 ),
               ),
               const SizedBox(width: 16),
@@ -265,10 +265,10 @@ class _PasscodeScreenState extends State<PasscodeScreen> with TickerProviderStat
                         ipAddress: widget.ipAddress,
                       );
                       // استخدام MessageService بدلاً من _showSuccessSnackBar
-                      MessageService.showSuccess('New code sent to ${widget.email}');
+                     MessageService.showSuccess(context.l10n.newCodeSentTo(widget.email));
                     } catch (e) {
                       // استخدام MessageService بدلاً من _showErrorSnackBar
-                      MessageService.showError('Failed to send code');
+                     MessageService.showError(context.l10n.failedToSendCode);
                     } finally {
                       setState(() => _isLoading = false);
                     }
@@ -279,7 +279,7 @@ class _PasscodeScreenState extends State<PasscodeScreen> with TickerProviderStat
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text('Send'),
+                  child:Text(context.l10n.send),
                 ),
               ),
             ],
@@ -322,26 +322,22 @@ class _PasscodeScreenState extends State<PasscodeScreen> with TickerProviderStat
     );
   }
   
-  // بناء لوحة المفاتيح
   Widget _buildKeyboard() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       child: Column(
         children: [
-          // الصفوف 1-2-3
           _buildRow(['1', '2', '3']),
           const SizedBox(height: 16),
           _buildRow(['4', '5', '6']),
           const SizedBox(height: 16),
           _buildRow(['7', '8', '9']),
           const SizedBox(height: 16),
-          // الصف الأخير: نص (Forget) - 0 - زر حذف
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              // Forget (يظهر فقط في حالة login)
               widget.isLogin
-                  ? _buildTextButton('Forget?', onTap: _onForgotPasscode)
+                  ?_buildTextButton(context.l10n.forgot, onTap: _onForgotPasscode)
                   : const SizedBox(width: 80),
               
               _buildNumberButton('0'),

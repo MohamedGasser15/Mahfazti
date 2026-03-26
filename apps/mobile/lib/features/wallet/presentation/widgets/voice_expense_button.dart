@@ -25,7 +25,7 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
 
   bool _isListening = false;
   bool _isProcessing = false;
-  bool _hasProcessed = false; // ✅ الجديد
+  bool _hasProcessed = false;
   String _recognizedText = '';
   bool _speechInitialized = false;
 
@@ -57,7 +57,7 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
       onStatus: (status) {
         debugPrint('Speech status: $status');
         if ((status == 'done' || status == 'notListening') && _isListening) {
-          _stopAndProcess(); // ✅ محمي بالـ flag جوا
+          _stopAndProcess();
         }
       },
     );
@@ -79,13 +79,13 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
     setState(() {
       _isListening = true;
       _recognizedText = '';
-      _hasProcessed = false; // ✅ reset عند كل تسجيل جديد
+      _hasProcessed = false;
     });
 
     await _speech.listen(
       onResult: (result) {
         if (mounted) setState(() => _recognizedText = result.recognizedWords);
-        if (result.finalResult && !_hasProcessed) { // ✅ شيك
+        if (result.finalResult && !_hasProcessed) {
           _stopAndProcess();
         }
       },
@@ -98,10 +98,10 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
   }
 
   Future<void> _stopAndProcess() async {
-    if (_hasProcessed) return; // ✅ الحماية الرئيسية
+    if (_hasProcessed) return;
     if (!_isListening && _recognizedText.isEmpty) return;
 
-    _hasProcessed = true; // ✅ قبل أي await
+    _hasProcessed = true;
     await _speech.stop();
 
     if (mounted) setState(() { _isListening = false; _isProcessing = true; });
@@ -112,7 +112,6 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
       _recognizedText,
       language: _isArabic ? 'ar' : 'en',
     );
-    // ✅ بنبعت النتيجة من غير note
     widget.onResult(VoiceExpenseResult(
       amount: result.amount,
       transactionType: result.transactionType,
@@ -120,7 +119,7 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
       categoryNameAr: result.categoryNameAr,
       categoryNameEn: result.categoryNameEn,
       title: result.title,
-      note: null, // ✅ دايماً فاضي
+      note: null,
       isSuccess: result.isSuccess,
       errorMessage: result.errorMessage,
     ));

@@ -21,14 +21,12 @@ class _InsightsPageState extends State<InsightsPage> {
   String? _errorMessage;
   String _currencyCode = 'USD';
 
-  // بيانات الشهر الحالي
   double _totalExpenses = 0;
   double _totalIncome = 0;
   List<Map<String, dynamic>> _topCategories = [];
   double _highestTransaction = 0;
   String _highestTransactionCategory = '';
 
-  // بيانات الشهر اللي فات للمقارنة
   double _lastMonthExpenses = 0;
 
   static const Map<String, String> currencySymbols = {
@@ -55,7 +53,6 @@ Future<void> _init() async {
 }
 
 Future<void> _loadData({bool forceRefresh = false}) async {
-  // 1. جرب الـ cache الأول
   if (!forceRefresh) {
     final cachedCurrent = await WalletCacheService.getInsightsCurrent();
     final cachedLast = await WalletCacheService.getInsightsLast();
@@ -63,13 +60,11 @@ Future<void> _loadData({bool forceRefresh = false}) async {
     if (cachedCurrent != null && cachedLast != null) {
       _applyData(cachedCurrent, cachedLast);
       setState(() => _isLoading = false);
-      // refresh في الـ background
       _refreshInBackground();
       return;
     }
   }
 
-  // 2. مفيش cache أو force refresh
   setState(() {
     _isLoading = true;
     _errorMessage = null;
@@ -96,7 +91,6 @@ Future<void> _fetchFromApi({bool silent = false}) async {
     final current = results[0];
     final last = results[1];
 
-    // تحويل للـ map عشان نحفظه في الـ cache
     final currentMap = {
       'totalIncome': current.totalIncome,
       'totalExpenses': current.totalExpenses,
@@ -114,7 +108,6 @@ Future<void> _fetchFromApi({bool silent = false}) async {
       'totalExpenses': last.totalExpenses,
     };
 
-    // حفظ في الـ cache
     await WalletCacheService.saveInsightsCurrent(currentMap);
     await WalletCacheService.saveInsightsLast(lastMap);
 
@@ -124,8 +117,9 @@ Future<void> _fetchFromApi({bool silent = false}) async {
     }
   } catch (e) {
     if (mounted && !silent) {
+      
       setState(() {
-        _errorMessage = 'Failed to load insights: $e';
+       _errorMessage = context.l10n.failedToLoadInsights(e.toString());
         _isLoading = false;
       });
     }
@@ -263,7 +257,7 @@ void _applyData(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          'Spending Insights',
+          context.l10n.spendingInsights,
           style: TextStyle(
             color: isDark ? Colors.white : Colors.black,
             fontSize: 24,
@@ -307,7 +301,7 @@ void _applyData(
                 backgroundColor: isDark ? Colors.white : Colors.black,
                 foregroundColor: isDark ? Colors.black : Colors.white,
               ),
-              child: const Text('Try Again'),
+              child: Text(context.l10n.tryAgain),
             ),
           ],
         ),
@@ -348,7 +342,7 @@ void _applyData(
                 isDark: isDark,
                 icon: Icons.trending_down_rounded,
                 iconColor: Colors.red,
-                label: 'This Month',
+                label: context.l10n.thisMonth,
                 value: _formatCurrency(_totalExpenses),
               ),
             ),
@@ -358,7 +352,7 @@ void _applyData(
                 isDark: isDark,
                 icon: Icons.trending_up_rounded,
                 iconColor: Colors.green,
-                label: 'Income',
+                label: context.l10n.income,
                 value: _formatCurrency(_totalIncome),
               ),
             ),
@@ -372,7 +366,7 @@ void _applyData(
                 isDark: isDark,
                 icon: Icons.calendar_today_rounded,
                 iconColor: Colors.blue,
-                label: 'Daily Avg',
+                label: context.l10n.dailyAverage,
                 value: _formatCurrency(_dailyAverage),
               ),
             ),
@@ -384,9 +378,9 @@ void _applyData(
                     ? Icons.arrow_upward_rounded
                     : Icons.arrow_downward_rounded,
                 iconColor: isUp ? Colors.orange : Colors.green,
-                label: 'vs Last Month',
+                label: context.l10n.vsLastMonth,
                 value: _lastMonthExpenses == 0
-                    ? 'No data'
+                    ? context.l10n.noData
                     : '${isUp ? '+' : ''}${diff.toStringAsFixed(1)}%',
                 valueColor: _lastMonthExpenses == 0
                     ? null
@@ -399,7 +393,7 @@ void _applyData(
 
           // ── Top spending categories ───────────────
           Text(
-            'Top Spending Categories',
+            context.l10n.topSpendingCategories,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
@@ -410,7 +404,7 @@ void _applyData(
           const SizedBox(height: 14),
 
           if (_topCategories.isEmpty)
-            _emptyState(isDark, 'No expenses this month')
+            _emptyState(isDark, context.l10n.noExpensesThisMonth)
           else
             ..._topCategories.asMap().entries.map((entry) {
               final rank = entry.key + 1;
@@ -438,7 +432,7 @@ void _applyData(
 
           // ── Quick facts ───────────────────────────
           Text(
-            'Quick Facts',
+            context.l10n.quickFacts,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
@@ -452,9 +446,9 @@ void _applyData(
             isDark: isDark,
             icon: Icons.local_fire_department_rounded,
             iconColor: Colors.deepOrange,
-            title: 'Biggest spend',
+            title: context.l10n.biggestSpend,
             subtitle: _highestTransactionCategory.isEmpty
-                ? 'No data'
+                ? context.l10n.noData
                 : '$_highestTransactionCategory — ${_formatCurrency(_highestTransaction)}',
           ),
 
@@ -464,7 +458,7 @@ void _applyData(
             isDark: isDark,
             icon: Icons.savings_rounded,
             iconColor: Colors.teal,
-            title: 'Net savings',
+            title: context.l10n.netSavings,
             subtitle: _formatCurrency(_totalIncome - _totalExpenses),
             subtitleColor: (_totalIncome - _totalExpenses) >= 0
                 ? Colors.green[700]
@@ -477,10 +471,8 @@ void _applyData(
             isDark: isDark,
             icon: Icons.compare_arrows_rounded,
             iconColor: Colors.purple,
-            title: 'Last month expenses',
-            subtitle: _lastMonthExpenses == 0
-                ? 'No data'
-                : _formatCurrency(_lastMonthExpenses),
+            title: context.l10n.lastMonthExpenses,
+            subtitle: _lastMonthExpenses == 0 ? context.l10n.noData : _formatCurrency(_lastMonthExpenses),
           ),
         ],
       ),

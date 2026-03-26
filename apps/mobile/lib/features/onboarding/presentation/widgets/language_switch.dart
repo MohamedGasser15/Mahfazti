@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/utils/language_service.dart';
-import 'package:my_wallet/l10n/app_localizations.dart';
 
 class LanguageSwitch extends StatefulWidget {
   final Function(Locale) onLocaleChanged;

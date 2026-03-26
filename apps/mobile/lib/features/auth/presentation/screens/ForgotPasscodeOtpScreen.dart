@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 import 'package:my_wallet/features/auth/presentation/screens/ResetPasscodeScreen.dart';
@@ -158,7 +159,7 @@ class _ForgotPasscodeOtpScreenState extends State<ForgotPasscodeOtpScreen>
               CircularProgressIndicator(color: theme.colorScheme.primary),
               const SizedBox(height: 16),
               Text(
-                'Sending verification code...',
+               context.l10n.sendingVerificationCode,
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: theme.colorScheme.onBackground.withOpacity(0.6),
                 ),
@@ -203,7 +204,7 @@ class _ForgotPasscodeOtpScreenState extends State<ForgotPasscodeOtpScreen>
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Reset passcode',
+                 context.l10n.resetPasscode,
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     fontSize: 30,
@@ -211,7 +212,7 @@ class _ForgotPasscodeOtpScreenState extends State<ForgotPasscodeOtpScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Enter the 6-digit code sent to your email',
+                  context.l10n.enterCodeSentToEmail,
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: theme.colorScheme.onBackground.withOpacity(0.6),
                   ),
@@ -347,7 +348,7 @@ class _ForgotPasscodeOtpScreenState extends State<ForgotPasscodeOtpScreen>
                                       .withOpacity(0.6)),
                               const SizedBox(width: 8),
                               Text(
-                                'Resend in ${_formatCountdown(_countdown)}',
+                               context.l10n.resendIn(_formatCountdown(_countdown)),
                                 style: TextStyle(
                                   color: theme.colorScheme.onSurface
                                       .withOpacity(0.8),
@@ -365,7 +366,7 @@ class _ForgotPasscodeOtpScreenState extends State<ForgotPasscodeOtpScreen>
                               const Icon(Icons.refresh, size: 18),
                               const SizedBox(width: 8),
                               Text(
-                                'Resend code',
+                                context.l10n.resendCode,
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 16,

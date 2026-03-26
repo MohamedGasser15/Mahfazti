@@ -65,7 +65,6 @@ class _StoryProgressBarState extends State<StoryProgressBar>
                   ),
                   child: Stack(
                     children: [
-                      // الخلفية الرمادية لجميع الأشرطة
                       Container(
                         decoration: BoxDecoration(
                           color: Theme.of(context).colorScheme.onBackground.withOpacity(0.1),
@@ -73,7 +72,6 @@ class _StoryProgressBarState extends State<StoryProgressBar>
                         ),
                       ),
                       
-                      // الصفحات المكتملة
                       if (index < widget.currentPage)
                         Container(
                           decoration: BoxDecoration(
@@ -82,7 +80,6 @@ class _StoryProgressBarState extends State<StoryProgressBar>
                           ),
                         ),
                       
-                      // الصفحة الحالية مع الحركة السلسة
                       if (index == widget.currentPage)
                         AnimatedBuilder(
                           animation: _progressAnimation,

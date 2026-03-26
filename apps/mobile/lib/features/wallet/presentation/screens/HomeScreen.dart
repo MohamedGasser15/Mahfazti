@@ -109,7 +109,7 @@ _buildAndroidNavItem(
 
     return GestureDetector(
       onTap: () {
-        setState(() => _currentIndex = index); // ← أضف السطر ده
+        setState(() => _currentIndex = index);
         _pageController.animateToPage(
           index,
           duration: const Duration(milliseconds: 300),
@@ -216,7 +216,7 @@ _buildAndroidNavItem(
 
     return GestureDetector(
      onTap: () {
-  setState(() => _currentIndex = index); // ← أضف السطر ده
+  setState(() => _currentIndex = index);
   _pageController.animateToPage(
     index,
     duration: const Duration(milliseconds: 350),

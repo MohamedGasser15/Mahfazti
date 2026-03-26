@@ -122,9 +122,9 @@ class _EmailScreenState extends State<EmailScreen> with SingleTickerProviderStat
       await _sendVerificationCode();
       
       // استخدام MessageService بدلاً من SnackBar
-      MessageService.showSuccess('Verification code sent to $email');
+      MessageService.showSuccess(context.l10n.verificationCodeSent(email));
     } catch (e) {
-      MessageService.showError('Error: ${e.toString()}');
+     MessageService.showError(context.l10n.errorWithDetails(e.toString()));
     } finally {
       setState(() {
         _isLoading = false;
@@ -159,7 +159,7 @@ class _EmailScreenState extends State<EmailScreen> with SingleTickerProviderStat
       );
     } catch (e) {
       // استخدام MessageService هنا أيضاً
-      MessageService.showError('Failed to send verification code');
+      MessageService.showError(context.l10n.failedToSendCode);
     }
   }
   

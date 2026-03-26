@@ -25,7 +25,6 @@ class VerificationScreen extends StatefulWidget {
 }
 
 class _VerificationScreenState extends State<VerificationScreen> with TickerProviderStateMixin {
-  // حقل مخفي واحد للتحكم في الإدخال
   late final TextEditingController _hiddenController;
   late final FocusNode _hiddenFocusNode;
 
@@ -43,7 +42,6 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
 
-  // الكود الحالي
   String _code = '';
 
   @override
@@ -54,7 +52,6 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
     _startTimer();
     _initAnimations();
 
-    // طلب التركيز على الحقل المخفي بعد بناء الواجهة
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _hiddenFocusNode.requestFocus();
     });
@@ -118,9 +115,7 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
     );
   }
 
-  // معالجة تغيير النص في الحقل المخفي
   void _onHiddenTextChanged(String value) {
-    // السماح فقط بالأرقام
     final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
     if (digits != value) {
       _hiddenController.text = digits;
@@ -131,12 +126,10 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
       _code = digits;
     });
 
-    // مسح رسالة الخطأ عند أي تغيير
     if (_errorMessage != null) {
       setState(() => _errorMessage = null);
     }
 
-    // التحقق التلقائي عند اكتمال 6 أرقام
     if (digits.length == 6) {
       _verifyCode();
     }
@@ -145,7 +138,6 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
   Future<void> _verifyCode() async {
     if (_isLoading) return;
 
-    // إخفاء الكيبورد بعد اكتمال الإدخال فقط
     _hiddenFocusNode.unfocus();
 
     setState(() {
@@ -198,7 +190,6 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
       _code = '';
     });
     _hiddenController.clear();
-    // إعادة التركيز للحقل المخفي بعد الخطأ
     _hiddenFocusNode.requestFocus();
   }
 
@@ -223,11 +214,9 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
       );
       _resetTimer();
       _clearCode();
-      // استخدام MessageService بدلاً من _showSuccessSnackBar
-      MessageService.showSuccess('Verification code resent to ${widget.email}');
+     MessageService.showSuccess(context.l10n.verificationCodeResentTo(widget.email));
     } catch (e) {
-      // استخدام MessageService بدلاً من _showErrorSnackBar
-      MessageService.showError('Failed to resend code. Please try again.');
+      MessageService.showError(context.l10n.failedToResend);
     } finally {
       setState(() {
         _isLoading = false;
@@ -291,9 +280,8 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
     final theme = Theme.of(context);
     final isRTL = Directionality.of(context) == TextDirection.rtl;
 
-    // حساب عرض المربعات مثل الأصل
     final screenWidth = MediaQuery.of(context).size.width;
-    final horizontalPadding = 40.0; // 20 + 20
+    final horizontalPadding = 40.0;
     final spacing = 12.0;
     final totalSpacing = (6 - 1) * spacing;
     double fieldWidth = (screenWidth - horizontalPadding - totalSpacing) / 6;
@@ -311,7 +299,6 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
         title: null,
       ),
       body: GestureDetector(
-        // النقر على الخلفية يخفي الكيبورد
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
         child: SafeArea(
           child: FadeTransition(
@@ -364,15 +351,14 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
                     const SizedBox(height: 8),
 
                     // Subtitle
-                    Text(
+                   Text(
                       widget.isLogin
-                          ? 'Enter the 6-digit code sent to your email'
-                          : 'Enter the verification code we sent to your email',
+                          ? context.l10n.enterCodeSentToEmailForLogin
+                          : context.l10n.enterVerificationCodeSentToEmail,
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: theme.colorScheme.onBackground.withOpacity(0.6),
                       ),
                     ),
-                    // الحقل المخفي (غير مرئي) لكنه موجود لربط الكيبورد
                     Opacity(
                       opacity: 0,
                       child: AbsorbPointer(
@@ -389,7 +375,6 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
                       ),
                     ),
 
-                    // مربعات عرض OTP مع animate الاهتزاز
                     AnimatedBuilder(
                       animation: _shakeAnimation,
                       builder: (context, child) {
@@ -454,7 +439,7 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
                                   Icon(Icons.timer, size: 18, color: theme.colorScheme.onSurface.withOpacity(0.6)),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'Resend code in ${_formatCountdown(_countdown)}',
+                                   context.l10n.resendIn(_formatCountdown(_countdown)),
                                     style: TextStyle(
                                       color: theme.colorScheme.onSurface.withOpacity(0.8),
                                       fontWeight: FontWeight.w500,
@@ -477,7 +462,7 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
                                   if (!_isLoading) Icon(Icons.refresh, size: 18),
                                   if (!_isLoading) const SizedBox(width: 8),
                                   Text(
-                                    _isLoading ? 'Resending...' : 'Resend code',
+                                    _isLoading ? context.l10n.resending : context.l10n.resendCode,
                                     style: TextStyle(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 16,
@@ -511,7 +496,6 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
     );
   }
 
-  // دالة بناء كل مربع عرض بنفس تصميم الأصل
   Widget _buildDisplayBox(int index, double width, ThemeData theme) {
     final String digit = _code.length > index ? _code[index] : '';
     final bool isFilled = digit.isNotEmpty;
@@ -519,7 +503,6 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
 
     return GestureDetector(
       onTap: () {
-        // عند النقر على المربع، نعيد التركيز للحقل المخفي
         _hiddenFocusNode.requestFocus();
       },
       child: Container(

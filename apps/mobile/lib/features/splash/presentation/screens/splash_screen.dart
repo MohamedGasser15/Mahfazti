@@ -152,7 +152,7 @@ class _SplashScreenState extends State<SplashScreen>
               children: [
                 // Logo with scale, rotation and fade
                 Transform.rotate(
-                  angle: _logoRotation.value * 3.14159, // نصف دورة كحد أقصى
+                  angle: _logoRotation.value * 3.14159,
                   child: Opacity(
                     opacity: _logoFade.value,
                     child: Transform.scale(

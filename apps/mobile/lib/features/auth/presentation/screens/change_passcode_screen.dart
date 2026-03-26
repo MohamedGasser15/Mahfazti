@@ -100,18 +100,18 @@ class _ChangePasscodeScreenState extends State<ChangePasscodeScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-Center(
-  child: Text(
-    l10n.changePasscode,
-    style: theme.textTheme.headlineMedium?.copyWith(
-      fontWeight: FontWeight.w700,
-    ),
-    textAlign: TextAlign.center,
-  ),
-),
+              Center(
+                child: Text(
+                  l10n.changePasscode,
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
               const SizedBox(height: 8),
               Text(
-                'Enter your current passcode and set a new one',
+                 l10n.enterCurrentAndSetNewPasscode,
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: theme.colorScheme.onBackground.withOpacity(0.6),
                 ),

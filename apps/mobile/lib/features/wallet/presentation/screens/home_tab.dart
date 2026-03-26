@@ -1,10 +1,11 @@
+// features/home/presentation/screens/home_tab.dart
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
- import 'package:intl/intl.dart';
+import 'package:intl/intl.dart';
 import 'package:my_wallet/core/services/hide_balance_service.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/services/wallet_cache_service.dart';
@@ -21,7 +22,6 @@ import 'package:my_wallet/features/settings/presentation/screens/settings_screen
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
 import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
 import 'dart:ui' as ui;
-
 
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
@@ -75,34 +75,34 @@ class _HomeTabState extends State<HomeTab> {
       _currencyLoaded = true;
     });
   }
-Map<String, dynamic> _homeDataToMap(WalletHomeData data) {
-  return {
-    'balance': {
-      'totalBalance': data.balance.totalBalance,
-      'totalDeposits': data.balance.totalDeposits,
-      'totalWithdrawals': data.balance.totalWithdrawals,
-    },
-    'recentTransactions': data.recentTransactions.map((t) => t.toJson()).toList(),
-    'totalTransactionCount': data.totalTransactionCount,
-  };
-}
+  Map<String, dynamic> _homeDataToMap(WalletHomeData data) {
+    return {
+      'balance': {
+        'totalBalance': data.balance.totalBalance,
+        'totalDeposits': data.balance.totalDeposits,
+        'totalWithdrawals': data.balance.totalWithdrawals,
+      },
+      'recentTransactions': data.recentTransactions.map((t) => t.toJson()).toList(),
+      'totalTransactionCount': data.totalTransactionCount,
+    };
+  }
 
-WalletHomeData _homeDataFromMap(Map<String, dynamic> map) {
-  final balanceMap = map['balance'] as Map<String, dynamic>;
-  final balance = WalletBalance(
-    totalBalance: (balanceMap['totalBalance'] as num).toDouble(),
-    totalDeposits: (balanceMap['totalDeposits'] as num).toDouble(),
-    totalWithdrawals: (balanceMap['totalWithdrawals'] as num).toDouble(),
-  );
-  final transactions = (map['recentTransactions'] as List)
-      .map((t) => WalletTransaction.fromJson(t))
-      .toList();
-  return WalletHomeData(
-    balance: balance,
-    recentTransactions: transactions,
-    totalTransactionCount: map['totalTransactionCount'] as int,
-  );
-}
+  WalletHomeData _homeDataFromMap(Map<String, dynamic> map) {
+    final balanceMap = map['balance'] as Map<String, dynamic>;
+    final balance = WalletBalance(
+      totalBalance: (balanceMap['totalBalance'] as num).toDouble(),
+      totalDeposits: (balanceMap['totalDeposits'] as num).toDouble(),
+      totalWithdrawals: (balanceMap['totalWithdrawals'] as num).toDouble(),
+    );
+    final transactions = (map['recentTransactions'] as List)
+        .map((t) => WalletTransaction.fromJson(t))
+        .toList();
+    return WalletHomeData(
+      balance: balance,
+      recentTransactions: transactions,
+      totalTransactionCount: map['totalTransactionCount'] as int,
+    );
+  }
   Future<void> _loadCategories() async {
     setState(() => _isLoadingCategories = true);
     try {
@@ -111,7 +111,7 @@ WalletHomeData _homeDataFromMap(Map<String, dynamic> map) {
     } catch (e) {
       final errorMsg = ApiErrorHandler.getErrorMessage(e);
       debugPrint('Error loading categories: $errorMsg');
-      MessageService.showError('فشل تحميل الفئات: $errorMsg');
+      MessageService.showError('${context.l10n.failedToLoadCategories}: $errorMsg');
     } finally {
       setState(() => _isLoadingCategories = false);
     }
@@ -123,78 +123,76 @@ WalletHomeData _homeDataFromMap(Map<String, dynamic> map) {
       return response.transactions;
     } catch (e) {
       final errorMsg = ApiErrorHandler.getErrorMessage(e);
-      MessageService.showError('فشل تحميل المعاملات: $errorMsg');
+      MessageService.showError('${context.l10n.failedToLoadTransactions}: $errorMsg');
       return [];
     }
   }
 
-Future<void> _loadHomeData({bool forceRefresh = false}) async {
-  if (!forceRefresh) {
-    final cached = await WalletCacheService.getHome();
-    if (cached != null) {
-      try {
-        final cachedData = _homeDataFromMap(cached);
+  Future<void> _loadHomeData({bool forceRefresh = false}) async {
+    if (!forceRefresh) {
+      final cached = await WalletCacheService.getHome();
+      if (cached != null) {
+        try {
+          final cachedData = _homeDataFromMap(cached);
+          setState(() {
+            _homeData = cachedData;
+            _isLoading = false;
+            _errorMessage = null;
+          });
+          _refreshInBackground();
+          return;
+        } catch (e) {
+          debugPrint('Error parsing cached home data: $e');
+        }
+      }
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    await _fetchHomeFromApi();
+  }
+  Future<void> _fetchHomeFromApi({bool silent = false}) async {
+    try {
+      final data = await _walletRepository.getHomeData();
+      final cacheMap = _homeDataToMap(data);
+      await WalletCacheService.saveHome(cacheMap);
+
+      if (mounted && !silent) {
         setState(() {
-          _homeData = cachedData;
+          _homeData = data;
           _isLoading = false;
-          _errorMessage = null;
         });
-        // Refresh in background
-        _refreshInBackground();
-        return;
-      } catch (e) {
-        debugPrint('Error parsing cached home data: $e');
+      } else if (mounted && silent) {
+        setState(() {
+          _homeData = data;
+        });
+      }
+    } catch (e) {
+      final errorMsg = ApiErrorHandler.getErrorMessage(e);
+      if (mounted && !silent) {
+        setState(() {
+          _errorMessage = errorMsg;
+          _isLoading = false;
+        });
+      }
+      if (!ApiErrorHandler.isNetworkError(e)) {
+        MessageService.showError(errorMsg);
       }
     }
   }
 
-  // No cache or forced refresh → show shimmer and fetch from API
-  setState(() {
-    _isLoading = true;
-    _errorMessage = null;
-  });
-  await _fetchHomeFromApi();
-}
-Future<void> _fetchHomeFromApi({bool silent = false}) async {
-  try {
-    final data = await _walletRepository.getHomeData();
-    final cacheMap = _homeDataToMap(data);
-    await WalletCacheService.saveHome(cacheMap);
-
-    if (mounted && !silent) {
-      setState(() {
-        _homeData = data;
-        _isLoading = false;
-      });
-    } else if (mounted && silent) {
-      setState(() {
-        _homeData = data;
-      });
-    }
-  } catch (e) {
-    final errorMsg = ApiErrorHandler.getErrorMessage(e);
-    if (mounted && !silent) {
-      setState(() {
-        _errorMessage = errorMsg;
-        _isLoading = false;
-      });
-    }
-    if (!ApiErrorHandler.isNetworkError(e)) {
-      MessageService.showError(errorMsg);
+  Future<void> _refreshInBackground() async {
+    try {
+      await _fetchHomeFromApi(silent: true);
+    } catch (_) {
+      // ignore
     }
   }
-}
-
-Future<void> _refreshInBackground() async {
-  try {
-    await _fetchHomeFromApi(silent: true);
-  } catch (_) {
-    // ignore
+  Future<void> _refreshData() async {
+    await _loadHomeData(forceRefresh: true);
   }
-}
-Future<void> _refreshData() async {
-  await _loadHomeData(forceRefresh: true);
-}
   //#endregion
 
   //#region Filter Helpers
@@ -218,687 +216,680 @@ Future<void> _refreshData() async {
   //#endregion
 
   //#region Dialog Helpers (Add / Edit / Delete)
-void _showAddTransactionDialog(
-  TransactionType type, {
-  VoiceExpenseResult? prefillFromVoice,
-}) {
-  final isIncome = type == TransactionType.income;
+  void _showAddTransactionDialog(
+    TransactionType type, {
+    VoiceExpenseResult? prefillFromVoice,
+  }) {
+    final isIncome = type == TransactionType.income;
 
-  // ✅ فلترة الكاتيجوريز الصح من البداية
-  final filteredCategories = _categories.where((c) => isIncome
-      ? ['Salary', 'Bonus', 'Income'].contains(c.nameEn)
-      : !['Salary', 'Bonus', 'Income'].contains(c.nameEn)).toList();
+    final filteredCategories = _categories.where((c) => isIncome
+        ? ['Salary', 'Bonus', 'Income'].contains(c.nameEn)
+        : !['Salary', 'Bonus', 'Income'].contains(c.nameEn)).toList();
 
-  // ✅ الـ default بياخد من الـ filtered مش من الكل
-  int? selectedCategoryId = prefillFromVoice?.categoryId != null
-      ? prefillFromVoice!.categoryId
-      : (filteredCategories.isNotEmpty ? filteredCategories.first.id : null);
+    int? selectedCategoryId = prefillFromVoice?.categoryId != null
+        ? prefillFromVoice!.categoryId
+        : (filteredCategories.isNotEmpty ? filteredCategories.first.id : null);
 
-  final descriptionController = TextEditingController(
-    text: prefillFromVoice?.note ?? '',
-  );
-  final amountController = TextEditingController(
-    text: prefillFromVoice?.amount?.toString() ?? '',
-  );
+    final descriptionController = TextEditingController(
+      text: prefillFromVoice?.note ?? '',
+    );
+    final amountController = TextEditingController(
+      text: prefillFromVoice?.amount?.toString() ?? '',
+    );
 
-  bool _isSubmitting = false;
-  double? _previewAmount = prefillFromVoice?.amount;
+    bool _isSubmitting = false;
+    double? _previewAmount = prefillFromVoice?.amount;
 
-  final currencyCode = _currencyCode ?? 'USD';
-  final currencySymbol = currencySymbols[currencyCode] ?? '\$';
+    final currencyCode = _currencyCode ?? 'USD';
+    final currencySymbol = currencySymbols[currencyCode] ?? '\$';
 
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) {
-      return StatefulBuilder(
-        builder: (context, setState) {
-          final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-          return Container(
-            decoration: BoxDecoration(
-              color: isDarkMode ? Colors.black : Colors.white,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(24),
-                topRight: Radius.circular(24),
-              ),
-            ),
-            child: Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      height: 4, width: 40,
-                      margin: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 48, height: 48,
-                            decoration: BoxDecoration(
-                              color: isIncome
-                                  ? Colors.green.withOpacity(0.1)
-                                  : Colors.red.withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              isIncome ? Icons.arrow_downward : Icons.arrow_upward,
-                              color: isIncome ? Colors.green[800] : Colors.red[800],
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Text(
-                            isIncome ? context.l10n.addDeposit : context.l10n.addWithdrawal,
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
-                              color: isDarkMode ? Colors.white : Colors.black,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    if (_previewAmount != null && _previewAmount! > 0)
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 24),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: (isIncome ? Colors.green : Colors.red).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isIncome ? Colors.green[800]! : Colors.red[800]!,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(context.l10n.amount,
-                                style: TextStyle(
-                                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600])),
-                            Text(
-                              '${isIncome ? '+' : '-'}$currencySymbol${_previewAmount!.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w800,
-                                color: isIncome ? Colors.green[800] : Colors.red[800],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 16),
-
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: TextFormField(
-                        controller: amountController,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
-                        ],
-                        onChanged: (value) {
-                          setState(() => _previewAmount = double.tryParse(value));
-                        },
-                        decoration: InputDecoration(
-                          labelText: context.l10n.amount,
-                          prefixIcon: Icon(Icons.attach_money,
-                              color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
-                          filled: true,
-                          fillColor: isDarkMode ? Colors.grey[900] : Colors.grey[50],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Row(
-                        children: (isIncome
-                                ? [50, 500, 1000, 2000]
-                                : [10, 50, 100, 200])
-                            .map((value) => Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: FilterChip(
-                                    label: Text('$currencySymbol$value'),
-                                    onSelected: (_) => setState(() {
-                                      amountController.text = value.toString();
-                                      _previewAmount = value.toDouble();
-                                    }),
-                                    backgroundColor:
-                                        isDarkMode ? Colors.grey[800] : Colors.grey[100],
-                                    selected: false,
-                                  ),
-                                ))
-                            .toList(),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // ✅ Dropdown بيستخدم filteredCategories المحسوبة فوق
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: _isLoadingCategories
-                          ? const Center(child: CircularProgressIndicator())
-                          : filteredCategories.isEmpty
-                              ? Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    'لا توجد فئات متاحة',
-                                    style: TextStyle(
-                                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
-                                  ),
-                                )
-                              : DropdownButtonFormField<int>(
-                                  value: selectedCategoryId,
-                                  decoration: InputDecoration(
-                                    labelText: context.l10n.category,
-                                    prefixIcon: Icon(Icons.category,
-                                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
-                                    filled: true,
-                                    fillColor: isDarkMode ? Colors.grey[900] : Colors.grey[50],
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                  ),
-                                  // ✅ بيستخدم filteredCategories مباشرة
-                                  items: filteredCategories
-                                      .map((category) => DropdownMenuItem<int>(
-                                            value: category.id,
-                                            child: Text(
-                                              Localizations.localeOf(context).languageCode == 'ar'
-                                                  ? category.nameAr
-                                                  : category.nameEn,
-                                              style: TextStyle(
-                                                  color: isDarkMode ? Colors.white : Colors.black),
-                                            ),
-                                          ))
-                                      .toList(),
-                                  onChanged: (value) =>
-                                      setState(() => selectedCategoryId = value),
-                                ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: TextFormField(
-                        controller: descriptionController,
-                        maxLines: 2,
-                        decoration: InputDecoration(
-                          labelText: context.l10n.descriptionOptional,
-                          prefixIcon: Icon(Icons.description,
-                              color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
-                          filled: true,
-                          fillColor: isDarkMode ? Colors.grey[900] : Colors.grey[50],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: _isSubmitting
-                                  ? null
-                                  : () => Navigator.pop(context),
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(
-                                    color: isDarkMode
-                                        ? Colors.grey[700]!
-                                        : Colors.grey[300]!),
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                              ),
-                              child: Text(context.l10n.cancel,
-                                  style: TextStyle(
-                                      color: isDarkMode ? Colors.white : Colors.black,
-                                      fontWeight: FontWeight.w600)),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: ElevatedButton(
-onPressed: _isSubmitting
-    ? null
-    : () async {
-        if (amountController.text.isEmpty) {
-          MessageService.showError(context.l10n.enterAmount);
-          return;
-        }
-        final amount = double.tryParse(amountController.text);
-        if (amount == null || amount <= 0) {
-          MessageService.showError(context.l10n.enterValidAmount);
-          return;
-        }
-        if (selectedCategoryId == null) {
-          MessageService.showError('اختر فئة');
-          return;
-        }
-
-        setState(() => _isSubmitting = true);
-        bool shouldPop = false;
-
-        try {
-          await _walletRepository.addTransaction(
-            description: descriptionController.text,
-            amount: amount,
-            type: isIncome ? 'Deposit' : 'Withdrawal',
-            categoryId: selectedCategoryId!,
-          );
-          shouldPop = true;
-          await _loadHomeData();
-          MessageService.showSuccess(
-            isIncome
-                ? context.l10n.depositAddedSuccess
-                : context.l10n.withdrawalAddedSuccess,
-          );
-        } catch (e) {
-          MessageService.showError(e.toString());
-        } finally {
-          if (shouldPop) {
-            Navigator.pop(context);   // ✅ modal closed – no setState needed
-          } else {
-            setState(() => _isSubmitting = false); // ✅ only when modal stays open
-          }
-        }
-      },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: isIncome ? Colors.green[800] : Colors.red[800],
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                              ),
-                              child: _isSubmitting
-                                  ? const SizedBox(
-                                      width: 20, height: 20,
-                                      child: CircularProgressIndicator(
-                                          color: Colors.white, strokeWidth: 2))
-                                  : Text(context.l10n.add,
-                                      style: const TextStyle(fontWeight: FontWeight.w600)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
+            return Container(
+              decoration: BoxDecoration(
+                color: isDarkMode ? Colors.black : Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
                 ),
               ),
-            ),
-          );
-        },
-      );
-    },
-  );
-} 
-void _showEditTransactionDialog(WalletTransaction transaction) {
-  final isIncome = transaction.isDeposit;
-
-  final filteredCategories = _categories.where((c) => isIncome
-      ? ['Salary', 'Bonus', 'Income'].contains(c.nameEn)
-      : !['Salary', 'Bonus', 'Income'].contains(c.nameEn)).toList();
-
-  int? selectedCategoryId = filteredCategories.any((c) => c.id == transaction.categoryId)
-      ? transaction.categoryId
-      : (filteredCategories.isNotEmpty ? filteredCategories.first.id : null);
-
-  final amountController = TextEditingController(text: transaction.amount.toString());
-  final descriptionController = TextEditingController(text: transaction.description ?? '');
-
-  bool _isSubmitting = false;
-  double? _previewAmount = transaction.amount;
-
-  final currencyCode = _currencyCode ?? 'USD';
-  final currencySymbol = currencySymbols[currencyCode] ?? '\$';
-
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) {
-      return StatefulBuilder(
-        builder: (context, setState) {
-          final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-          return Container(
-            decoration: BoxDecoration(
-              color: isDarkMode ? Colors.black : Colors.white,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(24),
-                topRight: Radius.circular(24),
-              ),
-            ),
-            child: Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      height: 4, width: 40,
-                      margin: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 48, height: 48,
-                            decoration: BoxDecoration(
-                              color: isIncome
-                                  ? Colors.green.withOpacity(0.1)
-                                  : Colors.red.withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              isIncome ? Icons.arrow_downward : Icons.arrow_upward,
-                              color: isIncome ? Colors.green[800] : Colors.red[800],
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Text(
-                            isIncome ? context.l10n.editDeposit : context.l10n.editWithdrawal,
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
-                              color: isDarkMode ? Colors.white : Colors.black,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Amount preview
-                    if (_previewAmount != null && _previewAmount! > 0)
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                       Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 24),
-                        padding: const EdgeInsets.all(16),
+                        height: 4, width: 40,
+                        margin: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          color: (isIncome ? Colors.green : Colors.red).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isIncome ? Colors.green[800]! : Colors.red[800]!,
-                          ),
+                          color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
                         ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(context.l10n.amount,
-                                style: TextStyle(
-                                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600])),
-                            Text(
-                              '${isIncome ? '+' : '-'}$currencySymbol${_previewAmount!.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w800,
+                            Container(
+                              width: 48, height: 48,
+                              decoration: BoxDecoration(
+                                color: isIncome
+                                    ? Colors.green.withOpacity(0.1)
+                                    : Colors.red.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                isIncome ? Icons.arrow_downward : Icons.arrow_upward,
                                 color: isIncome ? Colors.green[800] : Colors.red[800],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Text(
+                              isIncome ? context.l10n.addDeposit : context.l10n.addWithdrawal,
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                color: isDarkMode ? Colors.white : Colors.black,
                               ),
                             ),
                           ],
                         ),
                       ),
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 20),
 
-                    // Amount field
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: TextFormField(
-                        controller: amountController,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
-                        ],
-                        onChanged: (value) {
-                          setState(() => _previewAmount = double.tryParse(value));
-                        },
-                        decoration: InputDecoration(
-                          labelText: context.l10n.amount,
-                          prefixIcon: Icon(Icons.attach_money,
-                              color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
-                          filled: true,
-                          fillColor: isDarkMode ? Colors.grey[900] : Colors.grey[50],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
+                      if (_previewAmount != null && _previewAmount! > 0)
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 24),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: (isIncome ? Colors.green : Colors.red).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isIncome ? Colors.green[800]! : Colors.red[800]!,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(context.l10n.amount,
+                                  style: TextStyle(
+                                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600])),
+                              Text(
+                                '${isIncome ? '+' : '-'}$currencySymbol${_previewAmount!.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                  color: isIncome ? Colors.green[800] : Colors.red[800],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 16),
+
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: TextFormField(
+                          controller: amountController,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
+                          ],
+                          onChanged: (value) {
+                            setState(() => _previewAmount = double.tryParse(value));
+                          },
+                          decoration: InputDecoration(
+                            labelText: context.l10n.amount,
+                            prefixIcon: Icon(Icons.attach_money,
+                                color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                            filled: true,
+                            fillColor: isDarkMode ? Colors.grey[900] : Colors.grey[50],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
+                      const SizedBox(height: 12),
 
-                    // Quick amount chips
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Row(
-                        children: (isIncome
-                                ? [50, 500, 1000, 2000]
-                                : [10, 50, 100, 200])
-                            .map((value) => Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: FilterChip(
-                                    label: Text('$currencySymbol$value'),
-                                    onSelected: (_) => setState(() {
-                                      amountController.text = value.toString();
-                                      _previewAmount = value.toDouble();
-                                    }),
-                                    backgroundColor:
-                                        isDarkMode ? Colors.grey[800] : Colors.grey[100],
-                                    selected: false,
-                                  ),
-                                ))
-                            .toList(),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Row(
+                          children: (isIncome
+                                  ? [50, 500, 1000, 2000]
+                                  : [10, 50, 100, 200])
+                              .map((value) => Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: FilterChip(
+                                      label: Text('$currencySymbol$value'),
+                                      onSelected: (_) => setState(() {
+                                        amountController.text = value.toString();
+                                        _previewAmount = value.toDouble();
+                                      }),
+                                      backgroundColor:
+                                          isDarkMode ? Colors.grey[800] : Colors.grey[100],
+                                      selected: false,
+                                    ),
+                                  ))
+                              .toList(),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                    // Category dropdown
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: _isLoadingCategories
-                          ? const Center(child: CircularProgressIndicator())
-                          : filteredCategories.isEmpty
-                              ? Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text('لا توجد فئات متاحة',
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: _isLoadingCategories
+                            ? const Center(child: CircularProgressIndicator())
+                            : filteredCategories.isEmpty
+                                ? Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      context.l10n.noCategoriesAvailable,
                                       style: TextStyle(
-                                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600])),
-                                )
-                              : DropdownButtonFormField<int>(
-                                  value: selectedCategoryId,
-                                  decoration: InputDecoration(
-                                    labelText: context.l10n.category,
-                                    prefixIcon: Icon(Icons.category,
-                                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
-                                    filled: true,
-                                    fillColor: isDarkMode ? Colors.grey[900] : Colors.grey[50],
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide.none,
+                                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
                                     ),
+                                  )
+                                : DropdownButtonFormField<int>(
+                                    value: selectedCategoryId,
+                                    decoration: InputDecoration(
+                                      labelText: context.l10n.category,
+                                      prefixIcon: Icon(Icons.category,
+                                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                                      filled: true,
+                                      fillColor: isDarkMode ? Colors.grey[900] : Colors.grey[50],
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                    ),
+                                    items: filteredCategories
+                                        .map((category) => DropdownMenuItem<int>(
+                                              value: category.id,
+                                              child: Text(
+                                                Localizations.localeOf(context).languageCode == 'ar'
+                                                    ? category.nameAr
+                                                    : category.nameEn,
+                                                style: TextStyle(
+                                                    color: isDarkMode ? Colors.white : Colors.black),
+                                              ),
+                                            ))
+                                        .toList(),
+                                    onChanged: (value) =>
+                                        setState(() => selectedCategoryId = value),
                                   ),
-                                  items: filteredCategories
-                                      .map((category) => DropdownMenuItem<int>(
-                                            value: category.id,
-                                            child: Text(
-                                              Localizations.localeOf(context).languageCode == 'ar'
-                                                  ? category.nameAr
-                                                  : category.nameEn,
-                                              style: TextStyle(
-                                                  color: isDarkMode ? Colors.white : Colors.black),
-                                            ),
-                                          ))
-                                      .toList(),
-                                  onChanged: (value) =>
-                                      setState(() => selectedCategoryId = value),
-                                ),
-                    ),
-                    const SizedBox(height: 16),
+                      ),
+                      const SizedBox(height: 16),
 
-                    // Description
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: TextFormField(
-                        controller: descriptionController,
-                        maxLines: 2,
-                        decoration: InputDecoration(
-                          labelText: context.l10n.descriptionOptional,
-                          prefixIcon: Icon(Icons.description,
-                              color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
-                          filled: true,
-                          fillColor: isDarkMode ? Colors.grey[900] : Colors.grey[50],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: TextFormField(
+                          controller: descriptionController,
+                          maxLines: 2,
+                          decoration: InputDecoration(
+                            labelText: context.l10n.descriptionOptional,
+                            prefixIcon: Icon(Icons.description,
+                                color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                            filled: true,
+                            fillColor: isDarkMode ? Colors.grey[900] : Colors.grey[50],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 32),
+                      const SizedBox(height: 32),
 
-                    // Buttons
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: _isSubmitting ? null : () => Navigator.pop(context),
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(
-                                    color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!),
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: _isSubmitting
+                                    ? null
+                                    : () => Navigator.pop(context),
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                      color: isDarkMode
+                                          ? Colors.grey[700]!
+                                          : Colors.grey[300]!),
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
+                                ),
+                                child: Text(context.l10n.cancel,
+                                    style: TextStyle(
+                                        color: isDarkMode ? Colors.white : Colors.black,
+                                        fontWeight: FontWeight.w600)),
                               ),
-                              child: Text(context.l10n.cancel,
-                                  style: TextStyle(
-                                      color: isDarkMode ? Colors.white : Colors.black,
-                                      fontWeight: FontWeight.w600)),
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: ElevatedButton(
-onPressed: _isSubmitting
-    ? null
-    : () async {
-        if (amountController.text.isEmpty) {
-          MessageService.showError(context.l10n.enterAmount);
-          return;
-        }
-        final amount = double.tryParse(amountController.text);
-        if (amount == null || amount <= 0) {
-          MessageService.showError(context.l10n.enterValidAmount);
-          return;
-        }
-        if (selectedCategoryId == null) {
-          MessageService.showError('اختر فئة');
-          return;
-        }
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: _isSubmitting
+                                    ? null
+                                    : () async {
+                                        if (amountController.text.isEmpty) {
+                                          MessageService.showError(context.l10n.enterAmount);
+                                          return;
+                                        }
+                                        final amount = double.tryParse(amountController.text);
+                                        if (amount == null || amount <= 0) {
+                                          MessageService.showError(context.l10n.enterValidAmount);
+                                          return;
+                                        }
+                                        if (selectedCategoryId == null) {
+                                          MessageService.showError(context.l10n.selectCategory);
+                                          return;
+                                        }
 
-        setState(() => _isSubmitting = true);
-        bool shouldPop = false;
+                                        setState(() => _isSubmitting = true);
+                                        bool shouldPop = false;
 
-        try {
-          await _walletRepository.updateTransaction(
-            transaction.id,
-            title: transaction.title,
-            description: descriptionController.text,
-            amount: amount,
-            type: isIncome ? 'Deposit' : 'Withdrawal',
-            categoryId: selectedCategoryId!,
-            transactionDate: transaction.transactionDate,
-            isRecurring: transaction.isRecurring ?? false,
-            recurringInterval: transaction.recurringInterval,
-            recurringEndDate: transaction.recurringEndDate,
-          );
-          shouldPop = true;
-          await _loadHomeData();
-          MessageService.showSuccess(context.l10n.transactionUpdatedSuccess);
-        } catch (e) {
-          MessageService.showError(e.toString());
-        } finally {
-          if (shouldPop) {
-            Navigator.pop(context);
-          } else {
-            setState(() => _isSubmitting = false);
-          }
-        }
-      },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: isIncome ? Colors.green[800] : Colors.red[800],
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
+                                        try {
+                                          await _walletRepository.addTransaction(
+                                            description: descriptionController.text,
+                                            amount: amount,
+                                            type: isIncome ? 'Deposit' : 'Withdrawal',
+                                            categoryId: selectedCategoryId!,
+                                          );
+                                          shouldPop = true;
+                                          await _loadHomeData();
+                                          MessageService.showSuccess(
+                                            isIncome
+                                                ? context.l10n.depositAddedSuccess
+                                                : context.l10n.withdrawalAddedSuccess,
+                                          );
+                                        } catch (e) {
+                                          MessageService.showError(e.toString());
+                                        } finally {
+                                          if (shouldPop) {
+                                            Navigator.pop(context);
+                                          } else {
+                                            setState(() => _isSubmitting = false);
+                                          }
+                                        }
+                                      },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isIncome ? Colors.green[800] : Colors.red[800],
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
+                                ),
+                                child: _isSubmitting
+                                    ? const SizedBox(
+                                        width: 20, height: 20,
+                                        child: CircularProgressIndicator(
+                                            color: Colors.white, strokeWidth: 2))
+                                    : Text(context.l10n.add,
+                                        style: const TextStyle(fontWeight: FontWeight.w600)),
                               ),
-                              child: _isSubmitting
-                                  ? const SizedBox(
-                                      width: 20, height: 20,
-                                      child: CircularProgressIndicator(
-                                          color: Colors.white, strokeWidth: 2))
-                                  : Text(context.l10n.update,
-                                      style: const TextStyle(fontWeight: FontWeight.w600)),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        },
-      );
-    },
-  );
-}
+            );
+          },
+        );
+      },
+    );
+  }
+  void _showEditTransactionDialog(WalletTransaction transaction) {
+    final isIncome = transaction.isDeposit;
+
+    final filteredCategories = _categories.where((c) => isIncome
+        ? ['Salary', 'Bonus', 'Income'].contains(c.nameEn)
+        : !['Salary', 'Bonus', 'Income'].contains(c.nameEn)).toList();
+
+    int? selectedCategoryId = filteredCategories.any((c) => c.id == transaction.categoryId)
+        ? transaction.categoryId
+        : (filteredCategories.isNotEmpty ? filteredCategories.first.id : null);
+
+    final amountController = TextEditingController(text: transaction.amount.toString());
+    final descriptionController = TextEditingController(text: transaction.description ?? '');
+
+    bool _isSubmitting = false;
+    double? _previewAmount = transaction.amount;
+
+    final currencyCode = _currencyCode ?? 'USD';
+    final currencySymbol = currencySymbols[currencyCode] ?? '\$';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+            return Container(
+              decoration: BoxDecoration(
+                color: isDarkMode ? Colors.black : Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+              ),
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        height: 4, width: 40,
+                        margin: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 48, height: 48,
+                              decoration: BoxDecoration(
+                                color: isIncome
+                                    ? Colors.green.withOpacity(0.1)
+                                    : Colors.red.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                isIncome ? Icons.arrow_downward : Icons.arrow_upward,
+                                color: isIncome ? Colors.green[800] : Colors.red[800],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Text(
+                              isIncome ? context.l10n.editDeposit : context.l10n.editWithdrawal,
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                color: isDarkMode ? Colors.white : Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      if (_previewAmount != null && _previewAmount! > 0)
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 24),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: (isIncome ? Colors.green : Colors.red).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isIncome ? Colors.green[800]! : Colors.red[800]!,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(context.l10n.amount,
+                                  style: TextStyle(
+                                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600])),
+                              Text(
+                                '${isIncome ? '+' : '-'}$currencySymbol${_previewAmount!.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                  color: isIncome ? Colors.green[800] : Colors.red[800],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 16),
+
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: TextFormField(
+                          controller: amountController,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
+                          ],
+                          onChanged: (value) {
+                            setState(() => _previewAmount = double.tryParse(value));
+                          },
+                          decoration: InputDecoration(
+                            labelText: context.l10n.amount,
+                            prefixIcon: Icon(Icons.attach_money,
+                                color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                            filled: true,
+                            fillColor: isDarkMode ? Colors.grey[900] : Colors.grey[50],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Row(
+                          children: (isIncome
+                                  ? [50, 500, 1000, 2000]
+                                  : [10, 50, 100, 200])
+                              .map((value) => Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: FilterChip(
+                                      label: Text('$currencySymbol$value'),
+                                      onSelected: (_) => setState(() {
+                                        amountController.text = value.toString();
+                                        _previewAmount = value.toDouble();
+                                      }),
+                                      backgroundColor:
+                                          isDarkMode ? Colors.grey[800] : Colors.grey[100],
+                                      selected: false,
+                                    ),
+                                  ))
+                              .toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: _isLoadingCategories
+                            ? const Center(child: CircularProgressIndicator())
+                            : filteredCategories.isEmpty
+                                ? Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      context.l10n.noCategoriesAvailable,
+                                      style: TextStyle(
+                                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                                    ),
+                                  )
+                                : DropdownButtonFormField<int>(
+                                    value: selectedCategoryId,
+                                    decoration: InputDecoration(
+                                      labelText: context.l10n.category,
+                                      prefixIcon: Icon(Icons.category,
+                                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                                      filled: true,
+                                      fillColor: isDarkMode ? Colors.grey[900] : Colors.grey[50],
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                    ),
+                                    items: filteredCategories
+                                        .map((category) => DropdownMenuItem<int>(
+                                              value: category.id,
+                                              child: Text(
+                                                Localizations.localeOf(context).languageCode == 'ar'
+                                                    ? category.nameAr
+                                                    : category.nameEn,
+                                                style: TextStyle(
+                                                    color: isDarkMode ? Colors.white : Colors.black),
+                                              ),
+                                            ))
+                                        .toList(),
+                                    onChanged: (value) =>
+                                        setState(() => selectedCategoryId = value),
+                                  ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: TextFormField(
+                          controller: descriptionController,
+                          maxLines: 2,
+                          decoration: InputDecoration(
+                            labelText: context.l10n.descriptionOptional,
+                            prefixIcon: Icon(Icons.description,
+                                color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                            filled: true,
+                            fillColor: isDarkMode ? Colors.grey[900] : Colors.grey[50],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: _isSubmitting ? null : () => Navigator.pop(context),
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                      color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!),
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
+                                ),
+                                child: Text(context.l10n.cancel,
+                                    style: TextStyle(
+                                        color: isDarkMode ? Colors.white : Colors.black,
+                                        fontWeight: FontWeight.w600)),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: _isSubmitting
+                                    ? null
+                                    : () async {
+                                        if (amountController.text.isEmpty) {
+                                          MessageService.showError(context.l10n.enterAmount);
+                                          return;
+                                        }
+                                        final amount = double.tryParse(amountController.text);
+                                        if (amount == null || amount <= 0) {
+                                          MessageService.showError(context.l10n.enterValidAmount);
+                                          return;
+                                        }
+                                        if (selectedCategoryId == null) {
+                                          MessageService.showError(context.l10n.selectCategory);
+                                          return;
+                                        }
+
+                                        setState(() => _isSubmitting = true);
+                                        bool shouldPop = false;
+
+                                        try {
+                                          await _walletRepository.updateTransaction(
+                                            transaction.id,
+                                            title: transaction.title,
+                                            description: descriptionController.text,
+                                            amount: amount,
+                                            type: isIncome ? 'Deposit' : 'Withdrawal',
+                                            categoryId: selectedCategoryId!,
+                                            transactionDate: transaction.transactionDate,
+                                            isRecurring: transaction.isRecurring ?? false,
+                                            recurringInterval: transaction.recurringInterval,
+                                            recurringEndDate: transaction.recurringEndDate,
+                                          );
+                                          shouldPop = true;
+                                          await _loadHomeData();
+                                          MessageService.showSuccess(context.l10n.transactionUpdatedSuccess);
+                                        } catch (e) {
+                                          MessageService.showError(e.toString());
+                                        } finally {
+                                          if (shouldPop) {
+                                            Navigator.pop(context);
+                                          } else {
+                                            setState(() => _isSubmitting = false);
+                                          }
+                                        }
+                                      },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isIncome ? Colors.green[800] : Colors.red[800],
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
+                                ),
+                                child: _isSubmitting
+                                    ? const SizedBox(
+                                        width: 20, height: 20,
+                                        child: CircularProgressIndicator(
+                                            color: Colors.white, strokeWidth: 2))
+                                    : Text(context.l10n.update,
+                                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showDeleteConfirmationDialog(WalletTransaction transaction) {
     showDialog(
       context: context,
@@ -986,9 +977,9 @@ onPressed: _isSubmitting
         recurringEndDate: recurringEndDate,
       );
       await _loadHomeData();
-      MessageService.showSuccess('تم تحديث المعاملة بنجاح');
+      MessageService.showSuccess(context.l10n.transactionUpdatedSuccess);
     } catch (e) {
-      MessageService.showError('فشل تحديث المعاملة: ${e.toString()}');
+      MessageService.showError('${context.l10n.failedToUpdateTransaction}: ${e.toString()}');
     }
   }
   //#endregion
@@ -1029,7 +1020,7 @@ onPressed: _isSubmitting
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'All Transactions',
+                          context.l10n.transactions,
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
@@ -1398,7 +1389,7 @@ onPressed: _isSubmitting
             ),
             const SizedBox(height: 24),
             Text(
-              'عذراً، حدث خطأ',
+              context.l10n.somethingWentWrong,
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -1419,7 +1410,7 @@ onPressed: _isSubmitting
             ElevatedButton.icon(
               onPressed: _loadHomeData,
               icon: const Icon(Icons.refresh_rounded),
-              label: const Text('إعادة المحاولة'),
+              label: Text(context.l10n.tryAgain),
               style: ElevatedButton.styleFrom(
                 backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
                 foregroundColor: isDarkMode ? Colors.white : Colors.black,
@@ -1502,230 +1493,228 @@ onPressed: _isSubmitting
   }
 
   Widget _buildTransactionCard(WalletTransaction transaction, bool isDarkMode) {
-  final isIncome = transaction.isDeposit;
-  final hideService = Provider.of<HideBalanceService>(context, listen: true);
-  final locale = Localizations.localeOf(context).languageCode;
-  final categoryName = locale == 'ar'
-      ? (transaction.categoryNameAr ?? transaction.categoryNameEn ?? '')
-      : (transaction.categoryNameEn ?? transaction.categoryNameAr ?? '');
+    final isIncome = transaction.isDeposit;
+    final hideService = Provider.of<HideBalanceService>(context, listen: true);
+    final locale = Localizations.localeOf(context).languageCode;
+    final categoryName = locale == 'ar'
+        ? (transaction.categoryNameAr ?? transaction.categoryNameEn ?? '')
+        : (transaction.categoryNameEn ?? transaction.categoryNameAr ?? '');
 
-  return Slidable(
-    key: Key('transaction_${transaction.id}'),
-    endActionPane: ActionPane(
-      motion: const ScrollMotion(),
-      children: [
-        // زر التعديل
-        CustomSlidableAction(
-          onPressed: (context) => _showEditTransactionDialog(transaction),
-          backgroundColor: Colors.transparent,
-          padding: EdgeInsets.zero,
-          child: Container(
-            width: 80,
-            margin: const EdgeInsets.fromLTRB(4, 4, 4, 12),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.blue.withOpacity(0.2),
-                  Colors.blue.withOpacity(0.4),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.blue.withOpacity(0.5),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.blue.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                child: Container(
-                  color: Colors.blue.withOpacity(0.1),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.edit,
-                        color: isDarkMode ? Colors.white : Colors.blue[800],
-                        size: 28,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        context.l10n.edit,
-                        style: TextStyle(
-                          color: isDarkMode ? Colors.white : Colors.blue[800],
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        // زر الحذف
-        CustomSlidableAction(
-          onPressed: (context) => _showDeleteConfirmationDialog(transaction),
-          backgroundColor: Colors.transparent,
-          padding: EdgeInsets.zero,
-          child: Container(
-            width: 80,
-            margin: const EdgeInsets.fromLTRB(4, 4, 4, 12),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.red.withOpacity(0.2),
-                  Colors.red.withOpacity(0.4),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.red.withOpacity(0.5),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.red.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                child: Container(
-                  color: Colors.red.withOpacity(0.1),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.delete,
-                        color: isDarkMode ? Colors.white : Colors.red[800],
-                        size: 28,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        context.l10n.delete,
-                        style: TextStyle(
-                          color: isDarkMode ? Colors.white : Colors.red[800],
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    ),
-    child: Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
-          width: 1,
-        ),
-      ),
-      child: Row(
+    return Slidable(
+      key: Key('transaction_${transaction.id}'),
+      endActionPane: ActionPane(
+        motion: const ScrollMotion(),
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: isIncome
-                  ? Colors.green.withOpacity(0.1)
-                  : Colors.red.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              transaction.icon,
-              color: isIncome ? Colors.green[800] : Colors.red[800],
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  transaction.title,
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.white : Colors.black,
-                    fontWeight: FontWeight.w600,
+          CustomSlidableAction(
+            onPressed: (context) => _showEditTransactionDialog(transaction),
+            backgroundColor: Colors.transparent,
+            padding: EdgeInsets.zero,
+            child: Container(
+              width: 80,
+              margin: const EdgeInsets.fromLTRB(4, 4, 4, 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.blue.withOpacity(0.2),
+                    Colors.blue.withOpacity(0.4),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.blue.withOpacity(0.5),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                  child: Container(
+                    color: Colors.blue.withOpacity(0.1),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.edit,
+                          color: isDarkMode ? Colors.white : Colors.blue[800],
+                          size: 28,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          context.l10n.edit,
+                          style: TextStyle(
+                            color: isDarkMode ? Colors.white : Colors.blue[800],
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
+              ),
+            ),
+          ),
+          CustomSlidableAction(
+            onPressed: (context) => _showDeleteConfirmationDialog(transaction),
+            backgroundColor: Colors.transparent,
+            padding: EdgeInsets.zero,
+            child: Container(
+              width: 80,
+              margin: const EdgeInsets.fromLTRB(4, 4, 4, 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.red.withOpacity(0.2),
+                    Colors.red.withOpacity(0.4),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.red.withOpacity(0.5),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.red.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                  child: Container(
+                    color: Colors.red.withOpacity(0.1),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.delete,
+                          color: isDarkMode ? Colors.white : Colors.red[800],
+                          size: 28,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          context.l10n.delete,
+                          style: TextStyle(
+                            color: isDarkMode ? Colors.white : Colors.red[800],
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isIncome
+                    ? Colors.green.withOpacity(0.1)
+                    : Colors.red.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                transaction.icon,
+                color: isIncome ? Colors.green[800] : Colors.red[800],
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    transaction.title,
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.white : Colors.black,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$categoryName • ${_formatDate(transaction.transactionDate)}',
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                  ),
+                  if (transaction.description != null &&
+                      transaction.description!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        transaction.description!,
+                        style: TextStyle(
+                          color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _buildBlurrableNumber(
+                  transaction.amount,
+                  TextStyle(
+                    color: isIncome ? Colors.green[800] : Colors.red[800],
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                  ),
+                  hideService.isHidden,
+                ),
                 Text(
-                  '$categoryName • ${_formatDate(transaction.transactionDate)}',
+                  _formatDate(transaction.transactionDate),
                   style: TextStyle(
                     color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                     fontSize: 12,
                   ),
                 ),
-                if (transaction.description != null &&
-                    transaction.description!.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      transaction.description!,
-                      style: TextStyle(
-                        color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
-                        fontSize: 12,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ),
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _buildBlurrableNumber(
-                transaction.amount,
-                TextStyle(
-                  color: isIncome ? Colors.green[800] : Colors.red[800],
-                  fontWeight: FontWeight.w800,
-                  fontSize: 16,
-                ),
-                hideService.isHidden,
-              ),
-              Text(
-                _formatDate(transaction.transactionDate),
-                style: TextStyle(
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
   Widget _buildEmptyState(bool isDarkMode) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 40),
@@ -1765,403 +1754,404 @@ onPressed: _isSubmitting
     return SafeArea(
       bottom: false,
       child: Stack(
-         children: [ RefreshIndicator(
-        onRefresh: _refreshData,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            children: [
-              if (_homeData == null) ...[
-                if (_isLoading)
-                  _buildSkeletonLoading(isDarkMode)
-                else if (_errorMessage != null)
-                  _buildErrorWidget(isDarkMode)
-                else
-                  const SizedBox.shrink(),
-              ] else ...[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: isDarkMode
-                            ? [Colors.grey[900]!, Colors.grey[850]!]
-                            : [Colors.white, Colors.grey[50]!],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(28),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.08),
-                          blurRadius: 15,
-                          offset: const Offset(0, 5),
+        children: [
+          RefreshIndicator(
+            onRefresh: _refreshData,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                children: [
+                  if (_homeData == null) ...[
+                    if (_isLoading)
+                      _buildSkeletonLoading(isDarkMode)
+                    else if (_errorMessage != null)
+                      _buildErrorWidget(isDarkMode)
+                    else
+                      const SizedBox.shrink(),
+                  ] else ...[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                      child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: isDarkMode
+                                ? [Colors.grey[900]!, Colors.grey[850]!]
+                                : [Colors.white, Colors.grey[50]!],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(28),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.08),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: isDarkMode
-                                      ? Colors.grey[800]
-                                      : Colors.grey[200],
-                                  borderRadius: BorderRadius.circular(30),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.account_balance_wallet_outlined,
-                                      color: isDarkMode
-                                          ? Colors.white
-                                          : Colors.black,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      context.l10n.appTitle,
-                                      style: TextStyle(
-                                        color: isDarkMode
-                                            ? Colors.white
-                                            : Colors.black,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w600,
-                                        letterSpacing: 0.3,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
                               Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  IconButton(
-                                    icon: Icon(
-                                      hideService.isHidden
-                                          ? Icons.visibility_off_outlined
-                                          : Icons.visibility_outlined,
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 8),
+                                    decoration: BoxDecoration(
                                       color: isDarkMode
-                                          ? Colors.grey[400]
-                                          : Colors.grey[600],
-                                      size: 20,
-                                    ),
-                                    onPressed: hideService.toggle,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  GestureDetector(
-                                    onTap: () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => SettingsScreen(
-                                          onLocaleChanged: (locale) {},
-                                        ),
-                                      ),
-                                    ),
-                                    child: CircleAvatar(
-                                      radius: 20,
-                                      backgroundColor: isDarkMode
                                           ? Colors.grey[800]
                                           : Colors.grey[200],
-                                      child: Icon(
-                                        Icons.person,
-                                        color: isDarkMode
-                                            ? Colors.white
-                                            : Colors.black,
-                                        size: 24,
+                                      borderRadius: BorderRadius.circular(30),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.05),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.account_balance_wallet_outlined,
+                                          color: isDarkMode
+                                              ? Colors.white
+                                              : Colors.black,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          context.l10n.appTitle,
+                                          style: TextStyle(
+                                            color: isDarkMode
+                                                ? Colors.white
+                                                : Colors.black,
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w600,
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        icon: Icon(
+                                          hideService.isHidden
+                                              ? Icons.visibility_off_outlined
+                                              : Icons.visibility_outlined,
+                                          color: isDarkMode
+                                              ? Colors.grey[400]
+                                              : Colors.grey[600],
+                                          size: 20,
+                                        ),
+                                        onPressed: hideService.toggle,
                                       ),
+                                      const SizedBox(width: 8),
+                                      GestureDetector(
+                                        onTap: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => SettingsScreen(
+                                              onLocaleChanged: (locale) {},
+                                            ),
+                                          ),
+                                        ),
+                                        child: CircleAvatar(
+                                          radius: 20,
+                                          backgroundColor: isDarkMode
+                                              ? Colors.grey[800]
+                                              : Colors.grey[200],
+                                          child: Icon(
+                                            Icons.person,
+                                            color: isDarkMode
+                                                ? Colors.white
+                                                : Colors.black,
+                                            size: 24,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                context.l10n.totalBalance,
+                                style: TextStyle(
+                                  color: isDarkMode
+                                      ? Colors.grey[400]
+                                      : Colors.grey[600],
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  _buildBlurrableNumber(
+                                    _homeData!.balance.totalBalance,
+                                    TextStyle(
+                                      color: isDarkMode ? Colors.white : Colors.black,
+                                      fontSize: 40,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                    hideService.isHidden,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 24),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.green.shade700,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: const Icon(
+                                                Icons.arrow_downward,
+                                                color: Colors.white,
+                                                size: 12,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              context.l10n.income,
+                                              style: TextStyle(
+                                                color: Colors.green.shade800,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        _buildBlurrableNumber(
+                                          _homeData!.balance.totalDeposits,
+                                          TextStyle(
+                                            color: Colors.green.shade800,
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                          hideService.isHidden,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.red.shade700,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: const Icon(
+                                                Icons.arrow_upward,
+                                                color: Colors.white,
+                                                size: 12,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              context.l10n.expense,
+                                              style: TextStyle(
+                                                color: Colors.red.shade800,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        _buildBlurrableNumber(
+                                          _homeData!.balance.totalWithdrawals,
+                                          TextStyle(
+                                            color: Colors.red.shade800,
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                          hideService.isHidden,
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            context.l10n.totalBalance,
-                            style: TextStyle(
-                              color: isDarkMode
-                                  ? Colors.grey[400]
-                                  : Colors.grey[600],
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      margin: const EdgeInsets.symmetric(vertical: 24),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildQuickAction(
+                            Icons.add, context.l10n.addDeposit,
+                            () => _showAddTransactionDialog(TransactionType.income),
+                            isDarkMode,
                           ),
-                          const SizedBox(height: 8),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              _buildBlurrableNumber(
-                                _homeData!.balance.totalBalance,
-                                TextStyle(
-                                  color: isDarkMode ? Colors.white : Colors.black,
-                                  fontSize: 40,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                                hideService.isHidden,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(4),
-                                          decoration: BoxDecoration(
-                                            color: Colors.green.shade700,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const Icon(
-                                            Icons.arrow_downward,
-                                            color: Colors.white,
-                                            size: 12,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          context.l10n.income,
-                                          style: TextStyle(
-                                            color: Colors.green.shade800,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _buildBlurrableNumber(
-                                      _homeData!.balance.totalDeposits,
-                                      TextStyle(
-                                        color: Colors.green.shade800,
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                      hideService.isHidden,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(4),
-                                          decoration: BoxDecoration(
-                                            color: Colors.red.shade700,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const Icon(
-                                            Icons.arrow_upward,
-                                            color: Colors.white,
-                                            size: 12,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          context.l10n.expense,
-                                          style: TextStyle(
-                                            color: Colors.red.shade800,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _buildBlurrableNumber(
-                                      _homeData!.balance.totalWithdrawals,
-                                      TextStyle(
-                                        color: Colors.red.shade800,
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                      hideService.isHidden,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+                          _buildQuickAction(
+                            Icons.remove, context.l10n.addWithdrawal,
+                            () => _showAddTransactionDialog(TransactionType.expense),
+                            isDarkMode,
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ),
-                Container(
-                  margin: const EdgeInsets.symmetric(vertical: 24),
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: // في مكان Row الـ Quick Actions في build()
-Row(
-  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-  children: [
-    _buildQuickAction(
-      Icons.add, context.l10n.addDeposit,
-      () => _showAddTransactionDialog(TransactionType.income),
-      isDarkMode,
-    ),
-    _buildQuickAction(
-      Icons.remove, context.l10n.addWithdrawal,
-      () => _showAddTransactionDialog(TransactionType.expense),
-      isDarkMode,
-    ),
-  ],
-),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        context.l10n.recentTransactions,
-                        style: TextStyle(
-                          color: isDarkMode ? Colors.white : Colors.black,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      if (_homeData!.totalTransactionCount > 5)
-                        TextButton(
-                          onPressed: () async {
-                            final allTransactions = await _loadAllTransactions();
-                            if (!mounted) return;
-                            _showAllTransactionsModal(allTransactions);
-                          },
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: Size.zero,
-                          ),
-                          child: Text(
-                            context.l10n.seeAll,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            context.l10n.recentTransactions,
                             style: TextStyle(
-                              color: isDarkMode
-                                  ? Colors.grey[400]
-                                  : Colors.grey[600],
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                              color: isDarkMode ? Colors.white : Colors.black,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                        ),
-                    ],
-                  ),
-                ),
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: _filters
-                        .map(
-                          (filter) => Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _selectedFilter = filter.type;
-                                });
+                          if (_homeData!.totalTransactionCount > 5)
+                            TextButton(
+                              onPressed: () async {
+                                final allTransactions = await _loadAllTransactions();
+                                if (!mounted) return;
+                                _showAllTransactionsModal(allTransactions);
                               },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: _selectedFilter == filter.type
-                                      ? (isDarkMode ? Colors.black : Colors.white)
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(8),
-                                  boxShadow: _selectedFilter == filter.type
-                                      ? [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(0.05),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ]
-                                      : null,
-                                ),
-                                child: Text(
-                                  filter.label,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: _selectedFilter == filter.type
-                                        ? (isDarkMode ? Colors.white : Colors.black)
-                                        : (isDarkMode
-                                            ? Colors.grey[400]
-                                            : Colors.grey[600]),
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                minimumSize: Size.zero,
+                              ),
+                              child: Text(
+                                context.l10n.seeAll,
+                                style: TextStyle(
+                                  color: isDarkMode
+                                      ? Colors.grey[400]
+                                      : Colors.grey[600],
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _filteredTransactions.isEmpty
-                      ? _buildEmptyState(isDarkMode)
-                      : Column(
-                          children: _filteredTransactions
-                              .take(5)
-                              .map((transaction) => _buildTransactionCard(transaction, isDarkMode))
-                              .toList(),
-                        ),
-                ),
-                 const SizedBox(height: 160),
-              ],
-            ],
+                        ],
+                      ),
+                    ),
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: _filters
+                            .map(
+                              (filter) => Expanded(
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedFilter = filter.type;
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: _selectedFilter == filter.type
+                                          ? (isDarkMode ? Colors.black : Colors.white)
+                                          : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(8),
+                                      boxShadow: _selectedFilter == filter.type
+                                          ? [
+                                              BoxShadow(
+                                                color: Colors.black.withOpacity(0.05),
+                                                blurRadius: 4,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ]
+                                          : null,
+                                    ),
+                                    child: Text(
+                                      filter.label,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: _selectedFilter == filter.type
+                                            ? (isDarkMode ? Colors.white : Colors.black)
+                                            : (isDarkMode
+                                                ? Colors.grey[400]
+                                                : Colors.grey[600]),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: _filteredTransactions.isEmpty
+                          ? _buildEmptyState(isDarkMode)
+                          : Column(
+                              children: _filteredTransactions
+                                  .take(5)
+                                  .map((transaction) => _buildTransactionCard(transaction, isDarkMode))
+                                  .toList(),
+                            ),
+                    ),
+                    const SizedBox(height: 160),
+                  ],
+                ],
+              ),
+            ),
           ),
-        ),
+          Positioned(
+            bottom: Platform.isIOS ? 100 : 20,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: VoiceExpenseButton(
+                isDarkMode: isDarkMode,
+                onResult: (result) {
+                  if (result.isSuccess) {
+                    final type = result.transactionType == 'Deposit'
+                        ? TransactionType.income
+                        : TransactionType.expense;
+                    _showAddTransactionDialog(type, prefillFromVoice: result);
+                  } else {
+                    MessageService.showError(
+                        result.errorMessage ?? context.l10n.voiceAnalysisFailed);
+                  }
+                },
+              ),
+            ),
+          ),
+        ],
       ),
-       Positioned(
-  bottom: Platform.isIOS ? 100 : 20,
-  left: 0,
-  right: 0,
-  child: Center(
-    child: VoiceExpenseButton(
-      isDarkMode: isDarkMode,
-      onResult: (result) {
-        if (result.isSuccess) {
-          final type = result.transactionType == 'Deposit'
-              ? TransactionType.income
-              : TransactionType.expense;
-          _showAddTransactionDialog(type, prefillFromVoice: result);
-        } else {
-          MessageService.showError(
-              result.errorMessage ?? 'فشل تحليل الصوت');
-        }
-      },
-    ),
-  ),
-),
-      ],
-    )
-  );}
+    );
+  }
   //#endregion
 
   //#region Helper Methods

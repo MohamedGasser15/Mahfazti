@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 
@@ -105,12 +106,12 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
           );
         }
       } else {
-        setState(() => _errorMessage = result['message'] ?? 'Invalid code');
+        setState(() => _errorMessage = result['message'] ?? context.l10n.invalidCode);
         _shakeController.forward(from: 0.0);
         _clearCode();
       }
     } catch (e) {
-      setState(() => _errorMessage = 'Something went wrong');
+      setState(() => _errorMessage = context.l10n.somethingWentWrong);
       _shakeController.forward(from: 0.0);
       _clearCode();
     } finally {
@@ -135,12 +136,12 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
       if (result['success'] == true) {
         _startTimer();
         _clearCode();
-        MessageService.showSuccess('Code resent to ${widget.newEmail}');
+        MessageService.showSuccess(context.l10n.codeResentTo(widget.newEmail));
       } else {
-        MessageService.showError(result['message'] ?? 'Failed to resend');
+        MessageService.showError(result['message'] ?? context.l10n.failedToResend);
       }
     } catch (e) {
-      MessageService.showError('Something went wrong');
+      MessageService.showError(context.l10n.somethingWentWrong);
     } finally {
       setState(() => _isLoading = false);
     }
@@ -210,7 +211,7 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
                 const SizedBox(height: 24),
 
                 Text(
-                  'Verify new email',
+                  context.l10n.verifyNewEmail,
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     fontSize: 32,
@@ -220,7 +221,7 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
                 const SizedBox(height: 8),
 
                 Text(
-                  'Enter the 6-digit code sent to your new email',
+                  context.l10n.verifyNewEmailDescription,
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: theme.colorScheme.onBackground.withOpacity(0.6),
                   ),
@@ -357,7 +358,7 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
                                       .withOpacity(0.6)),
                               const SizedBox(width: 8),
                               Text(
-                                'Resend in ${_formatCountdown(_countdown)}',
+                                context.l10n.resendIn(_formatCountdown(_countdown)),
                                 style: TextStyle(
                                   color: theme.colorScheme.onSurface
                                       .withOpacity(0.8),
@@ -375,7 +376,7 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
                               const Icon(Icons.refresh, size: 18),
                               const SizedBox(width: 8),
                               Text(
-                                'Resend code',
+                               context.l10n.resendCode,
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 16,

@@ -806,9 +806,9 @@ Widget _buildProfileHeader(bool isDarkMode) {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                _isLoadingProfile
-                    ? 'Loading...'
-                    : (_profile?.fullName ?? 'User'),
+                  _isLoadingProfile
+                      ? context.l10n.loading
+                      : (_profile?.fullName ?? context.l10n.user),
                 style: TextStyle(
                   color: isDarkMode ? Colors.white : Colors.black,
                   fontSize: 20,
@@ -817,7 +817,7 @@ Widget _buildProfileHeader(bool isDarkMode) {
               ),
               const SizedBox(height: 4),
               Text(
-                _profile?.email ?? 'email@example.com',
+                _profile?.email ?? context.l10n.emailPlaceholder,
                 style: TextStyle(
                   color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                   fontSize: 14,
@@ -960,7 +960,6 @@ ListTile(
     );
   }
 
-// في قسم _buildProfileSettings نغير ListTile الخاص بـ App Language
 String _getCurrencyName(String code) {
   switch (code) {
     case 'USD': return context.l10n.currencyUSD;
@@ -1046,8 +1045,7 @@ onTap: () {
               color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
             ),
             
-            // App Language - تغيير هنا
-            ListTile(
+              ListTile(
               leading: Container(
                 width: 40,
                 height: 40,
@@ -1075,7 +1073,7 @@ onTap: () {
                   fontSize: 12,
                 ),
               ),
-              trailing: _buildLanguageButton(), // تغيير هنا
+              trailing: _buildLanguageButton(),
             ),
           ],
         ),
@@ -1084,7 +1082,6 @@ onTap: () {
   );
 }
 
-// إضافة دالة لعرض زر اللغة الحالي
 Widget _buildLanguageButton() {
   final isDarkMode = Theme.of(context).brightness == Brightness.dark;
   

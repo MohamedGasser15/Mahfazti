@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 
@@ -59,10 +60,10 @@ class _RecoveryNewEmailScreenState extends State<RecoveryNewEmailScreen> {
           );
         }
       } else {
-        MessageService.showError(result['message'] ?? 'Email already in use');
+        MessageService.showError(result['message'] ?? context.l10n.emailAlreadyInUse);
       }
     } catch (e) {
-      MessageService.showError('Something went wrong');
+      MessageService.showError(context.l10n.somethingWentWrong);
     } finally {
       setState(() => _isLoading = false);
     }
@@ -108,7 +109,7 @@ class _RecoveryNewEmailScreenState extends State<RecoveryNewEmailScreen> {
                   const SizedBox(height: 24),
 
                   Text(
-                    'Enter new email',
+                    context.l10n.enterNewEmail,
                     style: theme.textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -117,7 +118,7 @@ class _RecoveryNewEmailScreenState extends State<RecoveryNewEmailScreen> {
                   const SizedBox(height: 12),
 
                   Text(
-                    'We\'ll send a verification code to your new email address.',
+                    context.l10n.enterNewEmailDescription,
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: theme.colorScheme.onBackground.withOpacity(0.6),
                       height: 1.5,
@@ -133,7 +134,7 @@ class _RecoveryNewEmailScreenState extends State<RecoveryNewEmailScreen> {
                     textInputAction: TextInputAction.done,
                     onSubmitted: (_) { if (_isValid) _onContinue(); },
                     decoration: InputDecoration(
-                      hintText: 'New email address',
+                      hintText: context.l10n.newEmailAddressHint,
                       hintStyle: TextStyle(
                         color: theme.colorScheme.onBackground.withOpacity(0.4),
                       ),
@@ -203,7 +204,7 @@ class _RecoveryNewEmailScreenState extends State<RecoveryNewEmailScreen> {
                       ),
                     )
                   : Text(
-                      'Send verification code',
+                      context.l10n.sendVerificationCode,
                       style: theme.textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: theme.colorScheme.onPrimary,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_wallet/core/extensions/context_extensions.dart';
 
 class AdvancedSettingsSheet extends StatefulWidget {
   const AdvancedSettingsSheet({super.key});
@@ -43,7 +44,7 @@ class _AdvancedSettingsSheetState extends State<AdvancedSettingsSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Advanced Settings',
+                    context.l10n.advancedSettings,
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
@@ -54,7 +55,7 @@ class _AdvancedSettingsSheetState extends State<AdvancedSettingsSheet> {
                   const SizedBox(height: 8),
                   
                   Text(
-                    'Customize your app experience',
+                    context.l10n.customizeYourAppExperience,
                     style: TextStyle(
                       fontSize: 14,
                       color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
@@ -70,7 +71,7 @@ class _AdvancedSettingsSheetState extends State<AdvancedSettingsSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Profile',
+                          context.l10n.profile,
                           style: TextStyle(
                             color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                             fontSize: 12,
@@ -89,7 +90,7 @@ class _AdvancedSettingsSheetState extends State<AdvancedSettingsSheet> {
                           child: Column(
                             children: [
                               _buildAdvancedItem(
-                                title: 'Personal Details',
+                                title: context.l10n.personalDetails,
                                 icon: Icons.person_outline,
                                 isDarkMode: isDarkMode,
                                 onTap: () {
@@ -97,7 +98,7 @@ class _AdvancedSettingsSheetState extends State<AdvancedSettingsSheet> {
                                 },
                               ),
                               _buildAdvancedItem(
-                                title: 'App Language',
+                                title: context.l10n.appLanguage,
                                 icon: Icons.language,
                                 isDarkMode: isDarkMode,
                                 trailing: DropdownButton<String>(
@@ -137,7 +138,7 @@ class _AdvancedSettingsSheetState extends State<AdvancedSettingsSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'About Us',
+                         context.l10n.aboutUs,
                           style: TextStyle(
                             color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                             fontSize: 12,
@@ -156,7 +157,7 @@ class _AdvancedSettingsSheetState extends State<AdvancedSettingsSheet> {
                           child: Column(
                             children: [
                               _buildAdvancedItem(
-                                title: 'Privacy Policy',
+                                title: context.l10n.privacyPolicy,
                                 icon: Icons.privacy_tip_outlined,
                                 isDarkMode: isDarkMode,
                                 onTap: () {
@@ -164,7 +165,7 @@ class _AdvancedSettingsSheetState extends State<AdvancedSettingsSheet> {
                                 },
                               ),
                               _buildAdvancedItem(
-                                title: 'Terms & Conditions',
+                                title: context.l10n.termsConditions,
                                 icon: Icons.description_outlined,
                                 isDarkMode: isDarkMode,
                                 onTap: () {
@@ -191,8 +192,8 @@ class _AdvancedSettingsSheetState extends State<AdvancedSettingsSheet> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text(
-                        'Close',
+                      child: Text(
+                        context.l10n.close,
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                         ),

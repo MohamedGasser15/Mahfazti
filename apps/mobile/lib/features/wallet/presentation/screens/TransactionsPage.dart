@@ -155,11 +155,11 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
       _isLoading = true;
       _errorMessage = null;
     });
-    await _fetchFromApi(page: page);
+    await _fetchFromApi(page: page, context: context);
   }
 
   /// Fetch fresh data from API for given page (usually page 1) and update cache.
-  Future<void> _fetchFromApi({int page = 1, bool silent = false}) async {
+  Future<void> _fetchFromApi({int page = 1, bool silent = false, BuildContext? context}) async {
     try {
       final response = await _walletRepository.getTransactions(
         page: page,
@@ -210,7 +210,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
     } catch (e) {
       if (mounted && !silent) {
         setState(() {
-          _errorMessage = 'Failed to load transactions: $e';
+          _errorMessage = context?.l10n.failedToLoadTransactions(e.toString()) ?? 'Failed to load transactions: $e';
           _isLoading = false;
         });
       }
@@ -244,7 +244,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
         setState(() {
           _isLoadingMore = false;
         });
-        MessageService.showError('Failed to load more: $e');
+        MessageService.showError(context.l10n.failedToLoadMore(e.toString()));
       }
     }
   }
@@ -301,7 +301,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
     );
   }
 
-  // ==================  Filter Sheet (unchanged except it triggers fresh load) ==================
+  // ==================  Filter Sheet ==================
 
   Widget _buildFilterSheet() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -334,7 +334,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
             ),
             const SizedBox(height: 16),
             Text(
-              'Filter Transactions',
+              context.l10n.filterTransactions,
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -344,9 +344,9 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
             const SizedBox(height: 16),
             ListTile(
               leading: Icon(Icons.calendar_today, color: isDarkMode ? Colors.white70 : Colors.black54),
-              title: Text('From', style: TextStyle(color: isDarkMode ? Colors.white : Colors.black)),
+              title: Text(context.l10n.from, style: TextStyle(color: isDarkMode ? Colors.white : Colors.black)),
               trailing: Text(
-                tempFromDate == null ? 'Any' : '${tempFromDate!.day}/${tempFromDate!.month}/${tempFromDate!.year}',
+                tempFromDate == null ? context.l10n.any : '${tempFromDate!.day}/${tempFromDate!.month}/${tempFromDate!.year}',
                 style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54),
               ),
               onTap: () async {
@@ -363,9 +363,9 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
             ),
             ListTile(
               leading: Icon(Icons.calendar_today, color: isDarkMode ? Colors.white70 : Colors.black54),
-              title: Text('To', style: TextStyle(color: isDarkMode ? Colors.white : Colors.black)),
+              title: Text(context.l10n.to, style: TextStyle(color: isDarkMode ? Colors.white : Colors.black)),
               trailing: Text(
-                tempToDate == null ? 'Any' : '${tempToDate!.day}/${tempToDate!.month}/${tempToDate!.year}',
+                tempToDate == null ? context.l10n.any : '${tempToDate!.day}/${tempToDate!.month}/${tempToDate!.year}',
                 style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54),
               ),
               onTap: () async {
@@ -394,7 +394,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: isDarkMode ? Colors.white70 : Colors.black54),
                     ),
-                    child: Text('Reset', style: TextStyle(color: isDarkMode ? Colors.white : Colors.black)),
+                    child: Text(context.l10n.reset, style: TextStyle(color: isDarkMode ? Colors.white : Colors.black)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -413,7 +413,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
                       backgroundColor: isDarkMode ? Colors.white : Colors.black,
                       foregroundColor: isDarkMode ? Colors.black : Colors.white,
                     ),
-                    child: const Text('Apply'),
+                    child: Text(context.l10n.apply),
                   ),
                 ),
               ],
@@ -435,7 +435,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
     }
   }
 
-  // ==================  Shimmer Skeleton (unchanged) ==================
+  // ==================  Shimmer Skeleton ==================
 
   Widget _buildShimmerAppBar(bool isDarkMode) {
     return Padding(
@@ -713,7 +713,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
                 child: Row(
                   children: [
                     Text(
-                      '${_filteredTransactions.length} transactions',
+                      context.l10n.transactionsCount(_filteredTransactions.length),
                       style: TextStyle(
                         color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                         fontSize: 13,
@@ -813,7 +813,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
             ElevatedButton.icon(
               onPressed: _refreshData,
               icon: const Icon(Icons.refresh),
-              label: const Text('Try Again'),
+              label: Text(context.l10n.tryAgain),
               style: ElevatedButton.styleFrom(
                 backgroundColor: isDarkMode ? Colors.white : Colors.black,
                 foregroundColor: isDarkMode ? Colors.black : Colors.white,
@@ -839,7 +839,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
           const SizedBox(height: 16),
           Text(
             _searchQuery.isNotEmpty
-                ? 'No matching transactions'
+                ? context.l10n.noMatchingTransactions
                 : context.l10n.noTransactions,
             style: TextStyle(
               fontSize: 20,
@@ -850,7 +850,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
           const SizedBox(height: 8),
           Text(
             _searchQuery.isNotEmpty
-                ? 'Try adjusting your search'
+                ? context.l10n.tryAdjustingYourSearch
                 : context.l10n.addYourFirstTransaction,
             style: TextStyle(
               color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
@@ -863,7 +863,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
               child: TextButton.icon(
                 onPressed: _clearSearch,
                 icon: Icon(Icons.clear, color: isDarkMode ? Colors.white70 : Colors.black54),
-                label: Text('Clear search', style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54)),
+                label: Text(context.l10n.clearSearch, style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54)),
               ),
             ),
         ],
@@ -1010,7 +1010,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          isIncome ? 'Income' : 'Expense',
+                          isIncome ? context.l10n.income : context.l10n.expense,
                           style: TextStyle(
                             color: isIncome ? Colors.green[800] : Colors.red[800],
                             fontSize: 11,
@@ -1036,18 +1036,18 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
       builder: (context) => AlertDialog(
         backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
         title: Text(
-          'Delete Transaction',
+          context.l10n.deleteTransaction,
           style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
         ),
         content: Text(
-          'Are you sure you want to delete "${transaction.title}"?',
+          context.l10n.confirmDeleteTransaction(transaction.title),
           style: TextStyle(color: isDarkMode ? Colors.grey[300] : Colors.grey[700]),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'Cancel',
+              context.l10n.cancel,
               style: TextStyle(color: isDarkMode ? Colors.grey[300] : Colors.grey[700]),
             ),
           ),
@@ -1057,14 +1057,14 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
               try {
                 await _walletRepository.deleteTransaction(transaction.id);
                 await _refreshData(); // force refresh after deletion
-                MessageService.showSuccess('Transaction deleted successfully');
+                MessageService.showSuccess(context.l10n.transactionDeletedSuccess);
               } catch (e) {
-                MessageService.showError('Failed to delete: $e');
+                MessageService.showError(context.l10n.failedToDeleteWithError(e.toString()));
               }
             },
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: Colors.red),
+            child: Text(
+              context.l10n.delete,
+              style: const TextStyle(color: Colors.red),
             ),
           ),
         ],
@@ -1082,9 +1082,9 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
     final transactionDate = DateTime(date.year, date.month, date.day);
 
     if (transactionDate == today) {
-      return 'Today';
+      return context.l10n.today;
     } else if (transactionDate == yesterday) {
-      return 'Yesterday';
+      return context.l10n.yesterday;
     } else {
       return '${date.day}/${date.month}/${date.year}';
     }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/biometric_service.dart';
 
 class BiometricBottomSheet extends StatefulWidget {
@@ -28,7 +29,6 @@ class _BiometricBottomSheetState extends State<BiometricBottomSheet> {
       setState(() {
         _isLoading = false;
       });
-      // TODO: Show error message
     }
   }
 
@@ -38,14 +38,13 @@ class _BiometricBottomSheetState extends State<BiometricBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    // اختيار الأيقونة المناسبة بناءً على نوع البايومتريك
     IconData iconData;
     if (widget.biometricName.toLowerCase().contains('face')) {
-      iconData = Icons.face; // أيقونة Face ID
+      iconData = Icons.face;
     } else if (widget.biometricName.toLowerCase().contains('finger')) {
-      iconData = Icons.fingerprint; // أيقونة Fingerprint
+      iconData = Icons.fingerprint;
     } else {
-      iconData = Icons.security; // أيقونة افتراضية
+      iconData = Icons.security;
     }
 
     return Container(
@@ -91,7 +90,7 @@ class _BiometricBottomSheetState extends State<BiometricBottomSheet> {
           
           // Title
           Text(
-            'Use ${widget.biometricName}?',
+            context.l10n.useBiometricQuestion(widget.biometricName),
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w700,
             ),
@@ -102,7 +101,7 @@ class _BiometricBottomSheetState extends State<BiometricBottomSheet> {
           
           // Description
           Text(
-            'You can use ${widget.biometricName.toLowerCase()} for faster and more secure login.',
+             context.l10n.biometricLoginDescription(widget.biometricName.toLowerCase()),
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
             ),
@@ -131,7 +130,7 @@ class _BiometricBottomSheetState extends State<BiometricBottomSheet> {
                         strokeWidth: 2,
                       ),
                     )
-                  : Text('Enable ${widget.biometricName}'),
+                  : Text(context.l10n.enableBiometric(widget.biometricName)),
             ),
           ),
           
@@ -148,7 +147,7 @@ class _BiometricBottomSheetState extends State<BiometricBottomSheet> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text('Not now'),
+              child: Text(context.l10n.notNow),
             ),
           ),
           

@@ -48,7 +48,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       _emailController.text = profile.email;
     } catch (e) {
       setState(() {
-        _errorMessage = 'Failed to load profile: ${e.toString()}';
+      _errorMessage = context.l10n.errorWithDetails(e.toString());
       });
     } finally {
       setState(() {

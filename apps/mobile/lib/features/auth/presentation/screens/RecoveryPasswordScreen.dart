@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:my_wallet/core/services/message_service.dart';
+import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 
 class RecoveryPasswordScreen extends StatefulWidget {
@@ -134,15 +134,15 @@ class _RecoveryPasswordScreenState extends State<RecoveryPasswordScreen>
                         size: 36, color: theme.colorScheme.primary),
                   ),
                   const SizedBox(height: 24),
-                  Text(
-                    'Enter your passcode',
+                 Text(
+                    context.l10n.enterYourPasscode,
                     style: theme.textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Verify it\'s you before changing your email',
+                    context.l10n.verifyItsYouBeforeChangingEmail,
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: theme.colorScheme.onBackground.withOpacity(0.6),
                     ),
@@ -196,10 +196,10 @@ class _RecoveryPasswordScreenState extends State<RecoveryPasswordScreen>
                         color: Colors.red.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(30),
                       ),
-                      child: const Text(
-                        'Incorrect passcode',
-                        style: TextStyle(color: Colors.red, fontSize: 14),
-                      ),
+child: Text(
+  context.l10n.invalidPasscode,
+  style: const TextStyle(color: Colors.red, fontSize: 14),
+),
                     ),
                   ),
 

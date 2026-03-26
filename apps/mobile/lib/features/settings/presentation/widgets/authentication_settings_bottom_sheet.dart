@@ -1,7 +1,7 @@
 // features/settings/presentation/widgets/authentication_settings_bottom_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:my_wallet/core/services/biometric_service.dart';
-import 'package:my_wallet/core/utils/shared_prefs.dart';
+import 'package:my_wallet/core/extensions/context_extensions.dart'; // لإتاحة context.l10n
 
 class AuthenticationSettingsBottomSheet extends StatefulWidget {
   const AuthenticationSettingsBottomSheet({super.key});
@@ -40,7 +40,6 @@ class _AuthenticationSettingsBottomSheetState
     
     try {
       if (value) {
-        // Enable biometric
         final authenticated = await BiometricService.authenticate();
         if (authenticated) {
           await BiometricService.enableBiometric();
@@ -48,28 +47,27 @@ class _AuthenticationSettingsBottomSheetState
             _biometricEnabled = true;
           });
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Biometric authentication enabled'),
+            SnackBar(
+              content: Text(context.l10n.biometricEnabledSuccess),
               backgroundColor: Colors.green,
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Authentication failed'),
+            SnackBar(
+              content: Text(context.l10n.biometricAuthenticationFailed),
               backgroundColor: Colors.red,
             ),
           );
         }
       } else {
-        // Disable biometric
         await BiometricService.disableBiometric();
         setState(() {
           _biometricEnabled = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Biometric authentication disabled'),
+          SnackBar(
+            content: Text(context.l10n.biometricDisabledSuccess),
             backgroundColor: Colors.orange,
           ),
         );
@@ -77,7 +75,7 @@ class _AuthenticationSettingsBottomSheetState
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: ${e.toString()}'),
+          content: Text(context.l10n.errorWithDetails(e.toString())),
           backgroundColor: Colors.red,
         ),
       );
@@ -90,9 +88,7 @@ class _AuthenticationSettingsBottomSheetState
 
   Future<void> _changePin() async {
     Navigator.pop(context);
-    
-    // TODO: Navigate to change PIN flow
-    // يمكنك إنشاء شاشة لتغيير الـ PIN
+    // TODO: Navigate to change PIN screen
   }
 
   @override
@@ -123,7 +119,7 @@ class _AuthenticationSettingsBottomSheetState
           
           // Title
           Text(
-            'Authentication Settings',
+            context.l10n.authenticationSettings,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w700,
             ),
@@ -134,8 +130,8 @@ class _AuthenticationSettingsBottomSheetState
           // Biometric Switch
           ListTile(
             leading: const Icon(Icons.fingerprint),
-            title: const Text('Biometric Authentication'),
-            subtitle: const Text('Use Face ID/Fingerprint to login'),
+            title: Text(context.l10n.useBiometricAuthentication),
+            subtitle: Text(context.l10n.biometricAuthenticationSubtitle),
             trailing: _isLoading
                 ? const CircularProgressIndicator()
                 : Switch(
@@ -147,8 +143,8 @@ class _AuthenticationSettingsBottomSheetState
           // Change PIN
           ListTile(
             leading: const Icon(Icons.lock),
-            title: const Text('Change PIN'),
-            subtitle: const Text('Update your 6-digit PIN'),
+            title: Text(context.l10n.changePasscode),
+            subtitle: Text(context.l10n.updateYour6DigitPasscode),
             onTap: _changePin,
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
           ),
@@ -160,7 +156,7 @@ class _AuthenticationSettingsBottomSheetState
             width: double.infinity,
             child: TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
+              child: Text(context.l10n.close),
             ),
           ),
           
