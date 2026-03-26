@@ -16,5 +16,9 @@ namespace MyWallet.Application.ServiceInterfaces
         Task<AuthResponseDto> ResendVerificationCodeAsync(SendVerificationDto dto);
         Task<AuthResponseDto> VerifyCodeAsync(VerifyCodeDto dto);
         Task<AuthResponseDto> SetUserCurrencyAsync(string userId, string currency);
+        Task<AuthResponseDto> CheckUserExistsAsync(CheckUserDto dto);
+        Task<AuthResponseDto> VerifyPasswordForRecoveryAsync(VerifyPasswordForRecoveryDto dto);
+        Task<AuthResponseDto> RequestEmailChangeAsync(RequestEmailChangeDto dto);
+        Task<AuthResponseDto> ConfirmEmailChangeAsync(ConfirmEmailChangeDto dto);
     }
 }

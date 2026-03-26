@@ -439,5 +439,178 @@ namespace MyWallet.Application.Services
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+
+        // Helper — زوده جوه AuthService فوق GenerateJwtToken
+        private async Task<ApplicationUser?> FindByEmailOrUsernameAsync(string emailOrUsername)
+        {
+            if (emailOrUsername.Contains('@'))
+                return await _userManager.FindByEmailAsync(emailOrUsername);
+            else
+                return await _userManager.FindByNameAsync(emailOrUsername);
+        }
+
+        // ─────────────────────────────────────────
+        // STEP 1: Check user exists
+        // ─────────────────────────────────────────
+        public async Task<AuthResponseDto> CheckUserExistsAsync(CheckUserDto dto)
+        {
+            var user = await FindByEmailOrUsernameAsync(dto.EmailOrUsername);
+
+            if (user == null)
+                return new AuthResponseDto
+                {
+                    Success = false,
+                    Message = "المستخدم غير موجود"
+                };
+
+            return new AuthResponseDto
+            {
+                Success = true,
+                Message = "المستخدم موجود"
+            };
+        }
+
+        // ─────────────────────────────────────────
+        // STEP 2: Verify password
+        // ─────────────────────────────────────────
+        public async Task<AuthResponseDto> VerifyPasswordForRecoveryAsync(VerifyPasswordForRecoveryDto dto)
+        {
+            var user = await FindByEmailOrUsernameAsync(dto.EmailOrUsername);
+
+            if (user == null)
+                return new AuthResponseDto
+                {
+                    Success = false,
+                    Message = "المستخدم غير موجود"
+                };
+
+            var isValid = await _userManager.CheckPasswordAsync(user, dto.Password);
+
+            if (!isValid)
+                return new AuthResponseDto
+                {
+                    Success = false,
+                    Message = "كلمة المرور غير صحيحة"
+                };
+
+            return new AuthResponseDto
+            {
+                Success = true,
+                Message = "كلمة المرور صحيحة"
+            };
+        }
+
+        // ─────────────────────────────────────────
+        // STEP 3: Request email change → send OTP
+        // ─────────────────────────────────────────
+        public async Task<AuthResponseDto> RequestEmailChangeAsync(RequestEmailChangeDto dto)
+        {
+            // Check new email not already taken
+            var emailTaken = await _userManager.FindByEmailAsync(dto.NewEmail);
+            if (emailTaken != null)
+                return new AuthResponseDto
+                {
+                    Success = false,
+                    Message = "هذا البريد الإلكتروني مسجل بالفعل"
+                };
+
+            var user = await FindByEmailOrUsernameAsync(dto.EmailOrUsername);
+            if (user == null)
+                return new AuthResponseDto
+                {
+                    Success = false,
+                    Message = "المستخدم غير موجود"
+                };
+
+            var otp = new Random().Next(100000, 999999).ToString();
+
+            var cacheKey = $"EmailChange_{dto.EmailOrUsername}";
+            _cache.Set(cacheKey, new EmailChangeCacheData
+            {
+                Code = otp,
+                NewEmail = dto.NewEmail,
+                EmailOrUsername = dto.EmailOrUsername
+            }, TimeSpan.FromMinutes(10));
+
+            // بعت OTP على الإيميل الجديد عشان يثبت إنه عنده access عليه
+            var emailBody = _emailTemplateService.GenerateVerificationEmail(
+                code: otp,
+                isLogin: false,
+                deviceName: null,
+                ipAddress: null
+            );
+
+            await _emailSender.SendEmailAsync(dto.NewEmail, "تأكيد تغيير البريد الإلكتروني - محفظتي", emailBody);
+
+            return new AuthResponseDto
+            {
+                Success = true,
+                Message = "تم إرسال رمز التحقق إلى بريدك الإلكتروني الجديد"
+            };
+        }
+
+        // ─────────────────────────────────────────
+        // STEP 4: Confirm OTP → update email → return JWT
+        // ─────────────────────────────────────────
+        public async Task<AuthResponseDto> ConfirmEmailChangeAsync(ConfirmEmailChangeDto dto)
+        {
+            var cacheKey = $"EmailChange_{dto.EmailOrUsername}";
+
+            if (!_cache.TryGetValue(cacheKey, out EmailChangeCacheData? cacheData))
+                return new AuthResponseDto
+                {
+                    Success = false,
+                    Message = "رمز التحقق منتهي الصلاحية"
+                };
+
+            if (cacheData.Code != dto.OtpCode || cacheData.NewEmail != dto.NewEmail)
+                return new AuthResponseDto
+                {
+                    Success = false,
+                    Message = "رمز التحقق غير صحيح"
+                };
+
+            var user = await FindByEmailOrUsernameAsync(dto.EmailOrUsername);
+            if (user == null)
+                return new AuthResponseDto
+                {
+                    Success = false,
+                    Message = "المستخدم غير موجود"
+                };
+
+            // Update email
+            user.Email = dto.NewEmail;
+            user.NormalizedEmail = dto.NewEmail.ToUpper();
+            user.EmailConfirmed = true;
+
+            var result = await _userManager.UpdateAsync(user);
+
+            if (!result.Succeeded)
+                return new AuthResponseDto
+                {
+                    Success = false,
+                    Message = "فشل تحديث البريد الإلكتروني",
+                    Errors = result.Errors.Select(e => e.Description).ToList()
+                };
+
+            _cache.Remove(cacheKey);
+
+            var token = await GenerateJwtToken(user);
+
+            return new AuthResponseDto
+            {
+                Success = true,
+                Message = "تم تغيير البريد الإلكتروني بنجاح",
+                Token = token,
+                User = new UserDto
+                {
+                    Id = user.Id.ToString(),
+                    Email = user.Email,
+                    FullName = user.FullName,
+                    UserName = user.UserName!,
+                    PhoneNumber = user.PhoneNumber ?? ""
+                }
+            };
+        }
     }
 }

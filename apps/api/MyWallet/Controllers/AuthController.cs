@@ -103,5 +103,37 @@ namespace MyWallet.Controllers
 
             return Ok(result);
         }
+
+        [HttpPost("recovery/check-user")]
+        public async Task<IActionResult> CheckUser([FromBody] CheckUserDto dto)
+        {
+            var result = await _authService.CheckUserExistsAsync(dto);
+            if (!result.Success) return BadRequest(result);
+            return Ok(result);
+        }
+
+        [HttpPost("recovery/verify-password")]
+        public async Task<IActionResult> VerifyPasswordForRecovery([FromBody] VerifyPasswordForRecoveryDto dto)
+        {
+            var result = await _authService.VerifyPasswordForRecoveryAsync(dto);
+            if (!result.Success) return BadRequest(result);
+            return Ok(result);
+        }
+
+        [HttpPost("recovery/request-email-change")]
+        public async Task<IActionResult> RequestEmailChange([FromBody] RequestEmailChangeDto dto)
+        {
+            var result = await _authService.RequestEmailChangeAsync(dto);
+            if (!result.Success) return BadRequest(result);
+            return Ok(result);
+        }
+
+        [HttpPost("recovery/confirm-email-change")]
+        public async Task<IActionResult> ConfirmEmailChange([FromBody] ConfirmEmailChangeDto dto)
+        {
+            var result = await _authService.ConfirmEmailChangeAsync(dto);
+            if (!result.Success) return BadRequest(result);
+            return Ok(result);
+        }
     }
 }
