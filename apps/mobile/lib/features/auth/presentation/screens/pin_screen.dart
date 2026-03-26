@@ -4,6 +4,7 @@ import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/biometric_service.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
+import 'package:my_wallet/features/auth/presentation/screens/ForgotPasscodeOtpScreen.dart';
 import 'package:my_wallet/features/auth/presentation/widgets/biometric_bottom_sheet.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/HomeScreen.dart';
 
@@ -168,29 +169,135 @@ void _showBiometricBottomSheet() {
   });
 }
 
-  void _onForgotPin() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.l10n.forgotPin),
-        content: Text(context.l10n.forgotPinDescription),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(context.l10n.cancel),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // التوجيه إلى استعادة الرمز عبر البريد
-              // يمكن إضافة شاشة استعادة هنا
-            },
-            child: Text(context.l10n.reset),
-          ),
-        ],
-      ),
-    );
-  }
+void _onForgotPin() {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      final theme = Theme.of(context);
+      return Container(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: EdgeInsets.fromLTRB(
+          24, 16, 24,
+          24 + MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onSurface.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            const SizedBox(height: 28),
+
+            // Icon
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.lock_reset_rounded,
+                size: 36,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            Text(
+              context.l10n.forgotPin,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            Text(
+              context.l10n.forgotPinDescription,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                height: 1.5,
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // Reset button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ForgotPasscodeOtpScreen(),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  elevation: 0,
+                ),
+                child: Text(
+                  context.l10n.reset,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Cancel button
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: Text(
+                  context.l10n.cancel,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
 
 
   @override

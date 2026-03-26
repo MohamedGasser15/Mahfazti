@@ -11,6 +11,9 @@ class ApiEndpoints {
   static const String recoveryVerifyPassword = 'api/auth/recovery/verify-password';
   static const String recoveryRequestEmailChange = 'api/auth/recovery/request-email-change';
   static const String recoveryConfirmEmailChange = 'api/auth/recovery/confirm-email-change';
+  static const String forgotPasscode = 'api/auth/passcode/forgot';
+  static const String resetPasscode = 'api/auth/passcode/reset';
+
   // Wallet
   static const String walletHome = 'api/wallet/home';
   static const String walletBalance = 'api/wallet/balance';

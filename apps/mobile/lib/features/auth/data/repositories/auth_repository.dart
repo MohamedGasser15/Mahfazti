@@ -96,7 +96,29 @@ Future<Map<String, dynamic>> recoveryRequestEmailChange({
   );
   return _apiService.handleResponse(response);
 }
+Future<Map<String, dynamic>> forgotPasscode() async {
+  final response = await _apiService.post(
+    ApiEndpoints.forgotPasscode,
+    {},
+    requiresAuth: true,
+  );
+  return _apiService.handleResponse(response);
+}
 
+Future<Map<String, dynamic>> resetPasscode({
+  required String otpCode,
+  required String newPasscode,
+}) async {
+  final response = await _apiService.post(
+    ApiEndpoints.resetPasscode,
+    {
+      'otpCode': otpCode,
+      'newPasscode': newPasscode,
+    },
+    requiresAuth: true,
+  );
+  return _apiService.handleResponse(response);
+}
 Future<Map<String, dynamic>> recoveryConfirmEmailChange({
   required String emailOrUsername,
   required String newEmail,
