@@ -101,8 +101,8 @@ _buildAndroidNavItem(
 
   Widget _buildAndroidNavItem(
     int index,
-    IconData outlineIcon,
-    IconData filledIcon,
+    FaIconData  outlineIcon,
+    FaIconData  filledIcon,
     bool isDarkMode,
   ) {
     final isSelected = _currentIndex == index;
@@ -128,7 +128,7 @@ _buildAndroidNavItem(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            FaIcon(
               isSelected ? filledIcon : outlineIcon,
               size: 24,
               color: isSelected
@@ -192,7 +192,7 @@ _buildAndroidNavItem(
   }
 
   Widget _buildNavItem(
-      int index, IconData outlineIcon, IconData filledIcon, bool isDarkMode) {
+      int index, FaIconData outlineIcon, FaIconData filledIcon, bool isDarkMode) {
     final isSelected = _currentIndex == index;
     final l10n = context.l10n;
 
@@ -242,7 +242,7 @@ _buildAndroidNavItem(
             AnimatedScale(
               duration: const Duration(milliseconds: 250),
               scale: isSelected ? 1.1 : 1.0,
-              child: Icon(
+              child: FaIcon(
                 isSelected ? filledIcon : outlineIcon,
                 size: 26,
                 color: isSelected
