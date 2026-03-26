@@ -59,7 +59,66 @@ Future<Map<String, dynamic>> sendVerification({
       rethrow;
     }
   }
-  
+  // في auth_repository.dart
+
+Future<Map<String, dynamic>> recoveryCheckUser(String emailOrUsername) async {
+  final response = await _apiService.post(
+    ApiEndpoints.recoveryCheckUser,
+    {'emailOrUsername': emailOrUsername},
+  );
+  return _apiService.handleResponse(response);
+}
+
+Future<Map<String, dynamic>> recoveryVerifyPassword({
+  required String emailOrUsername,
+  required String password,
+}) async {
+  final response = await _apiService.post(
+    ApiEndpoints.recoveryVerifyPassword,
+    {
+      'emailOrUsername': emailOrUsername,
+      'password': password,
+    },
+  );
+  return _apiService.handleResponse(response);
+}
+
+Future<Map<String, dynamic>> recoveryRequestEmailChange({
+  required String emailOrUsername,
+  required String newEmail,
+}) async {
+  final response = await _apiService.post(
+    ApiEndpoints.recoveryRequestEmailChange,
+    {
+      'emailOrUsername': emailOrUsername,
+      'newEmail': newEmail,
+    },
+  );
+  return _apiService.handleResponse(response);
+}
+
+Future<Map<String, dynamic>> recoveryConfirmEmailChange({
+  required String emailOrUsername,
+  required String newEmail,
+  required String otpCode,
+}) async {
+  final response = await _apiService.post(
+    ApiEndpoints.recoveryConfirmEmailChange,
+    {
+      'emailOrUsername': emailOrUsername,
+      'newEmail': newEmail,
+      'otpCode': otpCode,
+    },
+  );
+  final data = _apiService.handleResponse(response);
+  if (data['success'] == true && data['token'] != null) {
+    await SharedPrefs.setAuthToken(data['token']);
+    if (data['user'] != null) {
+      await SharedPrefs.setUserData(jsonEncode(data['user']));
+    }
+  }
+  return data;
+}
   // Resend verification code
   Future<Map<String, dynamic>> resendCode({
   required String email,

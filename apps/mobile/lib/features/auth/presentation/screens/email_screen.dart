@@ -171,10 +171,9 @@ class _EmailScreenState extends State<EmailScreen> with SingleTickerProviderStat
     );
   }
   
-  void _onLostAccess() {
-    // TODO: Handle lost access to email
-    print('Lost access to email');
-  }
+void _onLostAccess() {
+  Navigator.pushNamed(context, '/recovery-check-user');
+}
   
   @override
   void dispose() {

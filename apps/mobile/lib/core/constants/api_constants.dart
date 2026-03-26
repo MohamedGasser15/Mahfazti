@@ -7,7 +7,10 @@ class ApiEndpoints {
   static const String verifyAndComplete = 'api/auth/verify-complete';
   static const String logout = 'api/auth/logout';
   static const String checkEmail = 'api/auth/check-email';
-  
+  static const String recoveryCheckUser = 'api/auth/recovery/check-user';
+  static const String recoveryVerifyPassword = 'api/auth/recovery/verify-password';
+  static const String recoveryRequestEmailChange = 'api/auth/recovery/request-email-change';
+  static const String recoveryConfirmEmailChange = 'api/auth/recovery/confirm-email-change';
   // Wallet
   static const String walletHome = 'api/wallet/home';
   static const String walletBalance = 'api/wallet/balance';

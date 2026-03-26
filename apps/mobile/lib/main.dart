@@ -8,6 +8,10 @@ import 'package:my_wallet/core/themes/app_theme.dart';
 import 'package:my_wallet/core/utils/language_service.dart';
 import 'package:my_wallet/core/utils/navigation_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
+import 'package:my_wallet/features/auth/presentation/screens/RecoveryCheckUserScreen.dart';
+import 'package:my_wallet/features/auth/presentation/screens/RecoveryNewEmailScreen.dart';
+import 'package:my_wallet/features/auth/presentation/screens/RecoveryOtpScreen.dart';
+import 'package:my_wallet/features/auth/presentation/screens/RecoveryPasswordScreen.dart';
 import 'package:my_wallet/features/auth/presentation/screens/currency_selection_screen.dart';
 import 'package:my_wallet/features/auth/presentation/screens/email_screen.dart';
 import 'package:my_wallet/features/auth/presentation/screens/passcode_screen.dart';
@@ -194,6 +198,36 @@ onGenerateRoute: (settings) {
           isFirstTime: args?['isFirstTime'] ?? false,
         ),
       );
+      case '/recovery-check-user':
+  return MaterialPageRoute(
+    builder: (context) => const RecoveryCheckUserScreen(),
+  );
+
+case '/recovery-password':
+  final args = settings.arguments as Map<String, dynamic>;
+  return MaterialPageRoute(
+    builder: (context) => RecoveryPasswordScreen(
+      emailOrUsername: args['emailOrUsername'],
+    ),
+  );
+
+case '/recovery-new-email':
+  final args = settings.arguments as Map<String, dynamic>;
+  return MaterialPageRoute(
+    builder: (context) => RecoveryNewEmailScreen(
+      emailOrUsername: args['emailOrUsername'],
+      password: args['password'],
+    ),
+  );
+
+case '/recovery-otp':
+  final args = settings.arguments as Map<String, dynamic>;
+  return MaterialPageRoute(
+    builder: (context) => RecoveryOtpScreen(
+      emailOrUsername: args['emailOrUsername'],
+      newEmail: args['newEmail'],
+    ),
+  );
     default:
       return MaterialPageRoute(
         builder: (context) => SplashScreen(onLocaleChanged: _changeLocale),
