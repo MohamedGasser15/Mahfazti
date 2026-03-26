@@ -4,8 +4,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
+import 'package:my_wallet/features/wallet/presentation/screens/Insights_tab.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/analytics_screen.dart';
-import 'package:my_wallet/features/wallet/presentation/screens/budget_page.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/TransactionsPage.dart';
 
 import 'home_tab.dart';
@@ -39,7 +39,7 @@ PageView(
               HomeTab(),
               AnalyticsScreen(),
               TransactionsTab(),
-              BudgetPage(),
+              InsightsPage(),
             ],
           ),
           if (isIOS)
@@ -88,12 +88,12 @@ PageView(
             FontAwesomeIcons.receipt,
             isDarkMode,
           ),
-          _buildAndroidNavItem(
-            3,
-            FontAwesomeIcons.wallet,
-            FontAwesomeIcons.wallet,
-            isDarkMode,
-          ),
+_buildAndroidNavItem(
+  3,
+  FontAwesomeIcons.lightbulb,
+  FontAwesomeIcons.solidLightbulb,
+  isDarkMode,
+),
         ],
       ),
     );

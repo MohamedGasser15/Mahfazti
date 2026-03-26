@@ -1767,47 +1767,134 @@ Widget _buildSecuritySettings(bool isDarkMode) {
     );
   }
 
-  void _showLogoutDialog(bool isDarkMode) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
-        title: Text(
-          context.l10n.logout,
-          style: TextStyle(
-            color: isDarkMode ? Colors.white : Colors.black,
+void _showLogoutDialog(bool isDarkMode) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => Container(
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.grey[900] : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        24, 16, 24,
+        24 + MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
-        ),
-        content: Text(
-          context.l10n.logoutConfirmation,
-          style: TextStyle(
-            color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+
+          const SizedBox(height: 28),
+
+          // Icon
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: Colors.red.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.logout_rounded,
+              size: 36,
+              color: Colors.red,
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              context.l10n.cancel,
-              style: TextStyle(
-                color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+
+          const SizedBox(height: 20),
+
+          Text(
+            context.l10n.logout,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: isDarkMode ? Colors.white : Colors.black,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          Text(
+            context.l10n.logoutConfirmation,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: isDarkMode
+                  ? Colors.grey[400]
+                  : Colors.grey[600],
+              height: 1.5,
+            ),
+          ),
+
+          const SizedBox(height: 32),
+
+          // Logout button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _logout();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                context.l10n.logout,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _logout();
-            },
-            child: Text(
-              context.l10n.logout,
-              style: const TextStyle(color: Colors.red),
+
+          const SizedBox(height: 12),
+
+          // Cancel button
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: () => Navigator.pop(context),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: Text(
+                context.l10n.cancel,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: isDarkMode
+                      ? Colors.grey[400]
+                      : Colors.grey[600],
+                ),
+              ),
             ),
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   void _logout() async {
     // TODO: تسجيل الخروج من API
