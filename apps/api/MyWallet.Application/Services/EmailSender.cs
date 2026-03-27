@@ -27,7 +27,7 @@ namespace MyWallet.Application.Services
             var emailMessage = new MimeMessage();
 
             // Set From address
-            emailMessage.From.Add(new MailboxAddress("EducationLab", "edulab152@gmail.com"));
+            emailMessage.From.Add(new MailboxAddress("Mahfazti", "mahfazti15@gmail.com"));
 
             // Set To address
             emailMessage.To.Add(MailboxAddress.Parse(email));
