@@ -137,6 +137,7 @@ class _ChangePasscodeScreenState extends State<ChangePasscodeScreen> {
                       child: TextFormField(
                         controller: _currentController,
                         obscureText: _obscureCurrent,
+                         textDirection: TextDirection.ltr,
                         decoration: InputDecoration(
                           labelText: l10n.currentPasscode,
                           prefixIcon: Icon(
@@ -194,6 +195,7 @@ class _ChangePasscodeScreenState extends State<ChangePasscodeScreen> {
                       child: TextFormField(
                         controller: _newController,
                         obscureText: _obscureNew,
+                        textDirection: TextDirection.ltr,
                         decoration: InputDecoration(
                           labelText: l10n.newPasscode,
                           prefixIcon: Icon(
@@ -250,6 +252,7 @@ class _ChangePasscodeScreenState extends State<ChangePasscodeScreen> {
                       child: TextFormField(
                         controller: _confirmController,
                         obscureText: _obscureConfirm,
+                        textDirection: TextDirection.ltr,
                         decoration: InputDecoration(
                           labelText: l10n.confirmPasscode,
                           prefixIcon: Icon(

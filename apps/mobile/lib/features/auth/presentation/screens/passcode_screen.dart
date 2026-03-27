@@ -328,37 +328,37 @@ Widget _buildForgotPasscodeSheet() {
     );
   }
   
-  Widget _buildKeyboard() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-      child: Column(
-        children: [
-          _buildRow(['1', '2', '3']),
-          const SizedBox(height: 16),
-          _buildRow(['4', '5', '6']),
-          const SizedBox(height: 16),
-          _buildRow(['7', '8', '9']),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              widget.isLogin
-                  ?_buildTextButton(context.l10n.forgot, onTap: _onForgotPasscode)
-                  : const SizedBox(width: 80),
-              
-              _buildNumberButton('0'),
-              
-              _buildDeleteButton(),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+Widget _buildKeyboard() {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+    child: Column(
+      children: [
+        _buildRow(['1', '2', '3']),
+        const SizedBox(height: 16),
+        _buildRow(['4', '5', '6']),
+        const SizedBox(height: 16),
+        _buildRow(['7', '8', '9']),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          textDirection: TextDirection.ltr, 
+          children: [
+            widget.isLogin
+                ? _buildTextButton(context.l10n.forgot, onTap: _onForgotPasscode)
+                : const SizedBox(width: 80),
+            _buildNumberButton('0'),
+            _buildDeleteButton(),
+          ],
+        ),
+      ],
+    ),
+  );
+}
   
   Widget _buildRow(List<String> digits) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      textDirection: TextDirection.ltr,
       children: digits.map((digit) => _buildNumberButton(digit)).toList(),
     );
   }
@@ -437,54 +437,53 @@ Widget _buildForgotPasscodeSheet() {
     );
   }
   
-  // بناء النقاط
-  Widget _buildPasscodeIndicators() {
-    return AnimatedBuilder(
-      animation: _shakeAnimation,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(_showError ? _shakeAnimation.value : 0, 0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(_passcodeLength, (index) {
-              final isFilled = index < _passcode.length;
-              final isError = _showError && isFilled;
-              
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-                width: 18,
-                height: 18,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isError
-                      ? Colors.red
-                      : isFilled
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
-                  border: !isFilled
-                      ? Border.all(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-                          width: 1.5,
+Widget _buildPasscodeIndicators() {
+  return AnimatedBuilder(
+    animation: _shakeAnimation,
+    builder: (context, child) {
+      return Transform.translate(
+        offset: Offset(_showError ? _shakeAnimation.value : 0, 0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          textDirection: TextDirection.ltr,
+          children: List.generate(_passcodeLength, (index) {
+            final isFilled = index < _passcode.length;
+            final isError = _showError && isFilled;
+            
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isError
+                    ? Colors.red
+                    : isFilled
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+                border: !isFilled
+                    ? Border.all(
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                        width: 1.5,
+                      )
+                    : null,
+                boxShadow: isFilled && !isError
+                    ? [
+                        BoxShadow(
+                          color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                          blurRadius: 8,
+                          spreadRadius: 1,
                         )
-                      : null,
-                  boxShadow: isFilled && !isError
-                      ? [
-                          BoxShadow(
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                            blurRadius: 8,
-                            spreadRadius: 1,
-                          )
-                        ]
-                      : null,
-                ),
-              );
-            }),
-          ),
-        );
-      },
-    );
-  }
-  
+                      ]
+                    : null,
+              ),
+            );
+          }),
+        ),
+      );
+    },
+  );
+}
   @override
   Widget build(BuildContext context) {
     final isRTL = Directionality.of(context) == TextDirection.rtl;

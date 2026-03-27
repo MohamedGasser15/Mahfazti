@@ -378,6 +378,7 @@ void _onForgotPin() {
                   // نقاط PIN
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    textDirection: TextDirection.ltr,
                     children: List.generate(6, (index) {
                       final isFilled = index < _pinDigits.length;
                       return AnimatedContainer(
@@ -465,36 +466,38 @@ void _onForgotPin() {
     );
   }
 
-  Widget _buildKeyRow(List<String> digits) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: digits.map((d) => _buildNumberButton(d)).toList(),
-    );
-  }
+Widget _buildKeyRow(List<String> digits) {
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    textDirection: TextDirection.ltr,
+    children: digits.map((d) => _buildNumberButton(d)).toList(),
+  );
+}
 
-  Widget _buildNumberButton(String digit) {
-    return GestureDetector(
-      onTap: () => _addDigit(int.parse(digit)),
-      child: Container(
-        width: 70,
-        height: 70,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Theme.of(context).colorScheme.surface,
-          border: Border.all(
-            color: Theme.of(context).dividerColor.withOpacity(0.2),
-            width: 1,
-          ),
-        ),
-        child: Center(
-          child: Text(
-            digit,
-            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w400),
-          ),
+Widget _buildNumberButton(String digit) {
+  return GestureDetector(
+    onTap: () => _addDigit(int.parse(digit)),
+    child: Container(
+      width: 70,
+      height: 70,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Theme.of(context).colorScheme.surface,
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withOpacity(0.2),
+          width: 1,
         ),
       ),
-    );
-  }
+      child: Center(
+        child: Text(
+          digit,
+          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w400),
+          textDirection: TextDirection.ltr, // 👈 Force LTR direction
+        ),
+      ),
+    ),
+  );
+}
 
   Widget _buildFunctionButton({
     required IconData icon,

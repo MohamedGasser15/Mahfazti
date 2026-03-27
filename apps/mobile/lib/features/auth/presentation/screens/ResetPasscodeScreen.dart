@@ -352,6 +352,7 @@ void _showSuccessAndPop() {
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
+                        textDirection: TextDirection.ltr,
                         children: List.generate(_passcodeLength, (index) {
                           final filled = index < _passcode.length;
                           return AnimatedContainer(
@@ -454,36 +455,38 @@ void _showSuccessAndPop() {
     );
   }
 
-  Widget _buildKeyboard(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-      child: Column(
-        children: [
-          _buildRow(['1', '2', '3'], theme),
-          const SizedBox(height: 16),
-          _buildRow(['4', '5', '6'], theme),
-          const SizedBox(height: 16),
-          _buildRow(['7', '8', '9'], theme),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              const SizedBox(width: 70),
-              _buildKey('0', theme),
-              _buildDeleteKey(theme),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+Widget _buildKeyboard(ThemeData theme) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+    child: Column(
+      children: [
+        _buildRow(['1', '2', '3'], theme),
+        const SizedBox(height: 16),
+        _buildRow(['4', '5', '6'], theme),
+        const SizedBox(height: 16),
+        _buildRow(['7', '8', '9'], theme),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          textDirection: TextDirection.ltr,
+          children: [
+            const SizedBox(width: 70),
+            _buildKey('0', theme),
+            _buildDeleteKey(theme),
+          ],
+        ),
+      ],
+    ),
+  );
+}
 
-  Widget _buildRow(List<String> digits, ThemeData theme) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: digits.map((d) => _buildKey(d, theme)).toList(),
-    );
-  }
+Widget _buildRow(List<String> digits, ThemeData theme) {
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    textDirection: TextDirection.ltr,
+    children: digits.map((d) => _buildKey(d, theme)).toList(),
+  );
+}
 
   Widget _buildKey(String digit, ThemeData theme) {
     return GestureDetector(

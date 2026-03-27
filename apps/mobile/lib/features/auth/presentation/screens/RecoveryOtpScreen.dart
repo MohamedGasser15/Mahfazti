@@ -253,6 +253,7 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    textDirection: TextDirection.ltr,
                     children: List.generate(6, (index) {
                       final digit =
                           _code.length > index ? _code[index] : '';

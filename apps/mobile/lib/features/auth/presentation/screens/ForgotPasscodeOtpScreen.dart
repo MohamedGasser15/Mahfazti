@@ -239,57 +239,56 @@ class _ForgotPasscodeOtpScreenState extends State<ForgotPasscodeOtpScreen>
                 ),
 
                 // OTP Boxes
-                AnimatedBuilder(
-                  animation: _shakeAnimation,
-                  builder: (context, child) => Transform.translate(
-                    offset: Offset(_shakeAnimation.value, 0),
-                    child: child,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(6, (index) {
-                      final digit = _code.length > index ? _code[index] : '';
-                      final filled = digit.isNotEmpty;
-                      final hasError = _errorMessage != null;
+// OTP Boxes
+AnimatedBuilder(
+  animation: _shakeAnimation,
+  builder: (context, child) => Transform.translate(
+    offset: Offset(_shakeAnimation.value, 0),
+    child: child,
+  ),
+  child: Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    textDirection: TextDirection.ltr, // 👈 إضافة هذا السطر
+    children: List.generate(6, (index) {
+      final digit = _code.length > index ? _code[index] : '';
+      final filled = digit.isNotEmpty;
+      final hasError = _errorMessage != null;
 
-                      return GestureDetector(
-                        onTap: () => _hiddenFocusNode.requestFocus(),
-                        child: Container(
-                          width: fieldWidth,
-                          height: 72,
-                          margin: EdgeInsets.only(left: index > 0 ? 10 : 0),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surface,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: hasError
-                                  ? theme.colorScheme.error
-                                  : filled
-                                      ? theme.colorScheme.primary
-                                      : theme.colorScheme.outline
-                                          .withOpacity(0.3),
-                              width: hasError || filled ? 2 : 1.5,
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              digit,
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                                color: filled
-                                    ? theme.colorScheme.onSurface
-                                    : theme.colorScheme.onSurface
-                                        .withOpacity(0.3),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ),
-
+      return GestureDetector(
+        onTap: () => _hiddenFocusNode.requestFocus(),
+        child: Container(
+          width: fieldWidth,
+          height: 72,
+          margin: EdgeInsets.only(left: index > 0 ? 10 : 0),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: hasError
+                  ? theme.colorScheme.error
+                  : filled
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.outline.withOpacity(0.3),
+              width: hasError || filled ? 2 : 1.5,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              digit,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: filled
+                    ? theme.colorScheme.onSurface
+                    : theme.colorScheme.onSurface.withOpacity(0.3),
+              ),
+            ),
+          ),
+        ),
+      );
+    }),
+  ),
+),
                 // Error
                 if (_errorMessage != null)
                   Padding(

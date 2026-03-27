@@ -386,6 +386,7 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
                       child: AutofillGroup(
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
+                          textDirection: TextDirection.ltr,
                           children: List.generate(6, (index) => _buildDisplayBox(index, fieldWidth, theme)),
                         ),
                       ),
