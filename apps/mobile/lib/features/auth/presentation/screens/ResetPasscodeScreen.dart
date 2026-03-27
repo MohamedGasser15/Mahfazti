@@ -10,7 +10,12 @@ enum _ResetStep { enterNew, confirm }
 
 class ResetPasscodeScreen extends StatefulWidget {
   final String otpCode;
-  const ResetPasscodeScreen({super.key, required this.otpCode});
+  final String email;
+  const ResetPasscodeScreen({
+    super.key,
+    required this.otpCode,
+    required this.email,
+  });
 
   @override
   State<ResetPasscodeScreen> createState() => _ResetPasscodeScreenState();
@@ -109,6 +114,7 @@ class _ResetPasscodeScreenState extends State<ResetPasscodeScreen>
 
     try {
       final result = await _authRepository.resetPasscode(
+        email: widget.email, // ← زود
         otpCode: widget.otpCode,
         newPasscode: entered,
       );
@@ -156,71 +162,71 @@ class _ResetPasscodeScreenState extends State<ResetPasscodeScreen>
     });
   }
 
-  void _showSuccessAndPop() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.check_circle_outline,
-                  size: 40, color: Colors.green),
+void _showSuccessAndPop() {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 8),
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.1),
+              shape: BoxShape.circle,
             ),
-            const SizedBox(height: 20),
-            Text(
-              context.l10n.passcodeUpdated,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+            child: const Icon(Icons.check_circle_outline, size: 40, color: Colors.green),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            context.l10n.passcodeUpdated,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w700,
             ),
-            const SizedBox(height: 8),
-            Text(
-             context.l10n.passcodeChangedSuccessfully,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onBackground
-                        .withOpacity(0.6),
-                  ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            context.l10n.passcodeChangedSuccessfully,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
             ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                    Navigator.pop(ctx);
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (_) => const HomeScreen()),
-                      (route) => false,
-                    );
-                  },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(context.l10n.done),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
 
+                // مسح الـ token القديم
+                await SharedPrefs.removeAuthToken();
+
+                // إعادة التوجيه لشاشة الـ email عشان يعمل login من أول
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/email',
+                  (route) => false,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(context.l10n.done),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);

@@ -96,26 +96,28 @@ Future<Map<String, dynamic>> recoveryRequestEmailChange({
   );
   return _apiService.handleResponse(response);
 }
-Future<Map<String, dynamic>> forgotPasscode() async {
+Future<Map<String, dynamic>> forgotPasscode({required String email}) async {
   final response = await _apiService.post(
     ApiEndpoints.forgotPasscode,
-    {},
-    requiresAuth: true,
+    {'email': email},
+    // شيل requiresAuth
   );
   return _apiService.handleResponse(response);
 }
 
 Future<Map<String, dynamic>> resetPasscode({
+  required String email, // ← زود
   required String otpCode,
   required String newPasscode,
 }) async {
   final response = await _apiService.post(
     ApiEndpoints.resetPasscode,
     {
+      'email': email, // ← زود
       'otpCode': otpCode,
       'newPasscode': newPasscode,
     },
-    requiresAuth: true,
+    // شيل requiresAuth
   );
   return _apiService.handleResponse(response);
 }
@@ -190,21 +192,17 @@ Future<Map<String, dynamic>> recoveryConfirmEmailChange({
       
       final data = _apiService.handleResponse(response);
       
-      // إذا نجح التسجيل، نخزن الـ token
-      if (data['success'] == true && data['token'] != null) {
-        await SharedPrefs.setAuthToken(data['token']);
-        
-        // تخزين بيانات المستخدم
-        await SharedPrefs.setUserData(jsonEncode({
-          'email': email,
-          'fullName': fullName,
-          'userName': userName,
-          'phoneNumber': phoneNumber,
-        }));
-        
-        // تنظيف البيانات المؤقتة
-        await _cleanTempData();
-      }
+if (data['success'] == true && data['token'] != null) {
+  await SharedPrefs.setAuthToken(data['token']);
+  await SharedPrefs.setString('user_email', email);
+  await SharedPrefs.setUserData(jsonEncode({
+    'email': email,
+    'fullName': fullName,
+    'userName': userName,
+    'phoneNumber': phoneNumber,
+  }));
+  await _cleanTempData();
+}
       
       return data;
     } catch (e) {
@@ -242,13 +240,10 @@ Future<Map<String, dynamic>> recoveryConfirmEmailChange({
       // إذا نجح الدخول، نخزن الـ token
       if (data['success'] == true && data['token'] != null) {
         await SharedPrefs.setAuthToken(data['token']);
-        
-        // تخزين بيانات المستخدم
+        await SharedPrefs.setString('user_email', email);
         await SharedPrefs.setUserData(jsonEncode({
           'email': email,
         }));
-        
-        // تنظيف البيانات المؤقتة
         await _cleanTempData();
       }
       

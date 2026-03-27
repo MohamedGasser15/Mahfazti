@@ -7,7 +7,8 @@ import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 import 'package:my_wallet/features/auth/presentation/screens/ResetPasscodeScreen.dart';
 
 class ForgotPasscodeOtpScreen extends StatefulWidget {
-  const ForgotPasscodeOtpScreen({super.key});
+  final String email;
+  const ForgotPasscodeOtpScreen({super.key, required this.email});
 
   @override
   State<ForgotPasscodeOtpScreen> createState() =>
@@ -62,7 +63,7 @@ class _ForgotPasscodeOtpScreenState extends State<ForgotPasscodeOtpScreen>
   Future<void> _sendOtp() async {
     setState(() => _isSending = true);
     try {
-      final result = await _authRepository.forgotPasscode();
+      final result = await _authRepository.forgotPasscode(email: widget.email);
       if (result['success'] == true) {
         _startTimer();
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -124,7 +125,10 @@ class _ForgotPasscodeOtpScreenState extends State<ForgotPasscodeOtpScreen>
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => ResetPasscodeScreen(otpCode: _code),
+          builder: (_) => ResetPasscodeScreen(
+            otpCode: _code,
+            email: widget.email,
+          ),
         ),
       );
     }

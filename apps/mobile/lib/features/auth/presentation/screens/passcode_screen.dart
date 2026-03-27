@@ -5,6 +5,7 @@ import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
+import 'package:my_wallet/features/auth/presentation/screens/ForgotPasscodeOtpScreen.dart';
 import 'package:my_wallet/features/onboarding/presentation/screens/onboarding_screen.dart';
 
 class PasscodeScreen extends StatefulWidget {
@@ -184,111 +185,116 @@ class _PasscodeScreenState extends State<PasscodeScreen> with TickerProviderStat
     Navigator.pushReplacementNamed(context, '/home');
   }
   
-  void _onForgotPasscode() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _buildForgotPasscodeSheet(),
-    );
-  }
-  
-  Widget _buildForgotPasscodeSheet() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.background,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
+void _onForgotPasscode() {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => _buildForgotPasscodeSheet(),
+  );
+}
+
+Widget _buildForgotPasscodeSheet() {
+  final theme = Theme.of(context);
+  return Container(
+    decoration: BoxDecoration(
+      color: theme.colorScheme.surface,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+    ),
+    padding: EdgeInsets.fromLTRB(
+      24, 16, 24,
+      24 + MediaQuery.of(context).viewInsets.bottom,
+    ),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 40,
+          height: 4,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.onSurface.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(2),
+          ),
         ),
-      ),
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(2),
-            ),
+        const SizedBox(height: 28),
+        Container(
+          width: 72,
+          height: 72,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary.withOpacity(0.1),
+            shape: BoxShape.circle,
           ),
-          const SizedBox(height: 24),
-          Icon(
-            Icons.lock_reset,
-            size: 60,
-            color: Theme.of(context).colorScheme.primary,
+          child: Icon(Icons.lock_reset_rounded, size: 36, color: theme.colorScheme.primary),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          context.l10n.resetPasscode,
+          style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          context.l10n.resetPasscodeDescription,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurface.withOpacity(0.6),
+            height: 1.5,
           ),
-          const SizedBox(height: 16),
-          Text(
-            context.l10n.resetPasscode,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-           context.l10n.resetPasscodeDescription,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+        ),
+        const SizedBox(height: 32),
+
+        // Send button — بيروح للـ ForgotPasscodeOtpScreen
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ForgotPasscodeOtpScreen(
+                    email: widget.email,
                   ),
-                  child: Text(context.l10n.cancel),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () async {
-                    Navigator.pop(context);
-                    setState(() => _isLoading = true);
-                    
-                    try {
-                      await _authRepository.sendVerification(
-                        email: widget.email,
-                        isLogin: widget.isLogin,
-                        deviceName: widget.deviceName,
-                        ipAddress: widget.ipAddress,
-                      );
-                      // استخدام MessageService بدلاً من _showSuccessSnackBar
-                     MessageService.showSuccess(context.l10n.newCodeSentTo(widget.email));
-                    } catch (e) {
-                      // استخدام MessageService بدلاً من _showErrorSnackBar
-                     MessageService.showError(context.l10n.failedToSendCode);
-                    } finally {
-                      setState(() => _isLoading = false);
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child:Text(context.l10n.send),
-                ),
-              ),
-            ],
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: theme.colorScheme.onPrimary,
+              elevation: 0,
+            ),
+            child: Text(
+              context.l10n.reset,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
           ),
-        ],
-      ),
-    );
-  }
-  void _showSuccessSnackBar(String message) {
+        ),
+        const SizedBox(height: 12),
+
+        // Cancel button
+        SizedBox(
+          width: double.infinity,
+          child: TextButton(
+            onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            child: Text(
+              context.l10n.cancel,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+} void _showSuccessSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(

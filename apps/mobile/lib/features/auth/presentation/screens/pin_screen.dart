@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/biometric_service.dart';
@@ -168,7 +169,21 @@ void _showBiometricBottomSheet() {
     _navigateToHome();
   });
 }
+String _getUserEmail() {
+  // جرب user_email الأول
+  final directEmail = SharedPrefs.getStringValue('user_email');
+  if (directEmail != null && directEmail.isNotEmpty) return directEmail;
 
+  // لو مش موجود، جيبه من userData
+  final userData = SharedPrefs.userData;
+  if (userData != null) {
+    try {
+      final decoded = jsonDecode(userData) as Map<String, dynamic>;
+      return decoded['email'] as String? ?? '';
+    } catch (_) {}
+  }
+  return '';
+}
 void _onForgotPin() {
   showModalBottomSheet(
     context: context,
@@ -246,7 +261,9 @@ void _onForgotPin() {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const ForgotPasscodeOtpScreen(),
+                      builder: (_) => ForgotPasscodeOtpScreen(
+                        email: _getUserEmail(),
+                      ),
                     ),
                   );
                 },
