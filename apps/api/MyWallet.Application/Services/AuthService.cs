@@ -613,16 +613,16 @@ namespace MyWallet.Application.Services
             };
         }
 
-        public async Task<AuthResponseDto> SendPasscodeResetOtpAsync(string userId)
+        public async Task<AuthResponseDto> SendPasscodeResetOtpAsync(string email)
         {
             try
             {
-                var user = await _userManager.FindByIdAsync(userId);
+                var user = await _userManager.FindByEmailAsync(email);
                 if (user == null)
-                    return new AuthResponseDto { Success = false, Message = "المستخدم غير موجود" };
+                    return new AuthResponseDto { Success = false, Message = "البريد الإلكتروني غير مسجل" };
 
                 var otp = new Random().Next(100000, 999999).ToString();
-                var cacheKey = $"PasscodeReset_{userId}";
+                var cacheKey = $"PasscodeReset_{email}";
 
                 _cache.Set(cacheKey, otp, TimeSpan.FromMinutes(10));
 
@@ -634,7 +634,7 @@ namespace MyWallet.Application.Services
                 );
 
                 await _emailSender.SendEmailAsync(
-                    user.Email!,
+                    email,
                     "إعادة تعيين الرمز السري - محفظتي",
                     emailBody
                 );
@@ -660,7 +660,7 @@ namespace MyWallet.Application.Services
         {
             try
             {
-                var cacheKey = $"PasscodeReset_{dto.UserId}";
+                var cacheKey = $"PasscodeReset_{dto.Email}";
 
                 if (!_cache.TryGetValue(cacheKey, out string? cachedOtp))
                     return new AuthResponseDto
@@ -676,11 +676,10 @@ namespace MyWallet.Application.Services
                         Message = "رمز التحقق غير صحيح"
                     };
 
-                var user = await _userManager.FindByIdAsync(dto.UserId);
+                var user = await _userManager.FindByEmailAsync(dto.Email);
                 if (user == null)
                     return new AuthResponseDto { Success = false, Message = "المستخدم غير موجود" };
 
-                // Reset password using Identity
                 var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
                 var result = await _userManager.ResetPasswordAsync(user, resetToken, dto.NewPasscode);
 

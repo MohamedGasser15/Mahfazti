@@ -7,16 +7,18 @@ using System.Threading.Tasks;
 
 namespace MyWallet.Application.DTOs.Auth
 {
-    // ForgotPasscodeRequestDto.cs
     public class ForgotPasscodeRequestDto
     {
         [Required]
-        public string UserId { get; set; } = string.Empty;
+        [EmailAddress]
+        public string Email { get; set; } = string.Empty;
     }
 
     public class ResetPasscodeDto
     {
-        public string? UserId { get; set; }
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = string.Empty;
 
         [Required]
         [StringLength(6, MinimumLength = 6)]
