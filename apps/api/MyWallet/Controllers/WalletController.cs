@@ -65,7 +65,27 @@ namespace MyWallet.Controllers
                 return NotFound();
             return Ok(transaction);
         }
+        [HttpPut("transactions/update/{id}")]
+        public async Task<IActionResult> UpdateTransaction(int id, [FromBody] AddTransactionDto dto)
+        {
+            var userId = GetUserId();
 
+            try
+            {
+                var result = await _walletService.UpdateTransactionAsync(id, userId, dto);
+
+                return Ok(result);
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound();
+            }
+            catch (Exception ex)
+            {
+                // optional logging
+                return StatusCode(500, "Something went wrong");
+            }
+        }
         // POST: api/wallet/transactions/add
         [HttpPost("transactions/add")]
         public async Task<IActionResult> AddTransaction([FromBody] AddTransactionDto dto)

@@ -386,56 +386,119 @@ class _HomeTabState extends State<HomeTab> {
                               .toList(),
                         ),
                       ),
-                      const SizedBox(height: 16),
+// داخل StatefulBuilder، بعد حقل المبلغ وقبل حقل الوصف
 
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: _isLoadingCategories
-                            ? const Center(child: CircularProgressIndicator())
-                            : filteredCategories.isEmpty
-                                ? Container(
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      context.l10n.noCategoriesAvailable,
-                                      style: TextStyle(
-                                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
-                                    ),
-                                  )
-                                : DropdownButtonFormField<int>(
-                                    value: selectedCategoryId,
-                                    decoration: InputDecoration(
-                                      labelText: context.l10n.category,
-                                      prefixIcon: Icon(Icons.category,
-                                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
-                                      filled: true,
-                                      fillColor: isDarkMode ? Colors.grey[900] : Colors.grey[50],
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                    ),
-                                    items: filteredCategories
-                                        .map((category) => DropdownMenuItem<int>(
-                                              value: category.id,
-                                              child: Text(
-                                                Localizations.localeOf(context).languageCode == 'ar'
-                                                    ? category.nameAr
-                                                    : category.nameEn,
-                                                style: TextStyle(
-                                                    color: isDarkMode ? Colors.white : Colors.black),
-                                              ),
-                                            ))
-                                        .toList(),
-                                    onChanged: (value) =>
-                                        setState(() => selectedCategoryId = value),
+const SizedBox(height: 16),
+
+// اختيار الفئة - دوائر أفقية (مثل استوري ماسنجر)
+Padding(
+  padding: const EdgeInsets.symmetric(horizontal: 24),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        context.l10n.category,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+        ),
+      ),
+      const SizedBox(height: 12),
+      _isLoadingCategories
+          ? const Center(child: CircularProgressIndicator())
+          : filteredCategories.isEmpty
+              ? Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    context.l10n.noCategoriesAvailable,
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                )
+              : SizedBox(
+                  height: 110, // ارتفاع ثابت لضمان ظهور الدوائر مع النص
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: filteredCategories.length,
+                    itemBuilder: (context, index) {
+                      final category = filteredCategories[index];
+                      final isSelected = selectedCategoryId == category.id;
+                      final categoryName = Localizations.localeOf(context).languageCode == 'ar'
+                          ? category.nameAr
+                          : category.nameEn;
+                      // اختصار الاسم: أول حرفين أو ثلاثة
+                      String shortName = categoryName.length >= 2
+                          ? categoryName.substring(0, 2).toUpperCase()
+                          : categoryName.toUpperCase();
+
+                      return GestureDetector(
+                        onTap: () => setState(() => selectedCategoryId = category.id),
+                        child: Container(
+                          width: 80,
+                          margin: const EdgeInsets.only(right: 12),
+                          child: Column(
+                            children: [
+                              Container(
+                                width: 70,
+                                height: 70,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? (isIncome ? Colors.green[800]! : Colors.red[800]!)
+                                        : Colors.transparent,
+                                    width: 3,
                                   ),
-                      ),
-                      const SizedBox(height: 16),
-
+                                ),
+                                child: CircleAvatar(
+                                  backgroundColor: isSelected
+                                      ? (isIncome
+                                          ? Colors.green.withOpacity(0.2)
+                                          : Colors.red.withOpacity(0.2))
+                                      : (isDarkMode ? Colors.grey[800] : Colors.grey[200]),
+                                  radius: 35,
+                                  child: Text(
+                                    shortName,
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: isSelected
+                                          ? (isIncome ? Colors.green[800] : Colors.red[800])
+                                          : (isDarkMode ? Colors.white70 : Colors.black54),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                categoryName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isSelected
+                                      ? (isIncome ? Colors.green[800] : Colors.red[800])
+                                      : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+    ],
+  ),
+),
+const SizedBox(height: 16),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 24),
                         child: TextFormField(

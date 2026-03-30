@@ -1107,4 +1107,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get yesterday => 'أمس';
+
+  @override
+  String get wallet => 'المحفظة';
+
+  @override
+  String get insights => 'الإحصائيات';
 }

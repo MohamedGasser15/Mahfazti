@@ -29,17 +29,17 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: isDarkMode ? Colors.black : Colors.white,
       extendBody: isIOS,
-      bottomNavigationBar: isIOS ? null : _buildAndroidBottomNav(isDarkMode),
+      bottomNavigationBar: isIOS ? null : _buildAndroidBottomNav(context, isDarkMode),
       body: Stack(
         children: [
-PageView(
-  controller: _pageController,
-  physics: const NeverScrollableScrollPhysics(),
+          PageView(
+            controller: _pageController,
+            physics: const NeverScrollableScrollPhysics(),
             children: const [
-              HomeTab(),
-              AnalyticsScreen(),
-              TransactionsTab(),
-              InsightsPage(),
+              HomeTab(),           // Wallet
+              InsightsPage(),      // Insights
+              AnalyticsScreen(),   // Analytics
+              TransactionsTab(),   // Transactions
             ],
           ),
           if (isIOS)
@@ -47,7 +47,7 @@ PageView(
               alignment: Alignment.bottomCenter,
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 15),
-                child: _buildFloatingNav(isDarkMode),
+                child: _buildFloatingNav(context, isDarkMode),
               ),
             ),
         ],
@@ -55,7 +55,9 @@ PageView(
     );
   }
 
-  Widget _buildAndroidBottomNav(bool isDarkMode) {
+  Widget _buildAndroidBottomNav(BuildContext context, bool isDarkMode) {
+    final l10n = context.l10n;
+    
     return Container(
       height: 70,
       decoration: BoxDecoration(
@@ -71,38 +73,48 @@ PageView(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildAndroidNavItem(
+            context,
             0,
-            FontAwesomeIcons.house,
-            FontAwesomeIcons.solidHouse,
+            FontAwesomeIcons.wallet,
+            FontAwesomeIcons.wallet,
+            l10n.wallet ?? 'Wallet',
             isDarkMode,
           ),
           _buildAndroidNavItem(
+            context,
             1,
-            FontAwesomeIcons.chartSimple,
-            FontAwesomeIcons.chartSimple,
+            FontAwesomeIcons.solidLightbulb,
+            FontAwesomeIcons.solidLightbulb,
+            l10n.insights ?? 'Insights',
             isDarkMode,
           ),
           _buildAndroidNavItem(
+            context,
             2,
-            FontAwesomeIcons.receipt,
-            FontAwesomeIcons.receipt,
+            FontAwesomeIcons.chartSimple,
+            FontAwesomeIcons.chartSimple,
+            l10n.analytics ?? 'Analytics',
             isDarkMode,
           ),
-_buildAndroidNavItem(
-  3,
-  FontAwesomeIcons.lightbulb,
-  FontAwesomeIcons.solidLightbulb,
-  isDarkMode,
-),
+          _buildAndroidNavItem(
+            context,
+            3,
+            FontAwesomeIcons.receipt,
+            FontAwesomeIcons.receipt,
+            l10n.transactions ?? 'Transactions',
+            isDarkMode,
+          ),
         ],
       ),
     );
   }
 
   Widget _buildAndroidNavItem(
+    BuildContext context,
     int index,
-    FaIconData  outlineIcon,
-    FaIconData  filledIcon,
+    FaIconData outlineIcon,
+    FaIconData filledIcon,
+    String label,
     bool isDarkMode,
   ) {
     final isSelected = _currentIndex == index;
@@ -135,11 +147,22 @@ _buildAndroidNavItem(
                   ? (isDarkMode ? Colors.white : Colors.black)
                   : (isDarkMode ? Colors.grey[600] : Colors.grey[400]),
             ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                color: isSelected
+                    ? (isDarkMode ? Colors.white : Colors.black)
+                    : (isDarkMode ? Colors.grey[500] : Colors.grey[500]),
+              ),
+            ),
             if (isSelected)
               Container(
                 width: 4,
                 height: 4,
-                margin: const EdgeInsets.only(top: 4),
+                margin: const EdgeInsets.only(top: 2),
                 decoration: BoxDecoration(
                   color: isDarkMode ? Colors.white : Colors.black,
                   shape: BoxShape.circle,
@@ -151,7 +174,9 @@ _buildAndroidNavItem(
     );
   }
 
-  Widget _buildFloatingNav(bool isDarkMode) {
+  Widget _buildFloatingNav(BuildContext context, bool isDarkMode) {
+    final l10n = context.l10n;
+    
     return ClipRRect(
       borderRadius: BorderRadius.circular(35),
       child: BackdropFilter(
@@ -180,10 +205,38 @@ _buildAndroidNavItem(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildNavItem(0, FontAwesomeIcons.solidHouse, FontAwesomeIcons.solidHouse, isDarkMode),
-              _buildNavItem(1, FontAwesomeIcons.chartSimple, FontAwesomeIcons.chartSimple, isDarkMode),
-              _buildNavItem(2, FontAwesomeIcons.receipt, FontAwesomeIcons.receipt, isDarkMode),
-              _buildNavItem(3, FontAwesomeIcons.wallet, FontAwesomeIcons.wallet, isDarkMode),
+              _buildNavItem(
+                context,
+                0, 
+                FontAwesomeIcons.wallet, 
+                FontAwesomeIcons.wallet,
+                l10n.wallet ?? 'Wallet',
+                isDarkMode,
+              ),
+              _buildNavItem(
+                context,
+                1,
+                FontAwesomeIcons.solidLightbulb,
+                FontAwesomeIcons.solidLightbulb,
+                l10n.insights ?? 'Insights',
+                isDarkMode,
+              ),
+              _buildNavItem(
+                context,
+                2,
+                FontAwesomeIcons.chartSimple,
+                FontAwesomeIcons.chartSimple,
+                l10n.analytics ?? 'Analytics',
+                isDarkMode,
+              ),
+              _buildNavItem(
+                context,
+                3,
+                FontAwesomeIcons.receipt,
+                FontAwesomeIcons.receipt,
+                l10n.transactions ?? 'Transactions',
+                isDarkMode,
+              ),
             ],
           ),
         ),
@@ -192,37 +245,24 @@ _buildAndroidNavItem(
   }
 
   Widget _buildNavItem(
-      int index, FaIconData outlineIcon, FaIconData filledIcon, bool isDarkMode) {
+    BuildContext context,
+    int index,
+    FaIconData outlineIcon,
+    FaIconData filledIcon,
+    String label,
+    bool isDarkMode,
+  ) {
     final isSelected = _currentIndex == index;
-    final l10n = context.l10n;
-
-    String label;
-    switch (index) {
-      case 0:
-        label = l10n.home;
-        break;
-      case 1:
-        label = l10n.analytics;
-        break;
-      case 2:
-        label = l10n.transactions;
-        break;
-      case 3:
-        label = l10n.budget;
-        break;
-      default:
-        label = '';
-    }
 
     return GestureDetector(
-     onTap: () {
-  setState(() => _currentIndex = index);
-  _pageController.animateToPage(
-    index,
-    duration: const Duration(milliseconds: 350),
-    curve: Curves.easeInOut,
-  );
-},
+      onTap: () {
+        setState(() => _currentIndex = index);
+        _pageController.animateToPage(
+          index,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeInOut,
+        );
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,

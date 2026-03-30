@@ -2149,6 +2149,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Yesterday'**
   String get yesterday;
+
+  /// No description provided for @wallet.
+  ///
+  /// In en, this message translates to:
+  /// **'WALLET'**
+  String get wallet;
+
+  /// No description provided for @insights.
+  ///
+  /// In en, this message translates to:
+  /// **'INSIGHTS'**
+  String get insights;
 }
 
 class _AppLocalizationsDelegate

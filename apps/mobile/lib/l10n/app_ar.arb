@@ -340,5 +340,7 @@
   "whatIsYourEmail": "ما هو بريدك الإلكتروني؟",
   "withdraw": "سحب",
   "withdrawalAddedSuccess": "تم إضافة السحب بنجاح!",
-  "yesterday": "أمس"
+  "yesterday": "أمس",
+  "wallet": "المحفظة",
+  "insights": "الإحصائيات"
 }

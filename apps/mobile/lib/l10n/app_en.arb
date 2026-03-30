@@ -341,5 +341,7 @@
   "whatIsYourEmail": "What is your email?",
   "withdraw": "Withdraw",
   "withdrawalAddedSuccess": "Withdrawal added successfully!",
-  "yesterday": "Yesterday"
+  "yesterday": "Yesterday",
+  "wallet": "WALLET",
+  "insights": "INSIGHTS"
 }

@@ -1112,4 +1112,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get yesterday => 'Yesterday';
+
+  @override
+  String get wallet => 'WALLET';
+
+  @override
+  String get insights => 'INSIGHTS';
 }
