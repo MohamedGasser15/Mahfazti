@@ -7,7 +7,7 @@ import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/Insights_tab.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/analytics_screen.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/TransactionsPage.dart';
-
+import 'package:google_nav_bar/google_nav_bar.dart';
 import 'home_tab.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -55,60 +55,64 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildAndroidBottomNav(BuildContext context, bool isDarkMode) {
-    final l10n = context.l10n;
-    
-    return Container(
-      height: 70,
-      decoration: BoxDecoration(
-        color: isDarkMode ? Colors.black : Colors.white,
-        border: Border(
-          top: BorderSide(
-            color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
-            width: 1,
-          ),
+Widget _buildAndroidBottomNav(BuildContext context, bool isDarkMode) {
+  final l10n = context.l10n;
+
+  return Container(
+    decoration: BoxDecoration(
+      color: isDarkMode ? Colors.black : Colors.white,
+      border: Border(
+        top: BorderSide(
+          color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+          width: 1,
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildAndroidNavItem(
-            context,
-            0,
-            FontAwesomeIcons.wallet,
-            FontAwesomeIcons.wallet,
-            l10n.wallet ?? 'Wallet',
-            isDarkMode,
-          ),
-          _buildAndroidNavItem(
-            context,
-            1,
-            FontAwesomeIcons.solidLightbulb,
-            FontAwesomeIcons.solidLightbulb,
-            l10n.insights ?? 'Insights',
-            isDarkMode,
-          ),
-          _buildAndroidNavItem(
-            context,
-            2,
-            FontAwesomeIcons.chartSimple,
-            FontAwesomeIcons.chartSimple,
-            l10n.analytics ?? 'Analytics',
-            isDarkMode,
-          ),
-          _buildAndroidNavItem(
-            context,
-            3,
-            FontAwesomeIcons.receipt,
-            FontAwesomeIcons.receipt,
-            l10n.transactions ?? 'Transactions',
-            isDarkMode,
-          ),
-        ],
+    ),
+    child: SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: GNav(
+          selectedIndex: _currentIndex,
+          onTabChange: (index) {
+            setState(() => _currentIndex = index);
+            _pageController.animateToPage(
+              index,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          },
+          gap: 8,
+          tabBorderRadius: 20,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          duration: const Duration(milliseconds: 300),
+          color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
+          activeColor: isDarkMode ? Colors.white : Colors.black,
+          tabBackgroundColor: isDarkMode
+              ? Colors.grey[900]!
+              : Colors.grey[100]!,
+          tabs: [
+GButton(
+  icon: Icons.account_balance_wallet_outlined,
+  text: l10n.wallet ?? 'Wallet',
+),
+GButton(
+  icon: Icons.lightbulb_outline,
+  text: l10n.insights ?? 'Insights',
+),
+GButton(
+  icon: Icons.bar_chart_rounded,
+  text: l10n.analytics ?? 'Analytics',
+),
+GButton(
+  icon: Icons.receipt_long_outlined,
+  text: l10n.transactions ?? 'Transactions',
+),
+          ],
+        ),
       ),
-    );
-  }
-
+    ),
+  );
+}
   Widget _buildAndroidNavItem(
     BuildContext context,
     int index,
