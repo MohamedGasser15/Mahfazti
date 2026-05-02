@@ -36,6 +36,7 @@ dependencies:
   flutter_slidable: ^4.0.3 
   flutter_localizations:
     sdk: flutter
+  cupertino_native: ^0.1.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

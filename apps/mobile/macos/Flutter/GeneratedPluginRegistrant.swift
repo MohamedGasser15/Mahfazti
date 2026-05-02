@@ -6,6 +6,7 @@ import FlutterMacOS
 import Foundation
 
 import connectivity_plus
+import cupertino_native
 import device_info_plus
 import flutter_secure_storage_darwin
 import local_auth_darwin
@@ -17,6 +18,7 @@ import url_launcher_macos
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   ConnectivityPlusPlugin.register(with: registry.registrar(forPlugin: "ConnectivityPlusPlugin"))
+  CupertinoNativePlugin.register(with: registry.registrar(forPlugin: "CupertinoNativePlugin"))
   DeviceInfoPlusMacosPlugin.register(with: registry.registrar(forPlugin: "DeviceInfoPlusMacosPlugin"))
   FlutterSecureStorageDarwinPlugin.register(with: registry.registrar(forPlugin: "FlutterSecureStorageDarwinPlugin"))
   LocalAuthPlugin.register(with: registry.registrar(forPlugin: "LocalAuthPlugin"))

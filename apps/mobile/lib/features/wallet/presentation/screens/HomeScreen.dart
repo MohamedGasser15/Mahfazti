@@ -1,6 +1,4 @@
 import 'dart:io';
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
@@ -9,6 +7,7 @@ import 'package:my_wallet/features/wallet/presentation/screens/analytics_screen.
 import 'package:my_wallet/features/wallet/presentation/screens/TransactionsPage.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'home_tab.dart';
+import 'package:cupertino_native/cupertino_native.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final isIOS = Platform.isIOS;
+    final l10n = context.l10n;
 
     return Scaffold(
       backgroundColor: isDarkMode ? Colors.black : Colors.white,
@@ -43,11 +43,38 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           if (isIOS)
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 15),
-                child: _buildFloatingNav(context, isDarkMode),
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: 15,
+              child: CNTabBar(
+                items: [
+                  CNTabBarItem(
+                    label: l10n.wallet ?? 'Wallet',
+                    icon: const CNSymbol('creditcard.fill'),
+                  ),
+                  CNTabBarItem(
+                    label: l10n.insights ?? 'Insights',
+                    icon: const CNSymbol('lightbulb.fill'),
+                  ),
+                  CNTabBarItem(
+                    label: l10n.analytics ?? 'Analytics',
+                    icon: const CNSymbol('chart.bar.fill'),
+                  ),
+                  CNTabBarItem(
+                    label: l10n.transactions ?? 'Transactions',
+                    icon: const CNSymbol('list.bullet.rectangle.fill'),
+                  ),
+                ],
+                currentIndex: _currentIndex,
+                onTap: (index) {
+                  setState(() => _currentIndex = index);
+                  _pageController.animateToPage(
+                    index,
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeInOut,
+                  );
+                },
               ),
             ),
         ],
@@ -113,201 +140,5 @@ GButton(
     ),
   );
 }
-  Widget _buildAndroidNavItem(
-    BuildContext context,
-    int index,
-    FaIconData outlineIcon,
-    FaIconData filledIcon,
-    String label,
-    bool isDarkMode,
-  ) {
-    final isSelected = _currentIndex == index;
 
-    return GestureDetector(
-      onTap: () {
-        setState(() => _currentIndex = index);
-        _pageController.animateToPage(
-          index,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      },
-      child: Container(
-        width: 70,
-        height: 70,
-        decoration: BoxDecoration(
-          color: isSelected
-              ? (isDarkMode ? Colors.grey[900] : Colors.grey[100])
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            FaIcon(
-              isSelected ? filledIcon : outlineIcon,
-              size: 24,
-              color: isSelected
-                  ? (isDarkMode ? Colors.white : Colors.black)
-                  : (isDarkMode ? Colors.grey[600] : Colors.grey[400]),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected
-                    ? (isDarkMode ? Colors.white : Colors.black)
-                    : (isDarkMode ? Colors.grey[500] : Colors.grey[500]),
-              ),
-            ),
-            if (isSelected)
-              Container(
-                width: 4,
-                height: 4,
-                margin: const EdgeInsets.only(top: 2),
-                decoration: BoxDecoration(
-                  color: isDarkMode ? Colors.white : Colors.black,
-                  shape: BoxShape.circle,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFloatingNav(BuildContext context, bool isDarkMode) {
-    final l10n = context.l10n;
-    
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(35),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          width: MediaQuery.of(context).size.width * 0.85,
-          height: 75,
-          decoration: BoxDecoration(
-            color: isDarkMode
-                ? Colors.black.withOpacity(0.5)
-                : Colors.white.withOpacity(0.7),
-            borderRadius: BorderRadius.circular(35),
-            border: Border.all(
-              color: isDarkMode
-                  ? Colors.white.withOpacity(0.15)
-                  : Colors.white.withOpacity(0.5),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 15,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(
-                context,
-                0, 
-                FontAwesomeIcons.wallet, 
-                FontAwesomeIcons.wallet,
-                l10n.wallet ?? 'Wallet',
-                isDarkMode,
-              ),
-              _buildNavItem(
-                context,
-                1,
-                FontAwesomeIcons.solidLightbulb,
-                FontAwesomeIcons.solidLightbulb,
-                l10n.insights ?? 'Insights',
-                isDarkMode,
-              ),
-              _buildNavItem(
-                context,
-                2,
-                FontAwesomeIcons.chartSimple,
-                FontAwesomeIcons.chartSimple,
-                l10n.analytics ?? 'Analytics',
-                isDarkMode,
-              ),
-              _buildNavItem(
-                context,
-                3,
-                FontAwesomeIcons.receipt,
-                FontAwesomeIcons.receipt,
-                l10n.transactions ?? 'Transactions',
-                isDarkMode,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-    BuildContext context,
-    int index,
-    FaIconData outlineIcon,
-    FaIconData filledIcon,
-    String label,
-    bool isDarkMode,
-  ) {
-    final isSelected = _currentIndex == index;
-
-    return GestureDetector(
-      onTap: () {
-        setState(() => _currentIndex = index);
-        _pageController.animateToPage(
-          index,
-          duration: const Duration(milliseconds: 350),
-          curve: Curves.easeInOut,
-        );
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-        width: 70,
-        height: 65,
-        decoration: BoxDecoration(
-          color: isSelected
-              ? (isDarkMode
-                  ? Colors.white.withOpacity(0.15)
-                  : Colors.black.withOpacity(0.1))
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(25),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedScale(
-              duration: const Duration(milliseconds: 250),
-              scale: isSelected ? 1.1 : 1.0,
-              child: FaIcon(
-                isSelected ? filledIcon : outlineIcon,
-                size: 26,
-                color: isSelected
-                    ? (isDarkMode ? Colors.white : Colors.black)
-                    : (isDarkMode ? Colors.white60 : Colors.black45),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 9,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected
-                    ? (isDarkMode ? Colors.white : Colors.black)
-                    : (isDarkMode ? Colors.white60 : Colors.black45),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
