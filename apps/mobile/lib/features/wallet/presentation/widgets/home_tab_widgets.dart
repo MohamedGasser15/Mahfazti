@@ -2,6 +2,7 @@ part of '../screens/home_tab.dart';
 
 mixin _HomeTabWidgets on _HomeTabState {
   //#region Skeleton Widgets
+  @override
   Widget _buildSkeletonAppBar(bool isDarkMode) {
     return Padding(
       padding: const EdgeInsets.only(top: 50, right: 20, left: 20),
@@ -21,6 +22,7 @@ mixin _HomeTabWidgets on _HomeTabState {
     );
   }
 
+  @override
   Widget _buildSkeletonBalanceCard(bool isDarkMode) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -129,6 +131,7 @@ mixin _HomeTabWidgets on _HomeTabState {
     );
   }
 
+  @override
   Widget _buildSkeletonQuickActions(bool isDarkMode) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 24),
@@ -149,6 +152,7 @@ mixin _HomeTabWidgets on _HomeTabState {
     );
   }
 
+  @override
   Widget _buildSkeletonTransactionHeader(bool isDarkMode) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -176,6 +180,7 @@ mixin _HomeTabWidgets on _HomeTabState {
     );
   }
 
+  @override
   Widget _buildSkeletonFilters(bool isDarkMode) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -201,6 +206,7 @@ mixin _HomeTabWidgets on _HomeTabState {
     );
   }
 
+  @override
   Widget _buildSkeletonTransactionCard(bool isDarkMode) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -275,6 +281,7 @@ mixin _HomeTabWidgets on _HomeTabState {
     );
   }
 
+  @override
   Widget _buildSkeletonLoading(bool isDarkMode) {
     return Shimmer.fromColors(
       baseColor: isDarkMode ? Colors.grey[900]! : Colors.grey[300]!,
@@ -295,6 +302,7 @@ mixin _HomeTabWidgets on _HomeTabState {
   //#endregion
 
   //#region UI Builders
+  @override
   Widget _buildBlurrableNumber(double amount, TextStyle style, bool blurred) {
     final formatted = _formatAmount(amount);
     return TweenAnimationBuilder<double>(
@@ -312,6 +320,7 @@ mixin _HomeTabWidgets on _HomeTabState {
     );
   }
 
+  @override
   Widget _buildErrorWidget(bool isDarkMode) {
     return Center(
       child: Padding(
@@ -371,6 +380,7 @@ mixin _HomeTabWidgets on _HomeTabState {
     );
   }
 
+  @override
   Widget _buildQuickAction(
     IconData icon,
     String label,
@@ -436,6 +446,7 @@ mixin _HomeTabWidgets on _HomeTabState {
     );
   }
 
+  @override
   @override
   Widget _buildTransactionCard(WalletTransaction transaction, bool isDarkMode) {
     final isIncome = transaction.isDeposit;
@@ -661,6 +672,7 @@ mixin _HomeTabWidgets on _HomeTabState {
     );
   }
 
+  @override
   @override
   Widget _buildEmptyState(bool isDarkMode) {
     return Container(
