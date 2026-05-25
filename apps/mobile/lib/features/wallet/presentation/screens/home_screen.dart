@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/analytics_screen.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/insights_tab.dart';

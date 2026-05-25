@@ -43,11 +43,13 @@ class _RecoveryCheckUserScreenState extends State<RecoveryCheckUserScreen> {
             arguments: {'emailOrUsername': value},
           );
         }
-      } else {
-MessageService.showError(context: context, message: result['message'] ?? context.l10n.userNotFound);
+      } else if (mounted) {
+        MessageService.showError(context: context, message: result['message'] ?? context.l10n.userNotFound);
       }
     } catch (e) {
-      MessageService.showError(context: context, message: context.l10n.somethingWentWrong);
+      if (mounted) {
+        MessageService.showError(context: context, message: context.l10n.somethingWentWrong);
+      }
     } finally {
       setState(() => _isLoading = false);
     }
@@ -59,7 +61,7 @@ MessageService.showError(context: context, message: result['message'] ?? context
     final isRTL = Directionality.of(context) == TextDirection.rtl;
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -83,7 +85,7 @@ MessageService.showError(context: context, message: result['message'] ?? context
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.1),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Icon(Icons.manage_accounts_outlined,
@@ -104,7 +106,7 @@ MessageService.showError(context: context, message: result['message'] ?? context
                   Text(
                    context.l10n.recoveryEnterUsernameOrEmail,
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      color: theme.colorScheme.onBackground.withOpacity(0.6),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                       height: 1.5,
                     ),
                   ),
@@ -118,11 +120,11 @@ MessageService.showError(context: context, message: result['message'] ?? context
                     decoration: InputDecoration(
                      hintText: context.l10n.usernameOrEmail,
                       hintStyle: TextStyle(
-                        color: theme.colorScheme.onBackground.withOpacity(0.4),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                       ),
                       prefixIcon: Icon(
                         Icons.person_outline,
-                        color: theme.colorScheme.onBackground.withOpacity(0.5),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                       suffixIcon: _controller.text.isNotEmpty
                           ? IconButton(
@@ -133,13 +135,13 @@ MessageService.showError(context: context, message: result['message'] ?? context
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
-                          color: theme.colorScheme.outline.withOpacity(0.3),
+                          color: theme.colorScheme.outline.withValues(alpha: 0.3),
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
-                          color: theme.colorScheme.outline.withOpacity(0.3),
+                          color: theme.colorScheme.outline.withValues(alpha: 0.3),
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
@@ -174,7 +176,7 @@ MessageService.showError(context: context, message: result['message'] ?? context
                 backgroundColor: theme.colorScheme.primary,
                 foregroundColor: theme.colorScheme.onPrimary,
                 disabledBackgroundColor:
-                    theme.colorScheme.primary.withOpacity(0.5),
+                    theme.colorScheme.primary.withValues(alpha: 0.5),
               ),
               child: _isLoading
                   ? SizedBox(

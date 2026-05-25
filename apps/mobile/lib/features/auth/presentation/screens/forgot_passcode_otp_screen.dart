@@ -155,7 +155,7 @@ class _ForgotPasscodeOtpScreenState extends State<ForgotPasscodeOtpScreen>
 
     if (_isSending) {
       return Scaffold(
-        backgroundColor: theme.colorScheme.background,
+        backgroundColor: theme.colorScheme.surface,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -165,7 +165,7 @@ class _ForgotPasscodeOtpScreenState extends State<ForgotPasscodeOtpScreen>
               Text(
                context.l10n.sendingVerificationCode,
                 style: theme.textTheme.bodyLarge?.copyWith(
-                  color: theme.colorScheme.onBackground.withOpacity(0.6),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -175,7 +175,7 @@ class _ForgotPasscodeOtpScreenState extends State<ForgotPasscodeOtpScreen>
     }
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -200,7 +200,7 @@ class _ForgotPasscodeOtpScreenState extends State<ForgotPasscodeOtpScreen>
                   width: 64,
                   height: 64,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Icon(Icons.lock_reset,
@@ -218,7 +218,7 @@ class _ForgotPasscodeOtpScreenState extends State<ForgotPasscodeOtpScreen>
                 Text(
                   context.l10n.enterCodeSentToEmail,
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onBackground.withOpacity(0.6),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -268,7 +268,7 @@ AnimatedBuilder(
                   ? theme.colorScheme.error
                   : filled
                       ? theme.colorScheme.primary
-                      : theme.colorScheme.outline.withOpacity(0.3),
+                      : theme.colorScheme.outline.withValues(alpha: 0.3),
               width: hasError || filled ? 2 : 1.5,
             ),
           ),
@@ -280,7 +280,7 @@ AnimatedBuilder(
                 fontWeight: FontWeight.w700,
                 color: filled
                     ? theme.colorScheme.onSurface
-                    : theme.colorScheme.onSurface.withOpacity(0.3),
+                    : theme.colorScheme.onSurface.withValues(alpha: 0.3),
               ),
             ),
           ),
@@ -297,10 +297,10 @@ AnimatedBuilder(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.error.withOpacity(0.1),
+                        color: theme.colorScheme.error.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: theme.colorScheme.error.withOpacity(0.5),
+                          color: theme.colorScheme.error.withValues(alpha: 0.5),
                         ),
                       ),
                       child: Row(
@@ -339,7 +339,7 @@ AnimatedBuilder(
                             borderRadius: BorderRadius.circular(30),
                             border: Border.all(
                               color:
-                                  theme.colorScheme.outline.withOpacity(0.2),
+                                  theme.colorScheme.outline.withValues(alpha: 0.2),
                             ),
                           ),
                           child: Row(
@@ -348,13 +348,13 @@ AnimatedBuilder(
                               Icon(Icons.timer,
                                   size: 18,
                                   color: theme.colorScheme.onSurface
-                                      .withOpacity(0.6)),
+                                      .withValues(alpha: 0.6)),
                               const SizedBox(width: 8),
                               Text(
                                context.l10n.resendIn(_formatCountdown(_countdown)),
                                 style: TextStyle(
                                   color: theme.colorScheme.onSurface
-                                      .withOpacity(0.8),
+                                      .withValues(alpha: 0.8),
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),

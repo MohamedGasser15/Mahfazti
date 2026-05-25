@@ -1,9 +1,11 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_wallet/core/constants/app_constants.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() {
     SharedPreferences.setMockInitialValues({});
   });
@@ -28,15 +30,40 @@ void main() {
     });
 
     group('authToken', () {
+      setUp(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+          const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+          (MethodCall methodCall) async {
+            if (methodCall.method == 'read' &&
+                methodCall.arguments['key'] == AppConstants.authTokenKey) {
+              return 'test-token';
+            }
+            if (methodCall.method == 'write') {
+              return null;
+            }
+            if (methodCall.method == 'delete') {
+              return null;
+            }
+            return null;
+          },
+        );
+      });
+
       test('defaults to null', () async {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+          const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+          (MethodCall methodCall) async => null,
+        );
         await SharedPrefs.init();
-        expect(SharedPrefs.authToken, isNull);
+        expect(await SharedPrefs.authToken, isNull);
       });
 
       test('setAuthToken then authToken returns the token', () async {
         await SharedPrefs.init();
         await SharedPrefs.setAuthToken('test-token');
-        expect(SharedPrefs.authToken, 'test-token');
+        expect(await SharedPrefs.authToken, 'test-token');
       });
     });
 

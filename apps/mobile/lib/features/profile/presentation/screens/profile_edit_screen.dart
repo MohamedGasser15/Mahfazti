@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
-import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/widgets/custom_button.dart';
 import 'package:my_wallet/core/widgets/custom_text_field.dart';
 import 'package:my_wallet/features/profile/data/repositories/profile_repository.dart';
@@ -63,24 +62,40 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
     setState(() {
       _isSaving = true;
+      _errorMessage = null;
     });
 
     try {
-      await _profileRepository.updateProfile(
+      final updated = await _profileRepository.updateProfile(
         fullName: _fullNameController.text.trim(),
         userName: _userNameController.text.trim(),
         phoneNumber: _phoneController.text.trim(),
       );
 
       if (mounted) {
-        MessageService.showSuccess(context: context, message: context.l10n.profileUpdatedSuccess);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text(context.l10n.profileUpdatedSuccess)),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
         widget.onProfileUpdated?.call();
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted) {
-        MessageService.showError(context: context, message: '${context.l10n.failedToUpdateProfile}: ${e.toString()}');
-      }
+      setState(() {
+        _errorMessage = '${context.l10n.failedToUpdateProfile}: ${e.toString()}';
+      });
     } finally {
       setState(() {
         _isSaving = false;

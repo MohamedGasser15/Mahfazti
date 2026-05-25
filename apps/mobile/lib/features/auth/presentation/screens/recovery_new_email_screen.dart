@@ -59,11 +59,13 @@ class _RecoveryNewEmailScreenState extends State<RecoveryNewEmailScreen> {
             },
           );
         }
-      } else {
+      } else if (mounted) {
         MessageService.showError(context: context, message: result['message'] ?? context.l10n.emailAlreadyInUse);
       }
     } catch (e) {
-      MessageService.showError(context: context, message: context.l10n.somethingWentWrong);
+      if (mounted) {
+        MessageService.showError(context: context, message: context.l10n.somethingWentWrong);
+      }
     } finally {
       setState(() => _isLoading = false);
     }
@@ -75,7 +77,7 @@ class _RecoveryNewEmailScreenState extends State<RecoveryNewEmailScreen> {
     final isRTL = Directionality.of(context) == TextDirection.rtl;
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -99,7 +101,7 @@ class _RecoveryNewEmailScreenState extends State<RecoveryNewEmailScreen> {
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.1),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Icon(Icons.mark_email_unread_outlined,
@@ -120,7 +122,7 @@ class _RecoveryNewEmailScreenState extends State<RecoveryNewEmailScreen> {
                   Text(
                     context.l10n.enterNewEmailDescription,
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      color: theme.colorScheme.onBackground.withOpacity(0.6),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                       height: 1.5,
                     ),
                   ),
@@ -136,11 +138,11 @@ class _RecoveryNewEmailScreenState extends State<RecoveryNewEmailScreen> {
                     decoration: InputDecoration(
                       hintText: context.l10n.newEmailAddressHint,
                       hintStyle: TextStyle(
-                        color: theme.colorScheme.onBackground.withOpacity(0.4),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                       ),
                       prefixIcon: Icon(
                         Icons.email_outlined,
-                        color: theme.colorScheme.onBackground.withOpacity(0.5),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                       suffixIcon: _controller.text.isNotEmpty
                           ? IconButton(
@@ -151,13 +153,13 @@ class _RecoveryNewEmailScreenState extends State<RecoveryNewEmailScreen> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
-                          color: theme.colorScheme.outline.withOpacity(0.3),
+                          color: theme.colorScheme.outline.withValues(alpha: 0.3),
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
-                          color: theme.colorScheme.outline.withOpacity(0.3),
+                          color: theme.colorScheme.outline.withValues(alpha: 0.3),
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
@@ -192,7 +194,7 @@ class _RecoveryNewEmailScreenState extends State<RecoveryNewEmailScreen> {
                 backgroundColor: theme.colorScheme.primary,
                 foregroundColor: theme.colorScheme.onPrimary,
                 disabledBackgroundColor:
-                    theme.colorScheme.primary.withOpacity(0.5),
+                    theme.colorScheme.primary.withValues(alpha: 0.5),
               ),
               child: _isLoading
                   ? SizedBox(

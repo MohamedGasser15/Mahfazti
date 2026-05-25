@@ -1,9 +1,11 @@
 // core/utils/shared_prefs.dart
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:my_wallet/core/constants/app_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SharedPrefs {
   static late SharedPreferences _prefs;
+  static const FlutterSecureStorage _secure = FlutterSecureStorage();
   
   static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
@@ -38,7 +40,19 @@ static Future<void> setCurrency(String currency) async {
   await _prefs.setString(_currencyKey, currency);
 }
   static Future<void> removeAuthToken() async {
-    await _prefs.remove(AppConstants.authTokenKey);
+    await _secure.delete(key: AppConstants.authTokenKey);
+  }
+
+  static Future<void> setSecureString(String key, String value) async {
+    await _secure.write(key: key, value: value);
+  }
+
+  static Future<String?> getSecureString(String key) async {
+    return await _secure.read(key: key);
+  }
+
+  static Future<void> removeSecureKey(String key) async {
+    await _secure.delete(key: key);
   }
   static Future<String?> getUserData() async {
   final prefs = await SharedPreferences.getInstance();

@@ -1,8 +1,7 @@
 // features/settings/presentation/widgets/authentication_settings_bottom_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:my_wallet/core/services/biometric_service.dart';
-import 'package:my_wallet/core/services/message_service.dart';
-import 'package:my_wallet/core/extensions/context_extensions.dart';
+import 'package:my_wallet/core/extensions/context_extensions.dart'; // لإتاحة context.l10n
 
 class AuthenticationSettingsBottomSheet extends StatefulWidget {
   const AuthenticationSettingsBottomSheet({super.key});
@@ -47,19 +46,39 @@ class _AuthenticationSettingsBottomSheetState
           setState(() {
             _biometricEnabled = true;
           });
-          MessageService.showSuccess(context: context, message: context.l10n.biometricEnabledSuccess);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(context.l10n.biometricEnabledSuccess),
+              backgroundColor: Colors.green,
+            ),
+          );
         } else {
-          MessageService.showError(context: context, message: context.l10n.biometricAuthenticationFailed);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(context.l10n.biometricAuthenticationFailed),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
       } else {
         await BiometricService.disableBiometric();
         setState(() {
           _biometricEnabled = false;
         });
-        MessageService.showWarning(context: context, message: context.l10n.biometricDisabledSuccess);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.biometricDisabledSuccess),
+            backgroundColor: Colors.orange,
+          ),
+        );
       }
     } catch (e) {
-      MessageService.showError(context: context, message: context.l10n.errorWithDetails(e.toString()));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.errorWithDetails(e.toString())),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       setState(() {
         _isLoading = false;

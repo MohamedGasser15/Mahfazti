@@ -107,7 +107,7 @@ class _RecoveryPasswordScreenState extends State<RecoveryPasswordScreen>
     final isRTL = Directionality.of(context) == TextDirection.rtl;
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -127,7 +127,7 @@ class _RecoveryPasswordScreenState extends State<RecoveryPasswordScreen>
                     width: 72,
                     height: 72,
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.1),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(Icons.lock_outline,
@@ -144,7 +144,7 @@ class _RecoveryPasswordScreenState extends State<RecoveryPasswordScreen>
                   Text(
                     context.l10n.verifyItsYouBeforeChangingEmail,
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      color: theme.colorScheme.onBackground.withOpacity(0.6),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -172,10 +172,10 @@ class _RecoveryPasswordScreenState extends State<RecoveryPasswordScreen>
                                 ? Colors.red
                                 : filled
                                     ? theme.colorScheme.primary
-                                    : theme.colorScheme.onSurface.withOpacity(0.2),
+                                    : theme.colorScheme.onSurface.withValues(alpha: 0.2),
                             border: !filled
                                 ? Border.all(
-                                    color: theme.colorScheme.onSurface.withOpacity(0.3),
+                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
                                     width: 1.5,
                                   )
                                 : null,
@@ -194,7 +194,7 @@ class _RecoveryPasswordScreenState extends State<RecoveryPasswordScreen>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
+                        color: Colors.red.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(30),
                       ),
 child: Text(
@@ -266,7 +266,7 @@ Widget _buildRow(List<String> digits, ThemeData theme) {
           color: theme.colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -300,7 +300,7 @@ Widget _buildRow(List<String> digits, ThemeData theme) {
             size: 28,
             color: _passcode.isNotEmpty
                 ? theme.colorScheme.onSurface
-                : theme.colorScheme.onSurface.withOpacity(0.3),
+                : theme.colorScheme.onSurface.withValues(alpha: 0.3),
           ),
         ),
       ),

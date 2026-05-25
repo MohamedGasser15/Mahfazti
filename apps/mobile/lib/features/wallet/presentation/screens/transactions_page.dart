@@ -156,7 +156,9 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
       _isLoading = true;
       _errorMessage = null;
     });
-    await _fetchFromApi(page: page, context: context);
+    if (mounted) {
+      await _fetchFromApi(page: page, context: context);
+    }
   }
 
   /// Fetch fresh data from API for given page (usually page 1) and update cache.
@@ -681,7 +683,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.05),
+              color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -704,8 +706,8 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          color.withOpacity(0.3),
-                          color.withOpacity(0.1),
+                          color.withValues(alpha: 0.3),
+                          color.withValues(alpha: 0.1),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -794,8 +796,8 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                           color: isIncome
-                              ? Colors.green.withOpacity(0.1)
-                              : Colors.red.withOpacity(0.1),
+                              ? Colors.green.withValues(alpha: 0.1)
+                              : Colors.red.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -845,10 +847,14 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
               Navigator.pop(context);
               try {
                 await _walletRepository.deleteTransaction(transaction.id);
-                await _refreshData(); // force refresh after deletion
-                MessageService.showSuccess(context: context, message: context.l10n.transactionDeletedSuccess);
+                await _refreshData();
+                if (context.mounted) {
+                  MessageService.showSuccess(context: context, message: context.l10n.transactionDeletedSuccess);
+                }
               } catch (e) {
-                MessageService.showError(context: context, message: context.l10n.failedToDeleteWithError(e.toString()));
+                if (context.mounted) {
+                  MessageService.showError(context: context, message: context.l10n.failedToDeleteWithError(e.toString()));
+                }
               }
             },
             child: Text(

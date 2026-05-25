@@ -136,12 +136,16 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
       if (result['success'] == true) {
         _startTimer();
         _clearCode();
-        MessageService.showSuccess(context: context, message: context.l10n.codeResentTo(widget.newEmail));
-      } else {
+        if (mounted) {
+          MessageService.showSuccess(context: context, message: context.l10n.codeResentTo(widget.newEmail));
+        }
+      } else if (mounted) {
         MessageService.showError(context: context, message: result['message'] ?? context.l10n.failedToResend);
       }
     } catch (e) {
-      MessageService.showError(context: context, message: context.l10n.somethingWentWrong);
+      if (mounted) {
+        MessageService.showError(context: context, message: context.l10n.somethingWentWrong);
+      }
     } finally {
       setState(() => _isLoading = false);
     }
@@ -161,7 +165,7 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
     final fieldWidth = ((screenWidth - 40 - 60) / 6).clamp(40.0, 56.0);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -184,7 +188,7 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(30),
                   ),
                   child: Row(
@@ -223,7 +227,7 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
                 Text(
                   context.l10n.verifyNewEmailDescription,
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onBackground.withOpacity(0.6),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
 
@@ -275,7 +279,7 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
                                   : filled
                                       ? theme.colorScheme.primary
                                       : theme.colorScheme.outline
-                                          .withOpacity(0.3),
+                                          .withValues(alpha: 0.3),
                               width: hasError || filled ? 2 : 1.5,
                             ),
                           ),
@@ -288,7 +292,7 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
                                 color: filled
                                     ? theme.colorScheme.onSurface
                                     : theme.colorScheme.onSurface
-                                        .withOpacity(0.3),
+                                        .withValues(alpha: 0.3),
                               ),
                             ),
                           ),
@@ -306,10 +310,10 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.error.withOpacity(0.1),
+                        color: theme.colorScheme.error.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: theme.colorScheme.error.withOpacity(0.5),
+                          color: theme.colorScheme.error.withValues(alpha: 0.5),
                         ),
                       ),
                       child: Row(
@@ -347,7 +351,7 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
                             borderRadius: BorderRadius.circular(30),
                             border: Border.all(
                               color:
-                                  theme.colorScheme.outline.withOpacity(0.2),
+                                  theme.colorScheme.outline.withValues(alpha: 0.2),
                             ),
                           ),
                           child: Row(
@@ -356,13 +360,13 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
                               Icon(Icons.timer,
                                   size: 18,
                                   color: theme.colorScheme.onSurface
-                                      .withOpacity(0.6)),
+                                      .withValues(alpha: 0.6)),
                               const SizedBox(width: 8),
                               Text(
                                 context.l10n.resendIn(_formatCountdown(_countdown)),
                                 style: TextStyle(
                                   color: theme.colorScheme.onSurface
-                                      .withOpacity(0.8),
+                                      .withValues(alpha: 0.8),
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),

@@ -2,9 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
+import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
-import 'package:my_wallet/features/auth/presentation/screens/ForgotPasscodeOtpScreen.dart';
+import 'package:my_wallet/features/auth/presentation/screens/forgot_passcode_otp_screen.dart';
 import 'package:my_wallet/features/onboarding/presentation/screens/onboarding_screen.dart';
 
 class PasscodeScreen extends StatefulWidget {
@@ -293,7 +294,39 @@ Widget _buildForgotPasscodeSheet() {
       ],
     ),
   );
-}
+} void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+  
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
   
 Widget _buildKeyboard() {
   return Container(

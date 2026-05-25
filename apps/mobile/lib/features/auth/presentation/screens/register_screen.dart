@@ -41,7 +41,7 @@ Future<void> _onComplete() async {
   if (_fullNameController.text.isEmpty ||
       _userNameController.text.isEmpty ||
       _phoneNumberController.text.isEmpty) {
-MessageService.showError(context: context, message: context.l10n.pleaseFillAllFields);
+    MessageService.showError(context: context, message: context.l10n.pleaseFillAllFields);
     return;
   }
   
@@ -70,7 +70,7 @@ MessageService.showError(context: context, message: context.l10n.pleaseFillAllFi
 
     }
   } catch (e) {
-    MessageService.showError(context: context, message: context.l10n.failedWithDetails(e.toString()));
+   MessageService.showError(context: context, message: context.l10n.failedWithDetails(e.toString()));
   } finally {
     setState(() {
       _isLoading = false;

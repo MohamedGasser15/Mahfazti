@@ -120,7 +120,7 @@ class _ResetPasscodeScreenState extends State<ResetPasscodeScreen>
       );
 
       if (result['success'] == true) {
-        await SharedPrefs.setString('user_password', entered);
+        await SharedPrefs.setSecureString('user_password', entered);
 
         if (mounted) {
           _showSuccessAndPop();
@@ -176,7 +176,7 @@ void _showSuccessAndPop() {
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
+              color: Colors.green.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.check_circle_outline, size: 40, color: Colors.green),
@@ -193,7 +193,7 @@ void _showSuccessAndPop() {
             context.l10n.passcodeChangedSuccessfully,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 24),
@@ -206,12 +206,14 @@ void _showSuccessAndPop() {
                 // مسح الـ token القديم
                 await SharedPrefs.removeAuthToken();
 
-                // إعادة التوجيه لشاشة الـ email عشان يعمل login من أول
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  '/email',
-                  (route) => false,
-                );
+                if (mounted) {
+                  // إعادة التوجيه لشاشة الـ email عشان يعمل login من أول
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/email',
+                    (route) => false,
+                  );
+                }
               },
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
@@ -235,7 +237,7 @@ void _showSuccessAndPop() {
     final isConfirm = _step == _ResetStep.confirm;
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -275,8 +277,8 @@ void _showSuccessAndPop() {
                         height: 80,
                         decoration: BoxDecoration(
                           color: isConfirm
-                              ? Colors.green.withOpacity(0.1)
-                              : theme.colorScheme.primary.withOpacity(0.1),
+                              ? Colors.green.withValues(alpha: 0.1)
+                              : theme.colorScheme.primary.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -316,7 +318,7 @@ void _showSuccessAndPop() {
                         : context.l10n.chooseNewPasscodeDescription,
                         style: theme.textTheme.bodyLarge?.copyWith(
                           color:
-                              theme.colorScheme.onBackground.withOpacity(0.6),
+                              theme.colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -370,11 +372,11 @@ void _showSuccessAndPop() {
                                           ? Colors.green
                                           : theme.colorScheme.primary)
                                       : theme.colorScheme.onSurface
-                                          .withOpacity(0.15),
+                                          .withValues(alpha: 0.15),
                               border: !filled
                                   ? Border.all(
                                       color: theme.colorScheme.onSurface
-                                          .withOpacity(0.3),
+                                          .withValues(alpha: 0.3),
                                       width: 1.5,
                                     )
                                   : null,
@@ -384,7 +386,7 @@ void _showSuccessAndPop() {
                                         color: (isConfirm
                                                 ? Colors.green
                                                 : theme.colorScheme.primary)
-                                            .withOpacity(0.3),
+                                            .withValues(alpha: 0.3),
                                         blurRadius: 8,
                                         spreadRadius: 1,
                                       )
@@ -406,7 +408,7 @@ void _showSuccessAndPop() {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
+                          color: Colors.red.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(30),
                         ),
                         child: Text(
@@ -449,7 +451,7 @@ void _showSuccessAndPop() {
             ? Colors.green
             : active
                 ? theme.colorScheme.primary
-                : theme.colorScheme.onSurface.withOpacity(0.2),
+                : theme.colorScheme.onSurface.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(4),
       ),
     );
@@ -499,7 +501,7 @@ Widget _buildRow(List<String> digits, ThemeData theme) {
           color: theme.colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -533,7 +535,7 @@ Widget _buildRow(List<String> digits, ThemeData theme) {
             size: 28,
             color: _passcode.isNotEmpty
                 ? theme.colorScheme.onSurface
-                : theme.colorScheme.onSurface.withOpacity(0.3),
+                : theme.colorScheme.onSurface.withValues(alpha: 0.3),
           ),
         ),
       ),

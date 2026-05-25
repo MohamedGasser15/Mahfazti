@@ -575,8 +575,9 @@ const SizedBox(height: 16),
                                           );
                                           shouldPop = true;
                                           await _loadHomeData();
-                                          MessageService.showSuccess(context: context, message: 
-                                            isIncome
+                                          MessageService.showSuccess(
+                                            context: context,
+                                            message: isIncome
                                                 ? context.l10n.depositAddedSuccess
                                                 : context.l10n.withdrawalAddedSuccess,
                                           );
@@ -2205,8 +2206,7 @@ const SizedBox(height: 16),
                     _showAddTransactionDialog(type, prefillFromVoice: result);
                   } else {
                     MessageService.showError(
-                        context: context,
-                        message: result.errorMessage ?? context.l10n.voiceAnalysisFailed);
+                        context: context, message: result.errorMessage ?? context.l10n.voiceAnalysisFailed);
                   }
                 },
               ),
