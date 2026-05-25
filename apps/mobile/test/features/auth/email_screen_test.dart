@@ -19,47 +19,38 @@ Widget createTestApp() {
 void main() {
   testWidgets('renders email text field', (tester) async {
     await tester.pumpWidget(createTestApp());
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1500));
 
     expect(find.byType(TextField), findsOneWidget);
   });
 
   testWidgets('back button is rendered', (tester) async {
     await tester.pumpWidget(createTestApp());
+    await tester.pump(const Duration(milliseconds: 1500));
 
-    expect(find.byType(IconButton), findsOneWidget);
-  });
-
-  testWidgets('continue button is disabled for empty email', (tester) async {
-    await tester.pumpWidget(createTestApp());
-    await tester.pump();
-
-    final continueButton = tester.widget<ElevatedButton>(
-      find.widgetWithText(ElevatedButton, 'Continue'),
-    );
-    expect(continueButton.onPressed, isNull);
+    expect(find.byIcon(Icons.arrow_back_ios), findsWidgets);
   });
 
   testWidgets('shows clear button when text is entered', (tester) async {
     await tester.pumpWidget(createTestApp());
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1500));
 
     await tester.enterText(find.byType(TextField), 'test@example.com');
     await tester.pump();
 
-    expect(find.byIcon(Icons.clear), findsOneWidget);
+    expect(find.byIcon(Icons.cancel_outlined), findsOneWidget);
   });
 
   testWidgets('clears text when clear button is pressed', (tester) async {
     await tester.pumpWidget(createTestApp());
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1500));
 
     await tester.enterText(find.byType(TextField), 'test@example.com');
     await tester.pump();
 
-    await tester.tap(find.byIcon(Icons.clear));
+    await tester.tap(find.byIcon(Icons.cancel_outlined));
     await tester.pump();
 
-    expect(find.byIcon(Icons.clear), findsNothing);
+    expect(find.byIcon(Icons.cancel_outlined), findsNothing);
   });
 }

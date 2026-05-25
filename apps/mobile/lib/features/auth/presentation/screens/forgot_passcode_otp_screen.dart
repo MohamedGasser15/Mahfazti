@@ -23,11 +23,20 @@ class _ForgotPasscodeOtpScreenState extends State<ForgotPasscodeOtpScreen>
 
   String _code = '';
   bool _isLoading = false;
-  bool _isSending = true; // بيبعت الـ OTP في الأول تلقائياً
+  bool _isSending = true;
   String? _errorMessage;
   int _countdown = 60;
   Timer? _timer;
 
+  late AnimationController _fadeController;
+  late Animation<double> _logoFade;
+  late Animation<Offset> _logoSlide;
+  late Animation<double> _titleFade;
+  late Animation<Offset> _titleSlide;
+  late Animation<double> _formFade;
+  late Animation<Offset> _formSlide;
+  late Animation<double> _socialFade;
+  late Animation<Offset> _socialSlide;
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
 
@@ -36,6 +45,41 @@ class _ForgotPasscodeOtpScreenState extends State<ForgotPasscodeOtpScreen>
     super.initState();
     _hiddenController = TextEditingController();
     _hiddenFocusNode = FocusNode();
+
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _logoFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.0, 0.3, curve: Curves.easeOut)),
+    );
+    _logoSlide = Tween<Offset>(begin: const Offset(0, -0.3), end: Offset.zero).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.0, 0.3, curve: Curves.easeOut)),
+    );
+
+    _titleFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.2, 0.5, curve: Curves.easeOut)),
+    );
+    _titleSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.2, 0.5, curve: Curves.easeOut)),
+    );
+
+    _formFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.4, 0.7, curve: Curves.easeOut)),
+    );
+    _formSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.4, 0.7, curve: Curves.easeOut)),
+    );
+
+    _socialFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.6, 1.0, curve: Curves.easeOut)),
+    );
+    _socialSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.6, 1.0, curve: Curves.easeOut)),
+    );
+
+    _fadeController.forward();
 
     _shakeController = AnimationController(
       duration: const Duration(milliseconds: 500),
@@ -55,6 +99,7 @@ class _ForgotPasscodeOtpScreenState extends State<ForgotPasscodeOtpScreen>
   void dispose() {
     _hiddenController.dispose();
     _hiddenFocusNode.dispose();
+    _fadeController.dispose();
     _shakeController.dispose();
     _timer?.cancel();
     super.dispose();
@@ -143,13 +188,14 @@ class _ForgotPasscodeOtpScreenState extends State<ForgotPasscodeOtpScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final isRTL = Directionality.of(context) == TextDirection.rtl;
     final screenWidth = MediaQuery.of(context).size.width;
-    final fieldWidth = ((screenWidth - 40 - 60) / 6).clamp(40.0, 56.0);
+    final fieldWidth = ((screenWidth - (28 * 2) - 60) / 6).clamp(40.0, 56.0);
 
     if (_isSending) {
       return Scaffold(
-        backgroundColor: theme.colorScheme.surface,
+        backgroundColor: isDark ? Colors.black : Colors.white,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -169,7 +215,7 @@ class _ForgotPasscodeOtpScreenState extends State<ForgotPasscodeOtpScreen>
     }
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: isDark ? Colors.black : Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -184,195 +230,259 @@ class _ForgotPasscodeOtpScreenState extends State<ForgotPasscodeOtpScreen>
       body: GestureDetector(
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Icon + Header
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
+                const SizedBox(height: 20),
+
+                // Logo
+                SlideTransition(
+                  position: _logoSlide,
+                  child: FadeTransition(
+                    opacity: _logoFade,
+                    child: Center(
+                      child: Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              theme.colorScheme.primary,
+                              theme.colorScheme.primary.withValues(alpha: 0.7),
+                            ],
+                          ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.account_balance_wallet,
+                          size: 40,
+                          color: theme.colorScheme.onPrimary,
+                        ),
+                      ),
+                    ),
                   ),
-                  child: Icon(Icons.lock_reset,
-                      size: 32, color: theme.colorScheme.primary),
                 ),
-                const SizedBox(height: 24),
-                Text(
-                 context.l10n.resetPasscode,
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 30,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  context.l10n.enterCodeSentToEmail,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
+
                 const SizedBox(height: 32),
 
-                // Hidden input
-                Opacity(
-                  opacity: 0,
-                  child: AbsorbPointer(
-                    child: TextField(
-                      controller: _hiddenController,
-                      focusNode: _hiddenFocusNode,
-                      keyboardType: const TextInputType.numberWithOptions(),
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      onChanged: _onTextChanged,
-                      autofillHints: const [AutofillHints.oneTimeCode],
+                // Title & Subtitle
+                SlideTransition(
+                  position: _titleSlide,
+                  child: FadeTransition(
+                    opacity: _titleFade,
+                    child: Column(
+                      children: [
+                        Center(
+                          child: Text(
+                           context.l10n.resetPasscode,
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Center(
+                          child: Text(
+                            context.l10n.enterCodeSentToEmail,
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
 
-                // OTP Boxes
-// OTP Boxes
-AnimatedBuilder(
-  animation: _shakeAnimation,
-  builder: (context, child) => Transform.translate(
-    offset: Offset(_shakeAnimation.value, 0),
-    child: child,
-  ),
-  child: Row(
-    mainAxisAlignment: MainAxisAlignment.center,
-    textDirection: TextDirection.ltr, // 👈 إضافة هذا السطر
-    children: List.generate(6, (index) {
-      final digit = _code.length > index ? _code[index] : '';
-      final filled = digit.isNotEmpty;
-      final hasError = _errorMessage != null;
+                const SizedBox(height: 36),
 
-      return GestureDetector(
-        onTap: () => _hiddenFocusNode.requestFocus(),
-        child: Container(
-          width: fieldWidth,
-          height: 72,
-          margin: EdgeInsets.only(left: index > 0 ? 10 : 0),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: hasError
-                  ? theme.colorScheme.error
-                  : filled
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.outline.withValues(alpha: 0.3),
-              width: hasError || filled ? 2 : 1.5,
-            ),
-          ),
-          child: Center(
-            child: Text(
-              digit,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: filled
-                    ? theme.colorScheme.onSurface
-                    : theme.colorScheme.onSurface.withValues(alpha: 0.3),
-              ),
-            ),
-          ),
-        ),
-      );
-    }),
-  ),
-),
-                // Error
-                if (_errorMessage != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.error.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: theme.colorScheme.error.withValues(alpha: 0.5),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.error_outline,
-                              color: theme.colorScheme.error, size: 20),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              _errorMessage!,
-                              style:
-                                  TextStyle(color: theme.colorScheme.error),
+                // OTP Form
+                SlideTransition(
+                  position: _formSlide,
+                  child: FadeTransition(
+                    opacity: _formFade,
+                    child: Column(
+                      children: [
+                        Opacity(
+                          opacity: 0,
+                          child: AbsorbPointer(
+                            child: TextField(
+                              controller: _hiddenController,
+                              focusNode: _hiddenFocusNode,
+                              keyboardType: const TextInputType.numberWithOptions(),
+                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                              onChanged: _onTextChanged,
+                              autofillHints: const [AutofillHints.oneTimeCode],
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+
+                        AnimatedBuilder(
+                          animation: _shakeAnimation,
+                          builder: (context, child) => Transform.translate(
+                            offset: Offset(_shakeAnimation.value, 0),
+                            child: child,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            textDirection: TextDirection.ltr,
+                            children: List.generate(6, (index) {
+                              final digit = _code.length > index ? _code[index] : '';
+                              final filled = digit.isNotEmpty;
+                              final hasError = _errorMessage != null;
+
+                              return GestureDetector(
+                                onTap: () => _hiddenFocusNode.requestFocus(),
+                                child: Container(
+                                  width: fieldWidth,
+                                  height: 80,
+                                  margin: EdgeInsets.only(left: index > 0 ? 12 : 0),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.surface,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: hasError
+                                          ? theme.colorScheme.error
+                                          : filled
+                                              ? theme.colorScheme.primary
+                                              : theme.colorScheme.outline.withValues(alpha: 0.3),
+                                      width: hasError || filled ? 2 : 1.5,
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      digit,
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w700,
+                                        color: filled
+                                            ? theme.colorScheme.onSurface
+                                            : theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+
+                        if (_errorMessage != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 16),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.error.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: theme.colorScheme.error.withValues(alpha: 0.5),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.error_outline,
+                                      color: theme.colorScheme.error, size: 20),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      _errorMessage!,
+                                      style:
+                                          TextStyle(color: theme.colorScheme.error),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                        if (_isLoading)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 24),
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                      ],
                     ),
                   ),
+                ),
 
-                if (_isLoading)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 24),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-
-                const Spacer(),
+                const SizedBox(height: 32),
 
                 // Timer / Resend
-                Center(
-                  child: _countdown > 0
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surface,
-                            borderRadius: BorderRadius.circular(30),
-                            border: Border.all(
-                              color:
-                                  theme.colorScheme.outline.withValues(alpha: 0.2),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.timer,
-                                  size: 18,
-                                  color: theme.colorScheme.onSurface
-                                      .withValues(alpha: 0.6)),
-                              const SizedBox(width: 8),
-                              Text(
-                               context.l10n.resendIn(_formatCountdown(_countdown)),
-                                style: TextStyle(
-                                  color: theme.colorScheme.onSurface
-                                      .withValues(alpha: 0.8),
-                                  fontWeight: FontWeight.w500,
+                SlideTransition(
+                  position: _socialSlide,
+                  child: FadeTransition(
+                    opacity: _socialFade,
+                    child: Column(
+                      children: [
+                        Center(
+                          child: _countdown > 0
+                              ? Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 24, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? Colors.grey[900] : Colors.grey[50],
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color:
+                                          theme.colorScheme.outline.withValues(alpha: 0.2),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.timer,
+                                          size: 18,
+                                          color: theme.colorScheme.onSurface
+                                              .withValues(alpha: 0.6)),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                       context.l10n.resendIn(_formatCountdown(_countdown)),
+                                        style: TextStyle(
+                                          color: theme.colorScheme.onSurface
+                                              .withValues(alpha: 0.8),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : TextButton(
+                                  onPressed: _isSending ? null : _sendOtp,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.refresh, size: 18),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        context.l10n.resendCode,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 16,
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : TextButton(
-                          onPressed: _isSending ? null : _sendOtp,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.refresh, size: 18),
-                              const SizedBox(width: 8),
-                              Text(
-                                context.l10n.resendCode,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16,
-                                  color: theme.colorScheme.primary,
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
+                        const SizedBox(height: 40),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),

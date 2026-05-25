@@ -32,6 +32,15 @@ class _ResetPasscodeScreenState extends State<ResetPasscodeScreen>
   bool _isLoading = false;
   bool _showError = false;
 
+  late AnimationController _fadeController;
+  late Animation<double> _logoFade;
+  late Animation<Offset> _logoSlide;
+  late Animation<double> _titleFade;
+  late Animation<Offset> _titleSlide;
+  late Animation<double> _formFade;
+  late Animation<Offset> _formSlide;
+  late Animation<double> _keyboardFade;
+  late Animation<Offset> _keyboardSlide;
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
   late AnimationController _slideController;
@@ -40,6 +49,41 @@ class _ResetPasscodeScreenState extends State<ResetPasscodeScreen>
   @override
   void initState() {
     super.initState();
+
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _logoFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.0, 0.3, curve: Curves.easeOut)),
+    );
+    _logoSlide = Tween<Offset>(begin: const Offset(0, -0.3), end: Offset.zero).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.0, 0.3, curve: Curves.easeOut)),
+    );
+
+    _titleFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.2, 0.5, curve: Curves.easeOut)),
+    );
+    _titleSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.2, 0.5, curve: Curves.easeOut)),
+    );
+
+    _formFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.4, 0.7, curve: Curves.easeOut)),
+    );
+    _formSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.4, 0.7, curve: Curves.easeOut)),
+    );
+
+    _keyboardFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.6, 1.0, curve: Curves.easeOut)),
+    );
+    _keyboardSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.6, 1.0, curve: Curves.easeOut)),
+    );
+
+    _fadeController.forward();
 
     _shakeController = AnimationController(
       duration: const Duration(milliseconds: 500),
@@ -71,6 +115,7 @@ class _ResetPasscodeScreenState extends State<ResetPasscodeScreen>
 
   @override
   void dispose() {
+    _fadeController.dispose();
     _shakeController.dispose();
     _slideController.dispose();
     super.dispose();
@@ -113,7 +158,7 @@ class _ResetPasscodeScreenState extends State<ResetPasscodeScreen>
 
     try {
       final result = await _authRepository.resetPasscode(
-        email: widget.email, // ← زود
+        email: widget.email,
         otpCode: widget.otpCode,
         newPasscode: entered,
       );
@@ -202,11 +247,9 @@ void _showSuccessAndPop() {
               onPressed: () async {
                 Navigator.pop(ctx);
 
-                // مسح الـ token القديم
                 await SharedPrefs.removeAuthToken();
 
                 if (mounted) {
-                  // إعادة التوجيه لشاشة الـ email عشان يعمل login من أول
                   Navigator.pushNamedAndRemoveUntil(
                     context,
                     '/email',
@@ -217,7 +260,7 @@ void _showSuccessAndPop() {
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
               child: Text(context.l10n.done),
@@ -231,12 +274,13 @@ void _showSuccessAndPop() {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final isRTL = Directionality.of(context) == TextDirection.rtl;
 
     final isConfirm = _step == _ResetStep.confirm;
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: isDark ? Colors.black : Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -263,172 +307,208 @@ void _showSuccessAndPop() {
           children: [
             Expanded(
               child: SlideTransition(
-                position: isConfirm ? _slideAnimation : AlwaysStoppedAnimation(Offset.zero),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Icon
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      child: Container(
-                        key: ValueKey(_step),
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: isConfirm
-                              ? Colors.green.withValues(alpha: 0.1)
-                              : theme.colorScheme.primary.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          isConfirm
-                              ? Icons.lock_outline
-                              : Icons.lock_reset,
-                          size: 40,
-                          color: isConfirm
-                              ? Colors.green
-                              : theme.colorScheme.primary,
-                        ),
-                      ),
-                    ),
+                position: isConfirm ? _slideAnimation : const AlwaysStoppedAnimation(Offset.zero),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 20),
 
-                    const SizedBox(height: 24),
-
-                    // Title
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      child: Text(
-                        key: ValueKey(_step),
-                        isConfirm ? context.l10n.confirmNewPasscode : context.l10n.enterNewPasscode,
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      child: Text(
-                        key: ValueKey(_step),
-                      isConfirm 
-                        ? context.l10n.confirmNewPasscodeDescription
-                        : context.l10n.chooseNewPasscodeDescription,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color:
-                              theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-
-                    const SizedBox(height: 48),
-
-                    // Step indicator
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildStepDot(
-                            active: _step == _ResetStep.enterNew,
-                            done: isConfirm,
-                            theme: theme),
-                        const SizedBox(width: 8),
-                        _buildStepDot(
-                            active: isConfirm,
-                            done: false,
-                            theme: theme),
-                      ],
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // Passcode dots
-                    AnimatedBuilder(
-                      animation: _shakeAnimation,
-                      builder: (context, child) => Transform.translate(
-                        offset:
-                            Offset(_showError ? _shakeAnimation.value : 0, 0),
-                        child: child,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        textDirection: TextDirection.ltr,
-                        children: List.generate(_passcodeLength, (index) {
-                          final filled = index < _passcode.length;
-                          return AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            margin:
-                                const EdgeInsets.symmetric(horizontal: 8),
-                            width: 18,
-                            height: 18,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: _showError
-                                  ? Colors.red
-                                  : filled
-                                      ? (isConfirm
-                                          ? Colors.green
-                                          : theme.colorScheme.primary)
-                                      : theme.colorScheme.onSurface
-                                          .withValues(alpha: 0.15),
-                              border: !filled
-                                  ? Border.all(
-                                      color: theme.colorScheme.onSurface
-                                          .withValues(alpha: 0.3),
-                                      width: 1.5,
-                                    )
-                                  : null,
-                              boxShadow: filled && !_showError
-                                  ? [
-                                      BoxShadow(
-                                        color: (isConfirm
-                                                ? Colors.green
-                                                : theme.colorScheme.primary)
-                                            .withValues(alpha: 0.3),
-                                        blurRadius: 8,
-                                        spreadRadius: 1,
-                                      )
-                                    ]
-                                  : null,
+                      // Logo
+                      SlideTransition(
+                        position: _logoSlide,
+                        child: FadeTransition(
+                          opacity: _logoFade,
+                          child: Center(
+                            child: Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    theme.colorScheme.primary,
+                                    theme.colorScheme.primary.withValues(alpha: 0.7),
+                                  ],
+                                ),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                Icons.account_balance_wallet,
+                                size: 40,
+                                color: theme.colorScheme.onPrimary,
+                              ),
                             ),
-                          );
-                        }),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Error message
-                    AnimatedOpacity(
-                      opacity: _showError ? 1 : 0,
-                      duration: const Duration(milliseconds: 300),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: Text(
-                          context.l10n.passcodesDoNotMatch,
-                          style: TextStyle(color: Colors.red, fontSize: 14),
+                          ),
                         ),
                       ),
-                    ),
 
-                    if (_isLoading)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 20),
-                        child: CircularProgressIndicator(),
+                      const SizedBox(height: 32),
+
+                      // Title
+                      SlideTransition(
+                        position: _titleSlide,
+                        child: FadeTransition(
+                          opacity: _titleFade,
+                          child: Column(
+                            children: [
+                              Center(
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 300),
+                                  child: Text(
+                                    key: ValueKey(_step),
+                                    isConfirm ? context.l10n.confirmNewPasscode : context.l10n.enterNewPasscode,
+                                    style: theme.textTheme.headlineMedium?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Center(
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 300),
+                                  child: Text(
+                                    key: ValueKey(_step),
+                                  isConfirm 
+                                    ? context.l10n.confirmNewPasscodeDescription
+                                    : context.l10n.chooseNewPasscodeDescription,
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color:
+                                          theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                  ],
+
+                      const SizedBox(height: 48),
+
+                      // Passcode dots
+                      SlideTransition(
+                        position: _formSlide,
+                        child: FadeTransition(
+                          opacity: _formFade,
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  _buildStepDot(active: _step == _ResetStep.enterNew, done: isConfirm, theme: theme),
+                                  const SizedBox(width: 8),
+                                  _buildStepDot(active: isConfirm, done: false, theme: theme),
+                                ],
+                              ),
+
+                              const SizedBox(height: 32),
+
+                              AnimatedBuilder(
+                                animation: _shakeAnimation,
+                                builder: (context, child) => Transform.translate(
+                                  offset:
+                                      Offset(_showError ? _shakeAnimation.value : 0, 0),
+                                  child: child,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  textDirection: TextDirection.ltr,
+                                  children: List.generate(_passcodeLength, (index) {
+                                    final filled = index < _passcode.length;
+                                    return AnimatedContainer(
+                                      duration: const Duration(milliseconds: 200),
+                                      margin:
+                                          const EdgeInsets.symmetric(horizontal: 8),
+                                      width: 18,
+                                      height: 18,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: _showError
+                                            ? Colors.red
+                                            : filled
+                                                ? (isConfirm
+                                                    ? Colors.green
+                                                    : theme.colorScheme.primary)
+                                                : theme.colorScheme.onSurface
+                                                    .withValues(alpha: 0.15),
+                                        border: !filled
+                                            ? Border.all(
+                                                color: theme.colorScheme.onSurface
+                                                    .withValues(alpha: 0.3),
+                                                width: 1.5,
+                                              )
+                                            : null,
+                                        boxShadow: filled && !_showError
+                                            ? [
+                                                BoxShadow(
+                                                  color: (isConfirm
+                                                          ? Colors.green
+                                                          : theme.colorScheme.primary)
+                                                      .withValues(alpha: 0.3),
+                                                  blurRadius: 8,
+                                                  spreadRadius: 1,
+                                                )
+                                              ]
+                                            : null,
+                                      ),
+                                    );
+                                  }),
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              AnimatedOpacity(
+                                opacity: _showError ? 1 : 0,
+                                duration: const Duration(milliseconds: 300),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Text(
+                                    context.l10n.passcodesDoNotMatch,
+                                    style: const TextStyle(color: Colors.red, fontSize: 14),
+                                  ),
+                                ),
+                              ),
+
+                              if (_isLoading)
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 20),
+                                  child: CircularProgressIndicator(),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
 
             // Keyboard
-            _buildKeyboard(theme),
+            SlideTransition(
+              position: _keyboardSlide,
+              child: FadeTransition(
+                opacity: _keyboardFade,
+                child: _buildKeyboard(theme),
+              ),
+            ),
             const SizedBox(height: 12),
           ],
         ),

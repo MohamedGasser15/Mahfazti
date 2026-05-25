@@ -112,7 +112,7 @@ void _openCurrencySelection() {
         {'code': 'AED', 'flag': '🇦🇪', 'name': 'UAE Dirham'},
         {'code': 'KWD', 'flag': '🇰🇼', 'name': 'Kuwaiti Dinar'},
       ];
-bool _isSubmitting = false;
+bool isSubmitting = false;
     return StatefulBuilder(
       builder: (context, setState) {
         return Container(
@@ -264,12 +264,12 @@ bool _isSubmitting = false;
                   child: SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-onPressed: _isSubmitting
+onPressed: isSubmitting
     ? null
     : () async {
         final currentContext = context;
         if (tempSelected == null) return;
-        setState(() => _isSubmitting = true);
+        setState(() => isSubmitting = true);
         try {
           await AuthRepository().setUserCurrency(tempSelected!);
           await SharedPrefs.setCurrency(tempSelected!);
@@ -280,7 +280,7 @@ onPressed: _isSubmitting
         } catch (e) {
           if (!currentContext.mounted) return;
           MessageService.showError(context: currentContext, message: e.toString());
-          setState(() => _isSubmitting = false);
+          setState(() => isSubmitting = false);
         }
       },
                       style: ElevatedButton.styleFrom(
@@ -292,7 +292,7 @@ onPressed: _isSubmitting
                         ),
                         elevation: 0,
                       ),
-                      child: _isSubmitting
+                      child: isSubmitting
     ? const SizedBox(
         width: 20,
         height: 20,

@@ -1,4 +1,5 @@
 part of '../screens/home_tab.dart';
+// ignore_for_file: annotate_overrides
 
 mixin _HomeTabDialogs on _HomeTabState {
   //#region Dialog Helpers (Add / Edit / Delete)
@@ -23,8 +24,8 @@ mixin _HomeTabDialogs on _HomeTabState {
       text: prefillFromVoice?.amount?.toString() ?? '',
     );
 
-    bool _isSubmitting = false;
-    double? _previewAmount = prefillFromVoice?.amount;
+    bool isSubmitting = false;
+    double? previewAmount = prefillFromVoice?.amount;
 
     final currencySymbol = currencySymbols[_currencyCode ?? 'USD'] ?? '\$';
 
@@ -92,7 +93,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                       ),
                       const SizedBox(height: 20),
 
-                      if (_previewAmount != null && _previewAmount! > 0)
+                      if (previewAmount != null && previewAmount! > 0)
                         Container(
                           margin: const EdgeInsets.symmetric(horizontal: 24),
                           padding: const EdgeInsets.all(16),
@@ -110,7 +111,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                                   style: TextStyle(
                                       color: isDarkMode ? Colors.grey[400] : Colors.grey[600])),
                               Text(
-                                '${isIncome ? '+' : '-'}$currencySymbol${_previewAmount!.toStringAsFixed(2)}',
+                                '${isIncome ? '+' : '-'}$currencySymbol${previewAmount!.toStringAsFixed(2)}',
                                 style: TextStyle(
                                   fontSize: 24,
                                   fontWeight: FontWeight.w800,
@@ -131,7 +132,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                             FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
                           ],
                           onChanged: (value) {
-                            setState(() => _previewAmount = double.tryParse(value));
+                            setState(() => previewAmount = double.tryParse(value));
                           },
                           decoration: InputDecoration(
                             labelText: context.l10n.amount,
@@ -161,7 +162,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                                       label: Text('$currencySymbol$value'),
                                       onSelected: (_) => setState(() {
                                         amountController.text = value.toString();
-                                        _previewAmount = value.toDouble();
+                                        previewAmount = value.toDouble();
                                       }),
                                       backgroundColor:
                                           isDarkMode ? Colors.grey[800] : Colors.grey[100],
@@ -306,7 +307,7 @@ const SizedBox(height: 16),
                           children: [
                             Expanded(
                               child: OutlinedButton(
-                                onPressed: _isSubmitting
+                                onPressed: isSubmitting
                                     ? null
                                     : () => Navigator.pop(context),
                                 style: OutlinedButton.styleFrom(
@@ -327,7 +328,7 @@ const SizedBox(height: 16),
                             const SizedBox(width: 16),
                             Expanded(
                               child: ElevatedButton(
-                                onPressed: _isSubmitting
+                                onPressed: isSubmitting
                                     ? null
                                     : () async {
                                         if (amountController.text.isEmpty) {
@@ -344,7 +345,7 @@ const SizedBox(height: 16),
                                           return;
                                         }
 
-                                        setState(() => _isSubmitting = true);
+                                        setState(() => isSubmitting = true);
                                         bool shouldPop = false;
 
                                         try {
@@ -371,7 +372,7 @@ const SizedBox(height: 16),
                                             if (!context.mounted) return;
                                             Navigator.pop(context);
                                           } else {
-                                            setState(() => _isSubmitting = false);
+                                            setState(() => isSubmitting = false);
                                           }
                                         }
                                       },
@@ -382,7 +383,7 @@ const SizedBox(height: 16),
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12)),
                                 ),
-                                child: _isSubmitting
+                                child: isSubmitting
                                     ? const SizedBox(
                                         width: 20, height: 20,
                                         child: CircularProgressIndicator(
@@ -420,8 +421,8 @@ const SizedBox(height: 16),
     final amountController = TextEditingController(text: transaction.amount.toString());
     final descriptionController = TextEditingController(text: transaction.description ?? '');
 
-    bool _isSubmitting = false;
-    double? _previewAmount = transaction.amount;
+    bool isSubmitting = false;
+    double? previewAmount = transaction.amount;
 
     final currencySymbol = currencySymbols[_currencyCode ?? 'USD'] ?? '\$';
 
@@ -489,7 +490,7 @@ const SizedBox(height: 16),
                       ),
                       const SizedBox(height: 20),
 
-                      if (_previewAmount != null && _previewAmount! > 0)
+                      if (previewAmount != null && previewAmount! > 0)
                         Container(
                           margin: const EdgeInsets.symmetric(horizontal: 24),
                           padding: const EdgeInsets.all(16),
@@ -507,7 +508,7 @@ const SizedBox(height: 16),
                                   style: TextStyle(
                                       color: isDarkMode ? Colors.grey[400] : Colors.grey[600])),
                               Text(
-                                '${isIncome ? '+' : '-'}$currencySymbol${_previewAmount!.toStringAsFixed(2)}',
+                                '${isIncome ? '+' : '-'}$currencySymbol${previewAmount!.toStringAsFixed(2)}',
                                 style: TextStyle(
                                   fontSize: 24,
                                   fontWeight: FontWeight.w800,
@@ -528,7 +529,7 @@ const SizedBox(height: 16),
                             FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
                           ],
                           onChanged: (value) {
-                            setState(() => _previewAmount = double.tryParse(value));
+                            setState(() => previewAmount = double.tryParse(value));
                           },
                           decoration: InputDecoration(
                             labelText: context.l10n.amount,
@@ -558,7 +559,7 @@ const SizedBox(height: 16),
                                       label: Text('$currencySymbol$value'),
                                       onSelected: (_) => setState(() {
                                         amountController.text = value.toString();
-                                        _previewAmount = value.toDouble();
+                                        previewAmount = value.toDouble();
                                       }),
                                       backgroundColor:
                                           isDarkMode ? Colors.grey[800] : Colors.grey[100],
@@ -588,7 +589,7 @@ const SizedBox(height: 16),
                                     ),
                                   )
                                 : DropdownButtonFormField<int>(
-                                    value: selectedCategoryId,
+                                    initialValue: selectedCategoryId,
                                     decoration: InputDecoration(
                                       labelText: context.l10n.category,
                                       prefixIcon: Icon(Icons.category,
@@ -644,7 +645,7 @@ const SizedBox(height: 16),
                           children: [
                             Expanded(
                               child: OutlinedButton(
-                                onPressed: _isSubmitting ? null : () => Navigator.pop(context),
+                                onPressed: isSubmitting ? null : () => Navigator.pop(context),
                                 style: OutlinedButton.styleFrom(
                                   side: BorderSide(
                                       color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!),
@@ -661,7 +662,7 @@ const SizedBox(height: 16),
                             const SizedBox(width: 16),
                             Expanded(
                               child: ElevatedButton(
-                                onPressed: _isSubmitting
+                                onPressed: isSubmitting
                                     ? null
                                     : () async {
                                         if (amountController.text.isEmpty) {
@@ -678,7 +679,7 @@ const SizedBox(height: 16),
                                           return;
                                         }
 
-                                        setState(() => _isSubmitting = true);
+                                        setState(() => isSubmitting = true);
                                         bool shouldPop = false;
 
                                         try {
@@ -705,7 +706,7 @@ const SizedBox(height: 16),
                                           if (shouldPop) {
                                             if (context.mounted) Navigator.pop(context);
                                           } else {
-                                            setState(() => _isSubmitting = false);
+                                            setState(() => isSubmitting = false);
                                           }
                                         }
                                       },
@@ -716,7 +717,7 @@ const SizedBox(height: 16),
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12)),
                                 ),
-                                child: _isSubmitting
+                                child: isSubmitting
                                     ? const SizedBox(
                                         width: 20, height: 20,
                                         child: CircularProgressIndicator(

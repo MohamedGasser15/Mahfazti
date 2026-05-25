@@ -1,4 +1,5 @@
 part of '../screens/home_tab.dart';
+// ignore_for_file: annotate_overrides
 
 mixin _HomeTabWidgets on _HomeTabState {
   //#region Skeleton Widgets

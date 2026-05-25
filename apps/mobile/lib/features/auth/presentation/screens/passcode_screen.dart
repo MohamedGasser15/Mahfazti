@@ -37,13 +37,56 @@ class _PasscodeScreenState extends State<PasscodeScreen> with TickerProviderStat
   String? _errorMessage;
   Timer? _resetTimer;
   
-  // Animation for dots
+  late AnimationController _fadeController;
+  late Animation<double> _logoFade;
+  late Animation<Offset> _logoSlide;
+  late Animation<double> _titleFade;
+  late Animation<Offset> _titleSlide;
+  late Animation<double> _formFade;
+  late Animation<Offset> _formSlide;
+  late Animation<double> _keyboardFade;
+  late Animation<Offset> _keyboardSlide;
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
   
   @override
   void initState() {
     super.initState();
+    
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _logoFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.0, 0.3, curve: Curves.easeOut)),
+    );
+    _logoSlide = Tween<Offset>(begin: const Offset(0, -0.3), end: Offset.zero).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.0, 0.3, curve: Curves.easeOut)),
+    );
+
+    _titleFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.2, 0.5, curve: Curves.easeOut)),
+    );
+    _titleSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.2, 0.5, curve: Curves.easeOut)),
+    );
+
+    _formFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.4, 0.7, curve: Curves.easeOut)),
+    );
+    _formSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.4, 0.7, curve: Curves.easeOut)),
+    );
+
+    _keyboardFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.6, 1.0, curve: Curves.easeOut)),
+    );
+    _keyboardSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.6, 1.0, curve: Curves.easeOut)),
+    );
+
+    _fadeController.forward();
     
     _shakeController = AnimationController(
       duration: const Duration(milliseconds: 500),
@@ -65,6 +108,7 @@ class _PasscodeScreenState extends State<PasscodeScreen> with TickerProviderStat
   
   @override
   void dispose() {
+    _fadeController.dispose();
     _shakeController.dispose();
     _resetTimer?.cancel();
     super.dispose();
@@ -85,7 +129,6 @@ class _PasscodeScreenState extends State<PasscodeScreen> with TickerProviderStat
         _errorMessage = null;
       });
       
-      // Haptic feedback
       HapticFeedback.lightImpact();
       
       if (_passcode.length == _passcodeLength) {
@@ -138,7 +181,6 @@ class _PasscodeScreenState extends State<PasscodeScreen> with TickerProviderStat
           _showErrorState(context.l10n.invalidPasscode);
         }
       } else {
-        // Save passcode locally before navigating to register
         await SharedPrefs.setString('user_password', passcode);
         if (!mounted) return;
         Navigator.pushNamed(
@@ -167,10 +209,8 @@ class _PasscodeScreenState extends State<PasscodeScreen> with TickerProviderStat
       _errorMessage = message;
     });
     
-    // Shake animation
     _shakeController.forward(from: 0.0);
     
-    // Clear after delay
     _resetTimer?.cancel();
     _resetTimer = Timer(const Duration(seconds: 2), () {
       if (mounted) {
@@ -198,9 +238,10 @@ void _onForgotPasscode() {
 
 Widget _buildForgotPasscodeSheet() {
   final theme = Theme.of(context);
+  final isDark = theme.brightness == Brightness.dark;
   return Container(
     decoration: BoxDecoration(
-      color: theme.colorScheme.surface,
+      color: isDark ? Colors.black : Colors.white,
       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
     ),
     padding: EdgeInsets.fromLTRB(
@@ -244,7 +285,6 @@ Widget _buildForgotPasscodeSheet() {
         ),
         const SizedBox(height: 32),
 
-        // Send button — بيروح للـ ForgotPasscodeOtpScreen
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
@@ -261,7 +301,7 @@ Widget _buildForgotPasscodeSheet() {
             },
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               backgroundColor: theme.colorScheme.primary,
               foregroundColor: theme.colorScheme.onPrimary,
               elevation: 0,
@@ -274,14 +314,13 @@ Widget _buildForgotPasscodeSheet() {
         ),
         const SizedBox(height: 12),
 
-        // Cancel button
         SizedBox(
           width: double.infinity,
           child: TextButton(
             onPressed: () => Navigator.pop(context),
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
             child: Text(
               context.l10n.cancel,
@@ -458,9 +497,10 @@ Widget _buildPasscodeIndicators() {
   Widget build(BuildContext context) {
     final isRTL = Directionality.of(context) == TextDirection.rtl;
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: isDark ? Colors.black : Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -477,85 +517,134 @@ Widget _buildPasscodeIndicators() {
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.symmetric(horizontal: 28),
                 child: Column(
                   children: [
                     const SizedBox(height: 20),
                     
-                    // Icon
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        widget.isLogin ? Icons.lock_outline : Icons.lock_reset,
-                        size: 40,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Title
-                    Text(
-                      widget.isLogin ? context.l10n.enterYourPasscode : context.l10n.setPasscodeTitle,
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 12),
-                    
-                    // Subtitle
-                    if (!widget.isLogin)
-                      Text(
-                        context.l10n.setPasscodeDescription,
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: theme.colorScheme.onBackground.withValues(alpha: 0.6),
+                    // Logo
+                    SlideTransition(
+                      position: _logoSlide,
+                      child: FadeTransition(
+                        opacity: _logoFade,
+                        child: Center(
+                          child: Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  theme.colorScheme.primary,
+                                  theme.colorScheme.primary.withValues(alpha: 0.7),
+                                ],
+                              ),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.account_balance_wallet,
+                              size: 40,
+                              color: theme.colorScheme.onPrimary,
+                            ),
+                          ),
                         ),
                       ),
+                    ),
+                    
+                    const SizedBox(height: 32),
+                    
+                    // Title & Subtitle
+                    SlideTransition(
+                      position: _titleSlide,
+                      child: FadeTransition(
+                        opacity: _titleFade,
+                        child: Column(
+                          children: [
+                            Center(
+                              child: Text(
+                                widget.isLogin ? context.l10n.enterYourPasscode : context.l10n.setPasscodeTitle,
+                                style: theme.textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Center(
+                              child: Text(
+                                widget.isLogin
+                                    ? ''
+                                    : context.l10n.setPasscodeDescription,
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                     
                     const SizedBox(height: 48),
                     
                     // Passcode indicators
-                    _buildPasscodeIndicators(),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Error message
-                    if (_errorMessage != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: Text(
-                          _errorMessage!,
-                          style: const TextStyle(
-                            color: Colors.red,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
+                    SlideTransition(
+                      position: _formSlide,
+                      child: FadeTransition(
+                        opacity: _formFade,
+                        child: Column(
+                          children: [
+                            _buildPasscodeIndicators(),
+                            
+                            const SizedBox(height: 24),
+                            
+                            if (_errorMessage != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Text(
+                                  _errorMessage!,
+                                  style: const TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            
+                            if (_isLoading)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 20),
+                                child: CircularProgressIndicator(),
+                              ),
+                          ],
                         ),
                       ),
-                    
-                    if (_isLoading)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 20),
-                        child: CircularProgressIndicator(),
-                      ),
+                    ),
                   ],
                 ),
               ),
             ),
             
             // Custom Keyboard
-            _buildKeyboard(),
+            SlideTransition(
+              position: _keyboardSlide,
+              child: FadeTransition(
+                opacity: _keyboardFade,
+                child: _buildKeyboard(),
+              ),
+            ),
           ],
         ),
       ),
@@ -563,7 +652,6 @@ Widget _buildPasscodeIndicators() {
   }
 }
 
-// زر مخصص مع تأثير اللمس
 class _KeyboardButton extends StatefulWidget {
   final VoidCallback onTap;
   final VoidCallback? onLongPress;

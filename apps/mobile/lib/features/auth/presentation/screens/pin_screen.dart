@@ -24,14 +24,13 @@ class PinScreen extends StatefulWidget {
 }
 
 class _PinScreenState extends State<PinScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final List<int> _pinDigits = [];
   bool _isLoading = false;
   bool _showError = false;
   String? _errorMessage;
   Timer? _errorTimer;
 
-  // Biometric data
   bool _biometricEnabled = false;
   bool _hasBiometricSupport = false;
   String _biometricName = 'Biometric';
@@ -39,6 +38,13 @@ class _PinScreenState extends State<PinScreen>
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  late AnimationController _fadeController;
+  late Animation<double> _titleFade;
+  late Animation<Offset> _titleSlide;
+  late Animation<double> _formFade;
+  late Animation<Offset> _formSlide;
+  late Animation<double> _keyboardFade;
+  late Animation<Offset> _keyboardSlide;
 
   @override
   void initState() {
@@ -52,12 +58,41 @@ class _PinScreenState extends State<PinScreen>
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _titleFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.2, 0.5, curve: Curves.easeOut)),
+    );
+    _titleSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.2, 0.5, curve: Curves.easeOut)),
+    );
+
+    _formFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.4, 0.7, curve: Curves.easeOut)),
+    );
+    _formSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.4, 0.7, curve: Curves.easeOut)),
+    );
+
+    _keyboardFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.6, 1.0, curve: Curves.easeOut)),
+    );
+    _keyboardSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.6, 1.0, curve: Curves.easeOut)),
+    );
+
+    _fadeController.forward();
   }
 
   @override
   void dispose() {
     _errorTimer?.cancel();
     _pulseController.dispose();
+    _fadeController.dispose();
     super.dispose();
   }
 
@@ -90,7 +125,6 @@ class _PinScreenState extends State<PinScreen>
       _navigateToHome();
     } else {
       setState(() => _biometricFailed = true);
-      // استخدام MessageService بدلاً من SnackBar
       if (!mounted) return;
       MessageService.showWarning(context: context, message: '${_biometricName} ${context.l10n.failed}');
     }
@@ -171,11 +205,9 @@ void _showBiometricBottomSheet() {
   });
 }
 String _getUserEmail() {
-  // جرب user_email الأول
   final directEmail = SharedPrefs.getStringValue('user_email');
   if (directEmail != null && directEmail.isNotEmpty) return directEmail;
 
-  // لو مش موجود، جيبه من userData
   final userData = SharedPrefs.userData;
   if (userData != null) {
     try {
@@ -192,9 +224,10 @@ void _onForgotPin() {
     backgroundColor: Colors.transparent,
     builder: (context) {
       final theme = Theme.of(context);
+      final isDark = theme.brightness == Brightness.dark;
       return Container(
         decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
+          color: isDark ? Colors.black : Colors.white,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         padding: EdgeInsets.fromLTRB(
@@ -204,7 +237,6 @@ void _onForgotPin() {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle bar
             Container(
               width: 40,
               height: 4,
@@ -216,7 +248,6 @@ void _onForgotPin() {
 
             const SizedBox(height: 28),
 
-            // Icon
             Container(
               width: 72,
               height: 72,
@@ -253,7 +284,6 @@ void _onForgotPin() {
 
             const SizedBox(height: 32),
 
-            // Reset button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -271,7 +301,7 @@ void _onForgotPin() {
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   backgroundColor: theme.colorScheme.primary,
                   foregroundColor: theme.colorScheme.onPrimary,
@@ -289,7 +319,6 @@ void _onForgotPin() {
 
             const SizedBox(height: 12),
 
-            // Cancel button
             SizedBox(
               width: double.infinity,
               child: TextButton(
@@ -297,7 +326,7 @@ void _onForgotPin() {
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
                 child: Text(
@@ -321,143 +350,182 @@ void _onForgotPin() {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: isDark ? Colors.black : Colors.white,
       body: SafeArea(
         child: Column(
           children: [
             Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // الشعار مع نبض خفيف
-                  ScaleTransition(
-                    scale: _pulseAnimation,
-                    child: Container(
-                      width: 90,
-                      height: 90,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            theme.colorScheme.primary,
-                            theme.colorScheme.primary.withValues(alpha: 0.7),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 28),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 20),
+
+                    // Logo with pulse
+                    ScaleTransition(
+                      scale: _pulseAnimation,
+                      child: Center(
+                        child: Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                theme.colorScheme.primary,
+                                theme.colorScheme.primary.withValues(alpha: 0.7),
+                              ],
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                                blurRadius: 20,
+                                spreadRadius: 5,
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.account_balance_wallet,
+                            size: 40,
+                            color: theme.colorScheme.onPrimary,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // Title & Subtitle
+                    SlideTransition(
+                      position: _titleSlide,
+                      child: FadeTransition(
+                        opacity: _titleFade,
+                        child: Column(
+                          children: [
+                            Center(
+                              child: Text(
+                                context.l10n.enterPin,
+                                style: theme.textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Center(
+                              child: Text(
+                                context.l10n.enterPinDescription,
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                            blurRadius: 20,
-                            spreadRadius: 5,
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        Icons.account_balance_wallet,
-                        size: 45,
-                        color: theme.colorScheme.onPrimary,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    context.l10n.enterPin,
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    context.l10n.enterPinDescription,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: theme.colorScheme.onBackground.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  const SizedBox(height: 40),
 
-                  // نقاط PIN
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    textDirection: TextDirection.ltr,
-                    children: List.generate(6, (index) {
-                      final isFilled = index < _pinDigits.length;
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        margin: const EdgeInsets.symmetric(horizontal: 8),
-                        width: 18,
-                        height: 18,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _showError
-                              ? Colors.red
-                              : isFilled
-                                  ? theme.colorScheme.primary
-                                  : theme.colorScheme.onSurface.withValues(alpha: 0.15),
-                          border: !isFilled
-                              ? Border.all(
-                                  color: theme.colorScheme.onSurface
-                                      .withValues(alpha: 0.3),
-                                  width: 1.5,
-                                )
-                              : null,
+                    const SizedBox(height: 40),
+
+                    // PIN dots
+                    SlideTransition(
+                      position: _formSlide,
+                      child: FadeTransition(
+                        opacity: _formFade,
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              textDirection: TextDirection.ltr,
+                              children: List.generate(6, (index) {
+                                final isFilled = index < _pinDigits.length;
+                                return AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                                  width: 18,
+                                  height: 18,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: _showError
+                                        ? Colors.red
+                                        : isFilled
+                                            ? theme.colorScheme.primary
+                                            : theme.colorScheme.onSurface.withValues(alpha: 0.15),
+                                    border: !isFilled
+                                        ? Border.all(
+                                            color: theme.colorScheme.onSurface
+                                                .withValues(alpha: 0.3),
+                                            width: 1.5,
+                                          )
+                                        : null,
+                                  ),
+                                );
+                              }),
+                            ),
+
+                            if (_errorMessage != null) ...[
+                              const SizedBox(height: 16),
+                              Text(
+                                _errorMessage!,
+                                style: const TextStyle(color: Colors.red, fontSize: 14),
+                              ),
+                            ],
+
+                            if (_isLoading) ...[
+                              const SizedBox(height: 24),
+                              const CircularProgressIndicator(),
+                            ],
+                          ],
                         ),
-                      );
-                    }),
-                  ),
-
-                  if (_errorMessage != null) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      _errorMessage!,
-                      style: const TextStyle(color: Colors.red, fontSize: 14),
+                      ),
                     ),
                   ],
-
-                  if (_isLoading) ...[
-                    const SizedBox(height: 24),
-                    const CircularProgressIndicator(),
-                  ],
-                ],
+                ),
               ),
             ),
 
-            // لوحة المفاتيح
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Column(
-                children: [
-                  _buildKeyRow(['1', '2', '3']),
-                  const SizedBox(height: 12),
-                  _buildKeyRow(['4', '5', '6']),
-                  const SizedBox(height: 12),
-                  _buildKeyRow(['7', '8', '9']),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            // Keyboard
+            SlideTransition(
+              position: _keyboardSlide,
+              child: FadeTransition(
+                opacity: _keyboardFade,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Column(
                     children: [
-                      // Forget
-                      _buildFunctionButton(
-                        icon: Icons.help_outline,
-                        onTap: _onForgotPin,
-                        label: context.l10n.forgot,
+                      _buildKeyRow(['1', '2', '3']),
+                      const SizedBox(height: 12),
+                      _buildKeyRow(['4', '5', '6']),
+                      const SizedBox(height: 12),
+                      _buildKeyRow(['7', '8', '9']),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildFunctionButton(
+                            icon: Icons.help_outline,
+                            onTap: _onForgotPin,
+                            label: context.l10n.forgot,
+                          ),
+                          _buildNumberButton('0'),
+                          _pinDigits.isEmpty && !_biometricFailed && _biometricEnabled
+                              ? _buildBiometricButton()
+                              : _buildFunctionButton(
+                                  icon: _pinDigits.isEmpty
+                                      ? Icons.backspace_outlined
+                                      : Icons.backspace,
+                                  onTap: _removeDigit,
+                                  onLongPress: _clearPin,
+                                  isActive: _pinDigits.isNotEmpty,
+                                ),
+                        ],
                       ),
-                      // 0
-                      _buildNumberButton('0'),
-                      // Delete / Biometric
-                      _pinDigits.isEmpty && !_biometricFailed && _biometricEnabled
-                          ? _buildBiometricButton()
-                          : _buildFunctionButton(
-                              icon: _pinDigits.isEmpty
-                                  ? Icons.backspace_outlined
-                                  : Icons.backspace,
-                              onTap: _removeDigit,
-                              onLongPress: _clearPin,
-                              isActive: _pinDigits.isNotEmpty,
-                            ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -493,7 +561,7 @@ Widget _buildNumberButton(String digit) {
         child: Text(
           digit,
           style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w400),
-          textDirection: TextDirection.ltr, // 👈 Force LTR direction
+          textDirection: TextDirection.ltr,
         ),
       ),
     ),

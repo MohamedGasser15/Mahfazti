@@ -13,14 +13,20 @@ class CurrencySelectionScreen extends StatefulWidget {
 }
 
 class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final AuthRepository _authRepository = AuthRepository();
   String? _selectedCurrency;
   bool _isLoading = false;
 
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
+  late AnimationController _fadeController;
+  late Animation<double> _logoFade;
+  late Animation<Offset> _logoSlide;
+  late Animation<double> _titleFade;
+  late Animation<Offset> _titleSlide;
+  late Animation<double> _formFade;
+  late Animation<Offset> _formSlide;
+  late Animation<double> _buttonFade;
+  late Animation<Offset> _buttonSlide;
 
   final List<Map<String, String>> currencies = const [
     {'code': 'USD', 'nameKey': 'currencyUSD', 'flag': '🇺🇸'},
@@ -34,23 +40,42 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
   @override
   void initState() {
     super.initState();
-    _loadCurrentCurrency(); // تحميل العملة الحالية إذا وجدت
-    _animationController = AnimationController(
+    _loadCurrentCurrency();
+    
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
-      duration: const Duration(milliseconds: 500),
     );
-    _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOut,
+
+    _logoFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.0, 0.3, curve: Curves.easeOut)),
     );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOut,
-    ));
-    _animationController.forward();
+    _logoSlide = Tween<Offset>(begin: const Offset(0, -0.3), end: Offset.zero).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.0, 0.3, curve: Curves.easeOut)),
+    );
+
+    _titleFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.2, 0.5, curve: Curves.easeOut)),
+    );
+    _titleSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.2, 0.5, curve: Curves.easeOut)),
+    );
+
+    _formFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.4, 0.7, curve: Curves.easeOut)),
+    );
+    _formSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.4, 0.7, curve: Curves.easeOut)),
+    );
+
+    _buttonFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.6, 1.0, curve: Curves.easeOut)),
+    );
+    _buttonSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+      CurvedAnimation(parent: _fadeController, curve: const Interval(0.6, 1.0, curve: Curves.easeOut)),
+    );
+
+    _fadeController.forward();
   }
 
   Future<void> _loadCurrentCurrency() async {
@@ -62,7 +87,7 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _fadeController.dispose();
     super.dispose();
   }
 
@@ -118,10 +143,10 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isRTL = Directionality.of(context) == TextDirection.rtl;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: isDark ? Colors.black : Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -132,39 +157,99 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
             color: theme.colorScheme.onSurface,
           ),
           onPressed: () {
-            // ✅ ببساطة نعود للشاشة السابقة
             Navigator.pop(context);
           },
         ),
         title: null,
       ),
       body: SafeArea(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: SlideTransition(
-            position: _slideAnimation,
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    context.l10n.selectCurrency,
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    context.l10n.selectCurrencyDescription,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: theme.colorScheme.onBackground.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 20),
 
-                  Expanded(
+              // Logo
+              SlideTransition(
+                position: _logoSlide,
+                child: FadeTransition(
+                  opacity: _logoFade,
+                  child: Center(
+                    child: Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            theme.colorScheme.primary,
+                            theme.colorScheme.primary.withValues(alpha: 0.7),
+                          ],
+                        ),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.account_balance_wallet,
+                        size: 40,
+                        color: theme.colorScheme.onPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              // Title & Subtitle
+              SlideTransition(
+                position: _titleSlide,
+                child: FadeTransition(
+                  opacity: _titleFade,
+                  child: Column(
+                    children: [
+                      Center(
+                        child: Text(
+                          context.l10n.selectCurrency,
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Center(
+                        child: Text(
+                          context.l10n.selectCurrencyDescription,
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 36),
+
+              // Currency list
+              SlideTransition(
+                position: _formSlide,
+                child: FadeTransition(
+                  opacity: _formFade,
+                  child: SizedBox(
+                    height: 380,
                     child: ListView.builder(
+                      physics: const NeverScrollableScrollPhysics(),
                       itemCount: currencies.length,
                       itemBuilder: (context, index) {
                         final currency = currencies[index];
@@ -240,7 +325,7 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
                                           Text(
                                             currency['code']!,
                                             style: theme.textTheme.bodyMedium?.copyWith(
-                                              color: theme.colorScheme.onBackground
+                                              color: theme.colorScheme.onSurface
                                                   .withValues(alpha: 0.6),
                                             ),
                                           ),
@@ -270,33 +355,49 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
                       },
                     ),
                   ),
+                ),
+              ),
 
-                  SizedBox(
+              const SizedBox(height: 24),
+
+              // Button
+              SlideTransition(
+                position: _buttonSlide,
+                child: FadeTransition(
+                  opacity: _buttonFade,
+                  child: SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _saveCurrency,
                       style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        disabledBackgroundColor: theme.colorScheme.primary.withValues(alpha: 0.4),
+                        disabledForegroundColor: theme.colorScheme.onPrimary.withValues(alpha: 0.4),
                         minimumSize: const Size(double.infinity, 56),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(16),
                         ),
+                        elevation: 4,
+                        shadowColor: Colors.black26,
                       ),
                       child: _isLoading
                           ? const SizedBox(
                               width: 24,
                               height: 24,
                               child: CircularProgressIndicator(
-                                color: Colors.white,
+                                color: Colors.black,
                                 strokeWidth: 2,
                               ),
                             )
-                          : Text(context.l10n.continueText),
+                          : Text(context.l10n.continueText, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                ],
+                ),
               ),
-            ),
+
+              const SizedBox(height: 40),
+            ],
           ),
         ),
       ),

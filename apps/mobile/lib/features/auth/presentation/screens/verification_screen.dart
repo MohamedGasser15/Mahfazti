@@ -35,10 +35,15 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
   bool _isLoading = false;
   String? _errorMessage;
 
-  // Animation controllers
-  late AnimationController _fadeSlideController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
+  late AnimationController _fadeController;
+  late Animation<double> _logoFade;
+  late Animation<Offset> _logoSlide;
+  late Animation<double> _titleFade;
+  late Animation<Offset> _titleSlide;
+  late Animation<double> _formFade;
+  late Animation<Offset> _formSlide;
+  late Animation<double> _socialFade;
+  late Animation<Offset> _socialSlide;
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
 
@@ -58,28 +63,84 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
   }
 
   void _initAnimations() {
-    _fadeSlideController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
-    _fadeAnimation = CurvedAnimation(
-      parent: _fadeSlideController,
-      curve: Curves.easeOut,
+
+    _logoFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: _fadeController,
+        curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
+      ),
     );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.1),
+    _logoSlide = Tween<Offset>(
+      begin: const Offset(0, -0.3),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _fadeSlideController,
-      curve: Curves.easeOut,
-    ));
-    _fadeSlideController.forward();
+    ).animate(
+      CurvedAnimation(
+        parent: _fadeController,
+        curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
+      ),
+    );
+
+    _titleFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: _fadeController,
+        curve: const Interval(0.2, 0.5, curve: Curves.easeOut),
+      ),
+    );
+    _titleSlide = Tween<Offset>(
+      begin: const Offset(0, 0.2),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _fadeController,
+        curve: const Interval(0.2, 0.5, curve: Curves.easeOut),
+      ),
+    );
+
+    _formFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: _fadeController,
+        curve: const Interval(0.4, 0.7, curve: Curves.easeOut),
+      ),
+    );
+    _formSlide = Tween<Offset>(
+      begin: const Offset(0, 0.2),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _fadeController,
+        curve: const Interval(0.4, 0.7, curve: Curves.easeOut),
+      ),
+    );
+
+    _socialFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: _fadeController,
+        curve: const Interval(0.6, 1.0, curve: Curves.easeOut),
+      ),
+    );
+    _socialSlide = Tween<Offset>(
+      begin: const Offset(0, 0.2),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _fadeController,
+        curve: const Interval(0.6, 1.0, curve: Curves.easeOut),
+      ),
+    );
+
+    _fadeController.forward();
 
     _shakeController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
-    _shakeAnimation = Tween<double>(begin: 0, end: 10).chain(CurveTween(curve: Curves.elasticIn)).animate(_shakeController)
+    _shakeAnimation = Tween<double>(begin: 0, end: 10)
+        .chain(CurveTween(curve: Curves.elasticIn))
+        .animate(_shakeController)
       ..addStatusListener((status) {
         if (status == AnimationStatus.completed) {
           _shakeController.reset();
@@ -237,7 +298,7 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
     _hiddenController.dispose();
     _hiddenFocusNode.dispose();
     _timer?.cancel();
-    _fadeSlideController.dispose();
+    _fadeController.dispose();
     _shakeController.dispose();
     super.dispose();
   }
@@ -245,17 +306,17 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final isRTL = Directionality.of(context) == TextDirection.rtl;
 
     final screenWidth = MediaQuery.of(context).size.width;
-    final horizontalPadding = 40.0;
-    final spacing = 12.0;
-    final totalSpacing = (6 - 1) * spacing;
-    double fieldWidth = (screenWidth - horizontalPadding - totalSpacing) / 6;
+    const spacing = 12.0;
+    const totalSpacing = (6 - 1) * spacing;
+    double fieldWidth = (screenWidth - (28 * 2) - totalSpacing) / 6;
     fieldWidth = fieldWidth.clamp(40.0, 56.0);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: isDark ? Colors.black : Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -268,195 +329,273 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
       body: GestureDetector(
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
         child: SafeArea(
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header with email chip
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(30),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+
+                // Logo
+                SlideTransition(
+                  position: _logoSlide,
+                  child: FadeTransition(
+                    opacity: _logoFade,
+                    child: Center(
+                      child: Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              theme.colorScheme.primary,
+                              theme.colorScheme.primary.withValues(alpha: 0.7),
+                            ],
+                          ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.account_balance_wallet,
+                          size: 40,
+                          color: theme.colorScheme.onPrimary,
+                        ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.email_outlined, size: 16, color: theme.colorScheme.primary),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              widget.email,
-                              style: TextStyle(
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.w500,
-                                fontSize: 14,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Email chip
+                SlideTransition(
+                  position: _titleSlide,
+                  child: FadeTransition(
+                    opacity: _titleFade,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.email_outlined, size: 16, color: theme.colorScheme.primary),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                widget.email,
+                                style: TextStyle(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 14,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Title & Subtitle
+                SlideTransition(
+                  position: _titleSlide,
+                  child: FadeTransition(
+                    opacity: _titleFade,
+                    child: Column(
+                      children: [
+                        Center(
+                          child: Text(
+                            widget.isLogin ? context.l10n.enterVerificationCode : context.l10n.verifyYourEmail,
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Title
-                    Text(
-                      widget.isLogin ? context.l10n.enterVerificationCode : context.l10n.verifyYourEmail,
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 32,
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // Subtitle
-                   Text(
-                      widget.isLogin
-                          ? context.l10n.enterCodeSentToEmailForLogin
-                          : context.l10n.enterVerificationCodeSentToEmail,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.onBackground.withValues(alpha: 0.6),
-                      ),
-                    ),
-                    Opacity(
-                      opacity: 0,
-                      child: AbsorbPointer(
-                        child: TextField(
-                          controller: _hiddenController,
-                          focusNode: _hiddenFocusNode,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: false, signed: false),
-                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                          onChanged: _onHiddenTextChanged,
-                          textInputAction: TextInputAction.done,
-                          enableInteractiveSelection: true,
-                          autofillHints: const [AutofillHints.oneTimeCode],
                         ),
-                      ),
-                    ),
-
-                    AnimatedBuilder(
-                      animation: _shakeAnimation,
-                      builder: (context, child) {
-                        return Transform.translate(
-                          offset: Offset(_shakeAnimation.value, 0),
-                          child: child,
-                        );
-                      },
-                      child: AutofillGroup(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          textDirection: TextDirection.ltr,
-                          children: List.generate(6, (index) => _buildDisplayBox(index, fieldWidth, theme)),
-                        ),
-                      ),
-                    ),
-
-                    // Error message
-                    if (_errorMessage != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 16),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.error.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: theme.colorScheme.error.withValues(alpha: 0.5)),
+                        const SizedBox(height: 8),
+                        Center(
+                          child: Text(
+                            widget.isLogin
+                                ? context.l10n.enterCodeSentToEmailForLogin
+                                : context.l10n.enterVerificationCodeSentToEmail,
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                            ),
                           ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.error_outline, color: theme.colorScheme.error, size: 20),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  _errorMessage!,
-                                  style: TextStyle(color: theme.colorScheme.error),
-                                ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 36),
+
+                // OTP Form
+                SlideTransition(
+                  position: _formSlide,
+                  child: FadeTransition(
+                    opacity: _formFade,
+                    child: Column(
+                      children: [
+                        Opacity(
+                          opacity: 0,
+                          child: AbsorbPointer(
+                            child: TextField(
+                              controller: _hiddenController,
+                              focusNode: _hiddenFocusNode,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: false, signed: false),
+                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                              onChanged: _onHiddenTextChanged,
+                              textInputAction: TextInputAction.done,
+                              enableInteractiveSelection: true,
+                              autofillHints: const [AutofillHints.oneTimeCode],
+                            ),
+                          ),
+                        ),
+
+                        AnimatedBuilder(
+                          animation: _shakeAnimation,
+                          builder: (context, child) {
+                            return Transform.translate(
+                              offset: Offset(_shakeAnimation.value, 0),
+                              child: child,
+                            );
+                          },
+                          child: AutofillGroup(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              textDirection: TextDirection.ltr,
+                              children: List.generate(6, (index) => _buildDisplayBox(index, fieldWidth, theme)),
+                            ),
+                          ),
+                        ),
+
+                        if (_errorMessage != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 16),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.error.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: theme.colorScheme.error.withValues(alpha: 0.5)),
                               ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.error_outline, color: theme.colorScheme.error, size: 20),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      _errorMessage!,
+                                      style: TextStyle(color: theme.colorScheme.error),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
+                // Timer and resend
+                SlideTransition(
+                  position: _socialSlide,
+                  child: FadeTransition(
+                    opacity: _socialFade,
+                    child: Column(
+                      children: [
+                        Center(
+                          child: Column(
+                            children: [
+                              if (_countdown > 0)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? Colors.grey[900] : Colors.grey[50],
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.timer, size: 18, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                       context.l10n.resendIn(_formatCountdown(_countdown)),
+                                        style: TextStyle(
+                                          color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                              if (_countdown == 0)
+                                TextButton(
+                                  onPressed: _isLoading ? null : _resendCode,
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: theme.colorScheme.primary,
+                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (!_isLoading) Icon(Icons.refresh, size: 18),
+                                      if (!_isLoading) const SizedBox(width: 8),
+                                      Text(
+                                        _isLoading ? context.l10n.resending : context.l10n.resendCode,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      if (_isLoading)
+                                        Padding(
+                                          padding: const EdgeInsets.only(left: 12),
+                                          child: SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: theme.colorScheme.primary,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
                             ],
                           ),
                         ),
-                      ),
-
-                    const Spacer(),
-
-                    // Timer and resend
-                    Center(
-                      child: Column(
-                        children: [
-                          if (_countdown > 0)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.surface,
-                                borderRadius: BorderRadius.circular(30),
-                                border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.timer, size: 18, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                   context.l10n.resendIn(_formatCountdown(_countdown)),
-                                    style: TextStyle(
-                                      color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                          if (_countdown == 0)
-                            TextButton(
-                              onPressed: _isLoading ? null : _resendCode,
-                              style: TextButton.styleFrom(
-                                foregroundColor: theme.colorScheme.primary,
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (!_isLoading) Icon(Icons.refresh, size: 18),
-                                  if (!_isLoading) const SizedBox(width: 8),
-                                  Text(
-                                    _isLoading ? context.l10n.resending : context.l10n.resendCode,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  if (_isLoading)
-                                    Padding(
-                                      padding: const EdgeInsets.only(left: 12),
-                                      child: SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: theme.colorScheme.primary,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
+                        const SizedBox(height: 40),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
