@@ -161,7 +161,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
 Future<void> _onGetStarted() async {
   await SharedPrefs.setFirstTime(false);
-  
+  if (!mounted) return;
   Navigator.pushNamed(context, '/email');
 }
   

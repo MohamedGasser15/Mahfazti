@@ -95,6 +95,7 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
         );
       }
     } catch (e) {
+      if (!mounted) return;
       MessageService.showError(context: context, message: '${context.l10n.failedToSaveCurrency}: ${e.toString()}');
     } finally {
       setState(() => _isLoading = false);
@@ -157,7 +158,7 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
                   Text(
                     context.l10n.selectCurrencyDescription,
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      color: theme.colorScheme.onBackground.withOpacity(0.6),
+                      color: theme.colorScheme.onBackground.withValues(alpha: 0.6),
                     ),
                   ),
                   const SizedBox(height: 32),
@@ -176,7 +177,7 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
                           margin: const EdgeInsets.only(bottom: 12),
                           child: Material(
                             color: isSelected
-                                ? theme.colorScheme.primary.withOpacity(0.05)
+                                ? theme.colorScheme.primary.withValues(alpha: 0.05)
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(16),
                             child: InkWell(
@@ -197,7 +198,7 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
                                   border: Border.all(
                                     color: isSelected
                                         ? theme.colorScheme.primary
-                                        : theme.colorScheme.outline.withOpacity(0.2),
+                                        : theme.colorScheme.outline.withValues(alpha: 0.2),
                                     width: isSelected ? 2 : 1,
                                   ),
                                 ),
@@ -211,7 +212,7 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
                                         shape: BoxShape.circle,
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withOpacity(0.05),
+                                            color: Colors.black.withValues(alpha: 0.05),
                                             blurRadius: 8,
                                             offset: const Offset(0, 2),
                                           ),
@@ -240,7 +241,7 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
                                             currency['code']!,
                                             style: theme.textTheme.bodyMedium?.copyWith(
                                               color: theme.colorScheme.onBackground
-                                                  .withOpacity(0.6),
+                                                  .withValues(alpha: 0.6),
                                             ),
                                           ),
                                         ],

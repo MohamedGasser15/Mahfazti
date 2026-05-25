@@ -40,7 +40,7 @@ static Future<void> setCurrency(String currency) async {
   await _prefs.setString(_currencyKey, currency);
 }
   static Future<void> removeAuthToken() async {
-    await _secure.delete(key: AppConstants.authTokenKey);
+    await _prefs.remove(AppConstants.authTokenKey);
   }
 
   static Future<void> setSecureString(String key, String value) async {

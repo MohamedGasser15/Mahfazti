@@ -90,7 +90,7 @@ class _ChangePasscodeScreenState extends State<ChangePasscodeScreen> {
                   height: 100,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
                   ),
                   child: Icon(
                     Icons.lock_outline,
@@ -113,7 +113,7 @@ class _ChangePasscodeScreenState extends State<ChangePasscodeScreen> {
               Text(
                  l10n.enterCurrentAndSetNewPasscode,
                 style: theme.textTheme.bodyLarge?.copyWith(
-                  color: theme.colorScheme.onBackground.withOpacity(0.6),
+                  color: theme.colorScheme.onBackground.withValues(alpha: 0.6),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -149,7 +149,7 @@ class _ChangePasscodeScreenState extends State<ChangePasscodeScreen> {
                               _obscureCurrent
                                   ? Icons.visibility_off
                                   : Icons.visibility,
-                              color: theme.colorScheme.onBackground.withOpacity(0.6),
+                              color: theme.colorScheme.onBackground.withValues(alpha: 0.6),
                             ),
                             onPressed: () {
                               setState(() => _obscureCurrent = !_obscureCurrent);
@@ -207,7 +207,7 @@ class _ChangePasscodeScreenState extends State<ChangePasscodeScreen> {
                               _obscureNew
                                   ? Icons.visibility_off
                                   : Icons.visibility,
-                              color: theme.colorScheme.onBackground.withOpacity(0.6),
+                              color: theme.colorScheme.onBackground.withValues(alpha: 0.6),
                             ),
                             onPressed: () {
                               setState(() => _obscureNew = !_obscureNew);
@@ -264,7 +264,7 @@ class _ChangePasscodeScreenState extends State<ChangePasscodeScreen> {
                               _obscureConfirm
                                   ? Icons.visibility_off
                                   : Icons.visibility,
-                              color: theme.colorScheme.onBackground.withOpacity(0.6),
+                              color: theme.colorScheme.onBackground.withValues(alpha: 0.6),
                             ),
                             onPressed: () {
                               setState(() => _obscureConfirm = !_obscureConfirm);

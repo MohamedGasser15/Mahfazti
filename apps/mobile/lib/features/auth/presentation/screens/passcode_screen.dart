@@ -134,11 +134,13 @@ class _PasscodeScreenState extends State<PasscodeScreen> with TickerProviderStat
           await SharedPrefs.setString('user_password', passcode);
           _navigateToHome();
         } else {
-         _showErrorState(context.l10n.invalidPasscode);
+         if (!mounted) return;
+          _showErrorState(context.l10n.invalidPasscode);
         }
       } else {
         // Save passcode locally before navigating to register
         await SharedPrefs.setString('user_password', passcode);
+        if (!mounted) return;
         Navigator.pushNamed(
           context,
           '/register',
@@ -150,7 +152,8 @@ class _PasscodeScreenState extends State<PasscodeScreen> with TickerProviderStat
         );
       }
     } catch (e) {
-     _showErrorState(context.l10n.somethingWentWrong);
+      if (!mounted) return;
+      _showErrorState(context.l10n.somethingWentWrong);
     } finally {
       setState(() {
         _isLoading = false;
@@ -211,7 +214,7 @@ Widget _buildForgotPasscodeSheet() {
           width: 40,
           height: 4,
           decoration: BoxDecoration(
-            color: theme.colorScheme.onSurface.withOpacity(0.15),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -220,7 +223,7 @@ Widget _buildForgotPasscodeSheet() {
           width: 72,
           height: 72,
           decoration: BoxDecoration(
-            color: theme.colorScheme.primary.withOpacity(0.1),
+            color: theme.colorScheme.primary.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(Icons.lock_reset_rounded, size: 36, color: theme.colorScheme.primary),
@@ -235,7 +238,7 @@ Widget _buildForgotPasscodeSheet() {
           context.l10n.resetPasscodeDescription,
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurface.withOpacity(0.6),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             height: 1.5,
           ),
         ),
@@ -285,7 +288,7 @@ Widget _buildForgotPasscodeSheet() {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -341,7 +344,7 @@ Widget _buildForgotPasscodeSheet() {
           color: Theme.of(context).colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -378,7 +381,7 @@ Widget _buildForgotPasscodeSheet() {
             size: 28,
             color: _passcode.isNotEmpty && !_isLoading
                 ? Theme.of(context).colorScheme.onSurface
-                : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
           ),
         ),
       ),
@@ -427,17 +430,17 @@ Widget _buildPasscodeIndicators() {
                     ? Colors.red
                     : isFilled
                         ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
                 border: !isFilled
                     ? Border.all(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                         width: 1.5,
                       )
                     : null,
                 boxShadow: isFilled && !isError
                     ? [
                         BoxShadow(
-                          color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                           blurRadius: 8,
                           spreadRadius: 1,
                         )
@@ -484,7 +487,7 @@ Widget _buildPasscodeIndicators() {
                       width: 80,
                       height: 80,
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withOpacity(0.1),
+                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -512,7 +515,7 @@ Widget _buildPasscodeIndicators() {
                         context.l10n.setPasscodeDescription,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyLarge?.copyWith(
-                          color: theme.colorScheme.onBackground.withOpacity(0.6),
+                          color: theme.colorScheme.onBackground.withValues(alpha: 0.6),
                         ),
                       ),
                     
@@ -528,7 +531,7 @@ Widget _buildPasscodeIndicators() {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
+                          color: Colors.red.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(30),
                         ),
                         child: Text(

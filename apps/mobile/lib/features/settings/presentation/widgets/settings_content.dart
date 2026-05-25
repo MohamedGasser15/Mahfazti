@@ -174,8 +174,8 @@ bool _isSubmitting = false;
                       decoration: BoxDecoration(
                         color: isSelected
                             ? (isDarkMode
-                                ? Colors.white.withOpacity(0.08)
-                                : Colors.black.withOpacity(0.05))
+                                ? Colors.white.withValues(alpha: 0.08)
+                                : Colors.black.withValues(alpha: 0.05))
                             : (isDarkMode ? Colors.grey[900] : Colors.grey[50]),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
@@ -267,18 +267,19 @@ bool _isSubmitting = false;
 onPressed: _isSubmitting
     ? null
     : () async {
+        final currentContext = context;
         if (tempSelected == null) return;
         setState(() => _isSubmitting = true);
         try {
           await AuthRepository().setUserCurrency(tempSelected!);
           await SharedPrefs.setCurrency(tempSelected!);
           this.setState(() => _currencyCode = tempSelected!);
-          if (mounted) {
-            Navigator.pop(context);
-            MessageService.showSuccess(context: context, message: context.l10n.currencySavedSuccess);
-          }
+          if (!currentContext.mounted) return;
+          Navigator.pop(currentContext);
+          MessageService.showSuccess(context: currentContext, message: currentContext.l10n.currencySavedSuccess);
         } catch (e) {
-          MessageService.showError(context: context, message: e.toString());
+          if (!currentContext.mounted) return;
+          MessageService.showError(context: currentContext, message: e.toString());
           setState(() => _isSubmitting = false);
         }
       },
@@ -379,6 +380,7 @@ Future<void> _loadSettings() async {
         }
       }
     } catch (e) {
+      if (!mounted) return;
       _showErrorSnackbar('${context.l10n.cannotOpenStore}: $e');
     }
   }
@@ -413,9 +415,11 @@ Future<void> _loadSettings() async {
       if (await canLaunchUrl(Uri.parse(url))) {
         await launchUrl(Uri.parse(url));
       } else {
+        if (!mounted) return;
         _showErrorSnackbar(context.l10n.cannotOpenUrl);
       }
     } catch (e) {
+      if (!mounted) return;
       _showErrorSnackbar('${context.l10n.error}: $e');
     }
   }
@@ -1232,6 +1236,7 @@ Widget _buildSecuritySettings(bool isDarkMode) {
                         _biometricEnabled = true;
                       });
                     } else {
+                      if (!mounted) return;
                       MessageService.showError(context: context, message: 'Could not enable biometric authentication');
                     }
                   } else {
@@ -1570,7 +1575,7 @@ Widget _buildSecuritySettings(bool isDarkMode) {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                    color: Colors.red.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -1589,7 +1594,7 @@ Widget _buildSecuritySettings(bool isDarkMode) {
                 subtitle: Text(
                   context.l10n.permanentlyDeleteYourAccount,
                   style: TextStyle(
-                    color: Colors.red.withOpacity(0.7),
+                    color: Colors.red.withValues(alpha: 0.7),
                     fontSize: 12,
                   ),
                 ),
@@ -1712,7 +1717,7 @@ void _showLogoutDialog(bool isDarkMode) {
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.1),
+              color: Colors.red.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -1808,10 +1813,14 @@ void _showLogoutDialog(bool isDarkMode) {
 }
 
   void _logout() async {
-    // TODO: تسجيل الخروج من API
-    await SharedPrefs.removeAuthToken();
-    await SharedPrefs.removeUserData();
+    try {
+      await AuthRepository().logout();
+    } catch (_) {
+      await SharedPrefs.removeAuthToken();
+      await SharedPrefs.removeUserData();
+    }
     
+if (!mounted) return;
 Navigator.pushAndRemoveUntil(
   context,
   MaterialPageRoute(

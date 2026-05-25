@@ -91,6 +91,7 @@ class _PinScreenState extends State<PinScreen>
     } else {
       setState(() => _biometricFailed = true);
       // استخدام MessageService بدلاً من SnackBar
+      if (!mounted) return;
       MessageService.showWarning(context: context, message: '${_biometricName} ${context.l10n.failed}');
     }
   }
@@ -208,7 +209,7 @@ void _onForgotPin() {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: theme.colorScheme.onSurface.withOpacity(0.15),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -220,7 +221,7 @@ void _onForgotPin() {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.1),
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -245,7 +246,7 @@ void _onForgotPin() {
               context.l10n.forgotPinDescription,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 height: 1.5,
               ),
             ),
@@ -304,7 +305,7 @@ void _onForgotPin() {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ),
@@ -340,13 +341,13 @@ void _onForgotPin() {
                         gradient: LinearGradient(
                           colors: [
                             theme.colorScheme.primary,
-                            theme.colorScheme.primary.withOpacity(0.7),
+                            theme.colorScheme.primary.withValues(alpha: 0.7),
                           ],
                         ),
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: theme.colorScheme.primary.withOpacity(0.3),
+                            color: theme.colorScheme.primary.withValues(alpha: 0.3),
                             blurRadius: 20,
                             spreadRadius: 5,
                           ),
@@ -370,7 +371,7 @@ void _onForgotPin() {
                   Text(
                     context.l10n.enterPinDescription,
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      color: theme.colorScheme.onBackground.withOpacity(0.6),
+                      color: theme.colorScheme.onBackground.withValues(alpha: 0.6),
                     ),
                   ),
                   const SizedBox(height: 40),
@@ -392,11 +393,11 @@ void _onForgotPin() {
                               ? Colors.red
                               : isFilled
                                   ? theme.colorScheme.primary
-                                  : theme.colorScheme.onSurface.withOpacity(0.15),
+                                  : theme.colorScheme.onSurface.withValues(alpha: 0.15),
                           border: !isFilled
                               ? Border.all(
                                   color: theme.colorScheme.onSurface
-                                      .withOpacity(0.3),
+                                      .withValues(alpha: 0.3),
                                   width: 1.5,
                                 )
                               : null,
@@ -484,7 +485,7 @@ Widget _buildNumberButton(String digit) {
         shape: BoxShape.circle,
         color: Theme.of(context).colorScheme.surface,
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.2),
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -521,7 +522,7 @@ Widget _buildNumberButton(String digit) {
               size: 28,
               color: isActive
                   ? Theme.of(context).colorScheme.onSurface
-                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
             ),
             if (label != null)
               Text(
@@ -554,7 +555,7 @@ Widget _buildNumberButton(String digit) {
         height: 70,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
         ),
         child: Icon(
           icon,

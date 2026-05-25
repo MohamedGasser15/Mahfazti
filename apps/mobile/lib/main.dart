@@ -134,7 +134,7 @@ class _MyWalletAppState extends State<MyWalletApp> {
                 textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
                 child: MediaQuery(
                   data: MediaQuery.of(context).copyWith(
-                    textScaleFactor: 1.0,
+                    textScaler: const TextScaler.linear(1.0),
                   ),
                   child: child!,
                 ),

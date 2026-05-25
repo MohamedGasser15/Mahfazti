@@ -92,8 +92,10 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
       localeId: _selectedLocale,
       listenFor: const Duration(seconds: 10),
       pauseFor: const Duration(seconds: 3),
-      partialResults: true,
-      cancelOnError: true, // TODO: Use SpeechListenOptions.cancelOnError
+      listenOptions: SpeechListenOptions(
+        partialResults: true,
+        cancelOnError: true,
+      ),
     );
   }
 
@@ -237,7 +239,7 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
                         : (isDark ? Colors.grey[800] : Colors.grey[200]),
                     boxShadow: _isListening
                         ? [BoxShadow(
-                            color: Colors.red.withOpacity(0.35),
+                            color: Colors.red.withValues(alpha: 0.35),
                             blurRadius: 14,
                             spreadRadius: 3,
                           )]
@@ -270,9 +272,9 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
             constraints: const BoxConstraints(maxWidth: 130),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.08),
+              color: Colors.red.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.red.withOpacity(0.25)),
+              border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
             ),
             child: Text(
               _recognizedText,

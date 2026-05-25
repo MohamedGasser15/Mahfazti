@@ -60,6 +60,7 @@ Future<void> _loadSummary({bool forceRefresh = false}) async {
     }
   }
 
+  if (!mounted) return;
   setState(() {
     _isLoading = true;
     _errorMessage = null;
@@ -607,7 +608,7 @@ Widget _buildChart(List<dynamic> categories, ChartType type, Color color, bool i
               barRods: [
                 BarChartRodData(
                   toY: total,
-                  color: color.withOpacity(0.7),
+                  color: color.withValues(alpha: 0.7),
                   width: 22,
                   borderRadius: BorderRadius.circular(4),
                 ),
@@ -712,7 +713,7 @@ Widget _buildChart(List<dynamic> categories, ChartType type, Color color, bool i
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: color, size: 20),
@@ -736,7 +737,7 @@ Widget _buildChart(List<dynamic> categories, ChartType type, Color color, bool i
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [color.withOpacity(0.7), color.withOpacity(0.4)],
+          colors: [color.withValues(alpha: 0.7), color.withValues(alpha: 0.4)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),

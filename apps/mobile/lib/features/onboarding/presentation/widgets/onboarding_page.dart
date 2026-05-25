@@ -22,7 +22,7 @@ class OnboardingPageWidget extends StatelessWidget {
             width: 280,
             height: 280,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -51,7 +51,7 @@ class OnboardingPageWidget extends StatelessWidget {
             child: AnimatedTextWidget(
               text: data.description,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onBackground.withValues(alpha: 0.7),
                 height: 1.5,
               ),
             ),

@@ -1,7 +1,8 @@
 // features/settings/presentation/widgets/authentication_settings_bottom_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:my_wallet/core/services/biometric_service.dart';
-import 'package:my_wallet/core/extensions/context_extensions.dart'; // لإتاحة context.l10n
+import 'package:my_wallet/core/extensions/context_extensions.dart';
+import 'package:my_wallet/features/auth/presentation/screens/change_passcode_screen.dart';
 
 class AuthenticationSettingsBottomSheet extends StatefulWidget {
   const AuthenticationSettingsBottomSheet({super.key});
@@ -46,6 +47,7 @@ class _AuthenticationSettingsBottomSheetState
           setState(() {
             _biometricEnabled = true;
           });
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(context.l10n.biometricEnabledSuccess),
@@ -53,6 +55,7 @@ class _AuthenticationSettingsBottomSheetState
             ),
           );
         } else {
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(context.l10n.biometricAuthenticationFailed),
@@ -62,9 +65,11 @@ class _AuthenticationSettingsBottomSheetState
         }
       } else {
         await BiometricService.disableBiometric();
+        if (!mounted) return;
         setState(() {
           _biometricEnabled = false;
         });
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(context.l10n.biometricDisabledSuccess),
@@ -73,6 +78,7 @@ class _AuthenticationSettingsBottomSheetState
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(context.l10n.errorWithDetails(e.toString())),
@@ -88,7 +94,10 @@ class _AuthenticationSettingsBottomSheetState
 
   Future<void> _changePin() async {
     Navigator.pop(context);
-    // TODO: Navigate to change PIN screen
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ChangePasscodeScreen()),
+    );
   }
 
   @override
@@ -110,7 +119,7 @@ class _AuthenticationSettingsBottomSheetState
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(2),
             ),
           ),

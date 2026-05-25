@@ -26,8 +26,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final l10n = context.l10n;
 
     return Scaffold(
-      backgroundColor: isDarkMode ? Colors.black : Colors.white,
-      extendBody: isIOS,
+      backgroundColor: Colors.transparent,
+      extendBody: true,
       bottomNavigationBar: isIOS ? null : _buildAndroidBottomNav(context, isDarkMode),
       body: Stack(
         children: [

@@ -60,17 +60,20 @@ Future<void> _onComplete() async {
     );
     
     if (result['success'] == true) {
+      if (!mounted) return;
       MessageService.showSuccess(context: context, message: context.l10n.registrationCompletedSuccessfully);
       
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/currency-selection');
       }
     } else {
+      if (!mounted) return;
       MessageService.showError(context: context, message: result['message'] ?? context.l10n.registrationFailed);
 
     }
   } catch (e) {
-   MessageService.showError(context: context, message: context.l10n.registrationFailed);
+    if (!mounted) return;
+    MessageService.showError(context: context, message: context.l10n.registrationFailed);
   } finally {
     setState(() {
       _isLoading = false;
@@ -124,7 +127,7 @@ Future<void> _onComplete() async {
             Text(
               context.l10n.enterYourDetails,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onBackground.withValues(alpha: 0.6),
                 height: 1.5,
               ),
             ),

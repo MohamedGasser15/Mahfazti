@@ -1,6 +1,7 @@
 // core/services/api_service.dart
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:my_wallet/core/constants/app_constants.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 
@@ -9,6 +10,9 @@ class ApiService {
   factory ApiService() => _instance;
   
   late Dio _dio;
+
+  @visibleForTesting
+  set dioForTesting(Dio value) => _dio = value;
   
   ApiService._internal() {
     _dio = Dio(BaseOptions(

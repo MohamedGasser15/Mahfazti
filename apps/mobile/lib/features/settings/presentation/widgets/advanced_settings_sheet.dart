@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
+import 'package:my_wallet/features/profile/presentation/screens/profile_edit_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AdvancedSettingsSheet extends StatefulWidget {
   const AdvancedSettingsSheet({super.key});
@@ -94,7 +96,10 @@ class _AdvancedSettingsSheetState extends State<AdvancedSettingsSheet> {
                                 icon: Icons.person_outline,
                                 isDarkMode: isDarkMode,
                                 onTap: () {
-                                  // TODO: Navigate to personal details
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => const ProfileEditScreen()),
+                                  );
                                 },
                               ),
                               _buildAdvancedItem(
@@ -160,16 +165,22 @@ class _AdvancedSettingsSheetState extends State<AdvancedSettingsSheet> {
                                 title: context.l10n.privacyPolicy,
                                 icon: Icons.privacy_tip_outlined,
                                 isDarkMode: isDarkMode,
-                                onTap: () {
-                                  // TODO: Open privacy policy
+                                onTap: () async {
+                                  final url = Uri.parse('https://yourwebsite.com/privacy');
+                                  if (await canLaunchUrl(url)) {
+                                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                                  }
                                 },
                               ),
                               _buildAdvancedItem(
                                 title: context.l10n.termsConditions,
                                 icon: Icons.description_outlined,
                                 isDarkMode: isDarkMode,
-                                onTap: () {
-                                  // TODO: Open terms & conditions
+                                onTap: () async {
+                                  final url = Uri.parse('https://yourwebsite.com/terms');
+                                  if (await canLaunchUrl(url)) {
+                                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                                  }
                                 },
                               ),
                             ],

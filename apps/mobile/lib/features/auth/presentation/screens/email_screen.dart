@@ -113,10 +113,11 @@ class _EmailScreenState extends State<EmailScreen> with SingleTickerProviderStat
       
       await _sendVerificationCode();
       
-      // استخدام MessageService بدلاً من SnackBar
+      if (!mounted) return;
       MessageService.showSuccess(context: context, message: context.l10n.verificationCodeSent(email));
     } catch (e) {
-     MessageService.showError(context: context, message: context.l10n.failedToSendCode);
+      if (!mounted) return;
+      MessageService.showError(context: context, message: context.l10n.failedToSendCode);
     } finally {
       setState(() {
         _isLoading = false;
@@ -139,6 +140,7 @@ class _EmailScreenState extends State<EmailScreen> with SingleTickerProviderStat
         ipAddress: _ipAddress,
       );
       
+      if (!mounted) return;
       Navigator.pushNamed(
         context,
         '/verification',
@@ -150,7 +152,7 @@ class _EmailScreenState extends State<EmailScreen> with SingleTickerProviderStat
         },
       );
     } catch (e) {
-      // استخدام MessageService هنا أيضاً
+      if (!mounted) return;
       MessageService.showError(context: context, message: context.l10n.failedToSendCode);
     }
   }
@@ -215,7 +217,7 @@ void _onLostAccess() {
                   Text(
                     context.l10n.enterYourEmailDescription,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
+                      color: Theme.of(context).colorScheme.onBackground.withValues(alpha: 0.6),
                       height: 1.5,
                     ),
                   ),
@@ -231,18 +233,18 @@ void _onLostAccess() {
                     decoration: InputDecoration(
                       hintText: context.l10n.email,
                       hintStyle: TextStyle(
-                        color: Theme.of(context).colorScheme.onBackground.withOpacity(0.4),
+                        color: Theme.of(context).colorScheme.onBackground.withValues(alpha: 0.4),
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
-                          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
-                          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
@@ -260,13 +262,13 @@ void _onLostAccess() {
                       ),
                       prefixIcon: Icon(
                         Icons.email_outlined,
-                        color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
+                        color: Theme.of(context).colorScheme.onBackground.withValues(alpha: 0.6),
                       ),
                       suffixIcon: _emailController.text.isNotEmpty
                           ? IconButton(
                               icon: Icon(
                                 Icons.clear,
-                                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.4),
+                                color: Theme.of(context).colorScheme.onBackground.withValues(alpha: 0.4),
                               ),
                               onPressed: () {
                                 _emailController.clear();
@@ -314,8 +316,8 @@ void _onLostAccess() {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                disabledBackgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.5),
-                disabledForegroundColor: Theme.of(context).colorScheme.onPrimary.withOpacity(0.5),
+                disabledBackgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                disabledForegroundColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.5),
                 minimumSize: const Size(double.infinity, 56),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -336,7 +338,7 @@ void _onLostAccess() {
                             height: 8 * _dotScales[index],
                             decoration: BoxDecoration(
                               color: Theme.of(context).colorScheme.onPrimary
-                                  .withOpacity(_dotOpacities[index]),
+                                  .withValues(alpha: _dotOpacities[index]),
                               shape: BoxShape.circle,
                             ),
                           );

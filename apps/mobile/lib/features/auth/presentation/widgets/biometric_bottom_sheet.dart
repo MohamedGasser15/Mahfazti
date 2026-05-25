@@ -24,6 +24,7 @@ class _BiometricBottomSheetState extends State<BiometricBottomSheet> {
 
     try {
       await BiometricService.enableBiometric();
+      if (!mounted) return;
       Navigator.pop(context, true);
     } catch (e) {
       setState(() {
@@ -64,7 +65,7 @@ class _BiometricBottomSheetState extends State<BiometricBottomSheet> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -77,7 +78,7 @@ class _BiometricBottomSheetState extends State<BiometricBottomSheet> {
             height: 80,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
             ),
             child: Icon(
               iconData,
@@ -103,7 +104,7 @@ class _BiometricBottomSheetState extends State<BiometricBottomSheet> {
           Text(
              context.l10n.biometricLoginDescription(widget.biometricName.toLowerCase()),
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
+              color: Theme.of(context).colorScheme.onBackground.withValues(alpha: 0.6),
             ),
             textAlign: TextAlign.center,
           ),

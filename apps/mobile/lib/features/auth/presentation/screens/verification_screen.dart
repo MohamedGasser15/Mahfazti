@@ -214,8 +214,10 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
       );
       _resetTimer();
       _clearCode();
-     MessageService.showSuccess(context: context, message: context.l10n.verificationCodeResentTo(widget.email));
+      if (!mounted) return;
+      MessageService.showSuccess(context: context, message: context.l10n.verificationCodeResentTo(widget.email));
     } catch (e) {
+      if (!mounted) return;
       MessageService.showError(context: context, message: context.l10n.failedToResend);
     } finally {
       setState(() {
@@ -279,7 +281,7 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withOpacity(0.1),
+                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(30),
                       ),
                       child: Row(
@@ -321,7 +323,7 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
                           ? context.l10n.enterCodeSentToEmailForLogin
                           : context.l10n.enterVerificationCodeSentToEmail,
                       style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.onBackground.withOpacity(0.6),
+                        color: theme.colorScheme.onBackground.withValues(alpha: 0.6),
                       ),
                     ),
                     Opacity(
@@ -366,9 +368,9 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
                           curve: Curves.easeInOut,
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.error.withOpacity(0.1),
+                            color: theme.colorScheme.error.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: theme.colorScheme.error.withOpacity(0.5)),
+                            border: Border.all(color: theme.colorScheme.error.withValues(alpha: 0.5)),
                           ),
                           child: Row(
                             children: [
@@ -397,17 +399,17 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
                               decoration: BoxDecoration(
                                 color: theme.colorScheme.surface,
                                 borderRadius: BorderRadius.circular(30),
-                                border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2)),
+                                border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.timer, size: 18, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                                  Icon(Icons.timer, size: 18, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                                   const SizedBox(width: 8),
                                   Text(
                                    context.l10n.resendIn(_formatCountdown(_countdown)),
                                     style: TextStyle(
-                                      color: theme.colorScheme.onSurface.withOpacity(0.8),
+                                      color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -483,7 +485,7 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
                 ? theme.colorScheme.error
                 : (isFilled
                     ? theme.colorScheme.primary
-                    : theme.colorScheme.outline.withOpacity(0.3)),
+                    : theme.colorScheme.outline.withValues(alpha: 0.3)),
             width: hasError ? 2 : (isFilled ? 2 : 1.5),
           ),
         ),
@@ -493,7 +495,7 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w700,
-              color: isFilled ? theme.colorScheme.onSurface : theme.colorScheme.onSurface.withOpacity(0.3),
+              color: isFilled ? theme.colorScheme.onSurface : theme.colorScheme.onSurface.withValues(alpha: 0.3),
             ),
           ),
         ),

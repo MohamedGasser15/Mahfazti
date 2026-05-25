@@ -201,7 +201,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                       hintText: l10n.email,
                       prefixIcon: Icon(
                         Icons.email_outlined,
-                        color: theme.colorScheme.primary.withOpacity(0.5),
+                        color: theme.colorScheme.primary.withValues(alpha: 0.5),
                       ),
                       enabled: false,
                     ),
@@ -210,9 +210,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.error.withOpacity(0.1),
+                          color: theme.colorScheme.error.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: theme.colorScheme.error.withOpacity(0.5)),
+                          border: Border.all(color: theme.colorScheme.error.withValues(alpha: 0.5)),
                         ),
                         child: Row(
                           children: [

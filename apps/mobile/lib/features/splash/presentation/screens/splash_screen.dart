@@ -164,13 +164,13 @@ class _SplashScreenState extends State<SplashScreen>
                             end: Alignment.bottomRight,
                             colors: [
                               theme.colorScheme.primary,
-                              theme.colorScheme.primary.withOpacity(0.8),
+                              theme.colorScheme.primary.withValues(alpha: 0.8),
                             ],
                           ),
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: theme.colorScheme.primary.withOpacity(0.5),
+                              color: theme.colorScheme.primary.withValues(alpha: 0.5),
                               blurRadius: 20,
                               spreadRadius: 2,
                               offset: const Offset(0, 8),
@@ -216,7 +216,7 @@ class _SplashScreenState extends State<SplashScreen>
                     child: Text(
                       context.l10n.manageYourMoneyEasily,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onBackground.withOpacity(0.6),
+                        color: theme.colorScheme.onBackground.withValues(alpha: 0.6),
                         letterSpacing: 0.5,
                       ),
                     ),

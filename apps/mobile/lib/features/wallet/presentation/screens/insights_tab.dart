@@ -497,7 +497,7 @@ void _applyData(
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.12),
+              color: iconColor.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: iconColor, size: 18),
@@ -554,7 +554,7 @@ void _applyData(
                 width: 28,
                 height: 28,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
+                  color: color.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -640,7 +640,7 @@ void _applyData(
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.12),
+              color: iconColor.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: iconColor, size: 22),
