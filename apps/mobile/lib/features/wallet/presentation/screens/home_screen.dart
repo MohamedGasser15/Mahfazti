@@ -45,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Positioned(
               left: 20,
               right: 20,
-              bottom: 15 + MediaQuery.of(context).padding.bottom,
+              bottom: 15 ,
               child: CNTabBar(
                 items: [
                   CNTabBarItem(
