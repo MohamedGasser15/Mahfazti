@@ -34,12 +34,12 @@ class _ChangePasscodeScreenState extends State<ChangePasscodeScreen> {
         confirmPassword: _confirmController.text,
       );
       if (mounted) {
-        MessageService.showSuccess(context.l10n.passcodeChangedSuccess);
+        MessageService.showSuccess(context: context, message: context.l10n.passcodeChangedSuccess);
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        MessageService.showError(e.toString());
+        MessageService.showError(context: context, message: e.toString());
       }
     } finally {
       setState(() => _isLoading = false);

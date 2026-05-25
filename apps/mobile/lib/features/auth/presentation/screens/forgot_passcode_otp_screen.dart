@@ -4,21 +4,18 @@ import 'package:flutter/services.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
+import 'package:my_wallet/features/auth/presentation/screens/reset_passcode_screen.dart';
 
-class RecoveryOtpScreen extends StatefulWidget {
-  final String emailOrUsername;
-  final String newEmail;
-  const RecoveryOtpScreen({
-    super.key,
-    required this.emailOrUsername,
-    required this.newEmail,
-  });
+class ForgotPasscodeOtpScreen extends StatefulWidget {
+  final String email;
+  const ForgotPasscodeOtpScreen({super.key, required this.email});
 
   @override
-  State<RecoveryOtpScreen> createState() => _RecoveryOtpScreenState();
+  State<ForgotPasscodeOtpScreen> createState() =>
+      _ForgotPasscodeOtpScreenState();
 }
 
-class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
+class _ForgotPasscodeOtpScreenState extends State<ForgotPasscodeOtpScreen>
     with TickerProviderStateMixin {
   late final TextEditingController _hiddenController;
   late final FocusNode _hiddenFocusNode;
@@ -26,6 +23,7 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
 
   String _code = '';
   bool _isLoading = false;
+  bool _isSending = true; // بيبعت الـ OTP في الأول تلقائياً
   String? _errorMessage;
   int _countdown = 60;
   Timer? _timer;
@@ -46,14 +44,11 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
     _shakeAnimation = Tween<double>(begin: 0, end: 10)
         .chain(CurveTween(curve: Curves.elasticIn))
         .animate(_shakeController)
-      ..addStatusListener((status) {
-        if (status == AnimationStatus.completed) _shakeController.reset();
+      ..addStatusListener((s) {
+        if (s == AnimationStatus.completed) _shakeController.reset();
       });
 
-    _startTimer();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _hiddenFocusNode.requestFocus();
-    });
+    _sendOtp();
   }
 
   @override
@@ -63,6 +58,31 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
     _shakeController.dispose();
     _timer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _sendOtp() async {
+    setState(() => _isSending = true);
+    try {
+      final result = await _authRepository.forgotPasscode(email: widget.email);
+      if (result['success'] == true) {
+        _startTimer();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _hiddenFocusNode.requestFocus();
+        });
+      } else {
+        if (mounted) {
+          MessageService.showError(context: context, message: result['message'] ?? 'Failed to send OTP');
+          Navigator.pop(context);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        MessageService.showError(context: context, message: 'Something went wrong');
+        Navigator.pop(context);
+      }
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
   }
 
   void _startTimer() {
@@ -84,38 +104,33 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
       _hiddenController.selection =
           TextSelection.fromPosition(TextPosition(offset: digits.length));
     }
-    setState(() { _code = digits; _errorMessage = null; });
+    setState(() {
+      _code = digits;
+      _errorMessage = null;
+    });
     if (digits.length == 6) _verify();
   }
 
   Future<void> _verify() async {
     _hiddenFocusNode.unfocus();
-    setState(() { _isLoading = true; _errorMessage = null; });
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-    try {
-      final result = await _authRepository.recoveryConfirmEmailChange(
-        emailOrUsername: widget.emailOrUsername,
-        newEmail: widget.newEmail,
-        otpCode: _code,
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    if (mounted) {
+      setState(() => _isLoading = false);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ResetPasscodeScreen(
+            otpCode: _code,
+            email: widget.email,
+          ),
+        ),
       );
-
-      if (result['success'] == true) {
-        if (mounted) {
-          Navigator.pushNamedAndRemoveUntil(
-            context, '/home', (route) => false,
-          );
-        }
-      } else {
-        setState(() => _errorMessage = result['message'] ?? context.l10n.invalidCode);
-        _shakeController.forward(from: 0.0);
-        _clearCode();
-      }
-    } catch (e) {
-      setState(() => _errorMessage = context.l10n.somethingWentWrong);
-      _shakeController.forward(from: 0.0);
-      _clearCode();
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -123,28 +138,6 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
     setState(() => _code = '');
     _hiddenController.clear();
     _hiddenFocusNode.requestFocus();
-  }
-
-  Future<void> _resend() async {
-    if (_countdown > 0) return;
-    setState(() => _isLoading = true);
-    try {
-      final result = await _authRepository.recoveryRequestEmailChange(
-        emailOrUsername: widget.emailOrUsername,
-        newEmail: widget.newEmail,
-      );
-      if (result['success'] == true) {
-        _startTimer();
-        _clearCode();
-        MessageService.showSuccess(context: context, message: context.l10n.codeResentTo(widget.newEmail));
-      } else {
-        MessageService.showError(context: context, message: result['message'] ?? context.l10n.failedToResend);
-      }
-    } catch (e) {
-      MessageService.showError(context: context, message: context.l10n.somethingWentWrong);
-    } finally {
-      setState(() => _isLoading = false);
-    }
   }
 
   String _formatCountdown(int s) {
@@ -160,14 +153,37 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
     final screenWidth = MediaQuery.of(context).size.width;
     final fieldWidth = ((screenWidth - 40 - 60) / 6).clamp(40.0, 56.0);
 
+    if (_isSending) {
+      return Scaffold(
+        backgroundColor: theme.colorScheme.background,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(color: theme.colorScheme.primary),
+              const SizedBox(height: 16),
+              Text(
+               context.l10n.sendingVerificationCode,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onBackground.withOpacity(0.6),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: theme.colorScheme.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(isRTL ? Icons.arrow_forward_ios : Icons.arrow_back_ios,
-              size: 20),
+          icon: Icon(
+            isRTL ? Icons.arrow_forward_ios : Icons.arrow_back_ios,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -179,54 +195,32 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Email chip
+                // Icon + Header
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 8),
+                  width: 64,
+                  height: 64,
                   decoration: BoxDecoration(
                     color: theme.colorScheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.email_outlined,
-                          size: 16, color: theme.colorScheme.primary),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          widget.newEmail,
-                          style: TextStyle(
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.w500,
-                            fontSize: 14,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
+                  child: Icon(Icons.lock_reset,
+                      size: 32, color: theme.colorScheme.primary),
                 ),
-
                 const SizedBox(height: 24),
-
                 Text(
-                  context.l10n.verifyNewEmail,
+                 context.l10n.resetPasscode,
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.w700,
-                    fontSize: 32,
+                    fontSize: 30,
                   ),
                 ),
-
                 const SizedBox(height: 8),
-
                 Text(
-                  context.l10n.verifyNewEmailDescription,
+                  context.l10n.enterCodeSentToEmail,
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: theme.colorScheme.onBackground.withOpacity(0.6),
                   ),
                 ),
-
                 const SizedBox(height: 32),
 
                 // Hidden input
@@ -244,60 +238,57 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
                   ),
                 ),
 
-                // OTP boxes
-                AnimatedBuilder(
-                  animation: _shakeAnimation,
-                  builder: (context, child) => Transform.translate(
-                    offset: Offset(_shakeAnimation.value, 0),
-                    child: child,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    textDirection: TextDirection.ltr,
-                    children: List.generate(6, (index) {
-                      final digit =
-                          _code.length > index ? _code[index] : '';
-                      final filled = digit.isNotEmpty;
-                      final hasError = _errorMessage != null;
+                // OTP Boxes
+// OTP Boxes
+AnimatedBuilder(
+  animation: _shakeAnimation,
+  builder: (context, child) => Transform.translate(
+    offset: Offset(_shakeAnimation.value, 0),
+    child: child,
+  ),
+  child: Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    textDirection: TextDirection.ltr, // 👈 إضافة هذا السطر
+    children: List.generate(6, (index) {
+      final digit = _code.length > index ? _code[index] : '';
+      final filled = digit.isNotEmpty;
+      final hasError = _errorMessage != null;
 
-                      return GestureDetector(
-                        onTap: () => _hiddenFocusNode.requestFocus(),
-                        child: Container(
-                          width: fieldWidth,
-                          height: 72,
-                          margin: EdgeInsets.only(left: index > 0 ? 10 : 0),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surface,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: hasError
-                                  ? theme.colorScheme.error
-                                  : filled
-                                      ? theme.colorScheme.primary
-                                      : theme.colorScheme.outline
-                                          .withOpacity(0.3),
-                              width: hasError || filled ? 2 : 1.5,
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              digit,
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                                color: filled
-                                    ? theme.colorScheme.onSurface
-                                    : theme.colorScheme.onSurface
-                                        .withOpacity(0.3),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ),
-
+      return GestureDetector(
+        onTap: () => _hiddenFocusNode.requestFocus(),
+        child: Container(
+          width: fieldWidth,
+          height: 72,
+          margin: EdgeInsets.only(left: index > 0 ? 10 : 0),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: hasError
+                  ? theme.colorScheme.error
+                  : filled
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.outline.withOpacity(0.3),
+              width: hasError || filled ? 2 : 1.5,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              digit,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: filled
+                    ? theme.colorScheme.onSurface
+                    : theme.colorScheme.onSurface.withOpacity(0.3),
+              ),
+            ),
+          ),
+        ),
+      );
+    }),
+  ),
+),
                 // Error
                 if (_errorMessage != null)
                   Padding(
@@ -320,7 +311,8 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
                           Expanded(
                             child: Text(
                               _errorMessage!,
-                              style: TextStyle(color: theme.colorScheme.error),
+                              style:
+                                  TextStyle(color: theme.colorScheme.error),
                             ),
                           ),
                         ],
@@ -336,7 +328,7 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
 
                 const Spacer(),
 
-                // Resend / Timer
+                // Timer / Resend
                 Center(
                   child: _countdown > 0
                       ? Container(
@@ -359,7 +351,7 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
                                       .withOpacity(0.6)),
                               const SizedBox(width: 8),
                               Text(
-                                context.l10n.resendIn(_formatCountdown(_countdown)),
+                               context.l10n.resendIn(_formatCountdown(_countdown)),
                                 style: TextStyle(
                                   color: theme.colorScheme.onSurface
                                       .withOpacity(0.8),
@@ -370,14 +362,14 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen>
                           ),
                         )
                       : TextButton(
-                          onPressed: _isLoading ? null : _resend,
+                          onPressed: _isSending ? null : _sendOtp,
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(Icons.refresh, size: 18),
                               const SizedBox(width: 8),
                               Text(
-                               context.l10n.resendCode,
+                                context.l10n.resendCode,
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 16,

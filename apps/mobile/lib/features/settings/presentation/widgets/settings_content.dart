@@ -277,10 +277,10 @@ onPressed: _isSubmitting
           this.setState(() => _currencyCode = tempSelected!);
           if (mounted) {
             Navigator.pop(context);
-            MessageService.showSuccess(context.l10n.currencySavedSuccess);
+            MessageService.showSuccess(context: context, message: context.l10n.currencySavedSuccess);
           }
         } catch (e) {
-          MessageService.showError(e.toString());
+          MessageService.showError(context: context, message: e.toString());
           setState(() => _isSubmitting = false);
         }
       },
@@ -1318,7 +1318,7 @@ Widget _buildSecuritySettings(bool isDarkMode) {
                         _biometricEnabled = true;
                       });
                     } else {
-                      MessageService.showError('Could not enable biometric authentication');
+                      MessageService.showError(context: context, message: 'Could not enable biometric authentication');
                     }
                   } else {
                     await BiometricService.disableBiometric();

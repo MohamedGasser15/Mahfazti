@@ -342,6 +342,12 @@
   "withdraw": "Withdraw",
   "withdrawalAddedSuccess": "Withdrawal added successfully!",
   "yesterday": "Yesterday",
+  "retry": "Retry",
+  "noInternet": "No Internet Connection",
+  "checkInternet": "Please check your internet connection and try again.",
+  "serverError": "Server Error",
+  "serverErrorDesc": "Something went wrong on our end. Please try again later.",
+  "errorOccurred": "An Error Occurred",
   "wallet": "WALLET",
   "insights": "INSIGHTS"
 }

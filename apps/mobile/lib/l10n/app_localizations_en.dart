@@ -1114,6 +1114,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get yesterday => 'Yesterday';
 
   @override
+  String get retry => 'Retry';
+
+  @override
+  String get noInternet => 'No Internet Connection';
+
+  @override
+  String get checkInternet =>
+      'Please check your internet connection and try again.';
+
+  @override
+  String get serverError => 'Server Error';
+
+  @override
+  String get serverErrorDesc =>
+      'Something went wrong on our end. Please try again later.';
+
+  @override
+  String get errorOccurred => 'An Error Occurred';
+
+  @override
   String get wallet => 'WALLET';
 
   @override

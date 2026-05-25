@@ -71,13 +71,13 @@ class _ForgotPasscodeOtpScreenState extends State<ForgotPasscodeOtpScreen>
         });
       } else {
         if (mounted) {
-          MessageService.showError(result['message'] ?? 'Failed to send OTP');
+          MessageService.showError(context: context, message: result['message'] ?? 'Failed to send OTP');
           Navigator.pop(context);
         }
       }
     } catch (e) {
       if (mounted) {
-        MessageService.showError('Something went wrong');
+        MessageService.showError(context: context, message: 'Something went wrong');
         Navigator.pop(context);
       }
     } finally {

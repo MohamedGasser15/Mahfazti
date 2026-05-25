@@ -111,7 +111,7 @@ class _HomeTabState extends State<HomeTab> {
     } catch (e) {
       final errorMsg = ApiErrorHandler.getErrorMessage(e);
       debugPrint('Error loading categories: $errorMsg');
-      MessageService.showError('${context.l10n.failedToLoadCategories}: $errorMsg');
+      MessageService.showError(context: context, message: '${context.l10n.failedToLoadCategories}: $errorMsg');
     } finally {
       setState(() => _isLoadingCategories = false);
     }
@@ -123,7 +123,7 @@ class _HomeTabState extends State<HomeTab> {
       return response.transactions;
     } catch (e) {
       final errorMsg = ApiErrorHandler.getErrorMessage(e);
-      MessageService.showError('${context.l10n.failedToLoadTransactions}: $errorMsg');
+      MessageService.showError(context: context, message: '${context.l10n.failedToLoadTransactions}: $errorMsg');
       return [];
     }
   }
@@ -178,7 +178,7 @@ class _HomeTabState extends State<HomeTab> {
         });
       }
       if (!ApiErrorHandler.isNetworkError(e)) {
-        MessageService.showError(errorMsg);
+        MessageService.showError(context: context, message: errorMsg);
       }
     }
   }
@@ -550,16 +550,16 @@ const SizedBox(height: 16),
                                     ? null
                                     : () async {
                                         if (amountController.text.isEmpty) {
-                                          MessageService.showError(context.l10n.enterAmount);
+                                          MessageService.showError(context: context, message: context.l10n.enterAmount);
                                           return;
                                         }
                                         final amount = double.tryParse(amountController.text);
                                         if (amount == null || amount <= 0) {
-                                          MessageService.showError(context.l10n.enterValidAmount);
+                                          MessageService.showError(context: context, message: context.l10n.enterValidAmount);
                                           return;
                                         }
                                         if (selectedCategoryId == null) {
-                                          MessageService.showError(context.l10n.selectCategory);
+                                          MessageService.showError(context: context, message: context.l10n.selectCategory);
                                           return;
                                         }
 
@@ -575,13 +575,13 @@ const SizedBox(height: 16),
                                           );
                                           shouldPop = true;
                                           await _loadHomeData();
-                                          MessageService.showSuccess(
+                                          MessageService.showSuccess(context: context, message: 
                                             isIncome
                                                 ? context.l10n.depositAddedSuccess
                                                 : context.l10n.withdrawalAddedSuccess,
                                           );
                                         } catch (e) {
-                                          MessageService.showError(e.toString());
+                                          MessageService.showError(context: context, message: e.toString());
                                         } finally {
                                           if (shouldPop) {
                                             Navigator.pop(context);
@@ -880,16 +880,16 @@ const SizedBox(height: 16),
                                     ? null
                                     : () async {
                                         if (amountController.text.isEmpty) {
-                                          MessageService.showError(context.l10n.enterAmount);
+                                          MessageService.showError(context: context, message: context.l10n.enterAmount);
                                           return;
                                         }
                                         final amount = double.tryParse(amountController.text);
                                         if (amount == null || amount <= 0) {
-                                          MessageService.showError(context.l10n.enterValidAmount);
+                                          MessageService.showError(context: context, message: context.l10n.enterValidAmount);
                                           return;
                                         }
                                         if (selectedCategoryId == null) {
-                                          MessageService.showError(context.l10n.selectCategory);
+                                          MessageService.showError(context: context, message: context.l10n.selectCategory);
                                           return;
                                         }
 
@@ -911,9 +911,9 @@ const SizedBox(height: 16),
                                           );
                                           shouldPop = true;
                                           await _loadHomeData();
-                                          MessageService.showSuccess(context.l10n.transactionUpdatedSuccess);
+                                          MessageService.showSuccess(context: context, message: context.l10n.transactionUpdatedSuccess);
                                         } catch (e) {
-                                          MessageService.showError(e.toString());
+                                          MessageService.showError(context: context, message: e.toString());
                                         } finally {
                                           if (shouldPop) {
                                             Navigator.pop(context);
@@ -1007,12 +1007,12 @@ const SizedBox(height: 16),
 
       if (success) {
         await _loadHomeData();
-        MessageService.showSuccess(context.l10n.transactionDeletedSuccess);
+        MessageService.showSuccess(context: context, message: context.l10n.transactionDeletedSuccess);
       } else {
-        MessageService.showError(context.l10n.failedToDeleteTransaction);
+        MessageService.showError(context: context, message: context.l10n.failedToDeleteTransaction);
       }
     } catch (e) {
-      MessageService.showError(context.l10n.errorDeletingTransaction(e.toString()));
+      MessageService.showError(context: context, message: context.l10n.errorDeletingTransaction(e.toString()));
     }
   }
 
@@ -1040,9 +1040,9 @@ const SizedBox(height: 16),
         recurringEndDate: recurringEndDate,
       );
       await _loadHomeData();
-      MessageService.showSuccess(context.l10n.transactionUpdatedSuccess);
+      MessageService.showSuccess(context: context, message: context.l10n.transactionUpdatedSuccess);
     } catch (e) {
-      MessageService.showError('${context.l10n.failedToUpdateTransaction}: ${e.toString()}');
+      MessageService.showError(context: context, message: '${context.l10n.failedToUpdateTransaction}: ${e.toString()}');
     }
   }
   //#endregion
@@ -2205,7 +2205,8 @@ const SizedBox(height: 16),
                     _showAddTransactionDialog(type, prefillFromVoice: result);
                   } else {
                     MessageService.showError(
-                        result.errorMessage ?? context.l10n.voiceAnalysisFailed);
+                        context: context,
+                        message: result.errorMessage ?? context.l10n.voiceAnalysisFailed);
                   }
                 },
               ),

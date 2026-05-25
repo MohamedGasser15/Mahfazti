@@ -9,7 +9,8 @@ import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:intl/intl.dart';
-import 'package:shimmer/shimmer.dart';
+import 'package:my_wallet/core/widgets/app_shimmer.dart';
+import 'package:my_wallet/core/widgets/app_states.dart';
 
 class TransactionsTab extends StatefulWidget {
   const TransactionsTab({super.key});
@@ -437,170 +438,22 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
 
   // ==================  Shimmer Skeleton ==================
 
-  Widget _buildShimmerAppBar(bool isDarkMode) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 8, right: 20, left: 20, bottom: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            width: 100,
-            height: 40,
-            decoration: BoxDecoration(
-              color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-              borderRadius: BorderRadius.circular(30),
-            ),
-          ),
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildShimmerSearchBar(bool isDarkMode) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Container(
-        height: 50,
-        decoration: BoxDecoration(
-          color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-          borderRadius: BorderRadius.circular(16),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildShimmerFilterChips(bool isDarkMode) {
-    return Container(
-      height: 50,
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Row(
-        children: List.generate(3, (index) {
-          return Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Container(
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-
-  Widget _buildShimmerTransactionCard(bool isDarkMode) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 120,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  width: 80,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Container(
-                width: 60,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                width: 40,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildShimmerLoading() {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    return Shimmer.fromColors(
-      baseColor: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
-      highlightColor: isDarkMode ? Colors.grey[700]! : Colors.grey[100]!,
+    return AppShimmer(
       child: SingleChildScrollView(
         physics: const NeverScrollableScrollPhysics(),
-        child: Column(
+        child: const Column(
           children: [
-            _buildShimmerAppBar(isDarkMode),
-            _buildShimmerSearchBar(isDarkMode),
-            _buildShimmerFilterChips(isDarkMode),
-            const SizedBox(height: 8),
-            ...List.generate(6, (index) => _buildShimmerTransactionCard(isDarkMode)),
+            _ShimmerAppBar(),
+            _ShimmerSearchBar(),
+            _ShimmerFilterChips(),
+            SizedBox(height: 8),
+            _ShimmerTransactionCard(),
+            _ShimmerTransactionCard(),
+            _ShimmerTransactionCard(),
+            _ShimmerTransactionCard(),
+            _ShimmerTransactionCard(),
+            _ShimmerTransactionCard(),
           ],
         ),
       ),
@@ -795,79 +648,15 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
   }
 
   Widget _buildErrorState() {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 72, color: isDarkMode ? Colors.white70 : Colors.black54),
-            const SizedBox(height: 16),
-            Text(
-              _errorMessage!,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54, fontSize: 16),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _refreshData,
-              icon: const Icon(Icons.refresh),
-              label: Text(context.l10n.tryAgain),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isDarkMode ? Colors.white : Colors.black,
-                foregroundColor: isDarkMode ? Colors.black : Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return AppErrorState(
+      message: _errorMessage!,
+      onRetry: _refreshData,
     );
   }
 
   Widget _buildEmptyState(bool isDarkMode) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.receipt_long_outlined,
-            size: 96,
-            color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            _searchQuery.isNotEmpty
-                ? context.l10n.noMatchingTransactions
-                : context.l10n.noTransactions,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _searchQuery.isNotEmpty
-                ? context.l10n.tryAdjustingYourSearch
-                : context.l10n.addYourFirstTransaction,
-            style: TextStyle(
-              color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
-              fontSize: 14,
-            ),
-          ),
-          if (_searchQuery.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: TextButton.icon(
-                onPressed: _clearSearch,
-                icon: Icon(Icons.clear, color: isDarkMode ? Colors.white70 : Colors.black54),
-                label: Text(context.l10n.clearSearch, style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54)),
-              ),
-            ),
-        ],
-      ),
+    return AppEmptyState(
+      message: context.l10n.noTransactions,
     );
   }
 
@@ -1088,5 +877,99 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
     } else {
       return '${date.day}/${date.month}/${date.year}';
     }
+  }
+}
+
+// ── Shimmer skeleton widgets ────────────────────────────────────────────
+
+class _ShimmerAppBar extends StatelessWidget {
+  const _ShimmerAppBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.only(top: 8, right: 20, left: 20, bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          SkeletonBox(width: 100, height: 40, borderRadius: 30),
+          Row(
+            children: [
+              SkeletonBox(width: 40, height: 40, shape: BoxShape.circle),
+              SizedBox(width: 8),
+              SkeletonBox(width: 40, height: 40, shape: BoxShape.circle),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ShimmerSearchBar extends StatelessWidget {
+  const _ShimmerSearchBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: SkeletonBox(height: 50, borderRadius: 16),
+    );
+  }
+}
+
+class _ShimmerFilterChips extends StatelessWidget {
+  const _ShimmerFilterChips();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Row(
+        children: List.generate(3, (index) {
+          return const Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: SkeletonBox(height: 40, borderRadius: 30),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+class _ShimmerTransactionCard extends StatelessWidget {
+  const _ShimmerTransactionCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      child: Row(
+        children: [
+          SkeletonBox(width: 40, height: 40, shape: BoxShape.circle),
+          SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonBox(width: 120, height: 16, borderRadius: 4),
+                SizedBox(height: 8),
+                SkeletonBox(width: 80, height: 12, borderRadius: 4),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              SkeletonBox(width: 60, height: 16, borderRadius: 4),
+              SizedBox(height: 4),
+              SkeletonBox(width: 40, height: 12, borderRadius: 4),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }

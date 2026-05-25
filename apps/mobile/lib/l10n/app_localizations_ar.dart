@@ -1109,6 +1109,25 @@ class AppLocalizationsAr extends AppLocalizations {
   String get yesterday => 'أمس';
 
   @override
+  String get retry => 'إعادة المحاولة';
+
+  @override
+  String get noInternet => 'لا يوجد اتصال بالإنترنت';
+
+  @override
+  String get checkInternet =>
+      'يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.';
+
+  @override
+  String get serverError => 'خطأ في الخادم';
+
+  @override
+  String get serverErrorDesc => 'حدث خطأ من جانبنا. يرجى المحاولة لاحقاً.';
+
+  @override
+  String get errorOccurred => 'حدث خطأ';
+
+  @override
   String get wallet => 'المحفظة';
 
   @override

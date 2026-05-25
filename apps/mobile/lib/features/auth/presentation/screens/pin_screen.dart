@@ -89,7 +89,7 @@ class _PinScreenState extends State<PinScreen>
     } else {
       setState(() => _biometricFailed = true);
       // استخدام MessageService بدلاً من SnackBar
-      MessageService.showWarning('${_biometricName} ${context.l10n.failed}');
+      MessageService.showWarning(context: context, message: '${_biometricName} ${context.l10n.failed}');
     }
   }
 

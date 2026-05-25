@@ -68,7 +68,7 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
 
   Future<void> _saveCurrency() async {
     if (_selectedCurrency == null) {
-      MessageService.showWarning(context.l10n.selectCurrencyWarning);
+      MessageService.showWarning(context: context, message: context.l10n.selectCurrencyWarning);
       return;
     }
 
@@ -82,7 +82,7 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
       await SharedPrefs.setCurrency(_selectedCurrency!);
 
       if (mounted) {
-        MessageService.showSuccess(context.l10n.currencySavedSuccess);
+        MessageService.showSuccess(context: context, message: context.l10n.currencySavedSuccess);
       }
 
       await Future.delayed(const Duration(milliseconds: 500));
@@ -95,7 +95,7 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
         );
       }
     } catch (e) {
-      MessageService.showError('${context.l10n.failedToSaveCurrency}: ${e.toString()}');
+      MessageService.showError(context: context, message: '${context.l10n.failedToSaveCurrency}: ${e.toString()}');
     } finally {
       setState(() => _isLoading = false);
     }

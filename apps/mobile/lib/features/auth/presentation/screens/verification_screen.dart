@@ -214,9 +214,9 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
       );
       _resetTimer();
       _clearCode();
-     MessageService.showSuccess(context.l10n.verificationCodeResentTo(widget.email));
+     MessageService.showSuccess(context: context, message: context.l10n.verificationCodeResentTo(widget.email));
     } catch (e) {
-      MessageService.showError(context.l10n.failedToResend);
+      MessageService.showError(context: context, message: context.l10n.failedToResend);
     } finally {
       setState(() {
         _isLoading = false;

@@ -41,7 +41,7 @@ Future<void> _onComplete() async {
   if (_fullNameController.text.isEmpty ||
       _userNameController.text.isEmpty ||
       _phoneNumberController.text.isEmpty) {
-    MessageService.showError(context.l10n.pleaseFillAllFields);
+MessageService.showError(context: context, message: context.l10n.pleaseFillAllFields);
     return;
   }
   
@@ -60,17 +60,17 @@ Future<void> _onComplete() async {
     );
     
     if (result['success'] == true) {
-      MessageService.showSuccess(context.l10n.registrationCompletedSuccessfully);
+      MessageService.showSuccess(context: context, message: context.l10n.registrationCompletedSuccessfully);
       
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/currency-selection');
       }
     } else {
-      MessageService.showError(result['message'] ?? context.l10n.registrationFailed);
+      MessageService.showError(context: context, message: result['message'] ?? context.l10n.registrationFailed);
 
     }
   } catch (e) {
-   MessageService.showError(context.l10n.failedWithDetails(e.toString()));
+    MessageService.showError(context: context, message: context.l10n.failedWithDetails(e.toString()));
   } finally {
     setState(() {
       _isLoading = false;

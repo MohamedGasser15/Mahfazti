@@ -341,6 +341,12 @@
   "withdraw": "سحب",
   "withdrawalAddedSuccess": "تم إضافة السحب بنجاح!",
   "yesterday": "أمس",
+  "retry": "إعادة المحاولة",
+  "noInternet": "لا يوجد اتصال بالإنترنت",
+  "checkInternet": "يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.",
+  "serverError": "خطأ في الخادم",
+  "serverErrorDesc": "حدث خطأ من جانبنا. يرجى المحاولة لاحقاً.",
+  "errorOccurred": "حدث خطأ",
   "wallet": "المحفظة",
   "insights": "الإحصائيات"
 }
