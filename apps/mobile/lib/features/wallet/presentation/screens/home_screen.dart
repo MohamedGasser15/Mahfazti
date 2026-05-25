@@ -27,7 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      extendBody: true,
+      extendBody: isIOS,
       bottomNavigationBar: isIOS ? null : _buildAndroidBottomNav(context, isDarkMode),
       body: Stack(
         children: [
@@ -45,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Positioned(
               left: 20,
               right: 20,
-              bottom: 15,
+              bottom: 15 + MediaQuery.of(context).padding.bottom,
               child: CNTabBar(
                 items: [
                   CNTabBarItem(
