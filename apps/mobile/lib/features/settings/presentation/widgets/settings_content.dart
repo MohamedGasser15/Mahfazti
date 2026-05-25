@@ -423,21 +423,11 @@ Future<void> _loadSettings() async {
   }
 
   void _showErrorSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
-    );
+    MessageService.showError(context: context, message: message);
   }
 
   void _showComingSoonSnackbar() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(context.l10n.featureComingSoon),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    MessageService.showInfo(context: context, message: context.l10n.featureComingSoon);
   }
 
   Widget _buildLanguageSelector() {

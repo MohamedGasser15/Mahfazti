@@ -1,7 +1,8 @@
 // features/settings/presentation/widgets/authentication_settings_bottom_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:my_wallet/core/services/biometric_service.dart';
-import 'package:my_wallet/core/extensions/context_extensions.dart'; // لإتاحة context.l10n
+import 'package:my_wallet/core/services/message_service.dart';
+import 'package:my_wallet/core/extensions/context_extensions.dart';
 
 class AuthenticationSettingsBottomSheet extends StatefulWidget {
   const AuthenticationSettingsBottomSheet({super.key});
@@ -46,39 +47,19 @@ class _AuthenticationSettingsBottomSheetState
           setState(() {
             _biometricEnabled = true;
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(context.l10n.biometricEnabledSuccess),
-              backgroundColor: Colors.green,
-            ),
-          );
+          MessageService.showSuccess(context: context, message: context.l10n.biometricEnabledSuccess);
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(context.l10n.biometricAuthenticationFailed),
-              backgroundColor: Colors.red,
-            ),
-          );
+          MessageService.showError(context: context, message: context.l10n.biometricAuthenticationFailed);
         }
       } else {
         await BiometricService.disableBiometric();
         setState(() {
           _biometricEnabled = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.biometricDisabledSuccess),
-            backgroundColor: Colors.orange,
-          ),
-        );
+        MessageService.showWarning(context: context, message: context.l10n.biometricDisabledSuccess);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.errorWithDetails(e.toString())),
-          backgroundColor: Colors.red,
-        ),
-      );
+      MessageService.showError(context: context, message: context.l10n.errorWithDetails(e.toString()));
     } finally {
       setState(() {
         _isLoading = false;
