@@ -2,7 +2,6 @@ part of '../screens/home_tab.dart';
 
 mixin _HomeTabDialogs on _HomeTabState {
   //#region Dialog Helpers (Add / Edit / Delete)
-  @override
   void _showAddTransactionDialog(
     TransactionType type, {
     VoiceExpenseResult? prefillFromVoice,
@@ -741,7 +740,6 @@ const SizedBox(height: 16),
     );
   }
 
-  @override
   void _showDeleteConfirmationDialog(WalletTransaction transaction) {
     showDialog(
       context: context,
@@ -790,7 +788,6 @@ const SizedBox(height: 16),
   //#endregion
 
   //#region All Transactions Modal
-  @override
   void _showAllTransactionsModal(List<WalletTransaction> transactions) {
     showModalBottomSheet(
       context: context,
