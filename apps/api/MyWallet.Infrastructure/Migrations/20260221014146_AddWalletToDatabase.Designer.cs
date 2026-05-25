@@ -128,7 +128,7 @@ namespace MyWallet.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("MyWallet.Infrastructure.Entities.WalletTransaction", b =>
+            modelBuilder.Entity("MyWallet.Core.Entities.WalletTransaction", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()

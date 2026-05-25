@@ -128,7 +128,7 @@ namespace MyWallet.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("MyWallet.Domain.Entites.Category", b =>
+            modelBuilder.Entity("MyWallet.Core.Entities.Category", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -155,7 +155,7 @@ namespace MyWallet.Infrastructure.Migrations
                     b.ToTable("Categories");
                 });
 
-            modelBuilder.Entity("MyWallet.Domain.Entites.CategoryBudget", b =>
+            modelBuilder.Entity("MyWallet.Core.Entities.CategoryBudget", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -181,7 +181,7 @@ namespace MyWallet.Infrastructure.Migrations
                     b.ToTable("CategoryBudgets");
                 });
 
-            modelBuilder.Entity("MyWallet.Domain.Entites.UserBudget", b =>
+            modelBuilder.Entity("MyWallet.Core.Entities.UserBudget", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -213,7 +213,7 @@ namespace MyWallet.Infrastructure.Migrations
                     b.ToTable("UserBudgets");
                 });
 
-            modelBuilder.Entity("MyWallet.Infrastructure.Entities.WalletTransaction", b =>
+            modelBuilder.Entity("MyWallet.Core.Entities.WalletTransaction", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -443,15 +443,15 @@ namespace MyWallet.Infrastructure.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("MyWallet.Domain.Entites.CategoryBudget", b =>
+            modelBuilder.Entity("MyWallet.Core.Entities.CategoryBudget", b =>
                 {
-                    b.HasOne("MyWallet.Domain.Entites.Category", "Category")
+                    b.HasOne("MyWallet.Core.Entities.Category", "Category")
                         .WithMany()
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("MyWallet.Domain.Entites.UserBudget", "UserBudget")
+                    b.HasOne("MyWallet.Core.Entities.UserBudget", "UserBudget")
                         .WithMany()
                         .HasForeignKey("UserBudgetId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -462,9 +462,9 @@ namespace MyWallet.Infrastructure.Migrations
                     b.Navigation("UserBudget");
                 });
 
-            modelBuilder.Entity("MyWallet.Infrastructure.Entities.WalletTransaction", b =>
+            modelBuilder.Entity("MyWallet.Core.Entities.WalletTransaction", b =>
                 {
-                    b.HasOne("MyWallet.Domain.Entites.Category", "Category")
+                    b.HasOne("MyWallet.Core.Entities.Category", "Category")
                         .WithMany("Transactions")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.SetNull);
@@ -472,7 +472,7 @@ namespace MyWallet.Infrastructure.Migrations
                     b.Navigation("Category");
                 });
 
-            modelBuilder.Entity("MyWallet.Domain.Entites.Category", b =>
+            modelBuilder.Entity("MyWallet.Core.Entities.Category", b =>
                 {
                     b.Navigation("Transactions");
                 });

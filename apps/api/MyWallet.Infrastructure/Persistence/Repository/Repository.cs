@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MyWallet.Infrastructure.Data;
-using MyWallet.Infrastructure.Persistence.IRepository;
+using MyWallet.Core.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;

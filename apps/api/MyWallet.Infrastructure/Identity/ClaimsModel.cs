@@ -1,5 +1,5 @@
 ﻿
-using MyWallet.Domain.Entites;
+using MyWallet.Core.Entities;
 
 namespace MyWallet.Infrastructure.Identity
 {

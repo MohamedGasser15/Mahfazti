@@ -1,8 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using MyWallet.Domain.Entites;
-using MyWallet.Infrastructure.Entities;
-using MyWallet.Infrastructure.Identity;
+using MyWallet.Core.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;

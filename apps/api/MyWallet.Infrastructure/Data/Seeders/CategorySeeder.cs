@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using MyWallet.Domain.Entites;
+using MyWallet.Core.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;

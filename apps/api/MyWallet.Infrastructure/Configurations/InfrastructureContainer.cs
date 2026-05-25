@@ -1,7 +1,7 @@
 ﻿
 
 using Microsoft.Extensions.DependencyInjection;
-using MyWallet.Infrastructure.Persistence.IRepository;
+using MyWallet.Core.Interfaces;
 using MyWallet.Infrastructure.Persistence.Repository;
 
 namespace MyWallet.Infrastructure.Configurations
