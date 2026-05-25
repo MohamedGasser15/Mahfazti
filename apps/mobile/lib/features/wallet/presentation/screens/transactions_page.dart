@@ -7,6 +7,7 @@ import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/services/wallet_cache_service.dart';
 import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
+import 'package:my_wallet/core/constants/currency_constants.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:intl/intl.dart';
 import 'package:my_wallet/core/widgets/app_shimmer.dart';
@@ -38,19 +39,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
   DateTime? _fromDate;
   DateTime? _toDate;
 
-  // متغيرات العملة
   String? _currencyCode;
-  bool _currencyLoaded = false;
-
-  // خريطة رموز العملات
-  static const Map<String, String> currencySymbols = {
-    'USD': '\$',
-    'EUR': '€',
-    'EGP': 'E£',
-    'SAR': '﷼',
-    'AED': 'د.إ',
-    'KWD': 'د.ك',
-  };
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -89,8 +78,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
     final code = await SharedPrefs.getCurrency();
     if (mounted) {
       setState(() {
-        _currencyCode = code ?? 'USD';
-        _currencyLoaded = true;
+      _currencyCode = code ?? 'USD';
       });
     }
   }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/wallet_cache_service.dart';
+import 'package:my_wallet/core/constants/currency_constants.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
 import 'package:shimmer/shimmer.dart';
@@ -28,15 +29,6 @@ class _InsightsPageState extends State<InsightsPage> {
   String _highestTransactionCategory = '';
 
   double _lastMonthExpenses = 0;
-
-  static const Map<String, String> currencySymbols = {
-    'USD': '\$',
-    'EUR': '€',
-    'EGP': 'E£',
-    'SAR': '﷼',
-    'AED': 'د.إ',
-    'KWD': 'د.ك',
-  };
 
   @override
   void initState() {

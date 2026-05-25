@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:my_wallet/core/constants/api_constants.dart';
 import 'package:my_wallet/core/services/api_service.dart';
 import 'package:my_wallet/features/wallet/data/models/category_model.dart';
 

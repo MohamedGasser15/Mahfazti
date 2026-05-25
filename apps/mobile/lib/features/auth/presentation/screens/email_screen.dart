@@ -6,7 +6,7 @@ import 'package:my_wallet/core/services/device_info_service.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 import 'package:my_wallet/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:my_wallet/core/services/message_service.dart'; // إضافة import
-import 'package:my_wallet/core/enums/message_type.dart'; // إضافة import
+
 
 class EmailScreen extends StatefulWidget {
   const EmailScreen({super.key});
@@ -27,7 +27,6 @@ class _EmailScreenState extends State<EmailScreen> with SingleTickerProviderStat
   String? _ipAddress;
   
   late AnimationController _waveController;
-  late Animation<double> _waveAnimation;
   final List<double> _dotScales = [1.0, 1.0, 1.0];
   final List<double> _dotOpacities = [0.5, 0.5, 0.5];
   
@@ -40,13 +39,6 @@ class _EmailScreenState extends State<EmailScreen> with SingleTickerProviderStat
     _waveController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
-    );
-    
-    _waveAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _waveController,
-        curve: Curves.easeInOut,
-      ),
     );
   }
   
@@ -124,7 +116,7 @@ class _EmailScreenState extends State<EmailScreen> with SingleTickerProviderStat
       // استخدام MessageService بدلاً من SnackBar
       MessageService.showSuccess(context: context, message: context.l10n.verificationCodeSent(email));
     } catch (e) {
-     MessageService.showError(context: context, message: context.l10n.errorWithDetails(e.toString()));
+     MessageService.showError(context: context, message: context.l10n.failedToSendCode);
     } finally {
       setState(() {
         _isLoading = false;

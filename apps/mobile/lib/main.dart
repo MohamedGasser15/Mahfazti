@@ -62,9 +62,6 @@ class _MyWalletAppState extends State<MyWalletApp> {
     _loadInitialLocale();
     
     LanguageService.localeNotifier.addListener(_onLocaleChanged);
-    ThemeService.themeNotifier.addListener(() {
-      if (mounted) setState(() {});
-    });
   }
   
   Future<void> _loadInitialLocale() async {

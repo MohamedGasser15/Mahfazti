@@ -4,7 +4,6 @@ import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
-import 'package:my_wallet/features/wallet/presentation/screens/home_screen.dart';
 
 enum _ResetStep { enterNew, confirm }
 

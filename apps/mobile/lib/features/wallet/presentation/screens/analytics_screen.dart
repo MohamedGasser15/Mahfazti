@@ -5,6 +5,7 @@ import 'package:my_wallet/core/services/wallet_cache_service.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
 import 'package:intl/intl.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
+import 'package:my_wallet/core/constants/currency_constants.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -29,18 +30,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   ChartType _incomeChartType = ChartType.line;
 
   String? _currencyCode;
-  bool _currencyLoaded = false;
-
-  static const Map<String, String> currencySymbols = {
-    'USD': '\$',
-    'EUR': '€',
-    'EGP': 'E£',
-    'SAR': '﷼',
-    'AED': 'د.إ',
-    'KWD': 'د.ك',
-  };
-
-  final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
 
   @override
   void initState() {
@@ -53,7 +42,6 @@ Future<void> _loadCurrency() async {
   if (mounted) {
     setState(() {
       _currencyCode = code ?? 'USD';
-      _currencyLoaded = true;
     });
     _loadSummary();
   }
@@ -323,9 +311,6 @@ Future<void> _fetchFromApi({bool silent = false, BuildContext? context}) async {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDarkMode ? Colors.white : Colors.black;
-    final cardColor = isDarkMode ? Colors.grey[900]! : Colors.grey[50]!;
-    final borderColor = isDarkMode ? Colors.grey[800]! : Colors.grey[200]!;
 
     return Scaffold(
       appBar: AppBar(

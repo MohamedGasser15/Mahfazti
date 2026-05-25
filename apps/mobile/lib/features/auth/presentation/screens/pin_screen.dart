@@ -77,7 +77,9 @@ class _PinScreenState extends State<PinScreen>
         !widget.isFirstTime &&
         widget.showBiometricFirst &&
         !_biometricFailed) {
-      await Future.delayed(const Duration(milliseconds: 300));
+      await _pulseController.status == AnimationStatus.completed
+          ? Future.value()
+          : Future.delayed(const Duration(milliseconds: 300));
       _authenticateWithBiometric();
     }
   }
@@ -124,8 +126,6 @@ class _PinScreenState extends State<PinScreen>
   Future<void> _verifyPin() async {
     setState(() => _isLoading = true);
 
-    // محاكاة تحقق (يتم استبدالها بالتحقق الفعلي)
-    await Future.delayed(const Duration(milliseconds: 600));
     final stored = await SharedPrefs.getStringValue('user_password');
     final entered = _pinDigits.join();
 

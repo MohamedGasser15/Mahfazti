@@ -70,7 +70,7 @@ Future<void> _onComplete() async {
 
     }
   } catch (e) {
-   MessageService.showError(context: context, message: context.l10n.failedWithDetails(e.toString()));
+   MessageService.showError(context: context, message: context.l10n.registrationFailed);
   } finally {
     setState(() {
       _isLoading = false;

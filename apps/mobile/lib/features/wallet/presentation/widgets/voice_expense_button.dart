@@ -93,7 +93,7 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
       listenFor: const Duration(seconds: 10),
       pauseFor: const Duration(seconds: 3),
       partialResults: true,
-      cancelOnError: true,
+      cancelOnError: true, // TODO: Use SpeechListenOptions.cancelOnError
     );
   }
 

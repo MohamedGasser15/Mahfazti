@@ -134,12 +134,6 @@ class _ForgotPasscodeOtpScreenState extends State<ForgotPasscodeOtpScreen>
     }
   }
 
-  void _clearCode() {
-    setState(() => _code = '');
-    _hiddenController.clear();
-    _hiddenFocusNode.requestFocus();
-  }
-
   String _formatCountdown(int s) {
     final m = s ~/ 60;
     final r = s % 60;

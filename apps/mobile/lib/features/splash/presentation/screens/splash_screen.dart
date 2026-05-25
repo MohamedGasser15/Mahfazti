@@ -29,7 +29,11 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
     _initAnimations();
-    _checkAuthStatus();
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        _checkAuthStatus();
+      }
+    });
   }
   
   void _initAnimations() {
@@ -100,11 +104,6 @@ class _SplashScreenState extends State<SplashScreen>
   }
   
   Future<void> _checkAuthStatus() async {
-    await SharedPrefs.init();
-    
-    // Wait for animations to complete (2 seconds)
-    await Future.delayed(const Duration(seconds: 2));
-    
     final token = SharedPrefs.authToken;
     
     if (token == null || token.isEmpty) {
@@ -139,7 +138,6 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     
     return Scaffold(
       backgroundColor: theme.colorScheme.background,

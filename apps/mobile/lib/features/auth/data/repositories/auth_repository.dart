@@ -23,8 +23,8 @@ Future<Map<String, dynamic>> sendVerification({
       },
     );
     final data = _apiService.handleResponse(response);
-    await SharedPrefs.setString('temp_email', email);
-    await SharedPrefs.setBool('temp_is_login', isLogin);
+    await SharedPrefs.setSecureString('temp_email', email);
+    await SharedPrefs.setSecureString('temp_is_login', isLogin.toString());
     return data;
   } catch (e) {
     rethrow;
@@ -49,9 +49,9 @@ Future<Map<String, dynamic>> sendVerification({
       
       // إذا نجح التحقق، نخزن البيانات
       if (data['success'] == true) {
-        await SharedPrefs.setString('verified_email', email);
-        await SharedPrefs.setString('verified_code', verificationCode);
-        await SharedPrefs.setBool('is_code_verified', true);
+        await SharedPrefs.setSecureString('verified_email', email);
+        await SharedPrefs.setSecureString('verified_code', verificationCode);
+        await SharedPrefs.setSecureString('is_code_verified', 'true');
       }
       
       return data;
@@ -194,7 +194,7 @@ Future<Map<String, dynamic>> recoveryConfirmEmailChange({
       
 if (data['success'] == true && data['token'] != null) {
   await SharedPrefs.setAuthToken(data['token']);
-  await SharedPrefs.setString('user_email', email);
+        await SharedPrefs.setSecureString('user_email', email);
   await SharedPrefs.setUserData(jsonEncode({
     'email': email,
     'fullName': fullName,
@@ -218,8 +218,8 @@ if (data['success'] == true && data['token'] != null) {
   }) async {
     try {
       // تأكد من أن الكود تم التحقق منه أولاً
-      final isVerified = SharedPrefs.getBoolValue('is_code_verified') ?? false;
-      if (!isVerified) {
+      final isVerified = await SharedPrefs.getSecureString('is_code_verified');
+      if (isVerified != 'true') {
         throw Exception('Please verify your code first');
       }
       
@@ -240,7 +240,7 @@ if (data['success'] == true && data['token'] != null) {
       // إذا نجح الدخول، نخزن الـ token
       if (data['success'] == true && data['token'] != null) {
         await SharedPrefs.setAuthToken(data['token']);
-        await SharedPrefs.setString('user_email', email);
+  await SharedPrefs.setSecureString('user_email', email);
         await SharedPrefs.setUserData(jsonEncode({
           'email': email,
         }));
@@ -256,6 +256,7 @@ if (data['success'] == true && data['token'] != null) {
   // Check if email exists
   Future<bool> checkEmail(String email) async {
     try {
+      // TODO: Change to POST to avoid email in query params
       final response = await _apiService.get(
         ApiEndpoints.checkEmail,
         queryParams: {'email': email},
@@ -270,11 +271,11 @@ if (data['success'] == true && data['token'] != null) {
   
   // تنظيف البيانات المؤقتة
   Future<void> _cleanTempData() async {
-    await SharedPrefs.removeKey('temp_email');
-    await SharedPrefs.removeKey('temp_is_login');
-    await SharedPrefs.removeKey('verified_email');
-    await SharedPrefs.removeKey('verified_code');
-    await SharedPrefs.removeKey('is_code_verified');
+    await SharedPrefs.removeSecureKey('temp_email');
+    await SharedPrefs.removeSecureKey('temp_is_login');
+    await SharedPrefs.removeSecureKey('verified_email');
+    await SharedPrefs.removeSecureKey('verified_code');
+    await SharedPrefs.removeSecureKey('is_code_verified');
   }
   Future<void> setUserCurrency(String currency) async {
   try {

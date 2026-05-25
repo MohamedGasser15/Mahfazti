@@ -35,10 +35,10 @@ class _HomeScreenState extends State<HomeScreen> {
             controller: _pageController,
             physics: const NeverScrollableScrollPhysics(),
             children: const [
-              HomeTab(),           // Wallet
-              InsightsPage(),      // Insights
-              AnalyticsScreen(),   // Analytics
-              TransactionsTab(),   // Transactions
+              RepaintBoundary(child: HomeTab()),           // Wallet
+              RepaintBoundary(child: InsightsPage()),      // Insights
+              RepaintBoundary(child: AnalyticsScreen()),   // Analytics
+              RepaintBoundary(child: TransactionsTab()),   // Transactions
             ],
           ),
           if (isIOS)
@@ -49,19 +49,19 @@ class _HomeScreenState extends State<HomeScreen> {
               child: CNTabBar(
                 items: [
                   CNTabBarItem(
-                    label: l10n.wallet ?? 'Wallet',
+                    label: l10n.wallet,
                     icon: const CNSymbol('creditcard.fill'),
                   ),
                   CNTabBarItem(
-                    label: l10n.insights ?? 'Insights',
+                    label: l10n.insights,
                     icon: const CNSymbol('lightbulb.fill'),
                   ),
                   CNTabBarItem(
-                    label: l10n.analytics ?? 'Analytics',
+                    label: l10n.analytics,
                     icon: const CNSymbol('chart.bar.fill'),
                   ),
                   CNTabBarItem(
-                    label: l10n.transactions ?? 'Transactions',
+                    label: l10n.transactions,
                     icon: const CNSymbol('list.bullet.rectangle.fill'),
                   ),
                 ],
@@ -119,19 +119,19 @@ Widget _buildAndroidBottomNav(BuildContext context, bool isDarkMode) {
           tabs: [
 GButton(
   icon: Icons.account_balance_wallet_outlined,
-  text: l10n.wallet ?? 'Wallet',
+  text: l10n.wallet,
 ),
 GButton(
   icon: Icons.lightbulb_outline,
-  text: l10n.insights ?? 'Insights',
+  text: l10n.insights,
 ),
 GButton(
   icon: Icons.bar_chart_rounded,
-  text: l10n.analytics ?? 'Analytics',
+  text: l10n.analytics,
 ),
 GButton(
   icon: Icons.receipt_long_outlined,
-  text: l10n.transactions ?? 'Transactions',
+  text: l10n.transactions,
 ),
           ],
         ),

@@ -10,7 +10,6 @@ import 'package:my_wallet/core/utils/language_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 import 'package:my_wallet/features/auth/presentation/screens/change_passcode_screen.dart';
-import 'package:my_wallet/features/auth/presentation/screens/currency_selection_screen.dart';
 import 'package:my_wallet/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:my_wallet/features/profile/data/models/user_profile.dart';
 import 'package:my_wallet/features/profile/data/repositories/profile_repository.dart';
@@ -32,7 +31,6 @@ class SettingsContent extends StatefulWidget {
 
 class _SettingsContentState extends State<SettingsContent> {
   bool _biometricEnabled = false;
-  bool _hideBalances = false;
   bool _isEnglish = true;
   String _currentTheme = 'system';
   String _currencyCode = 'USD';
@@ -436,90 +434,6 @@ Future<void> _loadSettings() async {
       SnackBar(
         content: Text(context.l10n.featureComingSoon),
         duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  Widget _buildLanguageSelector() {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: isDarkMode ? Colors.grey[800] : Colors.grey[100],
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-          width: 1,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Arabic
-          _buildLanguageOption(
-            label: context.l10n.arabic,
-            isSelected: !_isEnglish,
-            onTap: _switchToArabic,
-            isDarkMode: isDarkMode,
-          ),
-          
-          // English
-          _buildLanguageOption(
-            label: context.l10n.english,
-            isSelected: _isEnglish,
-            onTap: _switchToEnglish,
-            isDarkMode: isDarkMode,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLanguageOption({
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-    required bool isDarkMode,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected 
-              ? (isDarkMode ? Colors.indigo[800] : Colors.indigo[100])
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          border: isSelected
-              ? Border.all(
-                  color: isDarkMode ? Colors.indigoAccent : Colors.indigo[600]!,
-                  width: 2,
-                )
-              : null,
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: isDarkMode 
-                        ? Colors.indigoAccent.withOpacity(0.3)
-                        : Colors.indigoAccent.withOpacity(0.1),
-                    blurRadius: 10,
-                    spreadRadius: 1,
-                  )
-                ]
-              : null,
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: isSelected
-                ? (isDarkMode ? Colors.white : Colors.indigo[800])
-                : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
-          ),
-        ),
       ),
     );
   }

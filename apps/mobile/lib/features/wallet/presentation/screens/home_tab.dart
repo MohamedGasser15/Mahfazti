@@ -17,6 +17,7 @@ import 'package:my_wallet/features/wallet/data/repositories/category_repository.
 import 'package:my_wallet/features/wallet/presentation/widgets/voice_expense_button.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:my_wallet/core/constants/currency_constants.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/features/settings/presentation/screens/settings_screen.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
@@ -42,18 +43,6 @@ class _HomeTabState extends State<HomeTab> {
   bool _isLoadingCategories = false;
 
   String? _currencyCode;
-  bool _currencyLoaded = false;
-  //#endregion
-
-  //#region Currency Helpers
-  static const Map<String, String> currencySymbols = {
-    'USD': '\$',
-    'EUR': '€',
-    'EGP': 'E£',
-    'SAR': '﷼',
-    'AED': 'د.إ',
-    'KWD': 'د.ك',
-  };
   //#endregion
 
   //#region Lifecycle
@@ -72,7 +61,6 @@ class _HomeTabState extends State<HomeTab> {
     final code = await SharedPrefs.getCurrency();
     setState(() {
       _currencyCode = code ?? 'USD';
-      _currencyLoaded = true;
     });
   }
   Map<String, dynamic> _homeDataToMap(WalletHomeData data) {
@@ -240,8 +228,7 @@ class _HomeTabState extends State<HomeTab> {
     bool _isSubmitting = false;
     double? _previewAmount = prefillFromVoice?.amount;
 
-    final currencyCode = _currencyCode ?? 'USD';
-    final currencySymbol = currencySymbols[currencyCode] ?? '\$';
+    final currencySymbol = currencySymbols[_currencyCode ?? 'USD'] ?? '\$';
 
     showModalBottomSheet(
       context: context,
@@ -386,11 +373,8 @@ class _HomeTabState extends State<HomeTab> {
                               .toList(),
                         ),
                       ),
-// داخل StatefulBuilder، بعد حقل المبلغ وقبل حقل الوصف
-
 const SizedBox(height: 16),
 
-// اختيار الفئة - دوائر أفقية (مثل استوري ماسنجر)
 Padding(
   padding: const EdgeInsets.symmetric(horizontal: 24),
   child: Column(
@@ -422,7 +406,7 @@ Padding(
                   ),
                 )
               : SizedBox(
-                  height: 110, // ارتفاع ثابت لضمان ظهور الدوائر مع النص
+                  height: 110,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: filteredCategories.length,
@@ -432,7 +416,6 @@ Padding(
                       final categoryName = Localizations.localeOf(context).languageCode == 'ar'
                           ? category.nameAr
                           : category.nameEn;
-                      // اختصار الاسم: أول حرفين أو ثلاثة
                       String shortName = categoryName.length >= 2
                           ? categoryName.substring(0, 2).toUpperCase()
                           : categoryName.toUpperCase();
@@ -582,7 +565,7 @@ const SizedBox(height: 16),
                                                 : context.l10n.withdrawalAddedSuccess,
                                           );
                                         } catch (e) {
-                                          MessageService.showError(context: context, message: e.toString());
+                                          MessageService.showError(context: context, message: context.l10n.failedToAddTransaction(e.toString()));
                                         } finally {
                                           if (shouldPop) {
                                             Navigator.pop(context);
@@ -621,6 +604,7 @@ const SizedBox(height: 16),
       },
     );
   }
+
   void _showEditTransactionDialog(WalletTransaction transaction) {
     final isIncome = transaction.isDeposit;
 
@@ -638,8 +622,7 @@ const SizedBox(height: 16),
     bool _isSubmitting = false;
     double? _previewAmount = transaction.amount;
 
-    final currencyCode = _currencyCode ?? 'USD';
-    final currencySymbol = currencySymbols[currencyCode] ?? '\$';
+    final currencySymbol = currencySymbols[_currencyCode ?? 'USD'] ?? '\$';
 
     showModalBottomSheet(
       context: context,
@@ -906,7 +889,7 @@ const SizedBox(height: 16),
                                             type: isIncome ? 'Deposit' : 'Withdrawal',
                                             categoryId: selectedCategoryId!,
                                             transactionDate: transaction.transactionDate,
-                                            isRecurring: transaction.isRecurring ?? false,
+                                            isRecurring: transaction.isRecurring,
                                             recurringInterval: transaction.recurringInterval,
                                             recurringEndDate: transaction.recurringEndDate,
                                           );
@@ -914,7 +897,7 @@ const SizedBox(height: 16),
                                           await _loadHomeData();
                                           MessageService.showSuccess(context: context, message: context.l10n.transactionUpdatedSuccess);
                                         } catch (e) {
-                                          MessageService.showError(context: context, message: e.toString());
+                                          MessageService.showError(context: context, message: context.l10n.failedToUpdateTransaction(e.toString()));
                                         } finally {
                                           if (shouldPop) {
                                             Navigator.pop(context);
@@ -1017,35 +1000,6 @@ const SizedBox(height: 16),
     }
   }
 
-  Future<void> _updateTransaction(WalletTransaction transaction,
-      {required String title,
-      required String description,
-      required double amount,
-      required String type,
-      required int categoryId,
-      required DateTime transactionDate,
-      bool isRecurring = false,
-      String? recurringInterval,
-      DateTime? recurringEndDate}) async {
-    try {
-      await _walletRepository.updateTransaction(
-        transaction.id,
-        title: title,
-        description: description,
-        amount: amount,
-        type: type,
-        categoryId: categoryId,
-        transactionDate: transactionDate,
-        isRecurring: isRecurring,
-        recurringInterval: recurringInterval,
-        recurringEndDate: recurringEndDate,
-      );
-      await _loadHomeData();
-      MessageService.showSuccess(context: context, message: context.l10n.transactionUpdatedSuccess);
-    } catch (e) {
-      MessageService.showError(context: context, message: '${context.l10n.failedToUpdateTransaction}: ${e.toString()}');
-    }
-  }
   //#endregion
 
   //#region All Transactions Modal
@@ -2220,14 +2174,9 @@ const SizedBox(height: 16),
 
   //#region Helper Methods
   String _formatAmount(double amount) {
-    final symbol = _currencyCode != null ? (currencySymbols[_currencyCode] ?? '\$') : '\$';
+    final symbol = currencySymbols[_currencyCode ?? 'USD'] ?? '\$';
     final formatter = NumberFormat('#,##0', 'en_US');
     return '$symbol ${formatter.format(amount)}';
-  }
-
-  String _formatCurrency(double amount) {
-    final formatter = NumberFormat('#,##0', 'en_US');
-    return formatter.format(amount);
   }
 
   String _formatDate(DateTime date) {

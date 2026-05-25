@@ -66,7 +66,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     });
 
     try {
-      final updated = await _profileRepository.updateProfile(
+      await _profileRepository.updateProfile(
         fullName: _fullNameController.text.trim(),
         userName: _userNameController.text.trim(),
         phoneNumber: _phoneController.text.trim(),

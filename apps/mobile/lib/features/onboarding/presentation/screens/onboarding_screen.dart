@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
-import 'package:my_wallet/features/auth/presentation/screens/email_screen.dart';
 import 'package:my_wallet/features/onboarding/presentation/widgets/onboarding_page.dart';
 import 'package:my_wallet/features/onboarding/presentation/widgets/language_switch.dart';
 import 'package:my_wallet/features/onboarding/presentation/widgets/story_progress_bar.dart';

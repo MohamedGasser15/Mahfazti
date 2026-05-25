@@ -60,7 +60,7 @@ static Future<bool> authenticateWithFallback({
       final hasBiometrics = await _auth.canCheckBiometrics;
       if (!hasBiometrics) return false;
 
-      final userEnabled = SharedPrefs.getBoolValue('biometric_enabled') ?? false;
+      final userEnabled = await SharedPrefs.getSecureString('biometric_enabled') == 'true';
       return userEnabled;
     } on PlatformException catch (e) {
       print('Error checking biometric enabled: $e');
@@ -112,7 +112,7 @@ static Future<bool> enableBiometric() async {
   try {
     final authenticated = await authenticateDirectly();
     if (authenticated) {
-      await SharedPrefs.setBool('biometric_enabled', true);
+      await SharedPrefs.setSecureString('biometric_enabled', 'true');
       return true;
     }
     return false;
@@ -124,7 +124,7 @@ static Future<bool> enableBiometric() async {
 
   // Disable biometrics
   static Future<void> disableBiometric() async {
-    await SharedPrefs.removeKey('biometric_enabled');
+    await SharedPrefs.removeSecureKey('biometric_enabled');
   }
 
   // Get biometric display name based on platform
