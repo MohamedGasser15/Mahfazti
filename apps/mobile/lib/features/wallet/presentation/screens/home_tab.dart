@@ -248,7 +248,9 @@ abstract class _HomeTabState extends State<HomeTab> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final hideService = Provider.of<HideBalanceService>(context);
 
-    return SafeArea(
+    return Container(
+      color: isDarkMode ? Colors.black : Colors.white,
+      child: SafeArea(
       bottom: false,
       child: Stack(
         children: [
@@ -646,6 +648,7 @@ abstract class _HomeTabState extends State<HomeTab> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

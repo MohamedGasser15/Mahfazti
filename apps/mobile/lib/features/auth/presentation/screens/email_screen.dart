@@ -462,10 +462,17 @@ class _EmailScreenState extends State<EmailScreen>
                               : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor:
-                                _isEmailValid ? Colors.white : Colors.grey[300],
-                            foregroundColor: Colors.black,
-                            disabledBackgroundColor: Colors.grey[300],
-                            disabledForegroundColor: Colors.black38,
+                                _isEmailValid
+                                    ? (isDark ? Colors.white : theme.colorScheme.primary)
+                                    : (isDark ? Colors.grey[800] : Colors.grey[200]),
+                            foregroundColor:
+                                _isEmailValid
+                                    ? (isDark ? Colors.black : theme.colorScheme.onPrimary)
+                                    : (isDark ? Colors.white38 : Colors.black38),
+                            disabledBackgroundColor:
+                                isDark ? Colors.grey[800] : Colors.grey[200],
+                            disabledForegroundColor:
+                                isDark ? Colors.white38 : Colors.black38,
                             minimumSize:
                                 const Size(double.infinity, 56),
                             shape: RoundedRectangleBorder(
@@ -473,7 +480,8 @@ class _EmailScreenState extends State<EmailScreen>
                                   BorderRadius.circular(16),
                             ),
                             elevation: _isEmailValid ? 4 : 0,
-                            shadowColor: Colors.black26,
+                            shadowColor: theme.colorScheme.primary
+                                .withValues(alpha: 0.3),
                           ),
                           child: _isLoading
                               ? SizedBox(
@@ -517,9 +525,8 @@ class _EmailScreenState extends State<EmailScreen>
                                     fontWeight: FontWeight.w600,
                                     fontSize: 16,
                                     color: _isEmailValid && !_isLoading
-                                        ? Colors.black
-                                        : theme.colorScheme.onPrimary
-                                            .withValues(alpha: 0.4),
+                                        ? (isDark ? Colors.black : theme.colorScheme.onPrimary)
+                                        : (isDark ? Colors.white38 : Colors.black38),
                                   ),
                                 ),
                         ),
