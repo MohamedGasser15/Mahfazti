@@ -63,10 +63,24 @@ builder.Services.AddAuthentication(options =>
         NameClaimType = ClaimTypes.Name,
         RoleClaimType = ClaimTypes.Role
     };
+})
+.AddFacebook(facebookOptions =>
+{
+    facebookOptions.AppId = builder.Configuration["Authentication:Facebook:AppId"];
+    facebookOptions.AppSecret = builder.Configuration["Authentication:Facebook:AppSecret"];
+    facebookOptions.Scope.Add("email");
+})
+.AddGoogle(googleOptions =>
+{
+    googleOptions.ClientId = builder.Configuration["Authentication:Google:ClientId"];
+    googleOptions.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
 });
 
 // MemoryCache
 builder.Services.AddMemoryCache();
+
+// HttpClient for external login
+builder.Services.AddHttpClient();
 
 // Authorization (يمكن تعديل السياسات حسب احتياجك)
 builder.Services.AddAuthorization(options =>

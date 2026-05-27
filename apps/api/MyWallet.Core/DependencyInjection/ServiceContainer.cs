@@ -25,6 +25,8 @@ namespace MyWallet.Core.DependencyInjection
             services.AddScoped<ICategoryService, CategoryService>();
             services.AddScoped<IVoiceExpenseService, VoiceExpenseService>();
             services.AddScoped<IProfileService, ProfileService>();
+            services.AddScoped<ITokenService, TokenService>();
+            services.AddScoped<IExternalLoginService, ExternalLoginService>();
             return services;
         }
     }

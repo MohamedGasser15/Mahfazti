@@ -11,10 +11,14 @@ namespace MyWallet.WebApi.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
+        private readonly IExternalLoginService _externalLoginService;
 
-        public AuthController(IAuthService authService)
+        public AuthController(
+            IAuthService authService,
+            IExternalLoginService externalLoginService)
         {
             _authService = authService;
+            _externalLoginService = externalLoginService;
         }
 
         [HttpPost("send-verification")]
@@ -149,6 +153,44 @@ namespace MyWallet.WebApi.Controllers
             var result = await _authService.ResetPasscodeAsync(dto);
             if (!result.Success) return BadRequest(result);
             return Ok(result);
+        }
+
+        [HttpGet("ExternalLogin")]
+        public IActionResult ExternalLogin([FromQuery] string provider, [FromQuery] string? returnUrl = null)
+        {
+            var redirectUrl = Url.Action(nameof(ExternalLoginCallback), "Auth", new { returnUrl }, Request.Scheme);
+            var properties = _externalLoginService.ConfigureExternalAuthProperties(provider, redirectUrl);
+            return Challenge(properties, provider);
+        }
+
+        [HttpGet("ExternalLoginCallback")]
+        public async Task<IActionResult> ExternalLoginCallback([FromQuery] string? returnUrl = null, [FromQuery] string? remoteError = null)
+        {
+            var result = await _externalLoginService.HandleExternalLoginCallbackAsync(remoteError, returnUrl);
+            if (!string.IsNullOrEmpty(remoteError) || result == null || string.IsNullOrEmpty(result.Email))
+            {
+                return Redirect($"{returnUrl}?error=external_login_failed");
+            }
+
+            var separator = returnUrl.Contains("?") ? "&" : "?";
+            var url = $"{returnUrl}{separator}email={Uri.EscapeDataString(result.Email)}&isNewUser={result.IsNewUser.ToString().ToLower()}";
+            if (!string.IsNullOrEmpty(result.Token))
+            {
+                url += $"&token={Uri.EscapeDataString(result.Token)}";
+            }
+            return Redirect(url);
+        }
+
+        [HttpPost("ExternalLoginConfirmation")]
+        public async Task<IActionResult> ExternalLoginConfirmation([FromBody] ExternalLoginConfirmationDto model)
+        {
+            var result = await _externalLoginService.ConfirmExternalUserAsync(model);
+            if (string.IsNullOrEmpty(result.Token))
+            {
+                return BadRequest(new { success = false, message = result.Message });
+            }
+
+            return Ok(new { success = true, message = "User registered via external provider", token = result.Token });
         }
     }
 }
