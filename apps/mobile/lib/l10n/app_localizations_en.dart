@@ -599,6 +599,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lastMonthExpenses => 'Last month expenses';
 
   @override
+  String get last7Days => 'Last 7 days';
+
+  @override
+  String get last30Days => 'Last 30 days';
+
+  @override
+  String get last90Days => 'Last 90 days';
+
+  @override
+  String get customRange => 'Custom range';
+
+  @override
   String get left => 'Left';
 
   @override

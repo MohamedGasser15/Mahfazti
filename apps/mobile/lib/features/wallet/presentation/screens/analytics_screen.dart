@@ -718,7 +718,41 @@ Widget _buildChart(List<dynamic> categories, ChartType type, Color color, bool i
                 ),
                 child: Icon(icon, color: color, size: 20),
               ),
-              Icon(Icons.more_vert, color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+              PopupMenuButton<String>(
+                icon: Icon(Icons.more_vert, color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                color: isDarkMode ? Colors.grey[900] : Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                onSelected: (value) async {
+                  switch (value) {
+                    case '7':
+                      _fromDate = DateTime.now().subtract(const Duration(days: 7));
+                      _toDate = DateTime.now();
+                    case '30':
+                      _fromDate = DateTime.now().subtract(const Duration(days: 30));
+                      _toDate = DateTime.now();
+                    case '90':
+                      _fromDate = DateTime.now().subtract(const Duration(days: 90));
+                      _toDate = DateTime.now();
+                    case 'custom':
+                      final picked = await showDateRangePicker(
+                        context: context,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
+                        initialDateRange: DateTimeRange(start: _fromDate, end: _toDate),
+                      );
+                      if (picked == null) return;
+                      _fromDate = picked.start;
+                      _toDate = picked.end;
+                  }
+                  await _loadSummary(forceRefresh: true);
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(value: '7', child: Text(context.l10n.last7Days)),
+                  PopupMenuItem(value: '30', child: Text(context.l10n.last30Days)),
+                  PopupMenuItem(value: '90', child: Text(context.l10n.last90Days)),
+                  PopupMenuItem(value: 'custom', child: Text(context.l10n.customRange)),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 12),

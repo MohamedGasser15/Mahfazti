@@ -597,6 +597,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String get lastMonthExpenses => 'مصاريف الشهر الماضي';
 
   @override
+  String get last7Days => 'آخر 7 أيام';
+
+  @override
+  String get last30Days => 'آخر 30 يوم';
+
+  @override
+  String get last90Days => 'آخر 90 يوم';
+
+  @override
+  String get customRange => 'نطاق مخصص';
+
+  @override
   String get left => 'متبقي';
 
   @override

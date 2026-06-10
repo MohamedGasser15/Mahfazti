@@ -1178,6 +1178,30 @@ abstract class AppLocalizations {
   /// **'Last month expenses'**
   String get lastMonthExpenses;
 
+  /// No description provided for @last7Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 7 days'**
+  String get last7Days;
+
+  /// No description provided for @last30Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 30 days'**
+  String get last30Days;
+
+  /// No description provided for @last90Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 90 days'**
+  String get last90Days;
+
+  /// No description provided for @customRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom range'**
+  String get customRange;
+
   /// No description provided for @left.
   ///
   /// In en, this message translates to:

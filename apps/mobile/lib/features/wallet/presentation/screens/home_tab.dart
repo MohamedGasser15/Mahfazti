@@ -563,62 +563,104 @@ abstract class _HomeTabState extends State<HomeTab> {
                         color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Row(
-                        children: _filters
-                            .map(
-                              (filter) => Expanded(
-                                child: GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedFilter = filter.type;
-                                    });
-                                  },
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final tabWidth = constraints.maxWidth / _filters.length;
+                          final selectedIndex = _filters.indexWhere((f) => f.type == _selectedFilter);
+
+                          return SizedBox(
+                            height: 48,
+                            child: Stack(
+                              children: [
+                                AnimatedPositioned(
+                                  duration: const Duration(milliseconds: 250),
+                                  curve: Curves.easeInOut,
+                                  left: selectedIndex * tabWidth,
+                                  top: 0,
+                                  bottom: 0,
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    width: tabWidth,
                                     decoration: BoxDecoration(
-                                      color: _selectedFilter == filter.type
-                                          ? (isDarkMode ? Colors.black : Colors.white)
-                                          : Colors.transparent,
+                                      color: isDarkMode ? Colors.black : Colors.white,
                                       borderRadius: BorderRadius.circular(8),
-                                      boxShadow: _selectedFilter == filter.type
-                                          ? [
-                                              BoxShadow(
-                                                color: Colors.black.withValues(alpha: 0.05),
-                                                blurRadius: 4,
-                                                offset: const Offset(0, 2),
-                                              ),
-                                            ]
-                                          : null,
-                                    ),
-                                    child: Text(
-                                      filter.label,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: _selectedFilter == filter.type
-                                            ? (isDarkMode ? Colors.white : Colors.black)
-                                            : (isDarkMode
-                                                ? Colors.grey[400]
-                                                : Colors.grey[600]),
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.05),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
-                              ),
-                            )
-                            .toList(),
+                                Row(
+                                  children: _filters
+                                      .map(
+                                        (filter) => Expanded(
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              setState(() {
+                                                _selectedFilter = filter.type;
+                                              });
+                                            },
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(vertical: 12),
+                                              child: Text(
+                                                filter.label,
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  color: _selectedFilter == filter.type
+                                                      ? (isDarkMode ? Colors.white : Colors.black)
+                                                      : (isDarkMode
+                                                          ? Colors.grey[400]
+                                                          : Colors.grey[600]),
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: _filteredTransactions.isEmpty
-                          ? _buildEmptyState(isDarkMode)
-                          : Column(
-                              children: _filteredTransactions
-                                  .take(5)
-                                  .map((transaction) => _buildTransactionCard(transaction, isDarkMode))
-                                  .toList(),
-                            ),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      switchInCurve: Curves.easeInOut,
+                      switchOutCurve: Curves.easeInOut,
+                      transitionBuilder: (child, animation) {
+                        final offsetAnimation = Tween<Offset>(
+                          begin: const Offset(0.3, 0),
+                          end: Offset.zero,
+                        ).animate(CurvedAnimation(
+                          parent: animation,
+                          curve: Curves.easeInOut,
+                        ));
+                        return SlideTransition(
+                          position: offsetAnimation,
+                          child: FadeTransition(
+                            opacity: animation,
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: Padding(
+                        key: ValueKey(_selectedFilter),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _filteredTransactions.isEmpty
+                            ? _buildEmptyState(isDarkMode)
+                            : Column(
+                                children: _filteredTransactions
+                                    .take(5)
+                                    .map((transaction) => _buildTransactionCard(transaction, isDarkMode))
+                                    .toList(),
+                              ),
+                      ),
                     ),
                     const SizedBox(height: 160),
                   ],
