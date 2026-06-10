@@ -292,6 +292,44 @@ if (data['success'] == true && data['token'] != null) {
     rethrow;
   }
 }
+  Future<Map<String, dynamic>> socialLogin({
+    required String provider,
+    required Map<String, dynamic> tokenData,
+  }) async {
+    try {
+      final response = await _apiService.post(
+        _getSocialEndpoint(provider),
+        tokenData,
+      );
+
+      final data = _apiService.handleResponse(response);
+
+      if (data['success'] == true && data['token'] != null) {
+        await SharedPrefs.setAuthToken(data['token']);
+        if (data['user'] != null) {
+          await SharedPrefs.setUserData(jsonEncode(data['user']));
+        }
+      }
+
+      return data;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  String _getSocialEndpoint(String provider) {
+    switch (provider.toLowerCase()) {
+      case 'google':
+        return ApiEndpoints.googleLogin;
+      case 'apple':
+        return ApiEndpoints.appleLogin;
+      case 'facebook':
+        return ApiEndpoints.facebookLogin;
+      default:
+        throw Exception('Unknown provider: $provider');
+    }
+  }
+
   // Logout
   Future<void> logout() async {
     try {

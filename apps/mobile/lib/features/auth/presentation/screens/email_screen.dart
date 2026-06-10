@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/device_info_service.dart';
+import 'package:my_wallet/core/services/social_auth_service.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 import 'package:my_wallet/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:my_wallet/core/services/message_service.dart';
@@ -19,6 +21,7 @@ class _EmailScreenState extends State<EmailScreen>
   final TextEditingController _emailController = TextEditingController();
   final FocusNode _emailFocusNode = FocusNode();
   final AuthRepository _authRepository = AuthRepository();
+  final SocialAuthService _socialAuthService = SocialAuthService();
 
   bool _isEmailValid = false;
   bool _isLoading = false;
@@ -258,11 +261,88 @@ class _EmailScreenState extends State<EmailScreen>
     Navigator.pushNamed(context, '/recovery-check-user');
   }
 
-  void _onSocialLogin(String provider) {
-    MessageService.showInfo(
-      context: context,
-      message: '$provider ${context.l10n.featureComingSoon}',
-    );
+  Future<void> _onSocialLogin(String provider) async {
+    setState(() => _isLoading = true);
+
+    try {
+      Map<String, String?> tokenData;
+      switch (provider.toLowerCase()) {
+        case 'google':
+          tokenData = await _socialAuthService.signInWithGoogle();
+          break;
+        case 'apple':
+          tokenData = await _socialAuthService.signInWithApple();
+          break;
+        case 'facebook':
+          tokenData = await _socialAuthService.signInWithFacebook();
+          break;
+        default:
+          if (!mounted) return;
+          MessageService.showError(
+            context: context,
+            message: 'Unknown provider',
+          );
+          setState(() => _isLoading = false);
+          return;
+      }
+
+      if (tokenData.containsKey('error')) {
+        if (!mounted) return;
+        if (tokenData['error'] != 'User cancelled Google sign in') {
+          MessageService.showError(
+            context: context,
+            message: tokenData['error'] ?? context.l10n.somethingWentWrong,
+          );
+        }
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final result = await _authRepository.socialLogin(
+        provider: provider,
+        tokenData: tokenData,
+      );
+
+      if (!mounted) return;
+
+      if (result['success'] == true) {
+        MessageService.showSuccess(
+          context: context,
+          message: context.l10n.loginSuccess,
+        );
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/home',
+          (route) => false,
+        );
+      } else {
+        final needsRegistration = result['needsRegistration'] == true;
+        if (needsRegistration && result['email'] != null) {
+          Navigator.pushNamed(
+            context,
+            '/register',
+            arguments: {
+              'email': result['email'],
+              'isSocialLogin': true,
+              'provider': provider,
+            },
+          );
+        } else {
+          MessageService.showError(
+            context: context,
+            message: result['message'] ?? context.l10n.somethingWentWrong,
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      MessageService.showError(
+        context: context,
+        message: e.toString(),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -662,6 +742,54 @@ class _EmailScreenState extends State<EmailScreen>
                           ),
                         ),
                       ),
+
+                      if (Theme.of(context).platform == TargetPlatform.iOS ||
+                          Theme.of(context).platform ==
+                              TargetPlatform.macOS) ...[
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () =>
+                                _onSocialLogin('Apple'),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(
+                                color: theme.colorScheme.outline
+                                    .withValues(alpha: 0.2),
+                              ),
+                              backgroundColor: isDark
+                                  ? Colors.white
+                                      .withValues(alpha: 0.1)
+                                  : Colors.black
+                                      .withValues(alpha: 0.05),
+                              minimumSize:
+                                  const Size(double.infinity, 54),
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.circular(16),
+                              ),
+                            ),
+                            icon: FaIcon(
+                              FontAwesomeIcons.apple,
+                              size: 24,
+                              color: isDark
+                                  ? Colors.white
+                                  : Colors.black,
+                            ),
+                            label: Text(
+                              'Continue with Apple',
+                              style: theme
+                                  .textTheme.bodyMedium
+                                  ?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: isDark
+                                    ? Colors.white
+                                    : Colors.black,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
 
                       const SizedBox(height: 24),
 
