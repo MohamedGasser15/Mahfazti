@@ -248,10 +248,10 @@ namespace MyWallet.Core.Services
             try
             {
                 var googleClientId = _configuration["Authentication:Google:ClientId"];
-                var settings = new GoogleJsonWebSignature.ValidationSettings
-                {
-                    Audience = new[] { googleClientId }
-                };
+                var settings = new GoogleJsonWebSignature.ValidationSettings();
+
+                if (!string.IsNullOrEmpty(googleClientId) && googleClientId != "YOUR_GOOGLE_CLIENT_ID")
+                    settings.Audience = new[] { googleClientId, "342149506296-3hd76r4tbhk0385lmmu50bivnh4u8dc2.apps.googleusercontent.com" };
 
                 var payload = await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
 
@@ -312,7 +312,7 @@ namespace MyWallet.Core.Services
             }
             catch (InvalidJwtException ex)
             {
-                _logger.LogError(ex, "Invalid Google idToken");
+                _logger.LogError(ex, "Invalid Google idToken: {Message}", ex.Message);
                 return new ExternalLoginCallbackResultDTO { Message = "Invalid Google token." };
             }
         }
