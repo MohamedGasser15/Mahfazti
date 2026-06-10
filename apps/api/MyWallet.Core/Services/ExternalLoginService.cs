@@ -1,5 +1,7 @@
+using Google.Apis.Auth;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MyWallet.Core.Constants;
 using MyWallet.Core.DTOs.Auth;
@@ -15,17 +17,20 @@ namespace MyWallet.Core.Services
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly ILogger<ExternalLoginService> _logger;
         private readonly ITokenService _tokenService;
+        private readonly IConfiguration _configuration;
 
         public ExternalLoginService(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<ExternalLoginService> logger,
-            ITokenService tokenService)
+            ITokenService tokenService,
+            IConfiguration configuration)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _tokenService = tokenService;
+            _configuration = configuration;
         }
 
         public AuthenticationProperties ConfigureExternalAuthProperties(string provider, string redirectUrl)
@@ -232,6 +237,83 @@ namespace MyWallet.Core.Services
             {
                 _logger.LogError(ex, "Unexpected error during external user confirmation for email: {Email}", model?.Email);
                 return new ExternalLoginCallbackResultDTO { Message = "An error occurred during external user confirmation." };
+            }
+        }
+
+        public async Task<ExternalLoginCallbackResultDTO> HandleGoogleMobileLoginAsync(string idToken)
+        {
+            if (string.IsNullOrEmpty(idToken))
+                return new ExternalLoginCallbackResultDTO { Message = "idToken is required." };
+
+            try
+            {
+                var googleClientId = _configuration["Authentication:Google:ClientId"];
+                var settings = new GoogleJsonWebSignature.ValidationSettings
+                {
+                    Audience = new[] { googleClientId }
+                };
+
+                var payload = await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
+
+                var email = payload.Email;
+                var name = payload.Name ?? email;
+                var providerKey = payload.Subject;
+
+                var user = await _userManager.FindByLoginAsync("Google", providerKey);
+                if (user != null)
+                {
+                    var token = await _tokenService.GenerateAccessToken(user);
+                    return new ExternalLoginCallbackResultDTO
+                    {
+                        IsNewUser = false,
+                        Email = user.Email,
+                        Message = "Logged in successfully via Google",
+                        Token = token
+                    };
+                }
+
+                var existingUser = await _userManager.FindByEmailAsync(email);
+                if (existingUser != null)
+                {
+                    await _userManager.AddLoginAsync(existingUser, new UserLoginInfo("Google", providerKey, "Google"));
+                    var existingToken = await _tokenService.GenerateAccessToken(existingUser);
+                    return new ExternalLoginCallbackResultDTO
+                    {
+                        IsNewUser = false,
+                        Email = existingUser.Email,
+                        Message = "Linked and logged in successfully via Google",
+                        Token = existingToken
+                    };
+                }
+
+                var newUser = new ApplicationUser
+                {
+                    FullName = name,
+                    Email = email,
+                    UserName = email,
+                    EmailConfirmed = true
+                };
+
+                var createResult = await _userManager.CreateAsync(newUser);
+                if (!createResult.Succeeded)
+                    return new ExternalLoginCallbackResultDTO { Message = "User creation failed" };
+
+                await _userManager.AddToRoleAsync(newUser, Roles.User);
+                await _userManager.AddLoginAsync(newUser, new UserLoginInfo("Google", providerKey, "Google"));
+
+                var newToken = await _tokenService.GenerateAccessToken(newUser);
+                return new ExternalLoginCallbackResultDTO
+                {
+                    IsNewUser = false,
+                    Email = newUser.Email,
+                    Message = "Account created and logged in successfully via Google",
+                    Token = newToken
+                };
+            }
+            catch (InvalidJwtException ex)
+            {
+                _logger.LogError(ex, "Invalid Google idToken");
+                return new ExternalLoginCallbackResultDTO { Message = "Invalid Google token." };
             }
         }
     }

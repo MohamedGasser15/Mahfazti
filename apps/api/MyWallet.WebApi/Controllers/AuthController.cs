@@ -192,5 +192,14 @@ namespace MyWallet.WebApi.Controllers
 
             return Ok(new { success = true, message = "User registered via external provider", token = result.Token });
         }
+
+        [HttpPost("GoogleMobile")]
+        public async Task<IActionResult> GoogleMobileLogin([FromBody] GoogleMobileLoginDto dto)
+        {
+            var result = await _externalLoginService.HandleGoogleMobileLoginAsync(dto.IdToken);
+            if (result.Token != null)
+                return Ok(result);
+            return BadRequest(result);
+        }
     }
 }
