@@ -7,7 +7,9 @@ using MyWallet.Core.Constants;
 using MyWallet.Core.DTOs.Auth;
 using MyWallet.Core.Entities;
 using MyWallet.Core.Interfaces;
+using System.Net.Http;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace MyWallet.Core.Services
 {
@@ -314,6 +316,105 @@ namespace MyWallet.Core.Services
             {
                 _logger.LogError(ex, "Invalid Google idToken: {Message}", ex.Message);
                 return new ExternalLoginCallbackResultDTO { Message = "Invalid Google token." };
+            }
+        }
+
+        public async Task<ExternalLoginCallbackResultDTO> HandleFacebookMobileLoginAsync(string accessToken)
+        {
+            if (string.IsNullOrEmpty(accessToken))
+                return new ExternalLoginCallbackResultDTO { Message = "Access token is required." };
+
+            try
+            {
+                using var httpClient = new HttpClient();
+                var response = await httpClient.GetAsync(
+                    $"https://graph.facebook.com/me?fields=id,name,email&access_token={accessToken}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("Facebook token validation failed with status {StatusCode}", response.StatusCode);
+                    return new ExternalLoginCallbackResultDTO { Message = "Invalid Facebook token." };
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(json);
+
+                if (doc.RootElement.TryGetProperty("error", out _))
+                {
+                    var errorMsg = doc.RootElement.GetProperty("error").GetProperty("message").GetString();
+                    _logger.LogWarning("Facebook API error: {Error}", errorMsg);
+                    return new ExternalLoginCallbackResultDTO { Message = "Invalid Facebook token." };
+                }
+
+                var fbId = doc.RootElement.GetProperty("id").GetString();
+                var fbName = doc.RootElement.GetProperty("name").GetString();
+                var fbEmail = doc.RootElement.TryGetProperty("email", out var emailProp) ? emailProp.GetString() : null;
+
+                if (string.IsNullOrEmpty(fbId))
+                    return new ExternalLoginCallbackResultDTO { Message = "Failed to retrieve Facebook user info." };
+
+                var email = fbEmail;
+                var name = fbName ?? email;
+                var providerKey = fbId;
+
+                var user = await _userManager.FindByLoginAsync("Facebook", providerKey);
+                if (user != null)
+                {
+                    var token = await _tokenService.GenerateAccessToken(user);
+                    return new ExternalLoginCallbackResultDTO
+                    {
+                        IsNewUser = false,
+                        Email = user.Email,
+                        Message = "Logged in successfully via Facebook",
+                        Token = token
+                    };
+                }
+
+                if (!string.IsNullOrEmpty(email))
+                {
+                    var existingUser = await _userManager.FindByEmailAsync(email);
+                    if (existingUser != null)
+                    {
+                        await _userManager.AddLoginAsync(existingUser, new UserLoginInfo("Facebook", providerKey, "Facebook"));
+                        var existingToken = await _tokenService.GenerateAccessToken(existingUser);
+                        return new ExternalLoginCallbackResultDTO
+                        {
+                            IsNewUser = false,
+                            Email = existingUser.Email,
+                            Message = "Linked and logged in successfully via Facebook",
+                            Token = existingToken
+                        };
+                    }
+                }
+
+                var newUser = new ApplicationUser
+                {
+                    FullName = name ?? email ?? "Facebook User",
+                    Email = email,
+                    UserName = email ?? $"fb_{providerKey}",
+                    EmailConfirmed = email != null
+                };
+
+                var createResult = await _userManager.CreateAsync(newUser);
+                if (!createResult.Succeeded)
+                    return new ExternalLoginCallbackResultDTO { Message = "User creation failed" };
+
+                await _userManager.AddToRoleAsync(newUser, Roles.User);
+                await _userManager.AddLoginAsync(newUser, new UserLoginInfo("Facebook", providerKey, "Facebook"));
+
+                var newToken = await _tokenService.GenerateAccessToken(newUser);
+                return new ExternalLoginCallbackResultDTO
+                {
+                    IsNewUser = false,
+                    Email = newUser.Email,
+                    Message = "Account created and logged in successfully via Facebook",
+                    Token = newToken
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Facebook login error");
+                return new ExternalLoginCallbackResultDTO { Message = "Facebook login failed." };
             }
         }
     }

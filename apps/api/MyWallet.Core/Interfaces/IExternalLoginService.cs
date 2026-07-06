@@ -22,5 +22,7 @@ namespace MyWallet.Core.Interfaces
         Task<ExternalLoginCallbackResultDTO> ConfirmExternalUserAsync(ExternalLoginConfirmationDto model);
 
         Task<ExternalLoginCallbackResultDTO> HandleGoogleMobileLoginAsync(string idToken);
+
+        Task<ExternalLoginCallbackResultDTO> HandleFacebookMobileLoginAsync(string accessToken);
     }
 }

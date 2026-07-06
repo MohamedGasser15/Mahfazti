@@ -201,5 +201,14 @@ namespace MyWallet.WebApi.Controllers
                 return Ok(result);
             return BadRequest(result);
         }
+
+        [HttpPost("FacebookMobile")]
+        public async Task<IActionResult> FacebookMobileLogin([FromBody] FacebookMobileLoginDto dto)
+        {
+            var result = await _externalLoginService.HandleFacebookMobileLoginAsync(dto.AccessToken);
+            if (result.Token != null)
+                return Ok(result);
+            return BadRequest(result);
+        }
     }
 }
