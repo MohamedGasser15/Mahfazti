@@ -321,8 +321,6 @@ if (data['success'] == true && data['token'] != null) {
     switch (provider.toLowerCase()) {
       case 'google':
         return ApiEndpoints.googleLogin;
-      case 'apple':
-        return ApiEndpoints.appleLogin;
       case 'facebook':
         return ApiEndpoints.facebookLogin;
       default:

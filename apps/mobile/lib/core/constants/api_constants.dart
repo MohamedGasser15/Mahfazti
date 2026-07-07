@@ -14,7 +14,6 @@ class ApiEndpoints {
   static const String forgotPasscode = 'api/auth/passcode/forgot';
   static const String resetPasscode = 'api/auth/passcode/reset';
   static const String googleLogin = 'api/auth/GoogleMobile';
-  static const String appleLogin = 'api/auth/AppleMobile';
   static const String facebookLogin = 'api/auth/FacebookMobile';
 
   // Wallet

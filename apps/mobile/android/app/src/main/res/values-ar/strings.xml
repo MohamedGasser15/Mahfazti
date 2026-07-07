@@ -1,5 +1,5 @@
 <resources>
     <string name="app_name">محفظتي</string>
-    <string name="facebook_app_id">{YOUR_FACEBOOK_APP_ID}</string>
-    <string name="facebook_client_token">{YOUR_FACEBOOK_CLIENT_TOKEN}</string>
+    <string name="facebook_app_id">634439152779087</string>
+    <string name="facebook_client_token">d2a6a948c2fbec335c4c37f8fa0d2641</string>
 </resources>

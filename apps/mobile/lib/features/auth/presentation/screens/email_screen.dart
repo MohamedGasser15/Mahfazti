@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/device_info_service.dart';
 import 'package:my_wallet/core/services/social_auth_service.dart';
@@ -269,9 +268,6 @@ class _EmailScreenState extends State<EmailScreen>
       switch (provider.toLowerCase()) {
         case 'google':
           tokenData = await _socialAuthService.signInWithGoogle();
-          break;
-        case 'apple':
-          tokenData = await _socialAuthService.signInWithApple();
           break;
         case 'facebook':
           tokenData = await _socialAuthService.signInWithFacebook();
@@ -742,54 +738,6 @@ class _EmailScreenState extends State<EmailScreen>
                           ),
                         ),
                       ),
-
-                      if (Theme.of(context).platform == TargetPlatform.iOS ||
-                          Theme.of(context).platform ==
-                              TargetPlatform.macOS) ...[
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () =>
-                                _onSocialLogin('Apple'),
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(
-                                color: theme.colorScheme.outline
-                                    .withValues(alpha: 0.2),
-                              ),
-                              backgroundColor: isDark
-                                  ? Colors.white
-                                      .withValues(alpha: 0.1)
-                                  : Colors.black
-                                      .withValues(alpha: 0.05),
-                              minimumSize:
-                                  const Size(double.infinity, 54),
-                              shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(16),
-                              ),
-                            ),
-                            icon: FaIcon(
-                              FontAwesomeIcons.apple,
-                              size: 24,
-                              color: isDark
-                                  ? Colors.white
-                                  : Colors.black,
-                            ),
-                            label: Text(
-                              'Continue with Apple',
-                              style: theme
-                                  .textTheme.bodyMedium
-                                  ?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: isDark
-                                    ? Colors.white
-                                    : Colors.black,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
 
                       const SizedBox(height: 24),
 
