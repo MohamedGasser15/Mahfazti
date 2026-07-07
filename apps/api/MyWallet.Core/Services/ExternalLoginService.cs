@@ -354,8 +354,10 @@ namespace MyWallet.Core.Services
 
                 var fbId = principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
                            ?? principal.FindFirst("sub")?.Value;
-                var fbEmail = principal.FindFirst("email")?.Value;
-                var fbName = principal.FindFirst("name")?.Value;
+                var fbEmail = principal.FindFirst("email")?.Value
+                              ?? principal.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+                var fbName = principal.FindFirst("name")?.Value
+                             ?? principal.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
 
                 if (string.IsNullOrEmpty(fbId))
                     return new ExternalLoginCallbackResultDTO { Message = "Failed to retrieve Facebook user info." };
@@ -382,7 +384,15 @@ namespace MyWallet.Core.Services
                     var existingUser = await _userManager.FindByEmailAsync(email);
                     if (existingUser != null)
                     {
-                        await _userManager.AddLoginAsync(existingUser, new UserLoginInfo("Facebook", providerKey, "Facebook"));
+                        try
+                        {
+                            await _userManager.AddLoginAsync(existingUser, new UserLoginInfo("Facebook", providerKey, "Facebook"));
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed to link Facebook login for existing user {Email}", email);
+                            return new ExternalLoginCallbackResultDTO { Message = $"Failed to link Facebook: {ex.Message}" };
+                        }
                         var existingToken = await _tokenService.GenerateAccessToken(existingUser);
                         return new ExternalLoginCallbackResultDTO
                         {
@@ -404,7 +414,11 @@ namespace MyWallet.Core.Services
 
                 var createResult = await _userManager.CreateAsync(newUser);
                 if (!createResult.Succeeded)
-                    return new ExternalLoginCallbackResultDTO { Message = "User creation failed" };
+                {
+                    var errors = string.Join("; ", createResult.Errors.Select(e => $"{e.Code}: {e.Description}"));
+                    _logger.LogError("Facebook user creation failed: {Errors}", errors);
+                    return new ExternalLoginCallbackResultDTO { Message = $"User creation failed: {errors}" };
+                }
 
                 await _userManager.AddToRoleAsync(newUser, Roles.User);
                 await _userManager.AddLoginAsync(newUser, new UserLoginInfo("Facebook", providerKey, "Facebook"));
