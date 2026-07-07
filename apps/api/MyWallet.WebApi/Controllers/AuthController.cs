@@ -206,9 +206,14 @@ namespace MyWallet.WebApi.Controllers
         public async Task<IActionResult> FacebookMobileLogin([FromBody] FacebookMobileLoginDto dto)
         {
             var result = await _externalLoginService.HandleFacebookMobileLoginAsync(dto.AccessToken);
-            if (result.Token != null)
-                return Ok(result);
-            return BadRequest(result);
+            return Ok(new {
+                success = result.Token != null,
+                message = result.Message ?? "",
+                token = result.Token,
+                email = result.Email,
+                isNewUser = result.IsNewUser,
+                needsRegistration = result.Token == null && !string.IsNullOrEmpty(result.Email)
+            });
         }
     }
 }

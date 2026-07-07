@@ -3,18 +3,25 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Protocols;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Microsoft.IdentityModel.Tokens;
 using MyWallet.Core.Constants;
 using MyWallet.Core.DTOs.Auth;
 using MyWallet.Core.Entities;
 using MyWallet.Core.Interfaces;
-using System.Net.Http;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text.Json;
 
 namespace MyWallet.Core.Services
 {
     public class ExternalLoginService : IExternalLoginService
     {
+        private static readonly ConfigurationManager<OpenIdConnectConfiguration> _facebookConfigManager =
+            new ConfigurationManager<OpenIdConnectConfiguration>(
+                "https://www.facebook.com/.well-known/openid-configuration/",
+                new OpenIdConnectConfigurationRetriever());
+
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly ILogger<ExternalLoginService> _logger;
@@ -326,29 +333,29 @@ namespace MyWallet.Core.Services
 
             try
             {
-                using var httpClient = new HttpClient();
-                var response = await httpClient.GetAsync(
-                    $"https://graph.facebook.com/me?fields=id,name,email&access_token={accessToken}");
+                var appId = _configuration["Authentication:Facebook:AppId"];
 
-                if (!response.IsSuccessStatusCode)
+                var discoveryDocument = await _facebookConfigManager.GetConfigurationAsync();
+                var tokenHandler = new JwtSecurityTokenHandler();
+
+                var validationParameters = new TokenValidationParameters
                 {
-                    _logger.LogWarning("Facebook token validation failed with status {StatusCode}", response.StatusCode);
-                    return new ExternalLoginCallbackResultDTO { Message = "Invalid Facebook token." };
-                }
+                    ValidateIssuer = true,
+                    ValidIssuer = "https://www.facebook.com",
+                    ValidateAudience = true,
+                    ValidAudience = appId,
+                    ValidateLifetime = true,
+                    IssuerSigningKeys = discoveryDocument.SigningKeys,
+                    NameClaimType = "name",
+                    RoleClaimType = "role"
+                };
 
-                var json = await response.Content.ReadAsStringAsync();
-                using var doc = JsonDocument.Parse(json);
+                var principal = tokenHandler.ValidateToken(accessToken, validationParameters, out var validatedToken);
 
-                if (doc.RootElement.TryGetProperty("error", out _))
-                {
-                    var errorMsg = doc.RootElement.GetProperty("error").GetProperty("message").GetString();
-                    _logger.LogWarning("Facebook API error: {Error}", errorMsg);
-                    return new ExternalLoginCallbackResultDTO { Message = "Invalid Facebook token." };
-                }
-
-                var fbId = doc.RootElement.GetProperty("id").GetString();
-                var fbName = doc.RootElement.GetProperty("name").GetString();
-                var fbEmail = doc.RootElement.TryGetProperty("email", out var emailProp) ? emailProp.GetString() : null;
+                var fbId = principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                           ?? principal.FindFirst("sub")?.Value;
+                var fbEmail = principal.FindFirst("email")?.Value;
+                var fbName = principal.FindFirst("name")?.Value;
 
                 if (string.IsNullOrEmpty(fbId))
                     return new ExternalLoginCallbackResultDTO { Message = "Failed to retrieve Facebook user info." };
@@ -410,6 +417,11 @@ namespace MyWallet.Core.Services
                     Message = "Account created and logged in successfully via Facebook",
                     Token = newToken
                 };
+            }
+            catch (SecurityTokenException ex)
+            {
+                _logger.LogError(ex, "Invalid Facebook JWT token");
+                return new ExternalLoginCallbackResultDTO { Message = "Invalid Facebook token." };
             }
             catch (Exception ex)
             {
