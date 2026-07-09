@@ -251,7 +251,7 @@ bool isSubmitting = false;
                       ),
                     ),
                   );
-                }).toList(),
+                }),
 
                 // Save Button
                 Padding(

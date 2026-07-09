@@ -112,9 +112,9 @@ class _PinScreenState extends State<PinScreen>
         !widget.isFirstTime &&
         widget.showBiometricFirst &&
         !_biometricFailed) {
-      await _pulseController.status == AnimationStatus.completed
+      await (_pulseController.status == AnimationStatus.completed
           ? Future.value()
-          : Future.delayed(const Duration(milliseconds: 300));
+          : Future.delayed(const Duration(milliseconds: 300)));
       _authenticateWithBiometric();
     }
   }
@@ -126,7 +126,7 @@ class _PinScreenState extends State<PinScreen>
     } else {
       setState(() => _biometricFailed = true);
       if (!mounted) return;
-      MessageService.showWarning(context: context, message: '${_biometricName} ${context.l10n.failed}');
+      MessageService.showWarning(context: context, message: '$_biometricName ${context.l10n.failed}');
     }
   }
 
@@ -161,7 +161,7 @@ class _PinScreenState extends State<PinScreen>
   Future<void> _verifyPin() async {
     setState(() => _isLoading = true);
 
-    final stored = await SharedPrefs.getStringValue('user_password');
+    final stored = SharedPrefs.getStringValue('user_password');
     final entered = _pinDigits.join();
 
     if (stored == entered) {

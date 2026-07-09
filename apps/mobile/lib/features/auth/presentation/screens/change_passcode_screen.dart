@@ -113,7 +113,7 @@ class _ChangePasscodeScreenState extends State<ChangePasscodeScreen> {
               Text(
                  l10n.enterCurrentAndSetNewPasscode,
                 style: theme.textTheme.bodyLarge?.copyWith(
-                  color: theme.colorScheme.onBackground.withValues(alpha: 0.6),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -149,7 +149,7 @@ class _ChangePasscodeScreenState extends State<ChangePasscodeScreen> {
                               _obscureCurrent
                                   ? Icons.visibility_off
                                   : Icons.visibility,
-                              color: theme.colorScheme.onBackground.withValues(alpha: 0.6),
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                             onPressed: () {
                               setState(() => _obscureCurrent = !_obscureCurrent);
@@ -207,7 +207,7 @@ class _ChangePasscodeScreenState extends State<ChangePasscodeScreen> {
                               _obscureNew
                                   ? Icons.visibility_off
                                   : Icons.visibility,
-                              color: theme.colorScheme.onBackground.withValues(alpha: 0.6),
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                             onPressed: () {
                               setState(() => _obscureNew = !_obscureNew);
@@ -264,7 +264,7 @@ class _ChangePasscodeScreenState extends State<ChangePasscodeScreen> {
                               _obscureConfirm
                                   ? Icons.visibility_off
                                   : Icons.visibility,
-                              color: theme.colorScheme.onBackground.withValues(alpha: 0.6),
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                             onPressed: () {
                               setState(() => _obscureConfirm = !_obscureConfirm);

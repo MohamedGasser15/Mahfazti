@@ -198,8 +198,9 @@ abstract class _HomeTabState extends State<HomeTab> {
       ];
 
   List<WalletTransaction> get _filteredTransactions {
-    if (_selectedFilter == TransactionType.all)
+    if (_selectedFilter == TransactionType.all) {
       return _homeData?.recentTransactions ?? [];
+    }
 
     return _homeData?.recentTransactions
             .where((t) => _selectedFilter == TransactionType.income

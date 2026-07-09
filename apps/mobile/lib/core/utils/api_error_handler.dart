@@ -8,19 +8,16 @@ class ApiErrorHandler {
         case DioExceptionType.connectionTimeout:
         case DioExceptionType.sendTimeout:
         case DioExceptionType.receiveTimeout:
-          return 'انتهت مهلة الاتصال، تحقق من اتصالك بالإنترنت';
+          return 'Connection timed out. Please check your internet connection.';
         case DioExceptionType.badResponse:
-          // محاولة استخراج رسالة الخطأ من جسم الاستجابة
           final responseData = error.response?.data;
           if (responseData != null) {
-            // محاولة قراءة الحقول المعتادة
             if (responseData is Map) {
               if (responseData.containsKey('message')) {
                 return responseData['message'].toString();
               } else if (responseData.containsKey('error')) {
                 return responseData['error'].toString();
               } else if (responseData.containsKey('errors')) {
-                // لو كانت الأخطاء عبارة عن كائن به عدة حقول
                 final errors = responseData['errors'];
                 if (errors is Map) {
                   return errors.values.join('\n');
@@ -30,16 +27,16 @@ class ApiErrorHandler {
               return responseData;
             }
           }
-          return 'حدث خطأ في الخادم (${error.response?.statusCode ?? 'غير معروف'})';
+          return 'Server error (${error.response?.statusCode ?? 'unknown'})';
         case DioExceptionType.cancel:
-          return 'تم إلغاء الطلب';
+          return 'Request was cancelled.';
         case DioExceptionType.connectionError:
-          return 'لا يوجد اتصال بالإنترنت';
+          return 'No internet connection.';
         default:
-          return 'حدث خطأ غير متوقع: ${error.message}';
+          return 'An unexpected error occurred: ${error.message}';
       }
     } else if (error is FormatException) {
-      return 'خطأ في تنسيق البيانات المستلمة';
+      return 'Invalid data format received from server.';
     } else {
       return error.toString();
     }

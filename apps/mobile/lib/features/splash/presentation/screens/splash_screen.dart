@@ -140,7 +140,7 @@ class _SplashScreenState extends State<SplashScreen>
     final theme = Theme.of(context);
     
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       body: Center(
         child: AnimatedBuilder(
           animation: _controller,
@@ -216,7 +216,7 @@ class _SplashScreenState extends State<SplashScreen>
                     child: Text(
                       context.l10n.manageYourMoneyEasily,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onBackground.withValues(alpha: 0.6),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                         letterSpacing: 0.5,
                       ),
                     ),

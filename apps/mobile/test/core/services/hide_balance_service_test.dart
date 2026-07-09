@@ -1,12 +1,19 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_wallet/core/services/hide_balance_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   group('HideBalanceService', () {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+        (MethodCall methodCall) async => null,
+      );
       await SharedPrefs.init();
     });
 

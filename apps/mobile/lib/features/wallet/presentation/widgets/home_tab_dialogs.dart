@@ -369,8 +369,7 @@ const SizedBox(height: 16),
                                           MessageService.showError(context: context, message: context.l10n.failedToAddTransaction(e.toString()));
                                         } finally {
                                           if (shouldPop) {
-                                            if (!context.mounted) return;
-                                            Navigator.pop(context);
+                                            if (context.mounted) Navigator.pop(context);
                                           } else {
                                             setState(() => isSubmitting = false);
                                           }

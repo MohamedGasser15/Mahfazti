@@ -251,7 +251,12 @@ Future<VoiceExpenseResult> parseVoiceText(String text, {String language = 'ar'})
   }
   
   // معالجة أخطاء Dio
-  String _handleDioError(DioException e) {
+  Exception _handleDioError(DioException e) {
+    final message = _getDioErrorMessage(e);
+    return Exception(message);
+  }
+
+  String _getDioErrorMessage(DioException e) {
     if (e.response != null) {
       final data = e.response!.data;
       if (data is Map && data.containsKey('message')) {

@@ -60,14 +60,14 @@ class _StoryProgressBarState extends State<StoryProgressBar>
                 child: Container(
                   height: 3,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.onBackground.withValues(alpha: 0.1),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(2),
                   ),
                   child: Stack(
                     children: [
                       Container(
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.onBackground.withValues(alpha: 0.1),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),

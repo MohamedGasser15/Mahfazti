@@ -45,8 +45,8 @@ class ApiService {
       }
     }
 
-    print('🌐 PUT Request to: $endpoint');
-    print('📦 Body: ${jsonEncode(body)}');
+    debugPrint('PUT Request to: $endpoint');
+    debugPrint('Body: ${jsonEncode(body)}');
 
     final response = await _dio.put(
       endpoint,
@@ -54,18 +54,18 @@ class ApiService {
       options: Options(headers: headers),
     );
 
-    print('📥 Response Status: ${response.statusCode}');
-    print('📥 Response Body: ${response.data}');
+    debugPrint('Response Status: ${response.statusCode}');
+    debugPrint('Response Body: ${response.data}');
 
     return response;
   } on DioException catch (e) {
-    print('❌ PUT Error: $e');
+    debugPrint('PUT Error: $e');
     if (e.response != null) {
-      print('❌ Response: ${e.response?.data}');
+      debugPrint('Response: ${e.response?.data}');
     }
     rethrow;
   } catch (e) {
-    print('❌ PUT Error: $e');
+    debugPrint('PUT Error: $e');
     rethrow;
   }
 }
@@ -83,9 +83,9 @@ class ApiService {
       }
     }
     
-    print('🌐 DELETE Request to: $endpoint');
+    debugPrint('DELETE Request to: $endpoint');
     if (queryParams != null) {
-      print('📋 Query Params: $queryParams');
+      debugPrint('Query Params: $queryParams');
     }
     
     final response = await _dio.delete(
@@ -94,18 +94,18 @@ class ApiService {
       options: Options(headers: headers),
     );
     
-    print('📥 Response Status: ${response.statusCode}');
-    print('📥 Response Body: ${response.data}');
+    debugPrint('Response Status: ${response.statusCode}');
+    debugPrint('Response Body: ${response.data}');
     
     return response;
   } on DioException catch (e) {
-    print('❌ DELETE Error: $e');
+    debugPrint('DELETE Error: $e');
     if (e.response != null) {
-      print('❌ Response: ${e.response?.data}');
+      debugPrint('Response: ${e.response?.data}');
     }
     rethrow;
   } catch (e) {
-    print('❌ DELETE Error: $e');
+    debugPrint('DELETE Error: $e');
     rethrow;
   }
 }
@@ -124,8 +124,8 @@ class ApiService {
         }
       }
       
-      print('🌐 POST Request to: $endpoint');
-      print('📦 Body: ${jsonEncode(body)}');
+      debugPrint('POST Request to: $endpoint');
+      debugPrint('Body: ${jsonEncode(body)}');
       
       final response = await _dio.post(
         endpoint,
@@ -133,18 +133,18 @@ class ApiService {
         options: Options(headers: headers),
       );
       
-      print('📥 Response Status: ${response.statusCode}');
-      print('📥 Response Body: ${response.data}');
+      debugPrint('Response Status: ${response.statusCode}');
+      debugPrint('Response Body: ${response.data}');
       
       return response;
     } on DioException catch (e) {
-      print('❌ POST Error: $e');
+      debugPrint('POST Error: $e');
       if (e.response != null) {
-        print('❌ Response: ${e.response?.data}');
+        debugPrint('Response: ${e.response?.data}');
       }
       rethrow;
     } catch (e) {
-      print('❌ POST Error: $e');
+      debugPrint('POST Error: $e');
       rethrow;
     }
   }
@@ -164,9 +164,9 @@ class ApiService {
         }
       }
       
-      print('🌐 GET Request to: $endpoint');
+      debugPrint('GET Request to: $endpoint');
       if (queryParams != null) {
-        print('📋 Query Params: $queryParams');
+        debugPrint('Query Params: $queryParams');
       }
       
       final response = await _dio.get(
@@ -175,25 +175,25 @@ class ApiService {
         options: Options(headers: headers),
       );
       
-      print('📥 Response Status: ${response.statusCode}');
-      print('📥 Response Body: ${response.data}');
+      debugPrint('Response Status: ${response.statusCode}');
+      debugPrint('Response Body: ${response.data}');
       
       return response;
     } on DioException catch (e) {
-      print('❌ GET Error: $e');
+      debugPrint('GET Error: $e');
       if (e.response != null) {
-        print('❌ Response: ${e.response?.data}');
+        debugPrint('Response: ${e.response?.data}');
       }
       rethrow;
     } catch (e) {
-      print('❌ GET Error: $e');
+      debugPrint('GET Error: $e');
       rethrow;
     }
   }
   
   // Helper method to handle API responses
   Map<String, dynamic> handleResponse(Response response) {
-    print('🔄 Handling response: ${response.statusCode}');
+    debugPrint('Handling response: ${response.statusCode}');
     
     final statusCode = response.statusCode;
     final data = response.data;

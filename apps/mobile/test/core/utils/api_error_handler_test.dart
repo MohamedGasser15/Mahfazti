@@ -12,7 +12,7 @@ void main() {
         );
         expect(
           ApiErrorHandler.getErrorMessage(error),
-          'انتهت مهلة الاتصال، تحقق من اتصالك بالإنترنت',
+          'Connection timed out. Please check your internet connection.',
         );
       });
 
@@ -23,7 +23,7 @@ void main() {
         );
         expect(
           ApiErrorHandler.getErrorMessage(error),
-          'انتهت مهلة الاتصال، تحقق من اتصالك بالإنترنت',
+          'Connection timed out. Please check your internet connection.',
         );
       });
 
@@ -34,7 +34,7 @@ void main() {
         );
         expect(
           ApiErrorHandler.getErrorMessage(error),
-          'انتهت مهلة الاتصال، تحقق من اتصالك بالإنترنت',
+          'Connection timed out. Please check your internet connection.',
         );
       });
 
@@ -88,7 +88,7 @@ void main() {
         );
         expect(
           ApiErrorHandler.getErrorMessage(error),
-          'حدث خطأ في الخادم (500)',
+          'Server error (500)',
         );
       });
 
@@ -97,7 +97,7 @@ void main() {
           requestOptions: RequestOptions(path: ''),
           type: DioExceptionType.cancel,
         );
-        expect(ApiErrorHandler.getErrorMessage(error), 'تم إلغاء الطلب');
+        expect(ApiErrorHandler.getErrorMessage(error), 'Request was cancelled.');
       });
 
       test('returns connection error message', () {
@@ -107,7 +107,7 @@ void main() {
         );
         expect(
           ApiErrorHandler.getErrorMessage(error),
-          'لا يوجد اتصال بالإنترنت',
+          'No internet connection.',
         );
       });
 
@@ -119,7 +119,7 @@ void main() {
         );
         expect(
           ApiErrorHandler.getErrorMessage(error),
-          'حدث خطأ غير متوقع: Something went wrong',
+          'An unexpected error occurred: Something went wrong',
         );
       });
 
@@ -127,7 +127,7 @@ void main() {
         final error = FormatException('Invalid format');
         expect(
           ApiErrorHandler.getErrorMessage(error),
-          'خطأ في تنسيق البيانات المستلمة',
+          'Invalid data format received from server.',
         );
       });
 

@@ -44,12 +44,12 @@ void main() {
 
     group('equality', () {
       test('two instances with same values should be equal', () {
-        final a = const WalletBalance(
+        const a = WalletBalance(
           totalBalance: 100,
           totalDeposits: 200,
           totalWithdrawals: 100,
         );
-        final b = const WalletBalance(
+        const b = WalletBalance(
           totalBalance: 100,
           totalDeposits: 200,
           totalWithdrawals: 100,
@@ -59,12 +59,12 @@ void main() {
       });
 
       test('two instances with different values should not be equal', () {
-        final a = const WalletBalance(
+        const a = WalletBalance(
           totalBalance: 100,
           totalDeposits: 200,
           totalWithdrawals: 100,
         );
-        final b = const WalletBalance(
+        const b = WalletBalance(
           totalBalance: 50,
           totalDeposits: 200,
           totalWithdrawals: 100,
@@ -507,7 +507,7 @@ void main() {
 
       test('two different category summaries should not be equal', () {
         final a = CategorySummary.fromJson(categoryJson);
-        final b = CategorySummary.fromJson({
+        final b = CategorySummary.fromJson(const {
           'categoryId': 2,
           'categoryNameAr': 'مواصلات',
           'categoryNameEn': 'Transport',

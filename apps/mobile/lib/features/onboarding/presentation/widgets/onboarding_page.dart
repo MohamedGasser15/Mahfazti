@@ -51,7 +51,7 @@ class OnboardingPageWidget extends StatelessWidget {
             child: AnimatedTextWidget(
               text: data.description,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onBackground.withValues(alpha: 0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 height: 1.5,
               ),
             ),

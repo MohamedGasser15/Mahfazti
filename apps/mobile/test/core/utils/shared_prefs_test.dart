@@ -8,6 +8,11 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      (MethodCall methodCall) async => null,
+    );
   });
 
   group('SharedPrefs', () {
@@ -57,13 +62,13 @@ void main() {
           (MethodCall methodCall) async => null,
         );
         await SharedPrefs.init();
-        expect(await SharedPrefs.authToken, isNull);
+        expect(SharedPrefs.authToken, isNull);
       });
 
       test('setAuthToken then authToken returns the token', () async {
         await SharedPrefs.init();
         await SharedPrefs.setAuthToken('test-token');
-        expect(await SharedPrefs.authToken, 'test-token');
+        expect(SharedPrefs.authToken, 'test-token');
       });
     });
 

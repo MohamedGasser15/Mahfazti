@@ -33,6 +33,12 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
+
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      (MethodCall methodCall) async => null,
+    );
     await SharedPrefs.init();
 
     final mockDio = Dio();

@@ -548,7 +548,7 @@ Widget _buildChart(List<dynamic> categories, ChartType type, Color color, bool i
   }
 
   final maxY = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
-  final minY = 0.0;
+  const minY = 0.0;
 
   if (type == ChartType.bar) {
     return Container(

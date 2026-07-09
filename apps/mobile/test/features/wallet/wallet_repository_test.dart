@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_wallet/core/services/api_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
@@ -86,7 +87,14 @@ void main() {
     late WalletRepository repository;
 
     setUp(() async {
+      TestWidgetsFlutterBinding.ensureInitialized();
       SharedPreferences.setMockInitialValues({});
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+        (MethodCall methodCall) async => null,
+      );
       await SharedPrefs.init();
       repository = WalletRepository();
     });

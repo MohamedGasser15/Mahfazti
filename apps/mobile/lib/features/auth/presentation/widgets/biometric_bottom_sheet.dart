@@ -50,7 +50,7 @@ class _BiometricBottomSheetState extends State<BiometricBottomSheet> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.background,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(24),
           topRight: Radius.circular(24),
@@ -104,7 +104,7 @@ class _BiometricBottomSheetState extends State<BiometricBottomSheet> {
           Text(
              context.l10n.biometricLoginDescription(widget.biometricName.toLowerCase()),
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onBackground.withValues(alpha: 0.6),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
             textAlign: TextAlign.center,
           ),

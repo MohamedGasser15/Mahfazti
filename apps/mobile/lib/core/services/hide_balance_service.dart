@@ -11,9 +11,8 @@ class HideBalanceService extends ChangeNotifier {
     _load();
   }
 
-  Future<void> _load() async {
+  void _load() {
     _isHidden = SharedPrefs.getBoolValue(AppConstants.hideBalancesKey) ?? false;
-    notifyListeners();
   }
 
   // تبديل الحالة (يستخدمها زر العين السريع)

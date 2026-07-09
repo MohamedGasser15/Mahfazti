@@ -24,7 +24,6 @@ class AppTheme {
         primary: AppColors.primaryBlack,
         secondary: AppColors.primaryWhite,
         surface: AppColors.primaryWhite,
-        background: AppColors.primaryWhite,
         error: AppColors.accentRed,
       ),
       textTheme: TextTheme(
@@ -168,7 +167,6 @@ class AppTheme {
         primary: AppColors.primaryWhite,
         secondary: AppColors.primaryBlack,
         surface: AppColors.gray900,
-        background: AppColors.primaryBlack,
         error: AppColors.accentRed,
       ),
       textTheme: TextTheme(
