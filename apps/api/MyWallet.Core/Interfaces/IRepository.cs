@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq.Expressions;
 
 namespace MyWallet.Core.Interfaces
 {
@@ -17,7 +12,7 @@ namespace MyWallet.Core.Interfaces
             int? take = null,
             CancellationToken cancellationToken = default);
 
-        Task<T> GetAsync(
+        Task<T?> GetAsync(
             Expression<Func<T, bool>> filter,
             string? includeProperties = null,
             bool isTracking = false,

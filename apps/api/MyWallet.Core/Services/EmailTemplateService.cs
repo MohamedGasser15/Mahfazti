@@ -1,9 +1,4 @@
 ﻿using MyWallet.Core.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MyWallet.Core.Services
 {
@@ -11,14 +6,11 @@ namespace MyWallet.Core.Services
     {
         public string GenerateVerificationEmail(string code, bool isLogin, string? deviceName = null, string? ipAddress = null)
         {
-            // نحدد النص حسب نوع العملية
             string actionText = isLogin ? "Sign in to your account" : "Complete your registration";
             string greeting = isLogin ? "Welcome back!" : "Thanks for signing up!";
             string codePurpose = isLogin ? "sign-in" : "registration";
 
-            // رابط عميق لتطبيق Flutter (يجب تعديله حسب الـ scheme اللي هتستخدمه)
-            // مثال: mahfazati://verify?code=XXXXX
-            string deepLinkUrl = $"https://mahfazati.app/verify?code={code}"; // أو mahfazati://verify?code={code}
+            string deepLinkUrl = $"https://mahfazati.app/verify?code={code}";
 
             string deviceInfo = "";
             if (!string.IsNullOrEmpty(deviceName) || !string.IsNullOrEmpty(ipAddress))

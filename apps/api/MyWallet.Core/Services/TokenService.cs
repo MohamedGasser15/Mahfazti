@@ -27,9 +27,9 @@ namespace MyWallet.Core.Services
             var claims = new List<Claim>
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim(JwtRegisteredClaimNames.Name, user.UserName),
-                new Claim("fullName", user.FullName),
+                new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
+                new Claim(JwtRegisteredClaimNames.Name, user.UserName ?? ""),
+                new Claim("fullName", user.FullName ?? ""),
                 new Claim("phoneNumber", user.PhoneNumber ?? ""),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };

@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="MyWallet.Core/MyWallet.Core.csproj" />
   <Project Path="MyWallet.Infrastructure/MyWallet.Infrastructure.csproj" />
+  <Project Path="MyWallet.UnitTests/MyWallet.UnitTests.csproj" Id="7ab8bd4a-dcd4-4397-8e3f-89f146c15e4b" />
   <Project Path="MyWallet.WebApi/MyWallet.WebApi.csproj" />
 </Solution>

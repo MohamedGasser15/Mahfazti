@@ -124,7 +124,7 @@ namespace MyWallet.Core.Services
                 }
 
                 // Verify code
-                if (cacheData.Code != dto.VerificationCode)
+                if (cacheData!.Code != dto.VerificationCode)
                 {
                     return new AuthResponseDto
                     {
@@ -166,10 +166,10 @@ namespace MyWallet.Core.Services
                         User = new UserDto
                         {
                             Id = existingUser.Id.ToString(),
-                            Email = existingUser.Email,
-                            FullName = existingUser.FullName,
-                            UserName = existingUser.UserName,
-                            PhoneNumber = existingUser.PhoneNumber
+                            Email = existingUser.Email ?? "",
+                            FullName = existingUser.FullName ?? "",
+                            UserName = existingUser.UserName ?? "",
+                            PhoneNumber = existingUser.PhoneNumber ?? ""
                         }
                     };
                 }
@@ -281,7 +281,7 @@ namespace MyWallet.Core.Services
                 };
             }
 
-            if (cacheData.Code != dto.VerificationCode)
+            if (cacheData!.Code != dto.VerificationCode)
             {
                 return new AuthResponseDto
                 {
@@ -298,7 +298,6 @@ namespace MyWallet.Core.Services
             };
         }
 
-        // 2️⃣ Resend verification code
         public async Task<AuthResponseDto> ResendVerificationCodeAsync(SendVerificationDto dto)
         {
             var cacheKey = $"Verification_{dto.Email}";
@@ -335,11 +334,7 @@ namespace MyWallet.Core.Services
         {
             try
             {
-                // في حالة استخدام JWT، الـ Logout يكون عادةً على مستوى العميل
-                // ولكن يمكننا إضافة Token إلى blacklist إذا أردنا
-                // هنا سنقوم فقط بإرجاع نجاح
-
-                return new AuthResponseDto
+            return new AuthResponseDto
                 {
                     Success = true,
                     Message = "تم تسجيل الخروج بنجاح"
@@ -355,7 +350,6 @@ namespace MyWallet.Core.Services
                 };
             }
         }
-        // في نهاية AuthService.cs
         public async Task<bool> CheckEmailExists(string email)
         {
             var user = await _userManager.FindByEmailAsync(email);
@@ -409,9 +403,9 @@ namespace MyWallet.Core.Services
             var claims = new List<Claim>
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim(JwtRegisteredClaimNames.Name, user.UserName),
-                new Claim("fullName", user.FullName),
+                new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
+                new Claim(JwtRegisteredClaimNames.Name, user.UserName ?? ""),
+                new Claim("fullName", user.FullName ?? ""),
                 new Claim("phoneNumber", user.PhoneNumber ?? ""),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
@@ -438,7 +432,6 @@ namespace MyWallet.Core.Services
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        // Helper — زوده جوه AuthService فوق GenerateJwtToken
         private async Task<ApplicationUser?> FindByEmailOrUsernameAsync(string emailOrUsername)
         {
             if (emailOrUsername.Contains('@'))
@@ -447,9 +440,6 @@ namespace MyWallet.Core.Services
                 return await _userManager.FindByNameAsync(emailOrUsername);
         }
 
-        // ─────────────────────────────────────────
-        // STEP 1: Check user exists
-        // ─────────────────────────────────────────
         public async Task<AuthResponseDto> CheckUserExistsAsync(CheckUserDto dto)
         {
             var user = await FindByEmailOrUsernameAsync(dto.EmailOrUsername);
@@ -468,9 +458,6 @@ namespace MyWallet.Core.Services
             };
         }
 
-        // ─────────────────────────────────────────
-        // STEP 2: Verify password
-        // ─────────────────────────────────────────
         public async Task<AuthResponseDto> VerifyPasswordForRecoveryAsync(VerifyPasswordForRecoveryDto dto)
         {
             var user = await FindByEmailOrUsernameAsync(dto.EmailOrUsername);
@@ -498,9 +485,6 @@ namespace MyWallet.Core.Services
             };
         }
 
-        // ─────────────────────────────────────────
-        // STEP 3: Request email change → send OTP
-        // ─────────────────────────────────────────
         public async Task<AuthResponseDto> RequestEmailChangeAsync(RequestEmailChangeDto dto)
         {
             // Check new email not already taken
@@ -530,7 +514,6 @@ namespace MyWallet.Core.Services
                 EmailOrUsername = dto.EmailOrUsername
             }, TimeSpan.FromMinutes(10));
 
-            // بعت OTP على الإيميل الجديد عشان يثبت إنه عنده access عليه
             var emailBody = _emailTemplateService.GenerateVerificationEmail(
                 code: otp,
                 isLogin: false,
@@ -547,9 +530,6 @@ namespace MyWallet.Core.Services
             };
         }
 
-        // ─────────────────────────────────────────
-        // STEP 4: Confirm OTP → update email → return JWT
-        // ─────────────────────────────────────────
         public async Task<AuthResponseDto> ConfirmEmailChangeAsync(ConfirmEmailChangeDto dto)
         {
             var cacheKey = $"EmailChange_{dto.EmailOrUsername}";
@@ -561,7 +541,7 @@ namespace MyWallet.Core.Services
                     Message = "رمز التحقق منتهي الصلاحية"
                 };
 
-            if (cacheData.Code != dto.OtpCode || cacheData.NewEmail != dto.NewEmail)
+            if (cacheData!.Code != dto.OtpCode || cacheData.NewEmail != dto.NewEmail)
                 return new AuthResponseDto
                 {
                     Success = false,

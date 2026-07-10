@@ -3,11 +3,7 @@ using Microsoft.Extensions.Logging;
 using MyWallet.Core.DTOs.Wallet;
 using MyWallet.Core.Interfaces;
 using MyWallet.Core.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Threading.Tasks;
 
 namespace MyWallet.Core.Services
 {
@@ -35,16 +31,14 @@ namespace MyWallet.Core.Services
 
                 var balance = await GetBalanceAsync(userId);
 
-                // احسب العدد الإجمالي للمعاملات (غير المحذوفة)
                 var totalCount = (await _transactionRepository.GetAllAsync(
                     filter: t => t.UserId == userId && !t.IsDeleted,
                     isTracking: false
                 )).Count;
 
-                // جلب آخر 5 معاملات مع تحميل التصنيفات
                 var recentTransactions = await _transactionRepository.GetAllAsync(
                     filter: t => t.UserId == userId && !t.IsDeleted,
-                    includeProperties: "Category", // تحميل التصنيف
+                    includeProperties: "Category",
                     orderBy: q => q.OrderByDescending(t => t.TransactionDate),
                     take: 5,
                     isTracking: false
@@ -107,7 +101,6 @@ namespace MyWallet.Core.Services
 
         public async Task<TransactionListResponseDto> GetTransactionsAsync(string userId, TransactionFilterDto filter)
         {
-            // بناء الفلتر
             Expression<Func<WalletTransaction, bool>> predicate = t =>
                 t.UserId == userId && !t.IsDeleted;
 
@@ -132,13 +125,11 @@ namespace MyWallet.Core.Services
                 predicate = predicate.AndAlso(t => t.TransactionDate <= filter.ToDate.Value);
             }
 
-            // الحصول على العدد الكلي
             var totalCount = (await _transactionRepository.GetAllAsync(
                 filter: predicate,
                 isTracking: false
             )).Count;
 
-            // الحصول على المعاملات مع التصنيفات
             var transactions = await _transactionRepository.GetAllAsync(
                 filter: predicate,
                 includeProperties: "Category",
@@ -146,7 +137,6 @@ namespace MyWallet.Core.Services
                 isTracking: false
             );
 
-            // تطبيق pagination في الذاكرة (مؤقتاً)
             var paged = transactions
                 .Skip((filter.Page - 1) * filter.PageSize)
                 .Take(filter.PageSize)
@@ -226,7 +216,6 @@ namespace MyWallet.Core.Services
             return MapToDto(updated!);
         }
 
-        // ✅ دالة توليد العنوان الذكي
         private static string GenerateTitle(string type, Category? category)
         {
             if (category == null)
@@ -234,12 +223,10 @@ namespace MyWallet.Core.Services
 
             return category.NameEn switch
             {
-                // ===== Income Categories =====
                 "Salary" => "Work Income",
                 "Bonus" => "Extra Earnings",
                 "Income" => "Money Received",
 
-                // ===== Expense Categories =====
                 "Food" => "Food & Drinks",
                 "Transport" => "Transport",
                 "Shopping" => "Shopping",
@@ -249,7 +236,6 @@ namespace MyWallet.Core.Services
                 "Education" => "Education",
                 "Other" => type == "Deposit" ? "Other Income" : "Other Expense",
 
-                // fallback
                 _ => type == "Deposit" ? "Income" : "Expense"
             };
         }
@@ -280,14 +266,12 @@ namespace MyWallet.Core.Services
             if (toDate.HasValue)
                 predicate = predicate.AndAlso(t => t.TransactionDate <= toDate.Value);
 
-            // جلب المعاملات مع التصنيفات لتجميعها حسب الفئة
             var transactions = await _transactionRepository.GetAllAsync(
                 filter: predicate,
                 includeProperties: "Category",
                 isTracking: false
             );
 
-            // تجميع المصروفات حسب الفئة
             var expensesByCategory = transactions
                 .Where(t => t.Type == "Withdrawal")
                 .GroupBy(t => new { t.CategoryId, t.Category!.NameAr, t.Category!.NameEn })
@@ -302,7 +286,6 @@ namespace MyWallet.Core.Services
                 .OrderByDescending(g => g.Total)
                 .ToList();
 
-            // تجميع الإيرادات حسب الفئة
             var incomeByCategory = transactions
                 .Where(t => t.Type == "Deposit")
                 .GroupBy(t => new { t.CategoryId, t.Category!.NameAr, t.Category!.NameEn })
@@ -331,7 +314,6 @@ namespace MyWallet.Core.Services
             };
         }
 
-        // دالة التحويل مع تعبئة أسماء التصنيفات
         private static WalletTransactionDto MapToDto(WalletTransaction entity)
         {
             return new WalletTransactionDto
@@ -349,7 +331,6 @@ namespace MyWallet.Core.Services
         }
     }
 
-    // Predicate builder helper (كما هو)
     public static class PredicateBuilder
     {
         public static Expression<Func<T, bool>> AndAlso<T>(
@@ -363,7 +344,7 @@ namespace MyWallet.Core.Services
             var right = rightVisitor.Visit(expr2.Body);
 
             return Expression.Lambda<Func<T, bool>>(
-                Expression.AndAlso(left, right), parameter);
+                Expression.AndAlso(left!, right!), parameter);
         }
 
         private class ReplaceExpressionVisitor : ExpressionVisitor

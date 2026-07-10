@@ -20,7 +20,7 @@ namespace MyWallet.WebApi.Controllers
         [HttpGet("get")]
         public async Task<IActionResult> GetProfile()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var result = await _profileService.GetProfileAsync(userId);
             return Ok(result);
         }
@@ -28,7 +28,7 @@ namespace MyWallet.WebApi.Controllers
         [HttpPut("update")]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto dto)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var result = await _profileService.UpdateProfileAsync(userId, dto);
             return Ok(result);
         }
@@ -36,7 +36,7 @@ namespace MyWallet.WebApi.Controllers
         [HttpPost("change-password")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var result = await _profileService.ChangePasswordAsync(userId, dto);
             return Ok(result);
         }

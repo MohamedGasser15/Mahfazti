@@ -47,12 +47,12 @@ namespace MyWallet.Core.Services
             return _signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl);
         }
 
-        public async Task<ExternalLoginInfo> GetExternalLoginInfoAsync()
+        public async Task<ExternalLoginInfo?> GetExternalLoginInfoAsync()
         {
             return await _signInManager.GetExternalLoginInfoAsync();
         }
 
-        public async Task<ApplicationUser> FindByExternalLoginAsync(string provider, string key)
+        public async Task<ApplicationUser?> FindByExternalLoginAsync(string provider, string key)
         {
             return await _userManager.FindByLoginAsync(provider, key);
         }
@@ -127,7 +127,7 @@ namespace MyWallet.Core.Services
 
                 _logger.LogInformation("External user detected with email: {Email}", email);
 
-                var existingUser = await _userManager.FindByEmailAsync(email);
+                var existingUser = await _userManager.FindByEmailAsync(email!);
                 if (existingUser != null)
                 {
                     _logger.LogInformation("Email {Email} already exists. Linking external login.", email);
@@ -146,7 +146,7 @@ namespace MyWallet.Core.Services
                 _logger.LogInformation("Creating new user automatically for email: {Email}", email);
                 var newUser = new ApplicationUser
                 {
-                    FullName = name ?? email,
+                    FullName = name ?? email ?? "",
                     Email = email,
                     UserName = email,
                     EmailConfirmed = true
@@ -197,7 +197,7 @@ namespace MyWallet.Core.Services
                     return new ExternalLoginCallbackResultDTO { Message = "Invalid external login info." };
                 }
 
-                var existingUser = await _userManager.FindByEmailAsync(model.Email);
+                var existingUser = await _userManager.FindByEmailAsync(model.Email!);
                 if (existingUser != null)
                 {
                     _logger.LogWarning("Email {Email} is already registered", model.Email);
@@ -381,7 +381,7 @@ namespace MyWallet.Core.Services
 
                 if (!string.IsNullOrEmpty(email))
                 {
-                    var existingUser = await _userManager.FindByEmailAsync(email);
+                var existingUser = await _userManager.FindByEmailAsync(email!);
                     if (existingUser != null)
                     {
                         try

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace MyWallet.Core.DTOs.Wallet
+﻿namespace MyWallet.Core.DTOs.Wallet
 {
     public class WalletTransactionDto
     {

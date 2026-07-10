@@ -2,11 +2,7 @@
 using MyWallet.Core.DTOs.Wallet;
 using MyWallet.Core.Interfaces;
 using MyWallet.Core.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace MyWallet.Core.Services
 {
@@ -15,7 +11,6 @@ namespace MyWallet.Core.Services
         private readonly IRepository<Category> _categoryRepository;
         private readonly ILogger<VoiceExpenseService> _logger;
 
-        // ===== أرقام عربية =====
         private static readonly Dictionary<string, decimal> ArabicNumbers = new()
         {
             {"واحد", 1}, {"اتنين", 2}, {"تلاتة", 3}, {"اربعة", 4},
@@ -28,7 +23,6 @@ namespace MyWallet.Core.Services
             {"تسعمية", 900}, {"الف", 1000}, {"ألف", 1000}, {"مليون", 1000000}
         };
 
-        // ===== كاتيجوري عربي =====
         private static readonly Dictionary<string, string[]> ArabicCategoryKeywords = new()
         {
             { "Food",          new[] { "أكل", "اكل", "طعام", "فطار", "غدا", "عشا", "مطعم", "كافيه", "قهوة", "شاي", "عصير", "ساندوتش", "فول", "طعمية", "كشري", "بيتزا", "برجر" } },
@@ -40,7 +34,6 @@ namespace MyWallet.Core.Services
             { "Education",     new[] { "كورس", "كتاب", "مدرسة", "جامعة", "دروس", "كلية", "محاضرة" } },
         };
 
-        // ===== كاتيجوري إنجليزي =====
         private static readonly Dictionary<string, string[]> EnglishCategoryKeywords = new()
         {
             { "Food",          new[] { "food", "eat", "eating", "lunch", "dinner", "breakfast", "restaurant", "cafe", "coffee", "tea", "juice", "pizza", "burger", "sandwich", "meal" } },
@@ -52,11 +45,8 @@ namespace MyWallet.Core.Services
             { "Education",     new[] { "course", "book", "school", "university", "college", "lesson", "class", "tuition" } },
         };
 
-        // ===== كلمات إيراد عربي =====
-        // ===== كلمات إيراد إنجليزي - موسّعة =====
         private static readonly string[] EnglishIncomeKeywords = new[]
         {
-    // فعل مباشر
     "received", "receive",
     "earned", "earn",
     "got paid", "got",
@@ -78,7 +68,6 @@ namespace MyWallet.Core.Services
     "sent me",
 };
 
-        // ===== كلمات إيراد عربي - موسّعة =====
         private static readonly string[] ArabicIncomeKeywords = new[]
         {
     "استلمت", "استلم",
@@ -99,10 +88,8 @@ namespace MyWallet.Core.Services
     "استردت", "استرداد",
 };
 
-        // ===== كلمات شائعة نشيلها من الـ Note =====
         private static readonly string[] EnglishNoiseWords = new[]
         {
-    // أفعال المعاملة بس - مش كلمات income
     "spent", "paid", "bought", "purchased", "spend",
     // حروف جر
     "for", "on", "at", "with", "from", "into",
@@ -114,16 +101,11 @@ namespace MyWallet.Core.Services
 
         private static readonly string[] ArabicNoiseWords = new[]
         {
-    // أفعال مصروف
     "اشتريت", "اشترت", "دفعت", "دفع", "سحبت", "سحب", "صرفت", "صرف",
-    // أفعال إيراد - نشيلها من الـ note بس مش من الـ detection
     "استلمت", "اخدت", "حصلت", "حولت",
-    // ضمائر وأدوات
     "انا", "أنا", "احنا", "هو", "هي",
     "عايز", "بقا", "دلوقتي", "كده", "يعني", "بقى", "ده", "دي",
-    // عملات
     "جنيه", "جنيهات", "جنيهًا", "قرش", "دولار", "يورو", "ريال",
-    // حروف
     "من", "في", "على", "عن", "مع", "لـ", "ب",
 };
 
@@ -144,15 +126,12 @@ namespace MyWallet.Core.Services
 
                 var normalizedText = text.Trim().ToLower();
 
-                // ✅ 1. اكتشف اللغة الأول
                 var detectedLang = DetectLanguage(normalizedText, language);
                 _logger.LogInformation("Detected language: {Lang}", detectedLang);
 
-                // ✅ 2. اكتشف نوع المعاملة من النص الكامل (قبل أي تنظيف)
                 var transactionType = DetectTransactionType(normalizedText, detectedLang);
                 _logger.LogInformation("Transaction type: {Type}", transactionType);
 
-                // ✅ 3. استخرج المبلغ
                 var amount = ExtractAmount(normalizedText);
                 if (amount == null)
                     return new VoiceExpenseResultDto
@@ -163,7 +142,6 @@ namespace MyWallet.Core.Services
                             : "Could not detect the amount from your speech"
                     };
 
-                // ✅ 4. اكتشف الكاتيجوري
                 var (categoryNameEn, matchedKeyword) = DetectCategory(normalizedText, transactionType, detectedLang);
 
                 var category = await _categoryRepository.GetAsync(
@@ -171,7 +149,6 @@ namespace MyWallet.Core.Services
                     cancellationToken: cancellationToken
                 );
 
-                // ✅ 5. استخرج note نظيفة
                 var note = ExtractCleanNote(normalizedText, amount.Value, matchedKeyword, detectedLang);
                 var title = BuildTitle(note, matchedKeyword, categoryNameEn, transactionType, detectedLang);
 
@@ -197,7 +174,6 @@ namespace MyWallet.Core.Services
                 };
             }
         }
-        // ✅ تحديد اللغة من النص الفعلي
         private string DetectLanguage(string text, string hintLanguage)
         {
             if (Regex.IsMatch(text, @"[\u0600-\u06FF]"))

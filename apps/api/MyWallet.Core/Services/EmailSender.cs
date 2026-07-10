@@ -16,10 +16,10 @@ namespace MyWallet.Core.Services
 
         public EmailSender(IConfiguration config)
         {
-            _host = config["GoogleSMTP:Host"];
+            _host = config["GoogleSMTP:Host"] ?? "";
             _port = config.GetValue<int>("GoogleSMTP:Port");
-            _username = config["GoogleSMTP:Username"];
-            _password = config["GoogleSMTP:Password"];
+            _username = config["GoogleSMTP:Username"] ?? "";
+            _password = config["GoogleSMTP:Password"] ?? "";
         }
 
         public async Task SendEmailAsync(string email, string subject, string htmlMessage)

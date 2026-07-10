@@ -1,7 +1,4 @@
-﻿// Application/DTOs/Wallet/TransactionListResponseDto.cs
-using System.Collections.Generic;
-
-namespace MyWallet.Core.DTOs.Wallet
+﻿namespace MyWallet.Core.DTOs.Wallet
 {
     public class TransactionListResponseDto
     {

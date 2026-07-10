@@ -2,11 +2,6 @@
 using MyWallet.Core.DTOs.Profile;
 using MyWallet.Core.Interfaces;
 using MyWallet.Core.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MyWallet.Core.Services
 {
@@ -24,10 +19,10 @@ namespace MyWallet.Core.Services
 
             return new ProfileResponseDto
             {
-                FullName = user.FullName,
-                UserName = user.UserName,
-                Email = user.Email,
-                PhoneNumber = user.PhoneNumber,
+                FullName = user.FullName ?? "",
+                UserName = user.UserName ?? "",
+                Email = user.Email ?? "",
+                PhoneNumber = user.PhoneNumber ?? "",
                 ImagePath = user.ImagePath
             };
         }
@@ -40,7 +35,7 @@ namespace MyWallet.Core.Services
             user.FullName = dto.FullName;
             user.UserName = dto.UserName;
             user.PhoneNumber = dto.PhoneNumber;
-            // تحديث الصورة لو موجودة
+
 
             var result = await _userManager.UpdateAsync(user);
             if (!result.Succeeded)

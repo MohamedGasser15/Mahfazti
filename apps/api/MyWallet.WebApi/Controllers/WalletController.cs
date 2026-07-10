@@ -80,9 +80,8 @@ namespace MyWallet.WebApi.Controllers
             {
                 return NotFound();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                // optional logging
                 return StatusCode(500, "Something went wrong");
             }
         }

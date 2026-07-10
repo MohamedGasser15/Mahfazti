@@ -1,5 +1,4 @@
-﻿// Application/DTOs/Wallet/TransactionFilterDto.cs
-namespace MyWallet.Core.DTOs.Wallet
+﻿namespace MyWallet.Core.DTOs.Wallet
 {
     public class TransactionFilterDto
     {

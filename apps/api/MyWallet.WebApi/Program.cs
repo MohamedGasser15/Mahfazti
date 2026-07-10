@@ -66,14 +66,14 @@ builder.Services.AddAuthentication(options =>
 })
 .AddFacebook(facebookOptions =>
 {
-    facebookOptions.AppId = builder.Configuration["Authentication:Facebook:AppId"];
-    facebookOptions.AppSecret = builder.Configuration["Authentication:Facebook:AppSecret"];
+    facebookOptions.AppId = builder.Configuration["Authentication:Facebook:AppId"] ?? "";
+    facebookOptions.AppSecret = builder.Configuration["Authentication:Facebook:AppSecret"] ?? "";
     facebookOptions.Scope.Add("email");
 })
 .AddGoogle(googleOptions =>
 {
-    googleOptions.ClientId = builder.Configuration["Authentication:Google:ClientId"];
-    googleOptions.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+    googleOptions.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? "";
+    googleOptions.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "";
 });
 
 // MemoryCache
@@ -82,7 +82,6 @@ builder.Services.AddMemoryCache();
 // HttpClient for external login
 builder.Services.AddHttpClient();
 
-// Authorization (يمكن تعديل السياسات حسب احتياجك)
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminPolicy", policy => policy.RequireRole("Admin"));
@@ -199,6 +198,9 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await db.Database.MigrateAsync();
-    await CategorySeeder.SeedAsync(db); // ✅
+    await CategorySeeder.SeedAsync(db);
+
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
+    await RoleSeeder.SeedAsync(roleManager);
 }
 app.Run();

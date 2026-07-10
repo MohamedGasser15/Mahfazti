@@ -2,10 +2,6 @@
 using MyWallet.Core.DTOs.Budget;
 using MyWallet.Core.Interfaces;
 using MyWallet.Core.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace MyWallet.Core.Services
 {
@@ -37,24 +33,21 @@ namespace MyWallet.Core.Services
             var currentMonth = now.Month;
             var currentYear = now.Year;
 
-            // 1. جلب الميزانية المسجلة لهذا الشهر (إن وجدت)
             var budgetEntity = await _budgetRepository.GetAsync(
                 filter: b => b.UserId == userId && b.Month == currentMonth && b.Year == currentYear,
                 isTracking: false
             );
 
-            decimal monthlyBudget = budgetEntity?.MonthlyBudget ?? 3000m; // قيمة افتراضية
+            decimal monthlyBudget = budgetEntity?.MonthlyBudget ?? 3000m;
 
-            // 2. حساب المصروفات لهذا الشهر
             var startOfMonth = new DateTime(currentYear, currentMonth, 1);
             var endOfMonth = startOfMonth.AddMonths(1).AddDays(-1);
 
-            // جلب المعاملات مع التصنيفات
             var transactions = await _transactionRepository.GetAllAsync(
                 filter: t => t.UserId == userId && !t.IsDeleted &&
                              t.TransactionDate >= startOfMonth &&
                              t.TransactionDate <= endOfMonth,
-                includeProperties: "Category", // لتحميل أسماء التصنيفات
+                includeProperties: "Category",
                 isTracking: false
             );
 
@@ -62,10 +55,9 @@ namespace MyWallet.Core.Services
                 .Where(t => t.Type == "Withdrawal")
                 .Sum(t => t.Amount);
 
-            // 3. تجميع المصروفات حسب الفئة باستخدام CategoryId
             var expensesByCategory = transactions
                 .Where(t => t.Type == "Withdrawal" && t.CategoryId.HasValue)
-                .GroupBy(t => t.CategoryId.Value)
+                .GroupBy(t => t.CategoryId!.Value)
                 .Select(g => new
                 {
                     CategoryId = g.Key,
@@ -73,15 +65,11 @@ namespace MyWallet.Core.Services
                 })
                 .ToDictionary(x => x.CategoryId, x => x.Total);
 
-            // 4. جلب جميع التصنيفات النشطة (أو كلها) لاستخدامها في قائمة الميزانيات
             var allCategories = await _categoryRepository.GetAllAsync(
-                // filter: c => c.IsActive, // إذا كان هناك حقل IsActive
                 orderBy: q => q.OrderBy(c => c.NameEn),
                 isTracking: false
             );
 
-            // 5. جلب ميزانيات الفئات لهذا الشهر للمستخدم (إذا كان هناك جدول CategoryBudget)
-            // هنا نفترض أن CategoryBudget مرتبط بـ UserBudget، لذلك نحتاج أولاً الحصول على UserBudgetId
             int? userBudgetId = budgetEntity?.Id;
             var categoryBudgets = new List<CategoryBudget>();
 
@@ -94,12 +82,10 @@ namespace MyWallet.Core.Services
                 );
             }
 
-            // 6. تكوين قائمة CategoryBudgetDto
             var categoryBudgetDtos = new List<CategoryBudgetDto>();
 
             if (categoryBudgets.Any())
             {
-                // إذا كانت هناك ميزانيات مسجلة، نستخدمها
                 foreach (var cb in categoryBudgets)
                 {
                     categoryBudgetDtos.Add(new CategoryBudgetDto
@@ -115,8 +101,6 @@ namespace MyWallet.Core.Services
             }
             else
             {
-                // إذا لم توجد ميزانيات مسجلة، نستخدم قيم افتراضية لكل التصنيفات الموجودة
-                // يمكن تخصيص هذه القيم حسب رغبتك
                 var defaultBudgets = new Dictionary<string, decimal>
                 {
                     ["Food"] = 500,
@@ -129,14 +113,13 @@ namespace MyWallet.Core.Services
 
                 foreach (var category in allCategories)
                 {
-                    // نحاول إيجاد قيمة افتراضية بناءً على الاسم الإنجليزي
                     decimal budgetAmount = defaultBudgets.ContainsKey(category.NameEn)
                         ? defaultBudgets[category.NameEn]
-                        : 100; // قيمة افتراضية عامة
+                        : 100;
 
                     categoryBudgetDtos.Add(new CategoryBudgetDto
                     {
-                        Id = 0, // ليس لها Id حقيقي بعد
+                        Id = 0,
                         CategoryId = category.Id,
                         CategoryNameAr = category.NameAr,
                         CategoryNameEn = category.NameEn,
@@ -163,7 +146,6 @@ namespace MyWallet.Core.Services
 
             if (budgetEntity == null)
             {
-                // إذا لم توجد ميزانية شهرية، يمكن إنشاؤها بقيمة افتراضية أو رمي خطأ
                 throw new Exception("No monthly budget found for current month");
             }
 
@@ -226,7 +208,6 @@ namespace MyWallet.Core.Services
             }
         }
 
-        // يمكن إضافة دوال لإدارة ميزانيات الفئات (اختياري)
         public async Task UpdateCategoryBudgetAsync(int userBudgetId, int categoryId, decimal budgetAmount)
         {
             var categoryBudget = await _categoryBudgetRepository.GetAsync(

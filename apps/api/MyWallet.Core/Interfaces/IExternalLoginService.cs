@@ -9,9 +9,9 @@ namespace MyWallet.Core.Interfaces
     {
         AuthenticationProperties ConfigureExternalAuthProperties(string provider, string redirectUrl);
 
-        Task<ExternalLoginInfo> GetExternalLoginInfoAsync();
+        Task<ExternalLoginInfo?> GetExternalLoginInfoAsync();
 
-        Task<ApplicationUser> FindByExternalLoginAsync(string provider, string key);
+        Task<ApplicationUser?> FindByExternalLoginAsync(string provider, string key);
 
         Task<SignInResult> ExternalLoginSignInAsync(string provider, string key, bool isPersistent);
 

@@ -1,18 +1,11 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using MyWallet.Core.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Emit;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MyWallet.Infrastructure.Data
 {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, int>
     {
-        // Infrastructure/Data/ApplicationDbContext.cs
         public DbSet<WalletTransaction> WalletTransactions { get; set; }
         public DbSet<CategoryBudget> CategoryBudgets { get; set; }
 
@@ -35,14 +28,13 @@ namespace MyWallet.Infrastructure.Data
             .HasOne(wt => wt.Category)
             .WithMany(c => c.Transactions)
             .HasForeignKey(wt => wt.CategoryId)
-            .OnDelete(DeleteBehavior.SetNull); // إذا حذفت التصنيف، تبقى المعاملات بدون تصنيف
+            .OnDelete(DeleteBehavior.SetNull);
 
-            // علاقة CategoryBudget مع Category
             builder.Entity<CategoryBudget>()
                 .HasOne(cb => cb.Category)
-                .WithMany() // أو WithMany(c => c.CategoryBudgets) إذا أضفت ICollection في Category
+                .WithMany()
                 .HasForeignKey(cb => cb.CategoryId)
-                .OnDelete(DeleteBehavior.Cascade); // إذا حذفت التصنيف، تحذف ميزانيته
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

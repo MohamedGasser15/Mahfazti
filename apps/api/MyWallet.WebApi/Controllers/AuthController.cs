@@ -69,7 +69,7 @@ namespace MyWallet.WebApi.Controllers
         [Authorize]
         public async Task<IActionResult> Logout()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var result = await _authService.LogoutAsync(userId);
 
             return Ok(result);
@@ -86,12 +86,12 @@ namespace MyWallet.WebApi.Controllers
                 {
                     email,
                     exists = userExists,
-                    message = userExists ? "البريد الإلكتروني مسجل" : "البريد الإلكتروني غير مسجل"
+                    message = userExists ? "Email is registered" : "Email is not registered"
                 });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = "حدث خطأ", error = ex.Message });
+                return BadRequest(new { message = "An error occurred", error = ex.Message });
             }
         }
 
@@ -99,7 +99,7 @@ namespace MyWallet.WebApi.Controllers
         [HttpPost("set-currency")]
         public async Task<IActionResult> SetCurrency([FromBody] SetCurrencyDto dto)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var result = await _authService.SetUserCurrencyAsync(userId, dto.Currency);
 
             if (!result.Success)
@@ -158,21 +158,21 @@ namespace MyWallet.WebApi.Controllers
         [HttpGet("ExternalLogin")]
         public IActionResult ExternalLogin([FromQuery] string provider, [FromQuery] string? returnUrl = null)
         {
-            var redirectUrl = Url.Action(nameof(ExternalLoginCallback), "Auth", new { returnUrl }, Request.Scheme);
-            var properties = _externalLoginService.ConfigureExternalAuthProperties(provider, redirectUrl);
+            var redirectUrl = Url.Action(nameof(ExternalLoginCallback), "Auth", new { returnUrl }, Request.Scheme)!;
+            var properties = _externalLoginService.ConfigureExternalAuthProperties(provider, redirectUrl!);
             return Challenge(properties, provider);
         }
 
         [HttpGet("ExternalLoginCallback")]
         public async Task<IActionResult> ExternalLoginCallback([FromQuery] string? returnUrl = null, [FromQuery] string? remoteError = null)
         {
-            var result = await _externalLoginService.HandleExternalLoginCallbackAsync(remoteError, returnUrl);
+            var result = await _externalLoginService.HandleExternalLoginCallbackAsync(remoteError ?? "", returnUrl ?? "");
             if (!string.IsNullOrEmpty(remoteError) || result == null || string.IsNullOrEmpty(result.Email))
             {
                 return Redirect($"{returnUrl}?error=external_login_failed");
             }
 
-            var separator = returnUrl.Contains("?") ? "&" : "?";
+            var separator = returnUrl!.Contains("?") ? "&" : "?";
             var url = $"{returnUrl}{separator}email={Uri.EscapeDataString(result.Email)}&isNewUser={result.IsNewUser.ToString().ToLower()}";
             if (!string.IsNullOrEmpty(result.Token))
             {

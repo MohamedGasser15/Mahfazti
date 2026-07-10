@@ -2,12 +2,7 @@
 using Microsoft.Extensions.Logging;
 using MyWallet.Infrastructure.Data;
 using MyWallet.Core.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MyWallet.Infrastructure.Persistence.Repository
 {

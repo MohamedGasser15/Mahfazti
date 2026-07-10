@@ -82,11 +82,9 @@ namespace MyWallet.Core.Services
             var category = await _categoryRepository.GetAsync(c => c.Id == id, isTracking: true);
             if (category == null) return false;
 
-            // Hard delete أو Soft delete حسب رغبتك (ملاحظة: إذا كان هناك معاملات مرتبطة بهذا التصنيف، قد تحتاج لتعامل مختلف)
             await _categoryRepository.DeleteAsync(category);
             return true;
         }
 
-        // تم إزالة ActivateCategoryAsync نهائياً لأنه لا يوجد حقل IsActive
     }
 }

@@ -1,6 +1,4 @@
-﻿// Application/DTOs/Wallet/AddTransactionDto.cs
-using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace MyWallet.Core.DTOs.Wallet
 {
