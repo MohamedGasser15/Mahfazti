@@ -101,6 +101,7 @@ namespace MyWallet.Core.Services
                         _logger.LogInformation("User {UserId} logged in successfully via {Provider}", user.Id, info.LoginProvider);
 
                         var token = await _tokenService.GenerateAccessToken(user);
+                        var hasPassword = await _userManager.HasPasswordAsync(user);
 
                         return new ExternalLoginCallbackResultDTO
                         {
@@ -108,7 +109,8 @@ namespace MyWallet.Core.Services
                             Email = user.Email,
                             Message = "Logged in successfully via external provider",
                             ReturnUrl = returnUrl,
-                            Token = token
+                            Token = token,
+                            HasPassword = hasPassword
                         };
                     }
                     else
@@ -133,13 +135,15 @@ namespace MyWallet.Core.Services
                     _logger.LogInformation("Email {Email} already exists. Linking external login.", email);
                     await _userManager.AddLoginAsync(existingUser, info);
                     var existingToken = await _tokenService.GenerateAccessToken(existingUser);
+                    var hasPassword = await _userManager.HasPasswordAsync(existingUser);
                     return new ExternalLoginCallbackResultDTO
                     {
                         IsNewUser = false,
                         Email = existingUser.Email,
                         Message = "Linked and logged in successfully",
                         ReturnUrl = returnUrl,
-                        Token = existingToken
+                        Token = existingToken,
+                        HasPassword = hasPassword
                     };
                 }
 
@@ -164,7 +168,8 @@ namespace MyWallet.Core.Services
                         Email = newUser.Email,
                         Message = "Account created and logged in successfully",
                         ReturnUrl = returnUrl,
-                        Token = newToken
+                        Token = newToken,
+                        HasPassword = false
                     };
                 }
                 else
@@ -239,7 +244,8 @@ namespace MyWallet.Core.Services
                     Email = user.Email,
                     Message = "External user confirmed",
                     Token = token,
-                    IsNewUser = false
+                    IsNewUser = false,
+                    HasPassword = false
                 };
             }
             catch (Exception ex)
@@ -272,12 +278,14 @@ namespace MyWallet.Core.Services
                 if (user != null)
                 {
                     var token = await _tokenService.GenerateAccessToken(user);
+                    var hasPassword = await _userManager.HasPasswordAsync(user);
                     return new ExternalLoginCallbackResultDTO
                     {
                         IsNewUser = false,
                         Email = user.Email,
                         Message = "Logged in successfully via Google",
-                        Token = token
+                        Token = token,
+                        HasPassword = hasPassword
                     };
                 }
 
@@ -286,12 +294,14 @@ namespace MyWallet.Core.Services
                 {
                     await _userManager.AddLoginAsync(existingUser, new UserLoginInfo("Google", providerKey, "Google"));
                     var existingToken = await _tokenService.GenerateAccessToken(existingUser);
+                    var hasPassword = await _userManager.HasPasswordAsync(existingUser);
                     return new ExternalLoginCallbackResultDTO
                     {
                         IsNewUser = false,
                         Email = existingUser.Email,
                         Message = "Linked and logged in successfully via Google",
-                        Token = existingToken
+                        Token = existingToken,
+                        HasPassword = hasPassword
                     };
                 }
 
@@ -316,7 +326,8 @@ namespace MyWallet.Core.Services
                     IsNewUser = false,
                     Email = newUser.Email,
                     Message = "Account created and logged in successfully via Google",
-                    Token = newToken
+                    Token = newToken,
+                    HasPassword = false
                 };
             }
             catch (InvalidJwtException ex)
@@ -370,12 +381,14 @@ namespace MyWallet.Core.Services
                 if (user != null)
                 {
                     var token = await _tokenService.GenerateAccessToken(user);
+                    var hasPassword = await _userManager.HasPasswordAsync(user);
                     return new ExternalLoginCallbackResultDTO
                     {
                         IsNewUser = false,
                         Email = user.Email,
                         Message = "Logged in successfully via Facebook",
-                        Token = token
+                        Token = token,
+                        HasPassword = hasPassword
                     };
                 }
 
@@ -394,12 +407,14 @@ namespace MyWallet.Core.Services
                             return new ExternalLoginCallbackResultDTO { Message = $"Failed to link Facebook: {ex.Message}" };
                         }
                         var existingToken = await _tokenService.GenerateAccessToken(existingUser);
+                        var hasPassword = await _userManager.HasPasswordAsync(existingUser);
                         return new ExternalLoginCallbackResultDTO
                         {
                             IsNewUser = false,
                             Email = existingUser.Email,
                             Message = "Linked and logged in successfully via Facebook",
-                            Token = existingToken
+                            Token = existingToken,
+                            HasPassword = hasPassword
                         };
                     }
                 }
@@ -429,7 +444,8 @@ namespace MyWallet.Core.Services
                     IsNewUser = false,
                     Email = newUser.Email,
                     Message = "Account created and logged in successfully via Facebook",
-                    Token = newToken
+                    Token = newToken,
+                    HasPassword = false
                 };
             }
             catch (SecurityTokenException ex)

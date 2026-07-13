@@ -109,12 +109,16 @@ class _SplashScreenState extends State<SplashScreen>
     if (token == null || token.isEmpty) {
       _navigateToOnboarding();
     } else {
+      final hasPasscode = SharedPrefs.getStringValue('user_password') != null;
+      final route = hasPasscode ? '/pin' : '/set-passcode';
       Navigator.of(context).pushReplacementNamed(
-        '/pin',
-        arguments: {
-          'isFirstTime': false,
-          'showBiometricFirst': true,
-        },
+        route,
+        arguments: hasPasscode
+            ? {
+                'isFirstTime': false,
+                'showBiometricFirst': true,
+              }
+            : null,
       );
     }
   }

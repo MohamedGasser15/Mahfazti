@@ -13,6 +13,7 @@ class ApiEndpoints {
   static const String recoveryConfirmEmailChange = 'api/auth/recovery/confirm-email-change';
   static const String forgotPasscode = 'api/auth/passcode/forgot';
   static const String resetPasscode = 'api/auth/passcode/reset';
+  static const String createPasscode = 'api/auth/passcode/create';
   static const String googleLogin = 'api/auth/GoogleMobile';
   static const String facebookLogin = 'api/auth/FacebookMobile';
 

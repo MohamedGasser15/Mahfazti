@@ -302,15 +302,20 @@ class _EmailScreenState extends State<EmailScreen>
       if (!mounted) return;
 
       if (result['success'] == true) {
-        MessageService.showSuccess(
-          context: context,
-          message: context.l10n.loginSuccess,
-        );
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/home',
-          (route) => false,
-        );
+        final hasPassword = result['hasPassword'] == true;
+        if (hasPassword) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/home',
+            (route) => false,
+          );
+        } else {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/set-passcode',
+            (route) => false,
+          );
+        }
       } else {
         final needsRegistration = result['needsRegistration'] == true;
         if (needsRegistration && result['email'] != null) {

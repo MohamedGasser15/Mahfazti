@@ -7,5 +7,6 @@ namespace MyWallet.Core.DTOs.Auth
         public string? ReturnUrl { get; set; }
         public string? Message { get; set; }
         public string? Token { get; set; }
+        public bool HasPassword { get; set; }
     }
 }

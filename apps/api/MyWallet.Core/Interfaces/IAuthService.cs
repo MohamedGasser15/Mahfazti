@@ -17,5 +17,6 @@ namespace MyWallet.Core.Interfaces
         Task<AuthResponseDto> ConfirmEmailChangeAsync(ConfirmEmailChangeDto dto);
         Task<AuthResponseDto> SendPasscodeResetOtpAsync(string userId);
         Task<AuthResponseDto> ResetPasscodeAsync(ResetPasscodeDto dto);
+        Task<AuthResponseDto> CreatePasscodeAsync(string userId, CreatePasscodeDto dto);
     }
 }

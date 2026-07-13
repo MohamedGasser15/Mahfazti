@@ -17,6 +17,7 @@ import 'package:my_wallet/features/auth/presentation/screens/recovery_new_email_
 import 'package:my_wallet/features/auth/presentation/screens/recovery_otp_screen.dart';
 import 'package:my_wallet/features/auth/presentation/screens/recovery_password_screen.dart';
 import 'package:my_wallet/features/auth/presentation/screens/register_screen.dart';
+import 'package:my_wallet/features/auth/presentation/screens/set_passcode_screen.dart';
 import 'package:my_wallet/features/auth/presentation/screens/verification_screen.dart';
 import 'package:my_wallet/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:my_wallet/features/splash/presentation/screens/splash_screen.dart';
@@ -187,6 +188,10 @@ onGenerateRoute: (settings) {
     case '/home':
       return MaterialPageRoute(
         builder: (context) => const HomeScreen(),
+      );
+    case '/set-passcode':
+      return MaterialPageRoute(
+        builder: (context) => const SetPasscodeScreen(),
       );
     case '/pin':
       final args = settings.arguments as Map<String, dynamic>?;
