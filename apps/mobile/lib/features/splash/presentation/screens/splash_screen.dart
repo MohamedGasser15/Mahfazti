@@ -116,36 +116,57 @@ class _SplashScreenState extends State<SplashScreen>
     return null;
   }
 
-  Future<void> _checkAuthStatus() async {
-    final token = SharedPrefs.authToken;
+// 1. دي الدالة المساعدة اللي بتحدد هيروح فين بالظبط بناءً على وجود الباسكود
+void _navigateToSecurityScreen() {
+  if (!mounted) return;
+  
+  final hasPasscode = SharedPrefs.getStringValue('user_password') != null;
+  final route = hasPasscode ? '/pin' : '/set-passcode';
+  
+  Navigator.of(context).pushReplacementNamed(
+    route,
+    arguments: hasPasscode
+        ? {
+            'isFirstTime': false,
+            'showBiometricFirst': true,
+          }
+        : null,
+  );
+}
 
-    if (token == null || token.isEmpty) {
+// 2. دالة فحص حالة التسجيل بعد التعديل والدمج
+Future<void> _checkAuthStatus() async {
+  final token = SharedPrefs.authToken;
+
+  // أولاً: لو مفيش توكن، روح لـ Onboarding واقفل الدالة فوراً
+  if (token == null || token.isEmpty) {
+    _navigateToOnboarding();
+    return;
+  }
+
+  // ثانياً: لو مفيش إيميل كاش، روح لصفحة الأمان (PIN أو Set Passcode) واخرج
+  final email = _getCachedEmail();
+  if (email == null || email.isEmpty) {
+    _navigateToSecurityScreen();
+    return;
+  }
+
+  // ثالثاً: لو كل تمام، اتأكد من السيرفر إن الإيميل لسه فعال ومتحظرش
+  try {
+    final exists = await _authRepository.checkEmail(email);
+    if (!exists) {
+      await _forceLogout(); // لو مش موجود اعمل تسجيل خروج إجباري
+      if (!mounted) return;
       _navigateToOnboarding();
       return;
     }
-
-    final email = _getCachedEmail();
-    if (email == null || email.isEmpty) {
-      _navigateToPin();
-      return;
-    }
-
-    try {
-      final exists = await _authRepository.checkEmail(email);
-      if (!exists) {
-        await _forceLogout();
-        if (!mounted) return;
-        _navigateToOnboarding();
-        return;
-      }
-    } catch (_) {
-      // If the API call fails (network error, etc.), proceed normally
-    }
-
-    if (!mounted) return;
-    _navigateToPin();
+  } catch (_) {
+    // لو السيرفر وقع أو مفيش نت، عدي الخطوة وخليه يدخل بالـ PIN عادي
   }
 
+  // رابعاً: لو الإيميل فعال على السيرفر، وديه لصفحة الأمان
+  _navigateToSecurityScreen();
+}
   Future<void> _forceLogout() async {
     await SharedPrefs.removeAuthToken();
     await SharedPrefs.removeUserData();

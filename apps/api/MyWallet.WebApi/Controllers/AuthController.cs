@@ -155,6 +155,16 @@ namespace MyWallet.WebApi.Controllers
             return Ok(result);
         }
 
+        [Authorize]
+        [HttpPost("passcode/create")]
+        public async Task<IActionResult> CreatePasscode([FromBody] CreatePasscodeDto dto)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var result = await _authService.CreatePasscodeAsync(userId, dto);
+            if (!result.Success) return BadRequest(result);
+            return Ok(result);
+        }
+
         [HttpGet("ExternalLogin")]
         public IActionResult ExternalLogin([FromQuery] string provider, [FromQuery] string? returnUrl = null)
         {
@@ -173,7 +183,7 @@ namespace MyWallet.WebApi.Controllers
             }
 
             var separator = returnUrl!.Contains("?") ? "&" : "?";
-            var url = $"{returnUrl}{separator}email={Uri.EscapeDataString(result.Email)}&isNewUser={result.IsNewUser.ToString().ToLower()}";
+            var url = $"{returnUrl}{separator}email={Uri.EscapeDataString(result.Email)}&isNewUser={result.IsNewUser.ToString().ToLower()}&hasPassword={result.HasPassword.ToString().ToLower()}";
             if (!string.IsNullOrEmpty(result.Token))
             {
                 url += $"&token={Uri.EscapeDataString(result.Token)}";
@@ -197,9 +207,15 @@ namespace MyWallet.WebApi.Controllers
         public async Task<IActionResult> GoogleMobileLogin([FromBody] GoogleMobileLoginDto dto)
         {
             var result = await _externalLoginService.HandleGoogleMobileLoginAsync(dto.IdToken);
-            if (result.Token != null)
-                return Ok(result);
-            return BadRequest(result);
+            return Ok(new {
+                success = result.Token != null,
+                message = result.Message ?? "",
+                token = result.Token,
+                email = result.Email,
+                isNewUser = result.IsNewUser,
+                hasPassword = result.HasPassword,
+                needsRegistration = result.Token == null && !string.IsNullOrEmpty(result.Email)
+            });
         }
 
         [HttpPost("FacebookMobile")]
@@ -212,6 +228,7 @@ namespace MyWallet.WebApi.Controllers
                 token = result.Token,
                 email = result.Email,
                 isNewUser = result.IsNewUser,
+                hasPassword = result.HasPassword,
                 needsRegistration = result.Token == null && !string.IsNullOrEmpty(result.Email)
             });
         }

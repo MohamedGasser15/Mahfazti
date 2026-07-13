@@ -591,6 +591,50 @@ namespace MyWallet.Core.Services
             };
         }
 
+        public async Task<AuthResponseDto> CreatePasscodeAsync(string userId, CreatePasscodeDto dto)
+        {
+            try
+            {
+                if (dto.Passcode != dto.ConfirmPasscode)
+                    return new AuthResponseDto { Success = false, Message = "الرمز السري غير متطابق" };
+
+                if (dto.Passcode.Length < 6)
+                    return new AuthResponseDto { Success = false, Message = "الرمز السري يجب أن يكون 6 أرقام على الأقل" };
+
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                    return new AuthResponseDto { Success = false, Message = "المستخدم غير موجود" };
+
+                var hasPassword = await _userManager.HasPasswordAsync(user);
+                if (hasPassword)
+                    return new AuthResponseDto { Success = false, Message = "لديك already رمز سري" };
+
+                var result = await _userManager.AddPasswordAsync(user, dto.Passcode);
+                if (!result.Succeeded)
+                    return new AuthResponseDto
+                    {
+                        Success = false,
+                        Message = "فشل إنشاء الرمز السري",
+                        Errors = result.Errors.Select(e => e.Description).ToList()
+                    };
+
+                return new AuthResponseDto
+                {
+                    Success = true,
+                    Message = "تم إنشاء الرمز السري بنجاح"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new AuthResponseDto
+                {
+                    Success = false,
+                    Message = "حدث خطأ",
+                    Errors = new List<string> { ex.Message }
+                };
+            }
+        }
+
         public async Task<AuthResponseDto> SendPasscodeResetOtpAsync(string email)
         {
             try

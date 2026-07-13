@@ -249,6 +249,26 @@ if (data['success'] == true && data['token'] != null) {
     await SharedPrefs.removeSecureKey('verified_code');
     await SharedPrefs.removeSecureKey('is_code_verified');
   }
+  Future<Map<String, dynamic>> createPasscode(String passcode) async {
+    try {
+      final response = await _apiService.post(
+        ApiEndpoints.createPasscode,
+        {
+          'passcode': passcode,
+          'confirmPasscode': passcode,
+        },
+        requiresAuth: true,
+      );
+      final data = _apiService.handleResponse(response);
+      if (data['success'] == true) {
+        await SharedPrefs.setString('user_password', passcode);
+      }
+      return data;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<void> setUserCurrency(String currency) async {
     final response = await _apiService.post(
       ApiEndpoints.setCurrency,
