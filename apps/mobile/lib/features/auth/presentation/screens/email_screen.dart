@@ -376,405 +376,531 @@ class _EmailScreenState extends State<EmailScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 20),
-
-              // Logo
-              SlideTransition(
-                position: _logoSlide,
-                child: FadeTransition(
-                  opacity: _logoFade,
-                  child: Center(
-                    child: Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            theme.colorScheme.primary,
-                            theme.colorScheme.primary.withValues(alpha: 0.7),
-                          ],
-                        ),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: theme.colorScheme.primary
-                                .withValues(alpha: 0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        Icons.account_balance_wallet,
-                        size: 40,
-                        color: theme.colorScheme.onPrimary,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
+              _AnimatedLogo(logoFade: _logoFade, logoSlide: _logoSlide, theme: theme),
               const SizedBox(height: 32),
-
-              // Title
-              SlideTransition(
-                position: _titleSlide,
-                child: FadeTransition(
-                  opacity: _titleFade,
-                  child: Column(
-                    children: [
-                      Center(
-                        child: Text(
-                          context.l10n.whatIsYourEmail,
-                          style:
-                              theme.textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Center(
-                        child: Text(
-                          context.l10n.enterYourEmailDescription,
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.6),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
+              _AnimatedTitle(titleFade: _titleFade, titleSlide: _titleSlide, theme: theme),
               const SizedBox(height: 36),
-
-              // Form
-              SlideTransition(
-                position: _formSlide,
-                child: FadeTransition(
-                  opacity: _formFade,
-                  child: Column(
-                    children: [
-                      TextField(
-                        controller: _emailController,
-                        focusNode: _emailFocusNode,
-                        keyboardType: TextInputType.emailAddress,
-                        autofillHints: const [AutofillHints.email],
-                        textInputAction: TextInputAction.done,
-                        decoration: InputDecoration(
-                          hintText: context.l10n.email,
-                          hintStyle: TextStyle(
-                            color: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.4),
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(
-                              color: theme.colorScheme.outline
-                                  .withValues(alpha: 0.2),
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(
-                              color: theme.colorScheme.primary,
-                              width: 2,
-                            ),
-                          ),
-                          filled: true,
-                          fillColor:
-                              isDark ? Colors.grey[900] : Colors.grey[50],
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 18,
-                          ),
-                          prefixIcon: Padding(
-                            padding: const EdgeInsets.only(
-                                left: 16, right: 12),
-                            child: Icon(
-                              Icons.email_outlined,
-                              color: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.4),
-                            ),
-                          ),
-                          suffixIcon:
-                              _emailController.text.isNotEmpty
-                                  ? IconButton(
-                                      icon: Icon(
-                                        Icons.cancel_outlined,
-                                        color: theme.colorScheme.onSurface
-                                            .withValues(alpha: 0.3),
-                                      ),
-                                      onPressed: () {
-                                        _emailController.clear();
-                                        setState(() {
-                                          _isEmailValid = false;
-                                          _emailExists = false;
-                                        });
-                                      },
-                                    )
-                                  : null,
-                        ),
-                        style: theme.textTheme.bodyLarge,
-                        onSubmitted: (_) {
-                          if (_isEmailValid) _checkEmail();
-                        },
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _isEmailValid && !_isLoading
-                              ? _checkEmail
-                              : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                _isEmailValid
-                                    ? (isDark ? Colors.white : theme.colorScheme.primary)
-                                    : (isDark ? Colors.grey[800] : Colors.grey[200]),
-                            foregroundColor:
-                                _isEmailValid
-                                    ? (isDark ? Colors.black : theme.colorScheme.onPrimary)
-                                    : (isDark ? Colors.white38 : Colors.black38),
-                            disabledBackgroundColor:
-                                isDark ? Colors.grey[800] : Colors.grey[200],
-                            disabledForegroundColor:
-                                isDark ? Colors.white38 : Colors.black38,
-                            minimumSize:
-                                const Size(double.infinity, 56),
-                            shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(16),
-                            ),
-                            elevation: _isEmailValid ? 4 : 0,
-                            shadowColor: theme.colorScheme.primary
-                                .withValues(alpha: 0.3),
-                          ),
-                          child: _isLoading
-                              ? SizedBox(
-                                  width: 60,
-                                  height: 24,
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.center,
-                                    children: List.generate(
-                                        3, (index) {
-                                      return AnimatedContainer(
-                                        duration:
-                                            const Duration(
-                                                milliseconds: 200),
-                                        margin:
-                                            const EdgeInsets
-                                                .symmetric(
-                                                horizontal: 3),
-                                        width: 8 *
-                                            _dotScales[index],
-                                        height: 8 *
-                                            _dotScales[index],
-                                        decoration: BoxDecoration(
-                                          color: theme
-                                              .colorScheme
-                                              .onPrimary
-                                              .withValues(
-                                                alpha:
-                                                    _dotOpacities[
-                                                        index],
-                                              ),
-                                          shape: BoxShape.circle,
-                                        ),
-                                      );
-                                    }),
-                                  ),
-                                )
-                              : Text(
-                                  context.l10n.continueText,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 16,
-                                    color: _isEmailValid && !_isLoading
-                                        ? (isDark ? Colors.black : theme.colorScheme.onPrimary)
-                                        : (isDark ? Colors.white38 : Colors.black38),
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              _EmailFormSection(
+                formFade: _formFade,
+                formSlide: _formSlide,
+                theme: theme,
+                isDark: isDark,
+                emailController: _emailController,
+                emailFocusNode: _emailFocusNode,
+                isEmailValid: _isEmailValid,
+                isLoading: _isLoading,
+                dotScales: _dotScales,
+                dotOpacities: _dotOpacities,
+                onClear: () {
+                  setState(() {
+                    _emailController.clear();
+                    _isEmailValid = false;
+                    _emailExists = false;
+                  });
+                },
+                onSubmit: _checkEmail,
               ),
-
-              // Social
-              SlideTransition(
-                position: _socialSlide,
-                child: FadeTransition(
-                  opacity: _socialFade,
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 28),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Divider(
-                              color: theme.colorScheme.outline
-                                  .withValues(alpha: 0.2),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16),
-                            child: Text(
-                              'or continue with',
-                              style: theme
-                                  .textTheme.bodySmall
-                                  ?.copyWith(
-                                color: theme.colorScheme.onSurface
-                                    .withValues(alpha: 0.4),
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Divider(
-                              color: theme.colorScheme.outline
-                                  .withValues(alpha: 0.2),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () =>
-                              _onSocialLogin('Google'),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(
-                              color: theme.colorScheme.outline
-                                  .withValues(alpha: 0.2),
-                            ),
-                            backgroundColor: isDark
-                                ? Colors.white.withValues(alpha: 0.05)
-                                : Colors.grey.withValues(alpha: 0.05),
-                            minimumSize:
-                                const Size(double.infinity, 54),
-                            shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(16),
-                            ),
-                          ),
-                          icon: Container(
-                            width: 22,
-                            height: 22,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white,
-                            ),
-                            child: Center(
-                              child: Text(
-                                'G',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blue[700],
-                                  height: 1,
-                                ),
-                              ),
-                            ),
-                          ),
-                          label: Text(
-                            'Continue with Google',
-                            style: theme
-                                .textTheme.bodyMedium
-                                ?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: theme.colorScheme.onSurface,
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () =>
-                              _onSocialLogin('Facebook'),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(
-                              color: Colors.blue.withValues(alpha: 0.3),
-                            ),
-                            backgroundColor: Colors.blue
-                                .withValues(alpha: isDark ? 0.15 : 0.05),
-                            minimumSize:
-                                const Size(double.infinity, 54),
-                            shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(16),
-                            ),
-                          ),
-                          icon: Icon(
-                            Icons.facebook,
-                            color: Colors.blue[700],
-                            size: 24,
-                          ),
-                          label: Text(
-                            'Continue with Facebook',
-                            style: theme
-                                .textTheme.bodyMedium
-                                ?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.blue[700],
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      Center(
-                        child: GestureDetector(
-                          onTap: _onLostAccess,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                context.l10n.lostAccessToEmail,
-                                style: TextStyle(
-                                  color: theme.colorScheme.primary,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                isRTL
-                                    ? Icons.arrow_back_ios
-                                    : Icons.arrow_forward_ios,
-                                size: 12,
-                                color: theme.colorScheme.primary,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 40),
-                    ],
-                  ),
-                ),
+              _SocialLoginSection(
+                socialFade: _socialFade,
+                socialSlide: _socialSlide,
+                theme: theme,
+                isDark: isDark,
+                isRTL: isRTL,
+                onGoogleLogin: () => _onSocialLogin('Google'),
+                onFacebookLogin: () => _onSocialLogin('Facebook'),
+                onLostAccess: _onLostAccess,
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AnimatedLogo extends StatelessWidget {
+  final Animation<double> logoFade;
+  final Animation<Offset> logoSlide;
+  final ThemeData theme;
+
+  const _AnimatedLogo({
+    required this.logoFade,
+    required this.logoSlide,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SlideTransition(
+      position: logoSlide,
+      child: FadeTransition(
+        opacity: logoFade,
+        child: Center(
+          child: Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  theme.colorScheme.primary,
+                  theme.colorScheme.primary.withValues(alpha: 0.7),
+                ],
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Icon(
+              Icons.account_balance_wallet,
+              size: 40,
+              color: theme.colorScheme.onPrimary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AnimatedTitle extends StatelessWidget {
+  final Animation<double> titleFade;
+  final Animation<Offset> titleSlide;
+  final ThemeData theme;
+
+  const _AnimatedTitle({
+    required this.titleFade,
+    required this.titleSlide,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SlideTransition(
+      position: titleSlide,
+      child: FadeTransition(
+        opacity: titleFade,
+        child: Column(
+          children: [
+            Center(
+              child: Text(
+                context.l10n.whatIsYourEmail,
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: Text(
+                context.l10n.enterYourEmailDescription,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmailFormSection extends StatelessWidget {
+  final Animation<double> formFade;
+  final Animation<Offset> formSlide;
+  final ThemeData theme;
+  final bool isDark;
+  final TextEditingController emailController;
+  final FocusNode emailFocusNode;
+  final bool isEmailValid;
+  final bool isLoading;
+  final List<double> dotScales;
+  final List<double> dotOpacities;
+  final VoidCallback onClear;
+  final VoidCallback onSubmit;
+
+  const _EmailFormSection({
+    required this.formFade,
+    required this.formSlide,
+    required this.theme,
+    required this.isDark,
+    required this.emailController,
+    required this.emailFocusNode,
+    required this.isEmailValid,
+    required this.isLoading,
+    required this.dotScales,
+    required this.dotOpacities,
+    required this.onClear,
+    required this.onSubmit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SlideTransition(
+      position: formSlide,
+      child: FadeTransition(
+        opacity: formFade,
+        child: Column(
+          children: [
+            TextField(
+              controller: emailController,
+              focusNode: emailFocusNode,
+              keyboardType: TextInputType.emailAddress,
+              autofillHints: const [AutofillHints.email],
+              textInputAction: TextInputAction.done,
+              decoration: InputDecoration(
+                hintText: context.l10n.email,
+                hintStyle: TextStyle(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: theme.colorScheme.primary,
+                    width: 2,
+                  ),
+                ),
+                filled: true,
+                fillColor: isDark ? Colors.grey[900] : Colors.grey[50],
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 18,
+                ),
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.only(left: 16, right: 12),
+                  child: Icon(
+                    Icons.email_outlined,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                  ),
+                ),
+                suffixIcon: emailController.text.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(
+                          Icons.cancel_outlined,
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                        ),
+                        onPressed: onClear,
+                      )
+                    : null,
+              ),
+              style: theme.textTheme.bodyLarge,
+              onSubmitted: (_) {
+                if (isEmailValid) onSubmit();
+              },
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: isEmailValid && !isLoading ? onSubmit : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isEmailValid
+                      ? (isDark ? Colors.white : theme.colorScheme.primary)
+                      : (isDark ? Colors.grey[800] : Colors.grey[200]),
+                  foregroundColor: isEmailValid
+                      ? (isDark ? Colors.black : theme.colorScheme.onPrimary)
+                      : (isDark ? Colors.white38 : Colors.black38),
+                  disabledBackgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
+                  disabledForegroundColor: isDark ? Colors.white38 : Colors.black38,
+                  minimumSize: const Size(double.infinity, 56),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: isEmailValid ? 4 : 0,
+                  shadowColor: theme.colorScheme.primary.withValues(alpha: 0.3),
+                ),
+                child: isLoading
+                    ? _LoadingDots(dotScales: dotScales, dotOpacities: dotOpacities, theme: theme)
+                    : Text(
+                        context.l10n.continueText,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          color: isEmailValid && !isLoading
+                              ? (isDark ? Colors.black : theme.colorScheme.onPrimary)
+                              : (isDark ? Colors.white38 : Colors.black38),
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LoadingDots extends StatelessWidget {
+  final List<double> dotScales;
+  final List<double> dotOpacities;
+  final ThemeData theme;
+
+  const _LoadingDots({
+    required this.dotScales,
+    required this.dotOpacities,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 60,
+      height: 24,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(3, (index) {
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            width: 8 * dotScales[index],
+            height: 8 * dotScales[index],
+            decoration: BoxDecoration(
+              color: theme.colorScheme.onPrimary.withValues(
+                alpha: dotOpacities[index],
+              ),
+              shape: BoxShape.circle,
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+class _SocialLoginSection extends StatelessWidget {
+  final Animation<double> socialFade;
+  final Animation<Offset> socialSlide;
+  final ThemeData theme;
+  final bool isDark;
+  final bool isRTL;
+  final VoidCallback onGoogleLogin;
+  final VoidCallback onFacebookLogin;
+  final VoidCallback onLostAccess;
+
+  const _SocialLoginSection({
+    required this.socialFade,
+    required this.socialSlide,
+    required this.theme,
+    required this.isDark,
+    required this.isRTL,
+    required this.onGoogleLogin,
+    required this.onFacebookLogin,
+    required this.onLostAccess,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SlideTransition(
+      position: socialSlide,
+      child: FadeTransition(
+        opacity: socialFade,
+        child: Column(
+          children: [
+            const SizedBox(height: 28),
+            _SocialDivider(theme: theme),
+            const SizedBox(height: 20),
+            _GoogleSignInButton(theme: theme, isDark: isDark, onPressed: onGoogleLogin),
+            const SizedBox(height: 12),
+            _FacebookSignInButton(theme: theme, isDark: isDark, onPressed: onFacebookLogin),
+            const SizedBox(height: 24),
+            _LostAccessLink(theme: theme, isRTL: isRTL, onTap: onLostAccess),
+            const SizedBox(height: 40),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SocialDivider extends StatelessWidget {
+  final ThemeData theme;
+
+  const _SocialDivider({required this.theme});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Divider(
+            color: theme.colorScheme.outline.withValues(alpha: 0.2),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            context.l10n.orContinueWith,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Divider(
+            color: theme.colorScheme.outline.withValues(alpha: 0.2),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GoogleSignInButton extends StatelessWidget {
+  final ThemeData theme;
+  final bool isDark;
+  final VoidCallback onPressed;
+
+  const _GoogleSignInButton({
+    required this.theme,
+    required this.isDark,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(
+            color: theme.colorScheme.outline.withValues(alpha: 0.2),
+          ),
+          backgroundColor: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.grey.withValues(alpha: 0.05),
+          minimumSize: const Size(double.infinity, 54),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        icon: Container(
+          width: 22,
+          height: 22,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white,
+          ),
+          child: Center(
+            child: Text(
+              'G',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue[700],
+                height: 1,
+              ),
+            ),
+          ),
+        ),
+        label: Text(
+          context.l10n.continueWithGoogle,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FacebookSignInButton extends StatelessWidget {
+  final ThemeData theme;
+  final bool isDark;
+  final VoidCallback onPressed;
+
+  const _FacebookSignInButton({
+    required this.theme,
+    required this.isDark,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(
+            color: Colors.blue.withValues(alpha: 0.3),
+          ),
+          backgroundColor: Colors.blue.withValues(alpha: isDark ? 0.15 : 0.05),
+          minimumSize: const Size(double.infinity, 54),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        icon: Icon(
+          Icons.facebook,
+          color: Colors.blue[700],
+          size: 24,
+        ),
+        label: Text(
+          context.l10n.continueWithFacebook,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Colors.blue[700],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LostAccessLink extends StatelessWidget {
+  final ThemeData theme;
+  final bool isRTL;
+  final VoidCallback onTap;
+
+  const _LostAccessLink({
+    required this.theme,
+    required this.isRTL,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              context.l10n.lostAccessToEmail,
+              style: TextStyle(
+                color: theme.colorScheme.primary,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              isRTL ? Icons.arrow_back_ios : Icons.arrow_forward_ios,
+              size: 12,
+              color: theme.colorScheme.primary,
+            ),
+          ],
         ),
       ),
     );

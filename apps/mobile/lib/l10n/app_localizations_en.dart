@@ -1150,4 +1150,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get insights => 'INSIGHTS';
+
+  @override
+  String get orContinueWith => 'or continue with';
+
+  @override
+  String get continueWithGoogle => 'Continue with Google';
+
+  @override
+  String get continueWithFacebook => 'Continue with Facebook';
 }

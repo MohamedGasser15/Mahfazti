@@ -353,5 +353,8 @@
   "serverErrorDesc": "Something went wrong on our end. Please try again later.",
   "errorOccurred": "An Error Occurred",
   "wallet": "WALLET",
-  "insights": "INSIGHTS"
+  "insights": "INSIGHTS",
+  "orContinueWith": "or continue with",
+  "continueWithGoogle": "Continue with Google",
+  "continueWithFacebook": "Continue with Facebook"
 }

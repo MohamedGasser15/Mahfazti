@@ -1,47 +1,44 @@
-// features/wallet/data/repositories/wallet_repository.dart
 import 'package:dio/dio.dart';
 import 'package:my_wallet/core/constants/api_constants.dart';
 import 'package:my_wallet/core/services/api_service.dart';
+import 'package:my_wallet/core/utils/api_error_handler.dart';
 import 'package:my_wallet/features/wallet/data/models/budget_models.dart';
 import 'package:my_wallet/features/wallet/data/models/voice_expense_model.dart';
 import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
 
 class WalletRepository {
   final ApiService _apiService = ApiService();
-  
-  // جلب بيانات الصفحة الرئيسية
+
   Future<WalletHomeData> getHomeData() async {
     try {
       final response = await _apiService.get(
         ApiEndpoints.walletHome,
         requiresAuth: true,
       );
-      
+
       return WalletHomeData.fromJson(response.data);
     } on DioException catch (e) {
-      throw _handleDioError(e);
+      throw Exception(ApiErrorHandler.getErrorMessage(e));
     } catch (e) {
       throw Exception('Failed to load home data: $e');
     }
   }
-  
-  // جلب الرصيد فقط
+
   Future<WalletBalance> getBalance() async {
     try {
       final response = await _apiService.get(
         ApiEndpoints.walletBalance,
         requiresAuth: true,
       );
-      
+
       return WalletBalance.fromJson(response.data);
     } on DioException catch (e) {
-      throw _handleDioError(e);
+      throw Exception(ApiErrorHandler.getErrorMessage(e));
     } catch (e) {
       throw Exception('Failed to load balance: $e');
     }
   }
-  
-  // جلب قائمة المعاملات مع إمكانية التصفية والصفحات
+
   Future<TransactionListResponse> getTransactions({
     int page = 1,
     int pageSize = 20,
@@ -77,13 +74,12 @@ class WalletRepository {
 
       return TransactionListResponse.fromJson(response.data);
     } on DioException catch (e) {
-      throw _handleDioError(e);
+      throw Exception(ApiErrorHandler.getErrorMessage(e));
     } catch (e) {
       throw Exception('Failed to load transactions: $e');
     }
   }
-  
-  // إضافة معاملة جديدة
+
 Future<WalletTransaction> addTransaction({
   String? description,
   required double amount,
@@ -107,17 +103,16 @@ Future<WalletTransaction> addTransaction({
     );
     return WalletTransaction.fromJson(response.data);
   } on DioException catch (e) {
-    throw _handleDioError(e);
+    throw Exception(ApiErrorHandler.getErrorMessage(e));
   }
 }
-  
-  // تحديث معاملة موجودة
+
   Future<WalletTransaction> updateTransaction(
     int transactionId, {
     required String title,
     String? description,
     required double amount,
-    required String type, // "Deposit" أو "Withdrawal"
+    required String type,
     required int categoryId,
     DateTime? transactionDate,
     bool isRecurring = false,
@@ -146,34 +141,33 @@ Future<WalletTransaction> addTransaction({
         body['recurringEndDate'] = recurringEndDate.toIso8601String();
       }
 
-      // استخدم endpoint التحديث المناسب (غالباً PUT على نفس مسار الإضافة مع id)
       final response = await _apiService.put(
-        '${ApiEndpoints.walletUpdateTransaction}/$transactionId', // تأكد من صحة الـ endpoint
+        '${ApiEndpoints.walletUpdateTransaction}/$transactionId',
         body,
         requiresAuth: true,
       );
 
       return WalletTransaction.fromJson(response.data);
     } on DioException catch (e) {
-      throw _handleDioError(e);
+      throw Exception(ApiErrorHandler.getErrorMessage(e));
     } catch (e) {
       throw Exception('Failed to update transaction: $e');
     }
   }
-  // في wallet_repository.dart - أضف الميثود دي
+
 Future<VoiceExpenseResult> parseVoiceText(String text, {String language = 'ar'}) async {
   try {
     final response = await _apiService.post(
-      'api/wallet/voice-parse',
+      ApiEndpoints.walletVoiceParse,
       {'text': text, 'language': language},
       requiresAuth: true,
     );
     return VoiceExpenseResult.fromJson(response.data);
   } on DioException catch (e) {
-    throw _handleDioError(e);
+    throw Exception(ApiErrorHandler.getErrorMessage(e));
   }
 }
-  // حذف معاملة (soft delete)
+
   Future<bool> deleteTransaction(int transactionId) async {
     try {
       await _apiService.delete(
@@ -185,12 +179,12 @@ Future<VoiceExpenseResult> parseVoiceText(String text, {String language = 'ar'})
       if (e.response?.statusCode == 204 || e.response?.statusCode == 200) {
         return true;
       }
-      throw _handleDioError(e);
+      throw Exception(ApiErrorHandler.getErrorMessage(e));
     } catch (e) {
       throw Exception('Failed to delete transaction: $e');
     }
   }
-  
+
   Future<BudgetDto> getBudget() async {
     try {
       final response = await _apiService.get(
@@ -199,10 +193,10 @@ Future<VoiceExpenseResult> parseVoiceText(String text, {String language = 'ar'})
       );
       return BudgetDto.fromJson(response.data);
     } on DioException catch (e) {
-      throw _handleDioError(e);
+      throw Exception(ApiErrorHandler.getErrorMessage(e));
     }
   }
-  
+
   Future<void> updateMonthlyBudget(double monthlyBudget) async {
     try {
       await _apiService.put(
@@ -211,23 +205,22 @@ Future<VoiceExpenseResult> parseVoiceText(String text, {String language = 'ar'})
         requiresAuth: true,
       );
     } on DioException catch (e) {
-      throw _handleDioError(e);
+      throw Exception(ApiErrorHandler.getErrorMessage(e));
     }
   }
-  
+
   Future<void> updateCategoryBudget(int categoryId, double budget) async {
     try {
       await _apiService.put(
-        'api/Budget/category',
+        ApiEndpoints.budgetCategory,
         {'categoryId': categoryId, 'budget': budget},
         requiresAuth: true,
       );
     } on DioException catch (e) {
-      throw _handleDioError(e);
+      throw Exception(ApiErrorHandler.getErrorMessage(e));
     }
   }
-  
-  // جلب ملخص للتحليلات
+
   Future<WalletSummary> getSummary({
     required DateTime fromDate,
     required DateTime toDate,
@@ -244,32 +237,9 @@ Future<VoiceExpenseResult> parseVoiceText(String text, {String language = 'ar'})
 
       return WalletSummary.fromJson(response.data);
     } on DioException catch (e) {
-      throw _handleDioError(e);
+      throw Exception(ApiErrorHandler.getErrorMessage(e));
     } catch (e) {
       throw Exception('Failed to load summary: $e');
     }
-  }
-  
-  // معالجة أخطاء Dio
-  Exception _handleDioError(DioException e) {
-    final message = _getDioErrorMessage(e);
-    return Exception(message);
-  }
-
-  String _getDioErrorMessage(DioException e) {
-    if (e.response != null) {
-      final data = e.response!.data;
-      if (data is Map && data.containsKey('message')) {
-        return data['message'];
-      }
-      return 'Server error: ${e.response!.statusCode}';
-    } else if (e.type == DioExceptionType.connectionTimeout ||
-               e.type == DioExceptionType.receiveTimeout ||
-               e.type == DioExceptionType.sendTimeout) {
-      return 'Connection timeout. Please check your internet.';
-    } else if (e.type == DioExceptionType.connectionError) {
-      return 'No internet connection.';
-    }
-    return 'An error occurred: ${e.message}';
   }
 }

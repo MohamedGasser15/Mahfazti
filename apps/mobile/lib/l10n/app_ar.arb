@@ -352,5 +352,8 @@
   "serverErrorDesc": "حدث خطأ من جانبنا. يرجى المحاولة لاحقاً.",
   "errorOccurred": "حدث خطأ",
   "wallet": "المحفظة",
-  "insights": "الإحصائيات"
+  "insights": "الإحصائيات",
+  "orContinueWith": "أو متابعة عن طريق",
+  "continueWithGoogle": "متابعة عبر Google",
+  "continueWithFacebook": "متابعة عبر Facebook"
 }

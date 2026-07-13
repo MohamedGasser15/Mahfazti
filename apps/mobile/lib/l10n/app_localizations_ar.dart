@@ -1144,4 +1144,13 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get insights => 'الإحصائيات';
+
+  @override
+  String get orContinueWith => 'أو متابعة عن طريق';
+
+  @override
+  String get continueWithGoogle => 'متابعة عبر Google';
+
+  @override
+  String get continueWithFacebook => 'متابعة عبر Facebook';
 }

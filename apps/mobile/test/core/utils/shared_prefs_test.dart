@@ -105,9 +105,9 @@ void main() {
         expect(SharedPrefs.getStringValue('test_key'), 'hello');
       });
 
-      test('setString with bool stores and getBoolValue retrieves', () async {
+      test('setValue with bool stores and getBoolValue retrieves', () async {
         await SharedPrefs.init();
-        await SharedPrefs.setString('bool_key', true);
+        await SharedPrefs.setValue('bool_key', true);
         expect(SharedPrefs.getBoolValue('bool_key'), isTrue);
       });
 

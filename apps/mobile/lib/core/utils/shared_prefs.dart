@@ -44,7 +44,13 @@ class SharedPrefs {
 
   static const String _currencyKey = 'selected_currency';
 
-  static String? get currency => _prefs.getString(_currencyKey);
+  static String? get currency {
+    try {
+      return _prefs.getString(_currencyKey);
+    } catch (_) {
+      return null;
+    }
+  }
 
   static Future<String?> getCurrency() async {
     return _prefs.getString(_currencyKey);
@@ -90,11 +96,19 @@ class SharedPrefs {
     await _prefs.setString(AppConstants.appLanguageKey, language);
   }
 
-  static Future<void> setString(String key, dynamic value) async {
+  static Future<void> setString(String key, String value) async {
+    await _prefs.setString(key, value);
+  }
+
+  static Future<void> setValue(String key, dynamic value) async {
     if (value is String) {
       await _prefs.setString(key, value);
     } else if (value is bool) {
       await _prefs.setBool(key, value);
+    } else if (value is int) {
+      await _prefs.setInt(key, value);
+    } else if (value is double) {
+      await _prefs.setDouble(key, value);
     }
   }
 

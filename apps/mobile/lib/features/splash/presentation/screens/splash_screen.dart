@@ -1,22 +1,24 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
+import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 import 'package:my_wallet/features/onboarding/presentation/screens/onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   final Function(Locale) onLocaleChanged;
-  
+
   const SplashScreen({super.key, required this.onLocaleChanged});
-  
+
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> 
+class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  
-  // Animations for different elements
+  final AuthRepository _authRepository = AuthRepository();
+
   late Animation<double> _logoScale;
   late Animation<double> _logoRotation;
   late Animation<double> _logoFade;
@@ -24,7 +26,7 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _titleFade;
   late Animation<Offset> _subtitleSlide;
   late Animation<double> _subtitleFade;
-  
+
   @override
   void initState() {
     super.initState();
@@ -35,36 +37,34 @@ class _SplashScreenState extends State<SplashScreen>
       }
     });
   }
-  
+
   void _initAnimations() {
     _controller = AnimationController(
       duration: const Duration(milliseconds: 2000),
       vsync: this,
     );
-    
-    // Logo animations (0.0 - 0.6)
+
     _logoScale = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
         curve: const Interval(0.0, 0.4, curve: Curves.elasticOut),
       ),
     );
-    
+
     _logoRotation = Tween<double>(begin: -0.5, end: 0.0).animate(
       CurvedAnimation(
         parent: _controller,
         curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
       ),
     );
-    
+
     _logoFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
         curve: const Interval(0.0, 0.3, curve: Curves.easeIn),
       ),
     );
-    
-    // Title animations (0.3 - 0.8)
+
     _titleSlide = Tween<Offset>(
       begin: const Offset(0, 0.5),
       end: Offset.zero,
@@ -74,15 +74,14 @@ class _SplashScreenState extends State<SplashScreen>
         curve: const Interval(0.3, 0.7, curve: Curves.easeOut),
       ),
     );
-    
+
     _titleFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
         curve: const Interval(0.3, 0.6, curve: Curves.easeIn),
       ),
     );
-    
-    // Subtitle animations (0.5 - 1.0)
+
     _subtitleSlide = Tween<Offset>(
       begin: const Offset(0, 0.5),
       end: Offset.zero,
@@ -92,33 +91,79 @@ class _SplashScreenState extends State<SplashScreen>
         curve: const Interval(0.5, 0.9, curve: Curves.easeOut),
       ),
     );
-    
+
     _subtitleFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
         curve: const Interval(0.5, 0.8, curve: Curves.easeIn),
       ),
     );
-    
+
     _controller.forward();
   }
-  
+
+  String? _getCachedEmail() {
+    final directEmail = SharedPrefs.getStringValue('user_email');
+    if (directEmail != null && directEmail.isNotEmpty) return directEmail;
+
+    final userData = SharedPrefs.userData;
+    if (userData != null) {
+      try {
+        final decoded = jsonDecode(userData) as Map<String, dynamic>;
+        return decoded['email'] as String?;
+      } catch (_) {}
+    }
+    return null;
+  }
+
   Future<void> _checkAuthStatus() async {
     final token = SharedPrefs.authToken;
-    
+
     if (token == null || token.isEmpty) {
       _navigateToOnboarding();
-    } else {
-      Navigator.of(context).pushReplacementNamed(
-        '/pin',
-        arguments: {
-          'isFirstTime': false,
-          'showBiometricFirst': true,
-        },
-      );
+      return;
     }
+
+    final email = _getCachedEmail();
+    if (email == null || email.isEmpty) {
+      _navigateToPin();
+      return;
+    }
+
+    try {
+      final exists = await _authRepository.checkEmail(email);
+      if (!exists) {
+        await _forceLogout();
+        if (!mounted) return;
+        _navigateToOnboarding();
+        return;
+      }
+    } catch (_) {
+      // If the API call fails (network error, etc.), proceed normally
+    }
+
+    if (!mounted) return;
+    _navigateToPin();
   }
-  
+
+  Future<void> _forceLogout() async {
+    await SharedPrefs.removeAuthToken();
+    await SharedPrefs.removeUserData();
+    await SharedPrefs.removeKey('user_password');
+    await SharedPrefs.removeKey('user_email');
+    await SharedPrefs.removeSecureKey('user_email');
+  }
+
+  void _navigateToPin() {
+    Navigator.of(context).pushReplacementNamed(
+      '/pin',
+      arguments: {
+        'isFirstTime': false,
+        'showBiometricFirst': true,
+      },
+    );
+  }
+
   void _navigateToOnboarding() {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
@@ -128,17 +173,17 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
   }
-  
+
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       body: Center(
@@ -148,7 +193,6 @@ class _SplashScreenState extends State<SplashScreen>
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo with scale, rotation and fade
                 Transform.rotate(
                   angle: _logoRotation.value * 3.14159,
                   child: Opacity(
@@ -188,10 +232,9 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 32),
-                
-                // Title with slide and fade
+
                 SlideTransition(
                   position: _titleSlide,
                   child: FadeTransition(
@@ -205,10 +248,9 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 12),
-                
-                // Subtitle with slide and fade
+
                 SlideTransition(
                   position: _subtitleSlide,
                   child: FadeTransition(

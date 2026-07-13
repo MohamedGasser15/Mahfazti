@@ -1,11 +1,12 @@
-// features/wallet/data/models/wallet_models.dart
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
+import 'package:my_wallet/core/constants/currency_constants.dart';
+import 'package:my_wallet/core/utils/shared_prefs.dart';
 
 class WalletHomeData extends Equatable {
   final WalletBalance balance;
   final List<WalletTransaction> recentTransactions;
-  final int totalTransactionCount; 
+  final int totalTransactionCount;
 
   const WalletHomeData({
     required this.balance,
@@ -52,6 +53,11 @@ class WalletBalance extends Equatable {
         'totalWithdrawals': totalWithdrawals,
       };
 
+  String get currencySymbol {
+    final code = SharedPrefs.currency ?? 'USD';
+    return currencySymbols[code] ?? '\$';
+  }
+
   @override
   List<Object?> get props => [totalBalance, totalDeposits, totalWithdrawals];
 }
@@ -64,9 +70,9 @@ class WalletTransaction extends Equatable {
   final double amount;
   final DateTime transactionDate;
   final String type;
-  final int? categoryId;          // إضافة
-  final String? categoryNameAr;    // إضافة
-  final String? categoryNameEn;    // إضافة
+  final int? categoryId;
+  final String? categoryNameAr;
+  final String? categoryNameEn;
   final bool isRecurring;
   final String? recurringInterval;
   final DateTime? recurringEndDate;
@@ -81,9 +87,9 @@ class WalletTransaction extends Equatable {
     required this.amount,
     required this.transactionDate,
     required this.type,
-    this.categoryId,               // إضافة
-    this.categoryNameAr,            // إضافة
-    this.categoryNameEn,            // إضافة
+    this.categoryId,
+    this.categoryNameAr,
+    this.categoryNameEn,
     this.isRecurring = false,
     this.recurringInterval,
     this.recurringEndDate,
@@ -100,9 +106,9 @@ class WalletTransaction extends Equatable {
       amount: (json['amount'] as num).toDouble(),
       transactionDate: DateTime.parse(json['transactionDate']),
       type: json['type'],
-      categoryId: json['categoryId'],                       // إضافة
-      categoryNameAr: json['categoryNameAr'],                // إضافة
-      categoryNameEn: json['categoryNameEn'],                // إضافة
+      categoryId: json['categoryId'],
+      categoryNameAr: json['categoryNameAr'],
+      categoryNameEn: json['categoryNameEn'],
       isRecurring: json['isRecurring'] ?? false,
       recurringInterval: json['recurringInterval'],
       recurringEndDate: json['recurringEndDate'] != null
@@ -125,7 +131,7 @@ class WalletTransaction extends Equatable {
     'amount': amount,
     'transactionDate': transactionDate.toIso8601String(),
     'type': type,
-    if (categoryId != null) 'categoryId': categoryId,       // إضافة
+    if (categoryId != null) 'categoryId': categoryId,
     if (categoryNameAr != null) 'categoryNameAr': categoryNameAr,
     if (categoryNameEn != null) 'categoryNameEn': categoryNameEn,
     'isRecurring': isRecurring,
@@ -139,10 +145,12 @@ class WalletTransaction extends Equatable {
   bool get isDeposit => type.toLowerCase() == 'deposit';
   bool get isWithdrawal => type.toLowerCase() == 'withdrawal';
 
-  String get formattedAmount =>
-      '${isDeposit ? '+' : '-'}\$${amount.toStringAsFixed(2)}';
+  String get formattedAmount {
+    final code = SharedPrefs.currency ?? 'USD';
+    final symbol = currencySymbols[code] ?? '\$';
+    return '${isDeposit ? '+' : '-'}$symbol${amount.toStringAsFixed(2)}';
+  }
 
-  // استخدام الاسم الإنجليزي للـ icon mapping (أو العربي حسب الحاجة)
   IconData get icon {
     final cat = (categoryNameEn ?? '').toLowerCase();
     switch (cat) {
@@ -262,9 +270,9 @@ class WalletSummary extends Equatable {
       ];
 }
 class CategorySummary extends Equatable {
-  final int categoryId;           // أضف هذا
-  final String categoryNameAr;    // أضف هذا
-  final String categoryNameEn;    // أضف هذا
+  final int categoryId;
+  final String categoryNameAr;
+  final String categoryNameEn;
   final double total;
   final int count;
 
@@ -278,8 +286,8 @@ class CategorySummary extends Equatable {
 
   factory CategorySummary.fromJson(Map<String, dynamic> json) {
     return CategorySummary(
-      categoryId: json['categoryId'],           // افترض أن API بترجع categoryId
-      categoryNameAr: json['categoryNameAr'],   // تأكد من المفاتيح
+      categoryId: json['categoryId'],
+      categoryNameAr: json['categoryNameAr'],
       categoryNameEn: json['categoryNameEn'],
       total: (json['total'] as num).toDouble(),
       count: json['count'],

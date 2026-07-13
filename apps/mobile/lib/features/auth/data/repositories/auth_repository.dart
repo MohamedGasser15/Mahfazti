@@ -5,61 +5,51 @@ import 'package:my_wallet/core/utils/shared_prefs.dart';
 
 class AuthRepository {
   final ApiService _apiService = ApiService();
-  
+
 Future<Map<String, dynamic>> sendVerification({
   required String email,
   required bool isLogin,
   String? deviceName,
   String? ipAddress,
 }) async {
-  try {
-    final response = await _apiService.post(
-      ApiEndpoints.sendVerification,
-      {
-        'email': email,
-        'isLogin': isLogin,
-        'deviceName': deviceName,
-        'ipAddress': ipAddress,
-      },
-    );
-    final data = _apiService.handleResponse(response);
-    await SharedPrefs.setSecureString('temp_email', email);
-    await SharedPrefs.setSecureString('temp_is_login', isLogin.toString());
-    return data;
-  } catch (e) {
-    rethrow;
-  }
+  final response = await _apiService.post(
+    ApiEndpoints.sendVerification,
+    {
+      'email': email,
+      'isLogin': isLogin,
+      'deviceName': deviceName,
+      'ipAddress': ipAddress,
+    },
+  );
+  final data = _apiService.handleResponse(response);
+  await SharedPrefs.setSecureString('temp_email', email);
+  await SharedPrefs.setSecureString('temp_is_login', isLogin.toString());
+  return data;
 }
-  
-  // Verify code only (نقطة التحقق المنفصلة الجديدة)
+
+  // Verify code only (separate verification endpoint)
   Future<Map<String, dynamic>> verifyCode({
     required String email,
     required String verificationCode,
   }) async {
-    try {
-      final response = await _apiService.post(
-        ApiEndpoints.verifyCode,
-        {
-          'email': email,
-          'verificationCode': verificationCode,
-        },
-      );
-      
-      final data = _apiService.handleResponse(response);
-      
-      // إذا نجح التحقق، نخزن البيانات
-      if (data['success'] == true) {
-        await SharedPrefs.setSecureString('verified_email', email);
-        await SharedPrefs.setSecureString('verified_code', verificationCode);
-        await SharedPrefs.setSecureString('is_code_verified', 'true');
-      }
-      
-      return data;
-    } catch (e) {
-      rethrow;
+    final response = await _apiService.post(
+      ApiEndpoints.verifyCode,
+      {
+        'email': email,
+        'verificationCode': verificationCode,
+      },
+    );
+
+    final data = _apiService.handleResponse(response);
+
+    if (data['success'] == true) {
+      await SharedPrefs.setSecureString('verified_email', email);
+      await SharedPrefs.setSecureString('verified_code', verificationCode);
+      await SharedPrefs.setSecureString('is_code_verified', 'true');
     }
+
+    return data;
   }
-  // في auth_repository.dart
 
 Future<Map<String, dynamic>> recoveryCheckUser(String emailOrUsername) async {
   final response = await _apiService.post(
@@ -100,24 +90,22 @@ Future<Map<String, dynamic>> forgotPasscode({required String email}) async {
   final response = await _apiService.post(
     ApiEndpoints.forgotPasscode,
     {'email': email},
-    // شيل requiresAuth
   );
   return _apiService.handleResponse(response);
 }
 
 Future<Map<String, dynamic>> resetPasscode({
-  required String email, // ← زود
+  required String email,
   required String otpCode,
   required String newPasscode,
 }) async {
   final response = await _apiService.post(
     ApiEndpoints.resetPasscode,
     {
-      'email': email, // ← زود
+      'email': email,
       'otpCode': otpCode,
       'newPasscode': newPasscode,
     },
-    // شيل requiresAuth
   );
   return _apiService.handleResponse(response);
 }
@@ -161,7 +149,7 @@ Future<Map<String, dynamic>> recoveryConfirmEmailChange({
   );
   return _apiService.handleResponse(response);
 }
-  
+
   // Complete registration
   Future<Map<String, dynamic>> completeRegistration({
     required String email,
@@ -171,30 +159,28 @@ Future<Map<String, dynamic>> recoveryConfirmEmailChange({
     required String userName,
     required String phoneNumber,
   }) async {
-    try {
-      // تأكد من أن الكود تم التحقق منه أولاً
-      final isVerified = SharedPrefs.getBoolValue('is_code_verified') ?? false;
-      if (!isVerified) {
-        throw Exception('Please verify your code first');
-      }
-      
-      final response = await _apiService.post(
-        ApiEndpoints.verifyAndComplete,
-        {
-          'email': email,
-          'verificationCode': verificationCode,
-          'password': password,
-          'fullName': fullName,
-          'userName': userName,
-          'phoneNumber': phoneNumber,
-        },
-      );
-      
-      final data = _apiService.handleResponse(response);
-      
+    final isVerified = SharedPrefs.getBoolValue('is_code_verified') ?? false;
+    if (!isVerified) {
+      throw Exception('Please verify your code first');
+    }
+
+    final response = await _apiService.post(
+      ApiEndpoints.verifyAndComplete,
+      {
+        'email': email,
+        'verificationCode': verificationCode,
+        'password': password,
+        'fullName': fullName,
+        'userName': userName,
+        'phoneNumber': phoneNumber,
+      },
+    );
+
+    final data = _apiService.handleResponse(response);
+
 if (data['success'] == true && data['token'] != null) {
   await SharedPrefs.setAuthToken(data['token']);
-        await SharedPrefs.setSecureString('user_email', email);
+      await SharedPrefs.setSecureString('user_email', email);
   await SharedPrefs.setUserData(jsonEncode({
     'email': email,
     'fullName': fullName,
@@ -203,73 +189,59 @@ if (data['success'] == true && data['token'] != null) {
   }));
   await _cleanTempData();
 }
-      
-      return data;
-    } catch (e) {
-      rethrow;
-    }
+
+    return data;
   }
-  
+
   // Complete login
   Future<Map<String, dynamic>> completeLogin({
     required String email,
     required String verificationCode,
     required String password,
   }) async {
-    try {
-      // تأكد من أن الكود تم التحقق منه أولاً
-      final isVerified = await SharedPrefs.getSecureString('is_code_verified');
-      if (isVerified != 'true') {
-        throw Exception('Please verify your code first');
-      }
-      
-      final response = await _apiService.post(
-        ApiEndpoints.verifyAndComplete,
-        {
-          'email': email,
-          'verificationCode': verificationCode,
-          'password': password,
-          'fullName': '',
-          'userName': '',
-          'phoneNumber': '',
-        },
-      );
-      
-      final data = _apiService.handleResponse(response);
-      
-      // إذا نجح الدخول، نخزن الـ token
-      if (data['success'] == true && data['token'] != null) {
-        await SharedPrefs.setAuthToken(data['token']);
-  await SharedPrefs.setSecureString('user_email', email);
-        await SharedPrefs.setUserData(jsonEncode({
-          'email': email,
-        }));
-        await _cleanTempData();
-      }
-      
-      return data;
-    } catch (e) {
-      rethrow;
+    final isVerified = await SharedPrefs.getSecureString('is_code_verified');
+    if (isVerified != 'true') {
+      throw Exception('Please verify your code first');
     }
+
+    final response = await _apiService.post(
+      ApiEndpoints.verifyAndComplete,
+      {
+        'email': email,
+        'verificationCode': verificationCode,
+        'password': password,
+        'fullName': '',
+        'userName': '',
+        'phoneNumber': '',
+      },
+    );
+
+    final data = _apiService.handleResponse(response);
+
+    if (data['success'] == true && data['token'] != null) {
+      await SharedPrefs.setAuthToken(data['token']);
+  await SharedPrefs.setSecureString('user_email', email);
+      await SharedPrefs.setUserData(jsonEncode({
+        'email': email,
+      }));
+      await _cleanTempData();
+    }
+
+    return data;
   }
-  
+
   // Check if email exists
   Future<bool> checkEmail(String email) async {
-    try {
-      // TODO: Change to POST to avoid email in query params
-      final response = await _apiService.get(
-        ApiEndpoints.checkEmail,
-        queryParams: {'email': email},
-      );
-      
-      final data = _apiService.handleResponse(response);
-      return data['exists'] ?? false;
-    } catch (e) {
-      rethrow;
-    }
+    final response = await _apiService.get(
+      ApiEndpoints.checkEmail,
+      queryParams: {'email': email},
+    );
+
+    final data = _apiService.handleResponse(response);
+    return data['exists'] ?? false;
   }
-  
-  // تنظيف البيانات المؤقتة
+
+  // Clean temporary data
   Future<void> _cleanTempData() async {
     await SharedPrefs.removeSecureKey('temp_email');
     await SharedPrefs.removeSecureKey('temp_is_login');
@@ -278,9 +250,8 @@ if (data['success'] == true && data['token'] != null) {
     await SharedPrefs.removeSecureKey('is_code_verified');
   }
   Future<void> setUserCurrency(String currency) async {
-  try {
     final response = await _apiService.post(
-      ApiEndpoints.setCurrency, // يجب تعريف هذا endpoint
+      ApiEndpoints.setCurrency,
       {'currency': currency},
       requiresAuth: true,
     );
@@ -288,33 +259,26 @@ if (data['success'] == true && data['token'] != null) {
     if (data['success'] != true) {
       throw Exception(data['message'] ?? 'Failed to set currency');
     }
-  } catch (e) {
-    rethrow;
   }
-}
   Future<Map<String, dynamic>> socialLogin({
     required String provider,
-    required Map<String, dynamic> tokenData,
+    required Map<String, String?> tokenData,
   }) async {
-    try {
-      final response = await _apiService.post(
-        _getSocialEndpoint(provider),
-        tokenData,
-      );
+    final response = await _apiService.post(
+      _getSocialEndpoint(provider),
+      tokenData,
+    );
 
-      final data = _apiService.handleResponse(response);
+    final data = _apiService.handleResponse(response);
 
-      if (data['success'] == true && data['token'] != null) {
-        await SharedPrefs.setAuthToken(data['token']);
-        if (data['user'] != null) {
-          await SharedPrefs.setUserData(jsonEncode(data['user']));
-        }
+    if (data['success'] == true && data['token'] != null) {
+      await SharedPrefs.setAuthToken(data['token']);
+      if (data['user'] != null) {
+        await SharedPrefs.setUserData(jsonEncode(data['user']));
       }
-
-      return data;
-    } catch (e) {
-      rethrow;
     }
+
+    return data;
   }
 
   String _getSocialEndpoint(String provider) {
@@ -330,19 +294,14 @@ if (data['success'] == true && data['token'] != null) {
 
   // Logout
   Future<void> logout() async {
-    try {
-      await _apiService.post(
-        ApiEndpoints.logout,
-        {},
-        requiresAuth: true,
-      );
-      
-      // إزالة البيانات المحلية
-      await SharedPrefs.removeAuthToken();
-      await SharedPrefs.removeUserData();
-      await _cleanTempData();
-    } catch (e) {
-      rethrow;
-    }
+    await _apiService.post(
+      ApiEndpoints.logout,
+      {},
+      requiresAuth: true,
+    );
+
+    await SharedPrefs.removeAuthToken();
+    await SharedPrefs.removeUserData();
+    await _cleanTempData();
   }
 }
