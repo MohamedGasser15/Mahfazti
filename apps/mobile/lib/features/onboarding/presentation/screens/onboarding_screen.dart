@@ -195,10 +195,11 @@ Future<void> _onGetStarted() async {
   @override
   Widget build(BuildContext context) {
     final pages = _getPages(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isRTL = Directionality.of(context) == TextDirection.rtl;
     
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: isDark ? Colors.black : Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,

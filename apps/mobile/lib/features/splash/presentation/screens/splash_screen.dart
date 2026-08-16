@@ -175,16 +175,6 @@ Future<void> _checkAuthStatus() async {
     await SharedPrefs.removeSecureKey('user_email');
   }
 
-  void _navigateToPin() {
-    Navigator.of(context).pushReplacementNamed(
-      '/pin',
-      arguments: {
-        'isFirstTime': false,
-        'showBiometricFirst': true,
-      },
-    );
-  }
-
   void _navigateToOnboarding() {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
@@ -204,9 +194,10 @@ Future<void> _checkAuthStatus() async {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: isDark ? Colors.black : Colors.white,
       body: Center(
         child: AnimatedBuilder(
           animation: _controller,
