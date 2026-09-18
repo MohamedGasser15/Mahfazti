@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:my_wallet/core/constants/app_constants.dart';
+import 'package:my_wallet/core/constants/app_routes.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
+import 'package:my_wallet/core/services/wallet_cache_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
-import 'package:my_wallet/features/onboarding/presentation/screens/onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   final Function(Locale) onLocaleChanged;
@@ -103,7 +105,7 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   String? _getCachedEmail() {
-    final directEmail = SharedPrefs.getStringValue('user_email');
+    final directEmail = SharedPrefs.getStringValue(AppConstants.userEmailKey);
     if (directEmail != null && directEmail.isNotEmpty) return directEmail;
 
     final userData = SharedPrefs.userData;
@@ -116,73 +118,64 @@ class _SplashScreenState extends State<SplashScreen>
     return null;
   }
 
-// 1. دي الدالة المساعدة اللي بتحدد هيروح فين بالظبط بناءً على وجود الباسكود
-void _navigateToSecurityScreen() {
-  if (!mounted) return;
-  
-  final hasPasscode = SharedPrefs.getStringValue('user_password') != null;
-  final route = hasPasscode ? '/pin' : '/set-passcode';
-  
-  Navigator.of(context).pushReplacementNamed(
-    route,
-    arguments: hasPasscode
-        ? {
-            'isFirstTime': false,
-            'showBiometricFirst': true,
-          }
-        : null,
-  );
-}
+  void _navigateToSecurityScreen() {
+    if (!mounted) return;
 
-// 2. دالة فحص حالة التسجيل بعد التعديل والدمج
-Future<void> _checkAuthStatus() async {
-  final token = SharedPrefs.authToken;
+    final hasPasscode = SharedPrefs.getStringValue(AppConstants.userPasswordKey) != null;
+    final route = hasPasscode ? AppRoutes.pin : AppRoutes.setPasscode;
 
-  // أولاً: لو مفيش توكن، روح لـ Onboarding واقفل الدالة فوراً
-  if (token == null || token.isEmpty) {
-    _navigateToOnboarding();
-    return;
+    Navigator.of(context).pushReplacementNamed(
+      route,
+      arguments: hasPasscode
+          ? {
+              'isFirstTime': false,
+              'showBiometricFirst': true,
+            }
+          : null,
+    );
   }
 
-  // ثانياً: لو مفيش إيميل كاش، روح لصفحة الأمان (PIN أو Set Passcode) واخرج
-  final email = _getCachedEmail();
-  if (email == null || email.isEmpty) {
-    _navigateToSecurityScreen();
-    return;
-  }
+  Future<void> _checkAuthStatus() async {
+    final token = SharedPrefs.authToken;
 
-  // ثالثاً: لو كل تمام، اتأكد من السيرفر إن الإيميل لسه فعال ومتحظرش
-  try {
-    final exists = await _authRepository.checkEmail(email);
-    if (!exists) {
-      await _forceLogout(); // لو مش موجود اعمل تسجيل خروج إجباري
-      if (!mounted) return;
+    if (token == null || token.isEmpty) {
       _navigateToOnboarding();
       return;
     }
-  } catch (_) {
-    // لو السيرفر وقع أو مفيش نت، عدي الخطوة وخليه يدخل بالـ PIN عادي
+
+    final email = _getCachedEmail();
+    if (email == null || email.isEmpty) {
+      _navigateToSecurityScreen();
+      return;
+    }
+
+    try {
+      final exists = await _authRepository.checkEmail(email);
+      if (!exists) {
+        await _forceLogout();
+        if (!mounted) return;
+        _navigateToOnboarding();
+        return;
+      }
+    } catch (_) {
+      // Allow offline PIN entry if server is unreachable
+    }
+
+    _navigateToSecurityScreen();
   }
 
-  // رابعاً: لو الإيميل فعال على السيرفر، وديه لصفحة الأمان
-  _navigateToSecurityScreen();
-}
   Future<void> _forceLogout() async {
     await SharedPrefs.removeAuthToken();
     await SharedPrefs.removeUserData();
-    await SharedPrefs.removeKey('user_password');
-    await SharedPrefs.removeKey('user_email');
-    await SharedPrefs.removeSecureKey('user_email');
+    await SharedPrefs.removeKey(AppConstants.userPasswordKey);
+    await SharedPrefs.removeKey(AppConstants.userEmailKey);
+    await SharedPrefs.removeSecureKey(AppConstants.userEmailKey);
+    await WalletCacheService.invalidateAll();
   }
 
   void _navigateToOnboarding() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => OnboardingScreen(
-          onLocaleChanged: widget.onLocaleChanged,
-        ),
-      ),
-    );
+    if (!mounted) return;
+    Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
   }
 
   @override
@@ -244,9 +237,7 @@ Future<void> _checkAuthStatus() async {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 32),
-
                 SlideTransition(
                   position: _titleSlide,
                   child: FadeTransition(
@@ -260,9 +251,7 @@ Future<void> _checkAuthStatus() async {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 12),
-
                 SlideTransition(
                   position: _subtitleSlide,
                   child: FadeTransition(

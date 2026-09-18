@@ -1014,7 +1014,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String transactionsCount_plural(Object count) {
-    return '$count transactions';
+    return '$count معاملات';
   }
 
   @override

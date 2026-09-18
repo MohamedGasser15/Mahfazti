@@ -1,16 +1,15 @@
-// features/settings/presentation/widgets/settings_content.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:my_wallet/core/constants/app_routes.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/biometric_service.dart';
 import 'package:my_wallet/core/services/hide_balance_service.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/services/theme_service.dart';
+import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/language_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
-import 'package:my_wallet/features/auth/presentation/screens/change_passcode_screen.dart';
-import 'package:my_wallet/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:my_wallet/features/profile/data/models/user_profile.dart';
 import 'package:my_wallet/features/profile/data/repositories/profile_repository.dart';
 import 'package:my_wallet/features/profile/presentation/screens/profile_edit_screen.dart';
@@ -641,8 +640,8 @@ Future<void> _loadSettings() async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
     return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      child: ResponsiveWrapper(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1212,11 +1211,8 @@ Widget _buildSecuritySettings(bool isDarkMode) {
                 color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                 size: 20,
               ),
-             onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ChangePasscodeScreen()),
-                );
+              onTap: () {
+                Navigator.pushNamed(context, AppRoutes.changePasscode);
               },
             ),
             Divider(
@@ -1820,16 +1816,11 @@ void _showLogoutDialog(bool isDarkMode) {
       await SharedPrefs.removeUserData();
     }
     
-if (!mounted) return;
-Navigator.pushAndRemoveUntil(
-  context,
-  MaterialPageRoute(
-    builder: (_) => OnboardingScreen(
-      onLocaleChanged: (locale) {
-      },
-    ),
-  ),
-  (route) => false,
-);
+    if (!mounted) return;
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      AppRoutes.onboarding,
+      (route) => false,
+    );
   }
 }

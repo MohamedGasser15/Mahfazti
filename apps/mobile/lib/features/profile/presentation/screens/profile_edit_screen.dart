@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
+import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/widgets/custom_button.dart';
 import 'package:my_wallet/core/widgets/custom_text_field.dart';
 import 'package:my_wallet/features/profile/data/repositories/profile_repository.dart';
@@ -139,10 +140,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.all(24),
-              child: Form(
+          : ResponsiveWrapper(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: AppResponsive.screenPadding(context),
+                child: Form(
                 key: _formKey,
                 child: Column(
                   children: [
@@ -239,6 +241,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 ),
               ),
             ),
+          ),
     );
   }
 }

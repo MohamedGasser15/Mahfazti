@@ -314,6 +314,7 @@
   "transactionUpdatedSuccess": "تم تحديث المعاملة بنجاح!",
   "transactions": "المعاملات",
   "transactionsCount": "{count} معاملة",
+  "transactionsCount_plural": "{count} معاملات",
   "transfer": "تحويل",
   "tryAgain": "حاول مرة أخرى",
   "tryAdjustingYourSearch": "حاول تعديل بحثك",

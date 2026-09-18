@@ -1,15 +1,16 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:my_wallet/core/constants/app_routes.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
+import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/onboarding/presentation/widgets/onboarding_page.dart';
-import 'package:my_wallet/features/onboarding/presentation/widgets/language_switch.dart';
 import 'package:my_wallet/features/onboarding/presentation/widgets/story_progress_bar.dart';
 
 class OnboardingScreen extends StatefulWidget {
-  final Function(Locale) onLocaleChanged;
+  final Function(Locale)? onLocaleChanged;
   
-  const OnboardingScreen({super.key, required this.onLocaleChanged});
+  const OnboardingScreen({super.key, this.onLocaleChanged});
   
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -159,11 +160,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     }
   }
 
-Future<void> _onGetStarted() async {
-  await SharedPrefs.setFirstTime(false);
-  if (!mounted) return;
-  Navigator.pushNamed(context, '/email');
-}
+  Future<void> _onGetStarted() async {
+    await SharedPrefs.setFirstTime(false);
+    if (!mounted) return;
+    Navigator.pushNamed(context, AppRoutes.email);
+  }
   
   void _handlePageTap(int index) {
     if (_isAnimating) return;
@@ -200,129 +201,122 @@ Future<void> _onGetStarted() async {
     
     return Scaffold(
       backgroundColor: isDark ? Colors.black : Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: LanguageSwitch(onLocaleChanged: widget.onLocaleChanged),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Story Progress Bar
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: StoryProgressBar(
-              currentPage: _currentPage,
-              totalPages: pages.length,
-              progressController: _progressController,
-              onPageTap: _handlePageTap,
-            ),
-          ),
-          
-          // Page View
-          Expanded(
-            child: Stack(
-              children: [
-                PageView.builder(
-                  controller: _pageController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: pages.length,
-                  itemBuilder: (context, index) {
-                    return OnboardingPageWidget(data: pages[index]);
-                  },
+      body: SafeArea(
+        child: ResponsiveWrapper(
+          child: Column(
+            children: [
+              // Story Progress Bar
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: StoryProgressBar(
+                  currentPage: _currentPage,
+                  totalPages: pages.length,
+                  progressController: _progressController,
+                  onPageTap: _handlePageTap,
                 ),
-                
-                // Forward tap area (للصفحة التالية)
-                if (isRTL)
-                  // العربية: الضغط على اليسار يروح للصفحة الجديدة
-                  Positioned.fill(
-                    left: 0,
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onTap: _goToNextPage,
-                        child: Container(width: 100, color: Colors.transparent),
-                      ),
-                    ),
-                  )
-                else
-                  // الإنجليزية: الضغط على اليمين يروح للصفحة الجديدة
-                  Positioned.fill(
-                    right: 0,
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onTap: _goToNextPage,
-                        child: Container(width: 100, color: Colors.transparent),
-                      ),
-                    ),
+              ),
+            
+            // Page View
+            Expanded(
+              child: Stack(
+                children: [
+                  PageView.builder(
+                    controller: _pageController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: pages.length,
+                    itemBuilder: (context, index) {
+                      return OnboardingPageWidget(data: pages[index]);
+                    },
                   ),
-                
-                // Backward tap area (للصفحة السابقة)
-                if (isRTL)
-                  // العربية: الضغط على اليمين يروح للصفحة السابقة
-                  Positioned.fill(
-                    right: 0,
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onTap: _currentPage > 0 ? _goToPreviousPage : null,
-                        child: Container(width: 100, color: Colors.transparent),
+                  
+                  // Forward tap area (للصفحة التالية)
+                  if (isRTL)
+                    // العربية: الضغط على اليسار يروح للصفحة الجديدة
+                    Positioned.fill(
+                      left: 0,
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onTap: _goToNextPage,
+                          child: Container(width: 100, color: Colors.transparent),
+                        ),
+                      ),
+                    )
+                  else
+                    // الإنجليزية: الضغط على اليمين يروح للصفحة الجديدة
+                    Positioned.fill(
+                      right: 0,
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onTap: _goToNextPage,
+                          child: Container(width: 100, color: Colors.transparent),
+                        ),
                       ),
                     ),
-                  )
-                else
-                  // الإنجليزية: الضغط على اليسار يروح للصفحة السابقة
-                  Positioned.fill(
-                    left: 0,
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onTap: _currentPage > 0 ? _goToPreviousPage : null,
-                        child: Container(width: 100, color: Colors.transparent),
+                  
+                  // Backward tap area (للصفحة السابقة)
+                  if (isRTL)
+                    // العربية: الضغط على اليمين يروح للصفحة السابقة
+                    Positioned.fill(
+                      right: 0,
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onTap: _currentPage > 0 ? _goToPreviousPage : null,
+                          child: Container(width: 100, color: Colors.transparent),
+                        ),
+                      ),
+                    )
+                  else
+                    // الإنجليزية: الضغط على اليسار يروح للصفحة السابقة
+                    Positioned.fill(
+                      left: 0,
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onTap: _currentPage > 0 ? _goToPreviousPage : null,
+                          child: Container(width: 100, color: Colors.transparent),
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-          
-          // Get Started Button
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _onGetStarted,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  minimumSize: const Size(double.infinity, 56),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            
+            // Get Started Button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _onGetStarted,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                    minimumSize: const Size(double.infinity, 56),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
                   ),
-                  elevation: 0,
-                ),
-                child: Text(
-                  context.l10n.getStarted,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).brightness == Brightness.dark ? Colors.black : Colors.white,
+                  child: Text(
+                    context.l10n.getStarted,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.black : Colors.white,
+                    ),
                   ),
                 ),
               ),
             ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
