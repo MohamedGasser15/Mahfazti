@@ -1,4 +1,3 @@
-// core/utils/shared_prefs.dart
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:my_wallet/core/constants/app_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,7 +15,7 @@ class SharedPrefs {
     _userData = await _secure.read(key: AppConstants.userDataKey);
   }
 
-  // First Time
+  // First Time Check
   static bool get isFirstTime {
     return _prefs.getBool(AppConstants.isFirstTimeKey) ?? true;
   }
@@ -38,38 +37,21 @@ class SharedPrefs {
     await _secure.delete(key: AppConstants.authTokenKey);
   }
 
-  static Future<void> setBool(String key, bool value) async {
-    await _prefs.setBool(key, value);
-  }
-
-  static const String _currencyKey = 'selected_currency';
-
+  // Selected Currency
   static String? get currency {
     try {
-      return _prefs.getString(_currencyKey);
+      return _prefs.getString(AppConstants.selectedCurrencyKey);
     } catch (_) {
       return null;
     }
   }
 
   static Future<String?> getCurrency() async {
-    return _prefs.getString(_currencyKey);
+    return _prefs.getString(AppConstants.selectedCurrencyKey);
   }
 
   static Future<void> setCurrency(String currency) async {
-    await _prefs.setString(_currencyKey, currency);
-  }
-
-  static Future<void> setSecureString(String key, String value) async {
-    await _secure.write(key: key, value: value);
-  }
-
-  static Future<String?> getSecureString(String key) async {
-    return await _secure.read(key: key);
-  }
-
-  static Future<void> removeSecureKey(String key) async {
-    await _secure.delete(key: key);
+    await _prefs.setString(AppConstants.selectedCurrencyKey, currency);
   }
 
   // User Data (stored securely)
@@ -94,6 +76,24 @@ class SharedPrefs {
 
   static Future<void> setAppLanguage(String language) async {
     await _prefs.setString(AppConstants.appLanguageKey, language);
+  }
+
+  // Generic Secure Storage
+  static Future<void> setSecureString(String key, String value) async {
+    await _secure.write(key: key, value: value);
+  }
+
+  static Future<String?> getSecureString(String key) async {
+    return await _secure.read(key: key);
+  }
+
+  static Future<void> removeSecureKey(String key) async {
+    await _secure.delete(key: key);
+  }
+
+  // Generic SharedPreferences
+  static Future<void> setBool(String key, bool value) async {
+    await _prefs.setBool(key, value);
   }
 
   static Future<void> setString(String key, String value) async {
@@ -122,5 +122,12 @@ class SharedPrefs {
 
   static Future<void> removeKey(String key) async {
     await _prefs.remove(key);
+  }
+
+  static Future<void> clearAll() async {
+    await _prefs.clear();
+    await _secure.deleteAll();
+    _authToken = null;
+    _userData = null;
   }
 }

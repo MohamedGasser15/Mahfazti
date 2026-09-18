@@ -1,52 +1,54 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:my_wallet/core/constants/app_constants.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 
 class BiometricService {
   static final LocalAuthentication _auth = LocalAuthentication();
 
-  // Check if biometrics is available
+  // Check if biometrics hardware is available
   static Future<bool> isBiometricAvailable() async {
     try {
       return await _auth.canCheckBiometrics;
     } on PlatformException catch (e) {
-      print('Error checking biometrics: $e');
+      debugPrint('Error checking biometrics: $e');
       return false;
     }
   }
-// في biometric_service.dart، أضف هذه الدالة:
-static Future<bool> authenticateWithFallback({
-  int maxAttempts = 3,
-  Function()? onFallback,
-}) async {
-  for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      final authenticated = await authenticate();
-      if (authenticated) {
-        return true;
+
+  static Future<bool> authenticateWithFallback({
+    int maxAttempts = 3,
+    Function()? onFallback,
+  }) async {
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        final authenticated = await authenticate();
+        if (authenticated) {
+          return true;
+        }
+
+        if (attempt < maxAttempts) {
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
+      } catch (e) {
+        debugPrint('Biometric attempt $attempt failed: $e');
       }
-      
-      if (attempt < maxAttempts) {
-        await Future.delayed(const Duration(milliseconds: 500));
-      }
-    } catch (e) {
-      print('Biometric attempt $attempt failed: $e');
     }
+
+    if (onFallback != null) {
+      onFallback();
+    }
+
+    return false;
   }
-  
-  // إذا فشلت جميع المحاولات
-  if (onFallback != null) {
-    onFallback();
-  }
-  
-  return false;
-}
+
   // Get available biometric types
   static Future<List<BiometricType>> getAvailableBiometrics() async {
     try {
       return await _auth.getAvailableBiometrics();
     } on PlatformException catch (e) {
-      print('Error getting biometrics: $e');
+      debugPrint('Error getting biometrics: $e');
       return [];
     }
   }
@@ -60,10 +62,10 @@ static Future<bool> authenticateWithFallback({
       final hasBiometrics = await _auth.canCheckBiometrics;
       if (!hasBiometrics) return false;
 
-      final userEnabled = await SharedPrefs.getSecureString('biometric_enabled') == 'true';
+      final userEnabled = await SharedPrefs.getSecureString(AppConstants.biometricEnabledKey) == 'true';
       return userEnabled;
     } on PlatformException catch (e) {
-      print('Error checking biometric enabled: $e');
+      debugPrint('Error checking biometric enabled: $e');
       return false;
     }
   }
@@ -84,53 +86,51 @@ static Future<bool> authenticateWithFallback({
 
       return authenticated;
     } on PlatformException catch (e) {
-      print('Error during authentication: $e');
+      debugPrint('Error during authentication: $e');
       return false;
     }
   }
 
-  // Enable biometrics
-// Add this method
-static Future<bool> authenticateDirectly() async {
-  try {
-    final authenticated = await _auth.authenticate(
-      localizedReason: 'Authenticate to enable biometric login',
-      options: const AuthenticationOptions(
-        stickyAuth: true,
-        biometricOnly: true,
-      ),
-    );
-    return authenticated;
-  } on PlatformException catch (e) {
-    print('Error during direct authentication: $e');
-    return false;
-  }
-}
-
-// Modify enableBiometric to use direct authentication and return success
-static Future<bool> enableBiometric() async {
-  try {
-    final authenticated = await authenticateDirectly();
-    if (authenticated) {
-      await SharedPrefs.setSecureString('biometric_enabled', 'true');
-      return true;
+  // Direct authentication (to enable biometric)
+  static Future<bool> authenticateDirectly() async {
+    try {
+      final authenticated = await _auth.authenticate(
+        localizedReason: 'Authenticate to enable biometric login',
+        options: const AuthenticationOptions(
+          stickyAuth: true,
+          biometricOnly: true,
+        ),
+      );
+      return authenticated;
+    } on PlatformException catch (e) {
+      debugPrint('Error during direct authentication: $e');
+      return false;
     }
-    return false;
-  } on PlatformException catch (e) {
-    print('Error enabling biometrics: $e');
-    return false;
   }
-}
+
+  static Future<bool> enableBiometric() async {
+    try {
+      final authenticated = await authenticateDirectly();
+      if (authenticated) {
+        await SharedPrefs.setSecureString(AppConstants.biometricEnabledKey, 'true');
+        return true;
+      }
+      return false;
+    } on PlatformException catch (e) {
+      debugPrint('Error enabling biometrics: $e');
+      return false;
+    }
+  }
 
   // Disable biometrics
   static Future<void> disableBiometric() async {
-    await SharedPrefs.removeSecureKey('biometric_enabled');
+    await SharedPrefs.removeSecureKey(AppConstants.biometricEnabledKey);
   }
 
-  // Get biometric display name based on platform
+  // Get biometric display name based on hardware
   static Future<String> getBiometricName() async {
     final available = await getAvailableBiometrics();
-    
+
     if (available.contains(BiometricType.face)) {
       return 'Face ID';
     } else if (available.contains(BiometricType.fingerprint)) {
@@ -151,7 +151,7 @@ static Future<bool> enableBiometric() async {
       final biometrics = await getAvailableBiometrics();
       return biometrics.isNotEmpty;
     } on PlatformException catch (e) {
-      print('Error checking biometric support: $e');
+      debugPrint('Error checking biometric support: $e');
       return false;
     }
   }

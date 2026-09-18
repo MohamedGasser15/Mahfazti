@@ -1,21 +1,21 @@
 import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:my_wallet/core/constants/app_constants.dart';
+import 'package:my_wallet/core/utils/shared_prefs.dart';
 
 class LanguageService {
-  static const String _languageKey = 'selected_language';
-  
   static const Locale arabic = Locale('ar', 'SA');
   static const Locale english = Locale('en', 'US');
-  
-  // ValueNotifier لتتبع تغييرات اللغة
+
+  // ValueNotifier for tracking app language changes
   static final ValueNotifier<Locale> localeNotifier = ValueNotifier<Locale>(english);
-  
+
   static Future<void> init() async {
     final savedLocale = await getSavedLocale();
     localeNotifier.value = savedLocale;
   }
-  
+
   static Future<Locale> getDeviceLocale() async {
     final platformLocale = PlatformDispatcher.instance.locale;
     if (platformLocale.languageCode.startsWith('ar')) {
@@ -23,44 +23,41 @@ class LanguageService {
     }
     return english;
   }
-  
+
   static Future<Locale> getSavedLocale() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedLanguage = prefs.getString(_languageKey);
-      
-      if (savedLanguage == 'ar') return arabic;
-      if (savedLanguage == 'en') return english;
-      
+      final savedLanguage = SharedPrefs.appLanguage;
+
+      if (savedLanguage == AppConstants.arabic) return arabic;
+      if (savedLanguage == AppConstants.english) return english;
+
       return await getDeviceLocale();
-    } catch (e) {
+    } catch (_) {
       return english;
     }
   }
-  
+
   static Future<void> saveLocale(Locale locale) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_languageKey, locale.languageCode);
-      // تحديث الـ ValueNotifier
+      await SharedPrefs.setAppLanguage(locale.languageCode);
       localeNotifier.value = locale;
     } catch (e) {
-      print('Error saving locale: $e');
+      debugPrint('Error saving locale: $e');
     }
   }
-  
+
   static Future<void> switchToArabic() async {
     await saveLocale(arabic);
   }
-  
+
   static Future<void> switchToEnglish() async {
     await saveLocale(english);
   }
-  
+
   static bool isArabic(Locale locale) {
     return locale.languageCode == 'ar';
   }
-  
+
   static bool isEnglish(Locale locale) {
     return locale.languageCode == 'en';
   }

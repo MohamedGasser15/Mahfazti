@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:my_wallet/core/constants/app_routes.dart';
 import 'package:my_wallet/core/services/hide_balance_service.dart';
 import 'package:my_wallet/core/services/theme_service.dart';
 import 'package:my_wallet/core/services/watch_service.dart';
@@ -8,48 +9,36 @@ import 'package:my_wallet/core/themes/app_theme.dart';
 import 'package:my_wallet/core/utils/language_service.dart';
 import 'package:my_wallet/core/utils/navigation_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
-import 'package:my_wallet/features/auth/presentation/screens/currency_selection_screen.dart';
-import 'package:my_wallet/features/auth/presentation/screens/email_screen.dart';
-import 'package:my_wallet/features/auth/presentation/screens/passcode_screen.dart';
-import 'package:my_wallet/features/auth/presentation/screens/pin_screen.dart';
-import 'package:my_wallet/features/auth/presentation/screens/recovery_check_user_screen.dart';
-import 'package:my_wallet/features/auth/presentation/screens/recovery_new_email_screen.dart';
-import 'package:my_wallet/features/auth/presentation/screens/recovery_otp_screen.dart';
-import 'package:my_wallet/features/auth/presentation/screens/recovery_password_screen.dart';
-import 'package:my_wallet/features/auth/presentation/screens/register_screen.dart';
-import 'package:my_wallet/features/auth/presentation/screens/set_passcode_screen.dart';
-import 'package:my_wallet/features/auth/presentation/screens/verification_screen.dart';
-import 'package:my_wallet/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:my_wallet/features/splash/presentation/screens/splash_screen.dart';
-import 'package:my_wallet/features/wallet/presentation/screens/home_screen.dart';
 import 'package:my_wallet/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  
+
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.dark,
     systemNavigationBarColor: Colors.black,
     systemNavigationBarIconBrightness: Brightness.light,
   ));
+
   WatchService.initialize();
   await SharedPrefs.init();
   await ThemeService.init();
   await LanguageService.init();
-  
+
   runApp(const MyWalletApp());
 }
 
 class MyWalletApp extends StatefulWidget {
   const MyWalletApp({super.key});
-  
+
   @override
   State<MyWalletApp> createState() => _MyWalletAppState();
 }
@@ -61,10 +50,9 @@ class _MyWalletAppState extends State<MyWalletApp> {
   void initState() {
     super.initState();
     _loadInitialLocale();
-    
     LanguageService.localeNotifier.addListener(_onLocaleChanged);
   }
-  
+
   Future<void> _loadInitialLocale() async {
     final savedLocale = await LanguageService.getSavedLocale();
     if (mounted) {
@@ -73,7 +61,7 @@ class _MyWalletAppState extends State<MyWalletApp> {
       });
     }
   }
-  
+
   void _onLocaleChanged() {
     if (mounted) {
       setState(() {
@@ -81,26 +69,25 @@ class _MyWalletAppState extends State<MyWalletApp> {
       });
     }
   }
-  
+
   void _changeLocale(Locale locale) {
     setState(() {
       _currentLocale = locale;
     });
     LanguageService.saveLocale(locale);
   }
-  
+
   @override
   void dispose() {
     LanguageService.localeNotifier.removeListener(_onLocaleChanged);
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
-    return MultiProvider( // <-- أضف MultiProvider هنا
+    return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => HideBalanceService()),
-        // يمكنك إضافة خدمات أخرى هنا إذا احتجت
       ],
       child: ValueListenableBuilder<ThemeMode>(
         valueListenable: ThemeService.themeNotifier,
@@ -123,14 +110,10 @@ class _MyWalletAppState extends State<MyWalletApp> {
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: themeMode,
-            home: SplashScreen(onLocaleChanged: (locale) {
-              setState(() {
-                _currentLocale = locale;
-              });
-            }),
+            home: SplashScreen(onLocaleChanged: _changeLocale),
             builder: (context, child) {
               final isRTL = _currentLocale.languageCode == 'ar';
-              
+
               return Directionality(
                 textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
                 child: MediaQuery(
@@ -141,101 +124,11 @@ class _MyWalletAppState extends State<MyWalletApp> {
                 ),
               );
             },
-onGenerateRoute: (settings) {
-  switch (settings.name) {
-    case '/':
-      return MaterialPageRoute(
-        builder: (context) => SplashScreen(onLocaleChanged: _changeLocale),
-      );
-    case '/onboarding':
-      return MaterialPageRoute(
-        builder: (context) => OnboardingScreen(onLocaleChanged: _changeLocale),
-      );
-    case '/email':
-      return MaterialPageRoute(
-        builder: (context) => const EmailScreen(),
-      );
-    case '/verification':
-      final args = settings.arguments as Map<String, dynamic>;
-      return MaterialPageRoute(
-        builder: (context) => VerificationScreen(
-          email: args['email'],
-          isLogin: args['isLogin'],
-        ),
-      );
-    case '/passcode':
-      final args = settings.arguments as Map<String, dynamic>;
-      return MaterialPageRoute(
-        builder: (context) => PasscodeScreen(
-          email: args['email'],
-          verificationCode: args['verificationCode'],
-          isLogin: args['isLogin'],
-        ),
-      );
-    case '/register':
-      final args = settings.arguments as Map<String, dynamic>;
-      return MaterialPageRoute(
-        builder: (context) => RegisterScreen(
-          email: args['email'],
-          verificationCode: args['verificationCode'],
-          passcode: args['passcode'],
-        ),
-      );
-    case '/currency-selection':  // <-- أضف هذا
-      return MaterialPageRoute(
-        builder: (context) => const CurrencySelectionScreen(),
-      );
-    case '/home':
-      return MaterialPageRoute(
-        builder: (context) => const HomeScreen(),
-      );
-    case '/set-passcode':
-      return MaterialPageRoute(
-        builder: (context) => const SetPasscodeScreen(),
-      );
-    case '/pin':
-      final args = settings.arguments as Map<String, dynamic>?;
-      return MaterialPageRoute(
-        builder: (context) => PinScreen(
-          isFirstTime: args?['isFirstTime'] ?? false,
-        ),
-      );
-      case '/recovery-check-user':
-  return MaterialPageRoute(
-    builder: (context) => const RecoveryCheckUserScreen(),
-  );
-
-case '/recovery-password':
-  final args = settings.arguments as Map<String, dynamic>;
-  return MaterialPageRoute(
-    builder: (context) => RecoveryPasswordScreen(
-      emailOrUsername: args['emailOrUsername'],
-    ),
-  );
-
-case '/recovery-new-email':
-  final args = settings.arguments as Map<String, dynamic>;
-  return MaterialPageRoute(
-    builder: (context) => RecoveryNewEmailScreen(
-      emailOrUsername: args['emailOrUsername'],
-      password: args['password'],
-    ),
-  );
-
-case '/recovery-otp':
-  final args = settings.arguments as Map<String, dynamic>;
-  return MaterialPageRoute(
-    builder: (context) => RecoveryOtpScreen(
-      emailOrUsername: args['emailOrUsername'],
-      newEmail: args['newEmail'],
-    ),
-  );
-    default:
-      return MaterialPageRoute(
-        builder: (context) => SplashScreen(onLocaleChanged: _changeLocale),
-      );
-  }
-},);
+            onGenerateRoute: (settings) => AppRoutes.onGenerateRoute(
+              settings,
+              onLocaleChanged: _changeLocale,
+            ),
+          );
         },
       ),
     );
