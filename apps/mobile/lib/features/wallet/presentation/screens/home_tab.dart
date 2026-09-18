@@ -1,29 +1,29 @@
-// features/home/presentation/screens/home_tab.dart
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' as ui;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
+import 'package:my_wallet/core/constants/currency_constants.dart';
+import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/hide_balance_service.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/services/wallet_cache_service.dart';
 import 'package:my_wallet/core/utils/api_error_handler.dart';
+import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
+import 'package:my_wallet/features/settings/presentation/screens/settings_screen.dart';
 import 'package:my_wallet/features/wallet/data/models/category_model.dart';
 import 'package:my_wallet/features/wallet/data/models/voice_expense_model.dart';
+import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
 import 'package:my_wallet/features/wallet/data/repositories/category_repository.dart';
+import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
+import 'package:my_wallet/features/wallet/presentation/widgets/home_tab_models.dart';
 import 'package:my_wallet/features/wallet/presentation/widgets/voice_expense_button.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:my_wallet/core/constants/currency_constants.dart';
-import 'package:my_wallet/core/extensions/context_extensions.dart';
-import 'package:my_wallet/features/settings/presentation/screens/settings_screen.dart';
-import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
-import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
-import 'dart:ui' as ui;
-import '../widgets/home_tab_models.dart';
 
 part '../widgets/home_tab_dialogs.dart';
 part '../widgets/home_tab_widgets.dart';
@@ -67,34 +67,7 @@ abstract class _HomeTabState extends State<HomeTab> {
       _currencyCode = code ?? 'USD';
     });
   }
-  Map<String, dynamic> _homeDataToMap(WalletHomeData data) {
-    return {
-      'balance': {
-        'totalBalance': data.balance.totalBalance,
-        'totalDeposits': data.balance.totalDeposits,
-        'totalWithdrawals': data.balance.totalWithdrawals,
-      },
-      'recentTransactions': data.recentTransactions.map((t) => t.toJson()).toList(),
-      'totalTransactionCount': data.totalTransactionCount,
-    };
-  }
 
-  WalletHomeData _homeDataFromMap(Map<String, dynamic> map) {
-    final balanceMap = map['balance'] as Map<String, dynamic>;
-    final balance = WalletBalance(
-      totalBalance: (balanceMap['totalBalance'] as num).toDouble(),
-      totalDeposits: (balanceMap['totalDeposits'] as num).toDouble(),
-      totalWithdrawals: (balanceMap['totalWithdrawals'] as num).toDouble(),
-    );
-    final transactions = (map['recentTransactions'] as List)
-        .map((t) => WalletTransaction.fromJson(t))
-        .toList();
-    return WalletHomeData(
-      balance: balance,
-      recentTransactions: transactions,
-      totalTransactionCount: map['totalTransactionCount'] as int,
-    );
-  }
   Future<void> _loadCategories() async {
     setState(() => _isLoadingCategories = true);
     try {
@@ -127,7 +100,7 @@ abstract class _HomeTabState extends State<HomeTab> {
       final cached = await WalletCacheService.getHome();
       if (cached != null) {
         try {
-          final cachedData = _homeDataFromMap(cached);
+          final cachedData = WalletHomeData.fromJson(cached);
           setState(() {
             _homeData = cachedData;
             _isLoading = false;
@@ -147,10 +120,11 @@ abstract class _HomeTabState extends State<HomeTab> {
     });
     await _fetchHomeFromApi();
   }
+
   Future<void> _fetchHomeFromApi({bool silent = false}) async {
     try {
       final data = await _walletRepository.getHomeData();
-      final cacheMap = _homeDataToMap(data);
+      final cacheMap = data.toJson();
       await WalletCacheService.saveHome(cacheMap);
 
       if (mounted && !silent) {
@@ -259,7 +233,8 @@ abstract class _HomeTabState extends State<HomeTab> {
             onRefresh: _refreshData,
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              child: Column(
+              child: ResponsiveWrapper(
+                child: Column(
                 children: [
                   if (_homeData == null) ...[
                     if (_isLoading)
@@ -666,6 +641,7 @@ abstract class _HomeTabState extends State<HomeTab> {
                     const SizedBox(height: 160),
                   ],
                 ],
+              ),
               ),
             ),
           ),

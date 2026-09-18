@@ -1,9 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:my_wallet/core/constants/currency_constants.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/wallet_cache_service.dart';
-import 'package:my_wallet/core/constants/currency_constants.dart';
+import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
 import 'package:shimmer/shimmer.dart';
@@ -176,42 +177,44 @@ void _applyData(
           left: 20, right: 20, top: 24,
           bottom: Platform.isIOS ? 110 : 40,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // month label
-            Container(
-                width: 120,
-                height: 16,
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(4))),
-            const SizedBox(height: 20),
-            // 2 stat cards
-            Row(children: [
-              Expanded(child: _shimmerCard(isDark, height: 110)),
-              const SizedBox(width: 12),
-              Expanded(child: _shimmerCard(isDark, height: 110)),
-            ]),
-            const SizedBox(height: 12),
-            Row(children: [
-              Expanded(child: _shimmerCard(isDark, height: 110)),
-              const SizedBox(width: 12),
-              Expanded(child: _shimmerCard(isDark, height: 110)),
-            ]),
-            const SizedBox(height: 28),
-            // section title
-            Container(
-                width: 160,
-                height: 18,
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(4))),
-            const SizedBox(height: 14),
-            // 3 category rows
-            ...List.generate(
-                3, (_) => _shimmerCategoryRow(isDark)),
-          ],
+        child: ResponsiveWrapper(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // month label
+              Container(
+                  width: 120,
+                  height: 16,
+                  decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4))),
+              const SizedBox(height: 20),
+              // 2 stat cards
+              Row(children: [
+                Expanded(child: _shimmerCard(isDark, height: 110)),
+                const SizedBox(width: 12),
+                Expanded(child: _shimmerCard(isDark, height: 110)),
+              ]),
+              const SizedBox(height: 12),
+              Row(children: [
+                Expanded(child: _shimmerCard(isDark, height: 110)),
+                const SizedBox(width: 12),
+                Expanded(child: _shimmerCard(isDark, height: 110)),
+              ]),
+              const SizedBox(height: 28),
+              // section title
+              Container(
+                  width: 160,
+                  height: 18,
+                  decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4))),
+              const SizedBox(height: 14),
+              // 3 category rows
+              ...List.generate(
+                  3, (_) => _shimmerCategoryRow(isDark)),
+            ],
+          ),
         ),
       ),
     );
@@ -312,9 +315,10 @@ void _applyData(
         left: 20, right: 20, top: 24,
         bottom: Platform.isIOS ? 110 : 40,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      child: ResponsiveWrapper(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           // Month label
           Text(
             monthLabel,
@@ -467,6 +471,7 @@ void _applyData(
             subtitle: _lastMonthExpenses == 0 ? context.l10n.noData : _formatCurrency(_lastMonthExpenses),
           ),
         ],
+      ),
       ),
     );
   }

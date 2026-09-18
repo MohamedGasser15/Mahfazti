@@ -1,12 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:my_wallet/core/services/wallet_cache_service.dart';
-import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
 import 'package:intl/intl.dart';
-import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/constants/currency_constants.dart';
+import 'package:my_wallet/core/extensions/context_extensions.dart';
+import 'package:my_wallet/core/services/wallet_cache_service.dart';
+import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
+import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
 import 'package:shimmer/shimmer.dart';
 
 enum ChartType { line, bar }
@@ -282,27 +283,29 @@ Future<void> _fetchFromApi({bool silent = false, BuildContext? context}) async {
       highlightColor: isDarkMode ? Colors.grey[700]! : Colors.grey[100]!,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(child: _buildShimmerStatCard(isDarkMode)),
-                const SizedBox(width: 12),
-                Expanded(child: _buildShimmerStatCard(isDarkMode)),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildShimmerNetSavingsCard(isDarkMode),
-            const SizedBox(height: 24),
-            _buildShimmerChartSection(isDarkMode),
-            const SizedBox(height: 16),
-            ...List.generate(3, (i) => _buildShimmerCategoryItem(isDarkMode)),
-            const SizedBox(height: 24),
-            _buildShimmerChartSection(isDarkMode),
-            const SizedBox(height: 16),
-            ...List.generate(3, (i) => _buildShimmerCategoryItem(isDarkMode)),
-          ],
+        child: ResponsiveWrapper(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(child: _buildShimmerStatCard(isDarkMode)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _buildShimmerStatCard(isDarkMode)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildShimmerNetSavingsCard(isDarkMode),
+              const SizedBox(height: 24),
+              _buildShimmerChartSection(isDarkMode),
+              const SizedBox(height: 16),
+              ...List.generate(3, (i) => _buildShimmerCategoryItem(isDarkMode)),
+              const SizedBox(height: 24),
+              _buildShimmerChartSection(isDarkMode),
+              const SizedBox(height: 16),
+              ...List.generate(3, (i) => _buildShimmerCategoryItem(isDarkMode)),
+            ],
+          ),
         ),
       ),
     );
@@ -343,88 +346,89 @@ Future<void> _fetchFromApi({bool silent = false, BuildContext? context}) async {
                         top: 16,
                         bottom: Platform.isIOS ? 75 : 5,
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildStatCard(
-                                  title: context.l10n.totalIncome,
-                                  value: _formatCurrency(_summaryData!['totalIncome']),
-                                  icon: Icons.trending_up,
-                                  color: Colors.green,
-                                  isDarkMode: isDarkMode,
+                      child: ResponsiveWrapper(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildStatCard(
+                                    title: context.l10n.totalIncome,
+                                    value: _formatCurrency(_summaryData!['totalIncome']),
+                                    icon: Icons.trending_up,
+                                    color: Colors.green,
+                                    isDarkMode: isDarkMode,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _buildStatCard(
-                                  title: context.l10n.totalExpenses,
-                                  value: _formatCurrency(_summaryData!['totalExpenses']),
-                                  icon: Icons.trending_down,
-                                  color: Colors.red,
-                                  isDarkMode: isDarkMode,
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _buildStatCard(
+                                    title: context.l10n.totalExpenses,
+                                    value: _formatCurrency(_summaryData!['totalExpenses']),
+                                    icon: Icons.trending_down,
+                                    color: Colors.red,
+                                    isDarkMode: isDarkMode,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
 
-                          const SizedBox(height: 16),
+                            _buildNetSavingsCard(
+                              netSavings: (_summaryData!['netSavings'] as num).toDouble(),
+                              isDarkMode: isDarkMode,
+                            ),
 
-                          _buildNetSavingsCard(
-                            netSavings: _summaryData!['netSavings'],
-                            isDarkMode: isDarkMode,
-                          ),
+                            const SizedBox(height: 24),
 
-                          const SizedBox(height: 24),
+                            _buildChartSection(
+                              title: context.l10n.expensesByCategory,
+                              categories: _summaryData!['expensesByCategory'] as List,
+                              chartType: _expensesChartType,
+                              onChartTypeChanged: (type) {
+                                setState(() {
+                                  _expensesChartType = type;
+                                });
+                              },
+                              color: Colors.red,
+                              isDarkMode: isDarkMode,
+                            ),
 
-                          _buildChartSection(
-                            title: context.l10n.expensesByCategory,
-                            categories: _summaryData!['expensesByCategory'] as List,
-                            chartType: _expensesChartType,
-                            onChartTypeChanged: (type) {
-                              setState(() {
-                                _expensesChartType = type;
-                              });
-                            },
-                            color: Colors.red,
-                            isDarkMode: isDarkMode,
-                          ),
+                            const SizedBox(height: 16),
 
-                          const SizedBox(height: 16),
+                            _buildCategoryDetails(
+                              _summaryData!['expensesByCategory'] as List,
+                              isDarkMode,
+                              isIncome: false,
+                            ),
 
-                          _buildCategoryDetails(
-                            _summaryData!['expensesByCategory'] as List,
-                            isDarkMode,
-                            isIncome: false,
-                          ),
+                            const SizedBox(height: 24),
 
-                          const SizedBox(height: 24),
+                            _buildChartSection(
+                              title: context.l10n.incomeByCategory,
+                              categories: _summaryData!['incomeByCategory'] as List,
+                              chartType: _incomeChartType,
+                              onChartTypeChanged: (type) {
+                                setState(() {
+                                  _incomeChartType = type;
+                                });
+                              },
+                              color: Colors.green,
+                              isDarkMode: isDarkMode,
+                            ),
 
-                          _buildChartSection(
-                            title: context.l10n.incomeByCategory,
-                            categories: _summaryData!['incomeByCategory'] as List,
-                            chartType: _incomeChartType,
-                            onChartTypeChanged: (type) {
-                              setState(() {
-                                _incomeChartType = type;
-                              });
-                            },
-                            color: Colors.green,
-                            isDarkMode: isDarkMode,
-                          ),
+                            const SizedBox(height: 16),
 
-                          const SizedBox(height: 16),
+                            _buildCategoryDetails(
+                              _summaryData!['incomeByCategory'] as List,
+                              isDarkMode,
+                              isIncome: true,
+                            ),
 
-                          _buildCategoryDetails(
-                            _summaryData!['incomeByCategory'] as List,
-                            isDarkMode,
-                            isIncome: true,
-                          ),
-
-                          const SizedBox(height: 40),
-                        ],
+                            const SizedBox(height: 40),
+                          ],
+                        ),
                       ),
                     ),
                   );

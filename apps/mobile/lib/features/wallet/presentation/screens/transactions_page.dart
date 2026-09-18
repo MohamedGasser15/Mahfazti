@@ -1,16 +1,17 @@
 // features/home/presentation/screens/TransactionsPage.dart (TransactionsTab)
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:my_wallet/core/constants/currency_constants.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/services/wallet_cache_service.dart';
-import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
-import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
-import 'package:my_wallet/core/constants/currency_constants.dart';
+import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
-import 'package:intl/intl.dart';
 import 'package:my_wallet/core/widgets/app_shimmer.dart';
 import 'package:my_wallet/core/widgets/app_states.dart';
+import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
+import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
 
 class TransactionsTab extends StatefulWidget {
   const TransactionsTab({super.key});
@@ -476,7 +477,8 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
         ],
       ),
       body: SafeArea(
-        child: Column(
+        child: ResponsiveWrapper(
+          child: Column(
           children: [
             // Search Bar (always visible)
             Padding(
@@ -602,6 +604,7 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
                             ),
             ),
           ],
+        ),
         ),
       ),
     );

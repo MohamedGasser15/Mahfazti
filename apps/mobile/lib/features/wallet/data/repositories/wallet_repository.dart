@@ -15,7 +15,6 @@ class WalletRepository {
         ApiEndpoints.walletHome,
         requiresAuth: true,
       );
-
       return WalletHomeData.fromJson(response.data);
     } on DioException catch (e) {
       throw Exception(ApiErrorHandler.getErrorMessage(e));
@@ -30,7 +29,6 @@ class WalletRepository {
         ApiEndpoints.walletBalance,
         requiresAuth: true,
       );
-
       return WalletBalance.fromJson(response.data);
     } on DioException catch (e) {
       throw Exception(ApiErrorHandler.getErrorMessage(e));
@@ -80,32 +78,34 @@ class WalletRepository {
     }
   }
 
-Future<WalletTransaction> addTransaction({
-  String? description,
-  required double amount,
-  required String type,
-  required int categoryId,
-}) async {
-  try {
-    final body = <String, dynamic>{
-      'amount': amount,
-      'type': type,
-      'categoryId': categoryId,
-    };
-    if (description != null && description.isNotEmpty) {
-      body['description'] = description;
-    }
+  Future<WalletTransaction> addTransaction({
+    String? description,
+    required double amount,
+    required String type,
+    required int categoryId,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'amount': amount,
+        'type': type,
+        'categoryId': categoryId,
+      };
+      if (description != null && description.isNotEmpty) {
+        body['description'] = description;
+      }
 
-    final response = await _apiService.post(
-      ApiEndpoints.walletAddTransaction,
-      body,
-      requiresAuth: true,
-    );
-    return WalletTransaction.fromJson(response.data);
-  } on DioException catch (e) {
-    throw Exception(ApiErrorHandler.getErrorMessage(e));
+      final response = await _apiService.post(
+        ApiEndpoints.walletAddTransaction,
+        body,
+        requiresAuth: true,
+      );
+      return WalletTransaction.fromJson(response.data);
+    } on DioException catch (e) {
+      throw Exception(ApiErrorHandler.getErrorMessage(e));
+    } catch (e) {
+      throw Exception('Failed to add transaction: $e');
+    }
   }
-}
 
   Future<WalletTransaction> updateTransaction(
     int transactionId, {
@@ -155,25 +155,30 @@ Future<WalletTransaction> addTransaction({
     }
   }
 
-Future<VoiceExpenseResult> parseVoiceText(String text, {String language = 'ar'}) async {
-  try {
-    final response = await _apiService.post(
-      ApiEndpoints.walletVoiceParse,
-      {'text': text, 'language': language},
-      requiresAuth: true,
-    );
-    return VoiceExpenseResult.fromJson(response.data);
-  } on DioException catch (e) {
-    throw Exception(ApiErrorHandler.getErrorMessage(e));
+  Future<VoiceExpenseResult> parseVoiceText(String text, {String language = 'ar'}) async {
+    try {
+      final response = await _apiService.post(
+        ApiEndpoints.walletVoiceParse,
+        {'text': text, 'language': language},
+        requiresAuth: true,
+      );
+      return VoiceExpenseResult.fromJson(response.data);
+    } on DioException catch (e) {
+      throw Exception(ApiErrorHandler.getErrorMessage(e));
+    } catch (e) {
+      throw Exception('Failed to parse voice text: $e');
+    }
   }
-}
 
   Future<bool> deleteTransaction(int transactionId) async {
     try {
-      await _apiService.delete(
+      final response = await _apiService.delete(
         '${ApiEndpoints.walletDeleteTransaction}/$transactionId',
         requiresAuth: true,
       );
+      if (response.statusCode == 204 || response.statusCode == 200) {
+        return true;
+      }
       return true;
     } on DioException catch (e) {
       if (e.response?.statusCode == 204 || e.response?.statusCode == 200) {
@@ -194,6 +199,8 @@ Future<VoiceExpenseResult> parseVoiceText(String text, {String language = 'ar'})
       return BudgetDto.fromJson(response.data);
     } on DioException catch (e) {
       throw Exception(ApiErrorHandler.getErrorMessage(e));
+    } catch (e) {
+      throw Exception('Failed to load budget: $e');
     }
   }
 
@@ -206,6 +213,8 @@ Future<VoiceExpenseResult> parseVoiceText(String text, {String language = 'ar'})
       );
     } on DioException catch (e) {
       throw Exception(ApiErrorHandler.getErrorMessage(e));
+    } catch (e) {
+      throw Exception('Failed to update monthly budget: $e');
     }
   }
 
@@ -218,6 +227,8 @@ Future<VoiceExpenseResult> parseVoiceText(String text, {String language = 'ar'})
       );
     } on DioException catch (e) {
       throw Exception(ApiErrorHandler.getErrorMessage(e));
+    } catch (e) {
+      throw Exception('Failed to update category budget: $e');
     }
   }
 

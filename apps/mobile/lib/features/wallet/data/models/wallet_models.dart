@@ -16,13 +16,23 @@ class WalletHomeData extends Equatable {
 
   factory WalletHomeData.fromJson(Map<String, dynamic> json) {
     return WalletHomeData(
-      balance: WalletBalance.fromJson(json['balance']),
+      balance: WalletBalance.fromJson(json['balance'] as Map<String, dynamic>),
       recentTransactions: (json['recentTransactions'] as List)
-          .map((e) => WalletTransaction.fromJson(e))
+          .map((e) => WalletTransaction.fromJson(e as Map<String, dynamic>))
           .toList(),
-      totalTransactionCount: json['totalTransactionCount'] ?? 0,
+      totalTransactionCount: (json['totalTransactionCount'] as num?)?.toInt() ?? 0,
     );
   }
+
+  factory WalletHomeData.fromMap(Map<String, dynamic> map) => WalletHomeData.fromJson(map);
+
+  Map<String, dynamic> toJson() => {
+        'balance': balance.toJson(),
+        'recentTransactions': recentTransactions.map((t) => t.toJson()).toList(),
+        'totalTransactionCount': totalTransactionCount,
+      };
+
+  Map<String, dynamic> toMap() => toJson();
 
   @override
   List<Object?> get props => [balance, recentTransactions, totalTransactionCount];
