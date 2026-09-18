@@ -1,372 +1,269 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
+using Mahfazti.Core.Common;
 using Mahfazti.Core.DTOs.Auth;
-using Mahfazti.Core.Interfaces;
 using Mahfazti.Core.Entities;
-using System.IdentityModel.Tokens.Jwt;
+using Mahfazti.Core.Interfaces;
 using System.Security.Claims;
-using System.Text;
 
 namespace Mahfazti.Core.Services
 {
     public class AuthService : IAuthService
     {
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ITokenService _tokenService;
+        private readonly IRefreshTokenRepository _refreshTokenRepository;
         private readonly IEmailSender _emailSender;
         private readonly IEmailTemplateService _emailTemplateService;
-        private readonly IMemoryCache _cache;
-        private readonly IConfiguration _configuration;
-        private readonly IRepository<ApplicationUser> _userRepository;
+        private readonly ILogger<AuthService> _logger;
 
         public AuthService(
             UserManager<ApplicationUser> userManager,
+            ITokenService tokenService,
+            IRefreshTokenRepository refreshTokenRepository,
             IEmailSender emailSender,
             IEmailTemplateService emailTemplateService,
-            IMemoryCache cache,
-            IConfiguration configuration,
-            IRepository<ApplicationUser> userRepository)
+            ILogger<AuthService> logger)
         {
-            _userManager = userManager;
-            _emailSender = emailSender;
-            _emailTemplateService = emailTemplateService;
-            _cache = cache;
-            _configuration = configuration;
-            _userRepository = userRepository;
+            _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
+            _tokenService = tokenService ?? throw new ArgumentNullException(nameof(tokenService));
+            _refreshTokenRepository = refreshTokenRepository ?? throw new ArgumentNullException(nameof(refreshTokenRepository));
+            _emailSender = emailSender ?? throw new ArgumentNullException(nameof(emailSender));
+            _emailTemplateService = emailTemplateService ?? throw new ArgumentNullException(nameof(emailTemplateService));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<AuthResponseDto> SendVerificationAsync(SendVerificationDto dto)
+        #region Authentication Methods
+
+        public async Task<LoginResponseDTO?> Login(LoginRequestDTO request)
         {
             try
             {
-                // Check if user exists
-                var existingUser = await _userManager.FindByEmailAsync(dto.Email);
+                if (request == null)
+                    throw new ArgumentNullException(nameof(request));
 
-                // If this is for register and user already exists
-                if (!dto.IsLogin && existingUser != null)
+                _logger.LogInformation("Login attempt for email: {Email}", request.Email);
+
+                var user = await _userManager.FindByEmailAsync(request.Email);
+                if (user == null)
                 {
-                    return new AuthResponseDto
+                    _logger.LogWarning("Login failed: User with email {Email} not found", request.Email);
+                    return null;
+                }
+
+                // 1. Check if user is banned
+                if (user.IsBanned)
+                {
+                    _logger.LogWarning("Login failed: User {Email} is banned", request.Email);
+                    return new LoginResponseDTO
                     {
-                        Success = false,
-                        Message = "البريد الإلكتروني مسجل بالفعل",
-                        Errors = new List<string> { "Email already exists" }
+                        IsBanned = true,
+                        ErrorMessage = "تم حظر هذا الحساب من قبل الإدارة."
                     };
                 }
 
-                // If this is for login and user doesn't exist
-                if (dto.IsLogin && existingUser == null)
+                // 2. Check if user is locked out
+                if (await _userManager.IsLockedOutAsync(user))
                 {
-                    return new AuthResponseDto
+                    var lockoutEnd = await _userManager.GetLockoutEndDateAsync(user);
+                    _logger.LogWarning("Login failed: User {Email} is locked out until {LockoutEnd}", request.Email, lockoutEnd);
+                    return new LoginResponseDTO
                     {
-                        Success = false,
-                        Message = "البريد الإلكتروني غير مسجل",
-                        Errors = new List<string> { "Email not registered" }
+                        IsLockedOut = true,
+                        ErrorMessage = $"تم قفل الحساب مؤقتاً بسبب محاولات دخول خاطئة متكررة. يرجى المحاولة بعد {lockoutEnd?.LocalDateTime}"
                     };
                 }
 
-                // Generate verification code (6 digits)
-                var verificationCode = new Random().Next(100000, 999999).ToString();
-
-                // Store code in cache for 10 minutes with user type info
-                var cacheKey = $"Verification_{dto.Email}";
-                var cacheData = new VerificationCacheData
+                // 3. Check password
+                var passwordCheck = await _userManager.CheckPasswordAsync(user, request.Password);
+                if (!passwordCheck)
                 {
-                    Code = verificationCode,
-                    IsLogin = dto.IsLogin,
-                    UserExists = existingUser != null,
-                    DeviceName = dto.DeviceName, 
-                    IpAddress = dto.IpAddress  
-                };
+                    await _userManager.AccessFailedAsync(user);
 
-                _cache.Set(cacheKey, cacheData, TimeSpan.FromMinutes(10));
+                    var failedCount = await _userManager.GetAccessFailedCountAsync(user);
+                    _logger.LogWarning("Invalid password for email: {Email}. Failed attempts: {Count}", request.Email, failedCount);
 
-                // Send verification email
-                var emailBody = _emailTemplateService.GenerateVerificationEmail(
-                              code: verificationCode,
-                              isLogin: dto.IsLogin,
-                              deviceName: dto.DeviceName,
-                              ipAddress: dto.IpAddress
-                          );
-                await _emailSender.SendEmailAsync(dto.Email, "رمز التحقق - محفظتي", emailBody);
-
-                return new AuthResponseDto
-                {
-                    Success = true,
-                    Message = "تم إرسال رمز التحقق إلى بريدك الإلكتروني"
-                };
-            }
-            catch (Exception ex)
-            {
-                return new AuthResponseDto
-                {
-                    Success = false,
-                    Message = "حدث خطأ أثناء إرسال رمز التحقق",
-                    Errors = new List<string> { ex.Message }
-                };
-            }
-        }
-
-        public async Task<AuthResponseDto> VerifyAndCompleteAsync(VerifyAndCompleteDto dto)
-        {
-            try
-            {
-                // Get verification data from cache
-                var cacheKey = $"Verification_{dto.Email}";
-                if (!_cache.TryGetValue(cacheKey, out VerificationCacheData? cacheData))
-                {
-                    return new AuthResponseDto
+                    if (await _userManager.IsLockedOutAsync(user))
                     {
-                        Success = false,
-                        Message = "رمز التحقق منتهي الصلاحية أو غير صحيح",
-                        Errors = new List<string> { "Invalid or expired verification code" }
-                    };
-                }
+                        var lockoutEnd = await _userManager.GetLockoutEndDateAsync(user);
 
-                // Verify code
-                if (cacheData!.Code != dto.VerificationCode)
-                {
-                    return new AuthResponseDto
-                    {
-                        Success = false,
-                        Message = "رمز التحقق غير صحيح",
-                        Errors = new List<string> { "Invalid verification code" }
-                    };
-                }
-
-                // Check if user exists
-                var existingUser = await _userManager.FindByEmailAsync(dto.Email);
-
-                if (existingUser != null)
-                {
-                    // LOGIN FLOW
-                    // Verify password
-                    var passwordValid = await _userManager.CheckPasswordAsync(existingUser, dto.Password);
-                    if (!passwordValid)
-                    {
-                        return new AuthResponseDto
+                        try
                         {
-                            Success = false,
-                            Message = "كلمة المرور غير صحيحة",
-                            Errors = new List<string> { "Invalid password" }
-                        };
-                    }
-
-                    // Generate token
-                    var token = await GenerateJwtToken(existingUser);
-
-                    // Clear cache
-                    _cache.Remove(cacheKey);
-
-                    return new AuthResponseDto
-                    {
-                        Success = true,
-                        Message = "تم تسجيل الدخول بنجاح",
-                        Token = token,
-                        User = new UserDto
-                        {
-                            Id = existingUser.Id.ToString(),
-                            Email = existingUser.Email ?? "",
-                            FullName = existingUser.FullName ?? "",
-                            UserName = existingUser.UserName ?? "",
-                            PhoneNumber = existingUser.PhoneNumber ?? ""
+                            var emailBody = _emailTemplateService.GenerateAccountLockoutEmail(user, lockoutEnd, user.PreferredLanguage ?? "ar");
+                            await _emailSender.SendEmailAsync(
+                                user.Email!,
+                                _emailTemplateService.GetLocalizedText("EmailSubjectAccountLocked", user.PreferredLanguage ?? "ar"),
+                                emailBody
+                            );
                         }
-                    };
-                }
-                else
-                {
-                    // REGISTER FLOW
-                    // Validate required fields for registration
-                    if (string.IsNullOrEmpty(dto.FullName) ||
-                        string.IsNullOrEmpty(dto.UserName) ||
-                        string.IsNullOrEmpty(dto.PhoneNumber))
-                    {
-                        return new AuthResponseDto
+                        catch (Exception ex)
                         {
-                            Success = false,
-                            Message = "الرجاء إدخال جميع البيانات المطلوبة للتسجيل",
-                            Errors = new List<string> { "Missing required fields for registration" }
-                        };
-                    }
-
-                    // Check if username already exists
-                    var existingUsername = await _userManager.FindByNameAsync(dto.UserName);
-                    if (existingUsername != null)
-                    {
-                        return new AuthResponseDto
-                        {
-                            Success = false,
-                            Message = "اسم المستخدم مسجل بالفعل",
-                            Errors = new List<string> { "Username already exists" }
-                        };
-                    }
-
-                    // Check if phone number already exists
-                    var existingPhone = await _userRepository.GetAsync(u => u.PhoneNumber == dto.PhoneNumber);
-                    if (existingPhone != null)
-                    {
-                        return new AuthResponseDto
-                        {
-                            Success = false,
-                            Message = "رقم الهاتف مسجل بالفعل",
-                            Errors = new List<string> { "Phone number already exists" }
-                        };
-                    }
-
-                    // Create new user
-                    var newUser = new ApplicationUser
-                    {
-                        UserName = dto.UserName,
-                        Email = dto.Email,
-                        FullName = dto.FullName,
-                        PhoneNumber = dto.PhoneNumber,
-                        EmailConfirmed = true
-                    };
-
-                    var result = await _userManager.CreateAsync(newUser, dto.Password);
-
-                    if (!result.Succeeded)
-                    {
-                        var errors = result.Errors.Select(e => e.Description).ToList();
-                        return new AuthResponseDto
-                        {
-                            Success = false,
-                            Message = "فشل في إنشاء الحساب",
-                            Errors = errors
-                        };
-                    }
-
-                    // Generate token
-                    var token = await GenerateJwtToken(newUser);
-
-                    // Clear cache
-                    _cache.Remove(cacheKey);
-
-                    return new AuthResponseDto
-                    {
-                        Success = true,
-                        Message = "تم إنشاء الحساب بنجاح",
-                        Token = token,
-                        User = new UserDto
-                        {
-                            Id = newUser.Id.ToString(),
-                            Email = newUser.Email,
-                            FullName = newUser.FullName,
-                            UserName = newUser.UserName,
-                            PhoneNumber = newUser.PhoneNumber
+                            _logger.LogWarning(ex, "Failed to send lockout email to {Email}", user.Email);
                         }
-                    };
+
+                        return new LoginResponseDTO
+                        {
+                            IsLockedOut = true,
+                            ErrorMessage = "لقد تجاوزت عدد محاولات الدخول المسموح بها. تم قفل حسابك مؤقتاً."
+                        };
+                    }
+
+                    return null;
                 }
+
+                // Reset failed count on successful login
+                await _userManager.ResetAccessFailedCountAsync(user);
+
+                var roles = await _userManager.GetRolesAsync(user);
+
+                // Generate tokens
+                var accessToken = await _tokenService.GenerateAccessToken(user);
+                var refreshToken = _tokenService.GenerateRefreshToken();
+                var refreshTokenExpiry = DateTime.UtcNow.AddDays(7);
+
+                // Save refresh token to database
+                await _refreshTokenRepository.SaveRefreshTokenAsync(user.Id.ToString(), refreshToken, refreshTokenExpiry);
+
+                var userDto = new UserDTO
+                {
+                    Id = user.Id.ToString(),
+                    Email = user.Email ?? "",
+                    FullName = user.FullName,
+                    UserName = user.UserName ?? "",
+                    PhoneNumber = user.PhoneNumber ?? "",
+                    Currency = user.Currency,
+                    ImagePath = user.ImagePath,
+                    Role = roles.FirstOrDefault() ?? "User",
+                    CreatedAt = user.CreatedAt
+                };
+
+                // Send login notification email asynchronously
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        var emailBody = _emailTemplateService.GenerateLoginEmail(
+                            user, null, null, DateTime.Now, null, user.PreferredLanguage ?? "ar"
+                        );
+                        await _emailSender.SendEmailAsync(
+                            user.Email!,
+                            _emailTemplateService.GetLocalizedText("EmailSubjectLoginVerification", user.PreferredLanguage ?? "ar"),
+                            emailBody
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to send login notification email to user {UserId}", user.Id);
+                    }
+                });
+
+                _logger.LogInformation("User {UserId} logged in successfully", user.Id);
+
+                return new LoginResponseDTO
+                {
+                    Token = accessToken,
+                    RefreshToken = refreshToken,
+                    RefreshTokenExpiry = refreshTokenExpiry,
+                    User = userDto
+                };
             }
             catch (Exception ex)
             {
-                return new AuthResponseDto
-                {
-                    Success = false,
-                    Message = "حدث خطأ أثناء إكمال العملية",
-                    Errors = new List<string> { ex.Message }
-                };
+                _logger.LogError(ex, "Unexpected error during login for email: {Email}", request?.Email);
+                throw;
             }
         }
-        public async Task<AuthResponseDto> VerifyCodeAsync(VerifyCodeDto dto)
-        {
-            var cacheKey = $"Verification_{dto.Email}";
-            if (!_cache.TryGetValue(cacheKey, out VerificationCacheData? cacheData))
-            {
-                return new AuthResponseDto
-                {
-                    Success = false,
-                    Message = "رمز التحقق منتهي الصلاحية أو غير صحيح",
-                    Errors = new List<string> { "Invalid or expired verification code" }
-                };
-            }
 
-            if (cacheData!.Code != dto.VerificationCode)
-            {
-                return new AuthResponseDto
-                {
-                    Success = false,
-                    Message = "رمز التحقق غير صحيح",
-                    Errors = new List<string> { "Invalid verification code" }
-                };
-            }
-
-            return new AuthResponseDto
-            {
-                Success = true,
-                Message = "رمز التحقق صحيح"
-            };
-        }
-
-        public async Task<AuthResponseDto> ResendVerificationCodeAsync(SendVerificationDto dto)
-        {
-            var cacheKey = $"Verification_{dto.Email}";
-
-            // Generate a new code
-            var verificationCode = new Random().Next(100000, 999999).ToString();
-
-            var cacheData = new VerificationCacheData
-            {
-                Code = verificationCode,
-                IsLogin = dto.IsLogin,
-                UserExists = await _userManager.FindByEmailAsync(dto.Email) != null
-            };
-
-            // Save in cache
-            _cache.Set(cacheKey, cacheData, TimeSpan.FromMinutes(10));
-
-            // Send email
-            var emailBody = _emailTemplateService.GenerateVerificationEmail(
-    code: verificationCode,
-    isLogin: dto.IsLogin,
-    deviceName: dto.DeviceName,
-    ipAddress: dto.IpAddress
-);
-            await _emailSender.SendEmailAsync(dto.Email, "رمز التحقق - محفظتي", emailBody);
-
-            return new AuthResponseDto
-            {
-                Success = true,
-                Message = "تم إعادة إرسال رمز التحقق إلى بريدك الإلكتروني"
-            };
-        }
-        public async Task<AuthResponseDto> LogoutAsync(string userId)
+        public async Task<TokenResponseDTO?> RefreshToken(RefreshTokenRequestDTO request)
         {
             try
             {
-            return new AuthResponseDto
+                if (request == null)
+                    throw new ArgumentNullException(nameof(request));
+
+                _logger.LogInformation("Refresh token request received");
+
+                var principal = _tokenService.GetPrincipalFromExpiredToken(request.AccessToken);
+                var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal.FindFirstValue("sub");
+
+                if (string.IsNullOrEmpty(userId))
+                    throw new SecurityTokenException("Invalid token: User identifier not found");
+
+                var isValidRefreshToken = await _refreshTokenRepository.ValidateRefreshTokenAsync(userId, request.RefreshToken);
+                if (!isValidRefreshToken)
                 {
-                    Success = true,
-                    Message = "تم تسجيل الخروج بنجاح"
+                    _logger.LogWarning("Invalid refresh token for user {UserId}", userId);
+                    throw new SecurityTokenException("Invalid refresh token");
+                }
+
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    _logger.LogWarning("User not found during token refresh: {UserId}", userId);
+                    throw new SecurityTokenException("User not found");
+                }
+
+                var newAccessToken = await _tokenService.GenerateAccessToken(user);
+                var newRefreshToken = _tokenService.GenerateRefreshToken();
+                var newRefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
+
+                await _refreshTokenRepository.UpdateRefreshTokenAsync(
+                    userId, request.RefreshToken, newRefreshToken, newRefreshTokenExpiry);
+
+                _logger.LogInformation("Tokens refreshed successfully for user {UserId}", userId);
+
+                return new TokenResponseDTO
+                {
+                    AccessToken = newAccessToken,
+                    RefreshToken = newRefreshToken,
+                    RefreshTokenExpiry = newRefreshTokenExpiry
                 };
             }
             catch (Exception ex)
             {
-                return new AuthResponseDto
-                {
-                    Success = false,
-                    Message = "حدث خطأ أثناء تسجيل الخروج",
-                    Errors = new List<string> { ex.Message }
-                };
+                _logger.LogError(ex, "Unexpected error during token refresh");
+                throw;
             }
         }
+
+        public async Task RevokeRefreshToken(string userId, string refreshToken)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(userId))
+                    throw new ArgumentException("User ID cannot be null or empty.", nameof(userId));
+
+                if (string.IsNullOrEmpty(refreshToken))
+                    throw new ArgumentException("Refresh token cannot be null or empty.", nameof(refreshToken));
+
+                _logger.LogInformation("Revoking refresh token for user {UserId}", userId);
+
+                await _refreshTokenRepository.RevokeRefreshTokenAsync(userId, refreshToken);
+
+                _logger.LogInformation("Refresh token revoked successfully for user {UserId}", userId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error while revoking refresh token for user {UserId}", userId);
+                throw;
+            }
+        }
+
         public async Task<bool> CheckEmailExists(string email)
         {
             var user = await _userManager.FindByEmailAsync(email);
             return user != null;
         }
-        public async Task<AuthResponseDto> SetUserCurrencyAsync(string userId, string currency)
+
+        public async Task<ApiResponse<object>> SetUserCurrencyAsync(string userId, string currency)
         {
             try
             {
                 var user = await _userManager.FindByIdAsync(userId);
                 if (user == null)
                 {
-                    return new AuthResponseDto
-                    {
-                        Success = false,
-                        Message = "المستخدم غير موجود"
-                    };
+                    return ApiResponse<object>.FailResponse("المستخدم غير موجود");
                 }
 
                 user.Currency = currency;
@@ -374,362 +271,33 @@ namespace Mahfazti.Core.Services
 
                 if (!result.Succeeded)
                 {
-                    return new AuthResponseDto
-                    {
-                        Success = false,
-                        Message = "فشل تحديث العملة",
-                        Errors = result.Errors.Select(e => e.Description).ToList()
-                    };
+                    return ApiResponse<object>.FailResponse(
+                        "فشل تحديث العملة",
+                        result.Errors.Select(e => e.Description).ToList()
+                    );
                 }
 
-                return new AuthResponseDto
-                {
-                    Success = true,
-                    Message = "تم تحديث العملة بنجاح"
-                };
+                return ApiResponse<object>.SuccessResponse(null, "تم تحديث العملة بنجاح");
             }
             catch (Exception ex)
             {
-                return new AuthResponseDto
-                {
-                    Success = false,
-                    Message = "حدث خطأ أثناء تحديث العملة",
-                    Errors = new List<string> { ex.Message }
-                };
+                return ApiResponse<object>.FailResponse("حدث خطأ أثناء تحديث العملة", new List<string> { ex.Message });
             }
         }
-        private async Task<string> GenerateJwtToken(ApplicationUser user)
-        {
-            var claims = new List<Claim>
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
-                new Claim(JwtRegisteredClaimNames.Name, user.UserName ?? ""),
-                new Claim("fullName", user.FullName ?? ""),
-                new Claim("phoneNumber", user.PhoneNumber ?? ""),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            };
 
-            // Add user roles
-            var roles = await _userManager.GetRolesAsync(user);
-            foreach (var role in roles)
-            {
-                claims.Add(new Claim(ClaimTypes.Role, role));
-            }
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-                _configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not configured")));
-
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
-                claims: claims,
-                expires: DateTime.Now.AddDays(7),
-                signingCredentials: creds);
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
-
-        private async Task<ApplicationUser?> FindByEmailOrUsernameAsync(string emailOrUsername)
-        {
-            if (emailOrUsername.Contains('@'))
-                return await _userManager.FindByEmailAsync(emailOrUsername);
-            else
-                return await _userManager.FindByNameAsync(emailOrUsername);
-        }
-
-        public async Task<AuthResponseDto> CheckUserExistsAsync(CheckUserDto dto)
-        {
-            var user = await FindByEmailOrUsernameAsync(dto.EmailOrUsername);
-
-            if (user == null)
-                return new AuthResponseDto
-                {
-                    Success = false,
-                    Message = "المستخدم غير موجود"
-                };
-
-            return new AuthResponseDto
-            {
-                Success = true,
-                Message = "المستخدم موجود"
-            };
-        }
-
-        public async Task<AuthResponseDto> VerifyPasswordForRecoveryAsync(VerifyPasswordForRecoveryDto dto)
-        {
-            var user = await FindByEmailOrUsernameAsync(dto.EmailOrUsername);
-
-            if (user == null)
-                return new AuthResponseDto
-                {
-                    Success = false,
-                    Message = "المستخدم غير موجود"
-                };
-
-            var isValid = await _userManager.CheckPasswordAsync(user, dto.Password);
-
-            if (!isValid)
-                return new AuthResponseDto
-                {
-                    Success = false,
-                    Message = "كلمة المرور غير صحيحة"
-                };
-
-            return new AuthResponseDto
-            {
-                Success = true,
-                Message = "كلمة المرور صحيحة"
-            };
-        }
-
-        public async Task<AuthResponseDto> RequestEmailChangeAsync(RequestEmailChangeDto dto)
-        {
-            // Check new email not already taken
-            var emailTaken = await _userManager.FindByEmailAsync(dto.NewEmail);
-            if (emailTaken != null)
-                return new AuthResponseDto
-                {
-                    Success = false,
-                    Message = "هذا البريد الإلكتروني مسجل بالفعل"
-                };
-
-            var user = await FindByEmailOrUsernameAsync(dto.EmailOrUsername);
-            if (user == null)
-                return new AuthResponseDto
-                {
-                    Success = false,
-                    Message = "المستخدم غير موجود"
-                };
-
-            var otp = new Random().Next(100000, 999999).ToString();
-
-            var cacheKey = $"EmailChange_{dto.EmailOrUsername}";
-            _cache.Set(cacheKey, new EmailChangeCacheData
-            {
-                Code = otp,
-                NewEmail = dto.NewEmail,
-                EmailOrUsername = dto.EmailOrUsername
-            }, TimeSpan.FromMinutes(10));
-
-            var emailBody = _emailTemplateService.GenerateVerificationEmail(
-                code: otp,
-                isLogin: false,
-                deviceName: null,
-                ipAddress: null
-            );
-
-            await _emailSender.SendEmailAsync(dto.NewEmail, "تأكيد تغيير البريد الإلكتروني - محفظتي", emailBody);
-
-            return new AuthResponseDto
-            {
-                Success = true,
-                Message = "تم إرسال رمز التحقق إلى بريدك الإلكتروني الجديد"
-            };
-        }
-
-        public async Task<AuthResponseDto> ConfirmEmailChangeAsync(ConfirmEmailChangeDto dto)
-        {
-            var cacheKey = $"EmailChange_{dto.EmailOrUsername}";
-
-            if (!_cache.TryGetValue(cacheKey, out EmailChangeCacheData? cacheData))
-                return new AuthResponseDto
-                {
-                    Success = false,
-                    Message = "رمز التحقق منتهي الصلاحية"
-                };
-
-            if (cacheData!.Code != dto.OtpCode || cacheData.NewEmail != dto.NewEmail)
-                return new AuthResponseDto
-                {
-                    Success = false,
-                    Message = "رمز التحقق غير صحيح"
-                };
-
-            var user = await FindByEmailOrUsernameAsync(dto.EmailOrUsername);
-            if (user == null)
-                return new AuthResponseDto
-                {
-                    Success = false,
-                    Message = "المستخدم غير موجود"
-                };
-
-            // Update email
-            user.Email = dto.NewEmail;
-            user.NormalizedEmail = dto.NewEmail.ToUpper();
-            user.EmailConfirmed = true;
-
-            var result = await _userManager.UpdateAsync(user);
-
-            if (!result.Succeeded)
-                return new AuthResponseDto
-                {
-                    Success = false,
-                    Message = "فشل تحديث البريد الإلكتروني",
-                    Errors = result.Errors.Select(e => e.Description).ToList()
-                };
-
-            _cache.Remove(cacheKey);
-
-            var token = await GenerateJwtToken(user);
-
-            return new AuthResponseDto
-            {
-                Success = true,
-                Message = "تم تغيير البريد الإلكتروني بنجاح",
-                Token = token,
-                User = new UserDto
-                {
-                    Id = user.Id.ToString(),
-                    Email = user.Email,
-                    FullName = user.FullName,
-                    UserName = user.UserName!,
-                    PhoneNumber = user.PhoneNumber ?? ""
-                }
-            };
-        }
-
-        public async Task<AuthResponseDto> CreatePasscodeAsync(string userId, CreatePasscodeDto dto)
+        public async Task<ApiResponse<object>> LogoutAsync(string userId)
         {
             try
             {
-                if (dto.Passcode != dto.ConfirmPasscode)
-                    return new AuthResponseDto { Success = false, Message = "الرمز السري غير متطابق" };
-
-                if (dto.Passcode.Length < 6)
-                    return new AuthResponseDto { Success = false, Message = "الرمز السري يجب أن يكون 6 أرقام على الأقل" };
-
-                var user = await _userManager.FindByIdAsync(userId);
-                if (user == null)
-                    return new AuthResponseDto { Success = false, Message = "المستخدم غير موجود" };
-
-                var hasPassword = await _userManager.HasPasswordAsync(user);
-                if (hasPassword)
-                    return new AuthResponseDto { Success = false, Message = "لديك already رمز سري" };
-
-                var result = await _userManager.AddPasswordAsync(user, dto.Passcode);
-                if (!result.Succeeded)
-                    return new AuthResponseDto
-                    {
-                        Success = false,
-                        Message = "فشل إنشاء الرمز السري",
-                        Errors = result.Errors.Select(e => e.Description).ToList()
-                    };
-
-                return new AuthResponseDto
-                {
-                    Success = true,
-                    Message = "تم إنشاء الرمز السري بنجاح"
-                };
+                await _refreshTokenRepository.RevokeAllRefreshTokensAsync(userId);
+                return ApiResponse<object>.SuccessResponse(null, "تم تسجيل الخروج بنجاح");
             }
             catch (Exception ex)
             {
-                return new AuthResponseDto
-                {
-                    Success = false,
-                    Message = "حدث خطأ",
-                    Errors = new List<string> { ex.Message }
-                };
+                return ApiResponse<object>.FailResponse("حدث خطأ أثناء تسجيل الخروج", new List<string> { ex.Message });
             }
         }
 
-        public async Task<AuthResponseDto> SendPasscodeResetOtpAsync(string email)
-        {
-            try
-            {
-                var user = await _userManager.FindByEmailAsync(email);
-                if (user == null)
-                    return new AuthResponseDto { Success = false, Message = "البريد الإلكتروني غير مسجل" };
-
-                var otp = new Random().Next(100000, 999999).ToString();
-                var cacheKey = $"PasscodeReset_{email}";
-
-                _cache.Set(cacheKey, otp, TimeSpan.FromMinutes(10));
-
-                var emailBody = _emailTemplateService.GenerateVerificationEmail(
-                    code: otp,
-                    isLogin: false,
-                    deviceName: null,
-                    ipAddress: null
-                );
-
-                await _emailSender.SendEmailAsync(
-                    email,
-                    "إعادة تعيين الرمز السري - محفظتي",
-                    emailBody
-                );
-
-                return new AuthResponseDto
-                {
-                    Success = true,
-                    Message = "تم إرسال رمز التحقق إلى بريدك الإلكتروني"
-                };
-            }
-            catch (Exception ex)
-            {
-                return new AuthResponseDto
-                {
-                    Success = false,
-                    Message = "حدث خطأ",
-                    Errors = new List<string> { ex.Message }
-                };
-            }
-        }
-
-        public async Task<AuthResponseDto> ResetPasscodeAsync(ResetPasscodeDto dto)
-        {
-            try
-            {
-                var cacheKey = $"PasscodeReset_{dto.Email}";
-
-                if (!_cache.TryGetValue(cacheKey, out string? cachedOtp))
-                    return new AuthResponseDto
-                    {
-                        Success = false,
-                        Message = "رمز التحقق منتهي الصلاحية"
-                    };
-
-                if (cachedOtp != dto.OtpCode)
-                    return new AuthResponseDto
-                    {
-                        Success = false,
-                        Message = "رمز التحقق غير صحيح"
-                    };
-
-                var user = await _userManager.FindByEmailAsync(dto.Email);
-                if (user == null)
-                    return new AuthResponseDto { Success = false, Message = "المستخدم غير موجود" };
-
-                var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
-                var result = await _userManager.ResetPasswordAsync(user, resetToken, dto.NewPasscode);
-
-                if (!result.Succeeded)
-                    return new AuthResponseDto
-                    {
-                        Success = false,
-                        Message = "فشل تغيير الرمز السري",
-                        Errors = result.Errors.Select(e => e.Description).ToList()
-                    };
-
-                _cache.Remove(cacheKey);
-
-                return new AuthResponseDto
-                {
-                    Success = true,
-                    Message = "تم تغيير الرمز السري بنجاح"
-                };
-            }
-            catch (Exception ex)
-            {
-                return new AuthResponseDto
-                {
-                    Success = false,
-                    Message = "حدث خطأ",
-                    Errors = new List<string> { ex.Message }
-                };
-            }
-        }
+        #endregion
     }
 }

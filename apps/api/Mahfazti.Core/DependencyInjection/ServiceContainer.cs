@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Mahfazti.Core.Interfaces;
 using Mahfazti.Core.Services;
 
@@ -19,6 +19,7 @@ namespace Mahfazti.Core.DependencyInjection
             services.AddMemoryCache();
             services.AddScoped<IEmailSender, EmailSender>();
             services.AddScoped<IEmailTemplateService, EmailTemplateService>();
+            services.AddScoped<IUserService, UserService>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IWalletService, WalletService>();
             services.AddScoped<IBudgetService, BudgetService>();

@@ -1,5 +1,3 @@
-﻿
-
 using Microsoft.Extensions.DependencyInjection;
 using Mahfazti.Core.Interfaces;
 using Mahfazti.Infrastructure.Persistence.Repository;
@@ -19,6 +17,7 @@ namespace Mahfazti.Infrastructure.Configurations
         public static IServiceCollection AddInfrastructureRepositories(this IServiceCollection services)
         {
             services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+            services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
             return services;
         }
     }

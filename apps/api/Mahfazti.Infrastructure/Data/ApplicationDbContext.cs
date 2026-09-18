@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Mahfazti.Core.Entities;
 
@@ -8,32 +8,42 @@ namespace Mahfazti.Infrastructure.Data
     {
         public DbSet<WalletTransaction> WalletTransactions { get; set; }
         public DbSet<CategoryBudget> CategoryBudgets { get; set; }
-
         public DbSet<UserBudget> UserBudgets { get; set; }
         public DbSet<Category> Categories { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
+
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
-
         }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
             builder.Entity<WalletTransaction>().HasQueryFilter(t => !t.IsDeleted);
+
             // Make PhoneNumber unique
             builder.Entity<ApplicationUser>()
                 .HasIndex(u => u.PhoneNumber)
                 .IsUnique()
                 .HasFilter("[PhoneNumber] IS NOT NULL");
-                    builder.Entity<WalletTransaction>()
-            .HasOne(wt => wt.Category)
-            .WithMany(c => c.Transactions)
-            .HasForeignKey(wt => wt.CategoryId)
-            .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<WalletTransaction>()
+                .HasOne(wt => wt.Category)
+                .WithMany(c => c.Transactions)
+                .HasForeignKey(wt => wt.CategoryId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             builder.Entity<CategoryBudget>()
                 .HasOne(cb => cb.Category)
                 .WithMany()
                 .HasForeignKey(cb => cb.CategoryId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<RefreshToken>()
+                .HasOne(rt => rt.User)
+                .WithMany(u => u.RefreshTokens)
+                .HasForeignKey(rt => rt.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }
