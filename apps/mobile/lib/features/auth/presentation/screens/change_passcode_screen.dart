@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
+import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/features/profile/data/repositories/profile_repository.dart';
 
 class ChangePasscodeScreen extends StatefulWidget {
@@ -78,9 +79,10 @@ class _ChangePasscodeScreenState extends State<ChangePasscodeScreen> {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
+        child: ResponsiveWrapper(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header illustration
@@ -337,6 +339,7 @@ class _ChangePasscodeScreenState extends State<ChangePasscodeScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

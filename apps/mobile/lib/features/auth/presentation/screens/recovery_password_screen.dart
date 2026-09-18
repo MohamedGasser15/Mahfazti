@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:my_wallet/core/constants/app_routes.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
+import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 
 class RecoveryPasswordScreen extends StatefulWidget {
@@ -122,7 +124,7 @@ class _RecoveryPasswordScreenState extends State<RecoveryPasswordScreen>
         if (mounted) {
           Navigator.pushNamed(
             context,
-            '/recovery-new-email',
+            AppRoutes.recoveryNewEmail,
             arguments: {
               'emailOrUsername': widget.emailOrUsername,
               'password': _passcode.join(),
@@ -164,12 +166,13 @@ class _RecoveryPasswordScreenState extends State<RecoveryPasswordScreen>
         ),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 28),
-                child: Column(
+        child: ResponsiveWrapper(
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Column(
                   children: [
                     const SizedBox(height: 20),
 
@@ -328,6 +331,7 @@ class _RecoveryPasswordScreenState extends State<RecoveryPasswordScreen>
             ),
             const SizedBox(height: 12),
           ],
+        ),
         ),
       ),
     );

@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:my_wallet/core/constants/app_constants.dart';
+import 'package:my_wallet/core/constants/app_routes.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
+import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 import 'package:my_wallet/features/auth/presentation/screens/forgot_passcode_otp_screen.dart';
@@ -181,11 +184,11 @@ class _PasscodeScreenState extends State<PasscodeScreen> with TickerProviderStat
           _showErrorState(context.l10n.invalidPasscode);
         }
       } else {
-        await SharedPrefs.setString('user_password', passcode);
+        await SharedPrefs.setString(AppConstants.userPasswordKey, passcode);
         if (!mounted) return;
         Navigator.pushNamed(
           context,
-          '/register',
+          AppRoutes.register,
           arguments: {
             'email': widget.email,
             'verificationCode': widget.verificationCode,
@@ -224,7 +227,7 @@ class _PasscodeScreenState extends State<PasscodeScreen> with TickerProviderStat
   }
   
   void _navigateToHome() {
-    Navigator.pushReplacementNamed(context, '/home');
+    Navigator.pushReplacementNamed(context, AppRoutes.home);
   }
   
 void _onForgotPasscode() {
@@ -513,139 +516,141 @@ Widget _buildPasscodeIndicators() {
         ),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 28),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 20),
-                    
-                    // Logo
-                    SlideTransition(
-                      position: _logoSlide,
-                      child: FadeTransition(
-                        opacity: _logoFade,
-                        child: Center(
-                          child: Container(
-                            width: 80,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  theme.colorScheme.primary,
-                                  theme.colorScheme.primary.withValues(alpha: 0.7),
+        child: ResponsiveWrapper(
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 20),
+                      
+                      // Logo
+                      SlideTransition(
+                        position: _logoSlide,
+                        child: FadeTransition(
+                          opacity: _logoFade,
+                          child: Center(
+                            child: Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    theme.colorScheme.primary,
+                                    theme.colorScheme.primary.withValues(alpha: 0.7),
+                                  ],
+                                ),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 8),
+                                  ),
                                 ],
                               ),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.account_balance_wallet,
-                              size: 40,
-                              color: theme.colorScheme.onPrimary,
+                              child: Icon(
+                                Icons.account_balance_wallet,
+                                size: 40,
+                                color: theme.colorScheme.onPrimary,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    
-                    const SizedBox(height: 32),
-                    
-                    // Title & Subtitle
-                    SlideTransition(
-                      position: _titleSlide,
-                      child: FadeTransition(
-                        opacity: _titleFade,
-                        child: Column(
-                          children: [
-                            Center(
-                              child: Text(
-                                widget.isLogin ? context.l10n.enterYourPasscode : context.l10n.setPasscodeTitle,
-                                style: theme.textTheme.headlineMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Center(
-                              child: Text(
-                                widget.isLogin
-                                    ? ''
-                                    : context.l10n.setPasscodeDescription,
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 48),
-                    
-                    // Passcode indicators
-                    SlideTransition(
-                      position: _formSlide,
-                      child: FadeTransition(
-                        opacity: _formFade,
-                        child: Column(
-                          children: [
-                            _buildPasscodeIndicators(),
-                            
-                            const SizedBox(height: 24),
-                            
-                            if (_errorMessage != null)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
+                      
+                      const SizedBox(height: 32),
+                      
+                      // Title & Subtitle
+                      SlideTransition(
+                        position: _titleSlide,
+                        child: FadeTransition(
+                          opacity: _titleFade,
+                          child: Column(
+                            children: [
+                              Center(
                                 child: Text(
-                                  _errorMessage!,
-                                  style: const TextStyle(
-                                    color: Colors.red,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
+                                  widget.isLogin ? context.l10n.enterYourPasscode : context.l10n.setPasscodeTitle,
+                                  style: theme.textTheme.headlineMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ),
-                            
-                            if (_isLoading)
-                              const Padding(
-                                padding: EdgeInsets.only(top: 20),
-                                child: CircularProgressIndicator(),
+                              const SizedBox(height: 8),
+                              Center(
+                                child: Text(
+                                  widget.isLogin
+                                      ? ''
+                                      : context.l10n.setPasscodeDescription,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                  ),
+                                ),
                               ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                      
+                      const SizedBox(height: 48),
+                      
+                      // Passcode indicators
+                      SlideTransition(
+                        position: _formSlide,
+                        child: FadeTransition(
+                          opacity: _formFade,
+                          child: Column(
+                            children: [
+                              _buildPasscodeIndicators(),
+                              
+                              const SizedBox(height: 24),
+                              
+                              if (_errorMessage != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Text(
+                                    _errorMessage!,
+                                    style: const TextStyle(
+                                      color: Colors.red,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              
+                              if (_isLoading)
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 20),
+                                  child: CircularProgressIndicator(),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            
-            // Custom Keyboard
-            SlideTransition(
-              position: _keyboardSlide,
-              child: FadeTransition(
-                opacity: _keyboardFade,
-                child: _buildKeyboard(),
+              
+              // Custom Keyboard
+              SlideTransition(
+                position: _keyboardSlide,
+                child: FadeTransition(
+                  opacity: _keyboardFade,
+                  child: _buildKeyboard(),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

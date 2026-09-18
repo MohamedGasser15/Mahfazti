@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/biometric_service.dart';
 import 'package:my_wallet/core/services/message_service.dart';
+import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/auth/presentation/screens/forgot_passcode_otp_screen.dart';
 import 'package:my_wallet/features/auth/presentation/widgets/biometric_bottom_sheet.dart';
@@ -355,181 +356,183 @@ void _onForgotPin() {
     return Scaffold(
       backgroundColor: isDark ? Colors.black : Colors.white,
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 28),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 20),
-
-                    // Logo with pulse
-                    ScaleTransition(
-                      scale: _pulseAnimation,
-                      child: Center(
-                        child: Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                theme.colorScheme.primary,
-                                theme.colorScheme.primary.withValues(alpha: 0.7),
-                              ],
-                            ),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                                blurRadius: 20,
-                                spreadRadius: 5,
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            Icons.account_balance_wallet,
-                            size: 40,
-                            color: theme.colorScheme.onPrimary,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // Title & Subtitle
-                    SlideTransition(
-                      position: _titleSlide,
-                      child: FadeTransition(
-                        opacity: _titleFade,
-                        child: Column(
-                          children: [
-                            Center(
-                              child: Text(
-                                context.l10n.enterPin,
-                                style: theme.textTheme.headlineMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Center(
-                              child: Text(
-                                context.l10n.enterPinDescription,
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 40),
-
-                    // PIN dots
-                    SlideTransition(
-                      position: _formSlide,
-                      child: FadeTransition(
-                        opacity: _formFade,
-                        child: Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              textDirection: TextDirection.ltr,
-                              children: List.generate(6, (index) {
-                                final isFilled = index < _pinDigits.length;
-                                return AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                                  width: 18,
-                                  height: 18,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: _showError
-                                        ? Colors.red
-                                        : isFilled
-                                            ? theme.colorScheme.primary
-                                            : theme.colorScheme.onSurface.withValues(alpha: 0.15),
-                                    border: !isFilled
-                                        ? Border.all(
-                                            color: theme.colorScheme.onSurface
-                                                .withValues(alpha: 0.3),
-                                            width: 1.5,
-                                          )
-                                        : null,
-                                  ),
-                                );
-                              }),
-                            ),
-
-                            if (_errorMessage != null) ...[
-                              const SizedBox(height: 16),
-                              Text(
-                                _errorMessage!,
-                                style: const TextStyle(color: Colors.red, fontSize: 14),
-                              ),
-                            ],
-
-                            if (_isLoading) ...[
-                              const SizedBox(height: 24),
-                              const CircularProgressIndicator(),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Keyboard
-            SlideTransition(
-              position: _keyboardSlide,
-              child: FadeTransition(
-                opacity: _keyboardFade,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: ResponsiveWrapper(
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
                   child: Column(
                     children: [
-                      _buildKeyRow(['1', '2', '3']),
-                      const SizedBox(height: 12),
-                      _buildKeyRow(['4', '5', '6']),
-                      const SizedBox(height: 12),
-                      _buildKeyRow(['7', '8', '9']),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _buildFunctionButton(
-                            icon: Icons.help_outline,
-                            onTap: _onForgotPin,
-                            label: context.l10n.forgot,
-                          ),
-                          _buildNumberButton('0'),
-                          _pinDigits.isEmpty && !_biometricFailed && _biometricEnabled
-                              ? _buildBiometricButton()
-                              : _buildFunctionButton(
-                                  icon: _pinDigits.isEmpty
-                                      ? Icons.backspace_outlined
-                                      : Icons.backspace,
-                                  onTap: _removeDigit,
-                                  onLongPress: _clearPin,
-                                  isActive: _pinDigits.isNotEmpty,
+                      const SizedBox(height: 20),
+
+                      // Logo with pulse
+                      ScaleTransition(
+                        scale: _pulseAnimation,
+                        child: Center(
+                          child: Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  theme.colorScheme.primary,
+                                  theme.colorScheme.primary.withValues(alpha: 0.7),
+                                ],
+                              ),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                                  blurRadius: 20,
+                                  spreadRadius: 5,
                                 ),
-                        ],
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.account_balance_wallet,
+                              size: 40,
+                              color: theme.colorScheme.onPrimary,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      // Title & Subtitle
+                      SlideTransition(
+                        position: _titleSlide,
+                        child: FadeTransition(
+                          opacity: _titleFade,
+                          child: Column(
+                            children: [
+                              Center(
+                                child: Text(
+                                  context.l10n.enterPin,
+                                  style: theme.textTheme.headlineMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Center(
+                                child: Text(
+                                  context.l10n.enterPinDescription,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 40),
+
+                      // PIN dots
+                      SlideTransition(
+                        position: _formSlide,
+                        child: FadeTransition(
+                          opacity: _formFade,
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                textDirection: TextDirection.ltr,
+                                children: List.generate(6, (index) {
+                                  final isFilled = index < _pinDigits.length;
+                                  return AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                                    width: 18,
+                                    height: 18,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: _showError
+                                          ? Colors.red
+                                          : isFilled
+                                              ? theme.colorScheme.primary
+                                              : theme.colorScheme.onSurface.withValues(alpha: 0.15),
+                                      border: !isFilled
+                                          ? Border.all(
+                                              color: theme.colorScheme.onSurface
+                                                  .withValues(alpha: 0.3),
+                                              width: 1.5,
+                                            )
+                                          : null,
+                                    ),
+                                  );
+                                }),
+                              ),
+
+                              if (_errorMessage != null) ...[
+                                const SizedBox(height: 16),
+                                Text(
+                                  _errorMessage!,
+                                  style: const TextStyle(color: Colors.red, fontSize: 14),
+                                ),
+                              ],
+
+                              if (_isLoading) ...[
+                                const SizedBox(height: 24),
+                                const CircularProgressIndicator(),
+                              ],
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-          ],
+
+              // Keyboard
+              SlideTransition(
+                position: _keyboardSlide,
+                child: FadeTransition(
+                  opacity: _keyboardFade,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Column(
+                      children: [
+                        _buildKeyRow(['1', '2', '3']),
+                        const SizedBox(height: 12),
+                        _buildKeyRow(['4', '5', '6']),
+                        const SizedBox(height: 12),
+                        _buildKeyRow(['7', '8', '9']),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _buildFunctionButton(
+                              icon: Icons.help_outline,
+                              onTap: _onForgotPin,
+                              label: context.l10n.forgot,
+                            ),
+                            _buildNumberButton('0'),
+                            _pinDigits.isEmpty && !_biometricFailed && _biometricEnabled
+                                ? _buildBiometricButton()
+                                : _buildFunctionButton(
+                                    icon: _pinDigits.isEmpty
+                                        ? Icons.backspace_outlined
+                                        : Icons.backspace,
+                                    onTap: _removeDigit,
+                                    onLongPress: _clearPin,
+                                    isActive: _pinDigits.isNotEmpty,
+                                  ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
         ),
       ),
     );

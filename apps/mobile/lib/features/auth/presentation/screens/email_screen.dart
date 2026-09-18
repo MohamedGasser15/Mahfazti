@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:my_wallet/core/constants/app_routes.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/device_info_service.dart';
 import 'package:my_wallet/core/services/social_auth_service.dart';
+import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
-import 'package:my_wallet/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 
 class EmailScreen extends StatefulWidget {
@@ -231,7 +233,7 @@ class _EmailScreenState extends State<EmailScreen>
       if (!mounted) return;
       Navigator.pushNamed(
         context,
-        '/verification',
+        AppRoutes.verification,
         arguments: {
           'email': email,
           'isLogin': isLogin,
@@ -247,17 +249,15 @@ class _EmailScreenState extends State<EmailScreen>
   }
 
   void _onBackPressed() {
-    Navigator.pushAndRemoveUntil(
+    Navigator.pushNamedAndRemoveUntil(
       context,
-      MaterialPageRoute(
-        builder: (context) =>
-            OnboardingScreen(onLocaleChanged: (locale) {})),
+      AppRoutes.onboarding,
       (route) => false,
     );
   }
 
   void _onLostAccess() {
-    Navigator.pushNamed(context, '/recovery-check-user');
+    Navigator.pushNamed(context, AppRoutes.recoveryCheckUser);
   }
 
   Future<void> _onSocialLogin(String provider) async {
@@ -306,13 +306,13 @@ class _EmailScreenState extends State<EmailScreen>
         if (hasPassword) {
           Navigator.pushNamedAndRemoveUntil(
             context,
-            '/home',
+            AppRoutes.home,
             (route) => false,
           );
         } else {
           Navigator.pushNamedAndRemoveUntil(
             context,
-            '/set-passcode',
+            AppRoutes.setPasscode,
             (route) => false,
           );
         }
@@ -321,7 +321,7 @@ class _EmailScreenState extends State<EmailScreen>
         if (needsRegistration && result['email'] != null) {
           Navigator.pushNamed(
             context,
-            '/register',
+            AppRoutes.register,
             arguments: {
               'email': result['email'],
               'isSocialLogin': true,
@@ -375,47 +375,49 @@ class _EmailScreenState extends State<EmailScreen>
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              _AnimatedLogo(logoFade: _logoFade, logoSlide: _logoSlide, theme: theme),
-              const SizedBox(height: 32),
-              _AnimatedTitle(titleFade: _titleFade, titleSlide: _titleSlide, theme: theme),
-              const SizedBox(height: 36),
-              _EmailFormSection(
-                formFade: _formFade,
-                formSlide: _formSlide,
-                theme: theme,
-                isDark: isDark,
-                emailController: _emailController,
-                emailFocusNode: _emailFocusNode,
-                isEmailValid: _isEmailValid,
-                isLoading: _isLoading,
-                dotScales: _dotScales,
-                dotOpacities: _dotOpacities,
-                onClear: () {
-                  setState(() {
-                    _emailController.clear();
-                    _isEmailValid = false;
-                    _emailExists = false;
-                  });
-                },
-                onSubmit: _checkEmail,
-              ),
-              _SocialLoginSection(
-                socialFade: _socialFade,
-                socialSlide: _socialSlide,
-                theme: theme,
-                isDark: isDark,
-                isRTL: isRTL,
-                onGoogleLogin: () => _onSocialLogin('Google'),
-                onFacebookLogin: () => _onSocialLogin('Facebook'),
-                onLostAccess: _onLostAccess,
-              ),
-            ],
+        child: ResponsiveWrapper(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+                _AnimatedLogo(logoFade: _logoFade, logoSlide: _logoSlide, theme: theme),
+                const SizedBox(height: 32),
+                _AnimatedTitle(titleFade: _titleFade, titleSlide: _titleSlide, theme: theme),
+                const SizedBox(height: 36),
+                _EmailFormSection(
+                  formFade: _formFade,
+                  formSlide: _formSlide,
+                  theme: theme,
+                  isDark: isDark,
+                  emailController: _emailController,
+                  emailFocusNode: _emailFocusNode,
+                  isEmailValid: _isEmailValid,
+                  isLoading: _isLoading,
+                  dotScales: _dotScales,
+                  dotOpacities: _dotOpacities,
+                  onClear: () {
+                    setState(() {
+                      _emailController.clear();
+                      _isEmailValid = false;
+                      _emailExists = false;
+                    });
+                  },
+                  onSubmit: _checkEmail,
+                ),
+                _SocialLoginSection(
+                  socialFade: _socialFade,
+                  socialSlide: _socialSlide,
+                  theme: theme,
+                  isDark: isDark,
+                  isRTL: isRTL,
+                  onGoogleLogin: () => _onSocialLogin('Google'),
+                  onFacebookLogin: () => _onSocialLogin('Facebook'),
+                  onLostAccess: _onLostAccess,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -773,6 +775,16 @@ class _GoogleSignInButton extends StatelessWidget {
   final bool isDark;
   final VoidCallback onPressed;
 
+  static const String _googleSvg = '''
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+  <path fill="none" d="M0 0h48v48H0z"/>
+</svg>
+''';
+
   const _GoogleSignInButton({
     required this.theme,
     required this.isDark,
@@ -797,24 +809,10 @@ class _GoogleSignInButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
           ),
         ),
-        icon: Container(
+        icon: SvgPicture.string(
+          _googleSvg,
           width: 22,
           height: 22,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white,
-          ),
-          child: Center(
-            child: Text(
-              'G',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.blue[700],
-                height: 1,
-              ),
-            ),
-          ),
         ),
         label: Text(
           context.l10n.continueWithGoogle,

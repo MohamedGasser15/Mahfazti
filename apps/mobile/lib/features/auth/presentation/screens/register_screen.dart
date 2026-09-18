@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:my_wallet/core/constants/app_routes.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
+import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 import 'package:my_wallet/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:my_wallet/core/services/message_service.dart';
@@ -114,7 +116,7 @@ Future<void> _onComplete() async {
       MessageService.showSuccess(context: context, message: context.l10n.registrationCompletedSuccessfully);
       
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/currency-selection');
+        Navigator.pushReplacementNamed(context, AppRoutes.currencySelection);
       }
     } else {
       if (!mounted) return;
@@ -160,12 +162,13 @@ Future<void> _onComplete() async {
         title: null,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
+        child: ResponsiveWrapper(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
 
               // Logo
               SlideTransition(
@@ -404,6 +407,7 @@ Future<void> _onComplete() async {
               const SizedBox(height: 40),
             ],
           ),
+        ),
         ),
       ),
     );

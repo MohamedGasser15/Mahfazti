@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:my_wallet/core/constants/app_routes.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
+import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 
@@ -115,7 +117,7 @@ class _SetPasscodeScreenState extends State<SetPasscodeScreen>
       if (!mounted) return;
 
       if (result['success'] == true) {
-        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+        Navigator.pushNamedAndRemoveUntil(context, AppRoutes.home, (route) => false);
       } else {
         _showErrorState(result['message'] ?? context.l10n.somethingWentWrong);
       }
@@ -148,7 +150,7 @@ class _SetPasscodeScreenState extends State<SetPasscodeScreen>
     await SharedPrefs.removeAuthToken();
     await SharedPrefs.removeUserData();
     if (!mounted) return;
-    Navigator.pushNamedAndRemoveUntil(context, '/onboarding', (route) => false);
+    Navigator.pushNamedAndRemoveUntil(context, AppRoutes.onboarding, (route) => false);
   }
 
   @override
@@ -171,126 +173,146 @@ class _SetPasscodeScreenState extends State<SetPasscodeScreen>
         ),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 28),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 20),
-                    SlideTransition(
-                      position: _titleSlide,
-                      child: FadeTransition(
-                        opacity: _titleFade,
-                        child: Column(
-                          children: [
-                            Center(
-                              child: Text(
-                                context.l10n.setPasscodeTitle,
-                                style: theme.textTheme.headlineMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Center(
-                              child: Text(
-                                context.l10n.setPasscodeDescription,
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 48),
-                    SlideTransition(
-                      position: _formSlide,
-                      child: FadeTransition(
-                        opacity: _formFade,
-                        child: Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              textDirection: TextDirection.ltr,
-                              children: List.generate(_passcodeLength, (index) {
-                                final isFilled = index < _passcode.length;
-                                return Container(
-                                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                                  width: 18,
-                                  height: 18,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: _showError
-                                        ? Colors.red
-                                        : isFilled
-                                            ? theme.colorScheme.primary
-                                            : theme.colorScheme.onSurface.withValues(alpha: 0.2),
-                                    border: !isFilled
-                                        ? Border.all(
-                                            color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
-                                            width: 1.5,
-                                          )
-                                        : null,
-                                  ),
-                                );
-                              }),
-                            ),
-                            if (_errorMessage != null) ...[
-                              const SizedBox(height: 16),
-                              Text(
-                                _errorMessage!,
-                                style: const TextStyle(color: Colors.red, fontSize: 14),
-                              ),
-                            ],
-                            if (_isLoading) ...[
-                              const Padding(
-                                padding: EdgeInsets.only(top: 20),
-                                child: CircularProgressIndicator(),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SlideTransition(
-              position: _keyboardSlide,
-              child: FadeTransition(
-                opacity: _keyboardFade,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: ResponsiveWrapper(
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
                   child: Column(
                     children: [
-                      _buildRow(['1', '2', '3']),
-                      const SizedBox(height: 12),
-                      _buildRow(['4', '5', '6']),
-                      const SizedBox(height: 12),
-                      _buildRow(['7', '8', '9']),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        textDirection: TextDirection.ltr,
-                        children: [
-                          const SizedBox(width: 80),
-                          _buildNumberButton('0'),
-                          _buildDeleteButton(),
-                        ],
+                      const SizedBox(height: 20),
+                      SlideTransition(
+                        position: _titleSlide,
+                        child: FadeTransition(
+                          opacity: _titleFade,
+                          child: Column(
+                            children: [
+                              Center(
+                                child: Text(
+                                  context.l10n.setPasscodeTitle,
+                                  style: theme.textTheme.headlineMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Center(
+                                child: Text(
+                                  context.l10n.setPasscodeDescription,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 48),
+                      SlideTransition(
+                        position: _formSlide,
+                        child: FadeTransition(
+                          opacity: _formFade,
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                textDirection: TextDirection.ltr,
+                                children: List.generate(_passcodeLength, (index) {
+                                  final isFilled = index < _passcode.length;
+                                  return Container(
+                                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                                    width: 18,
+                                    height: 18,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: _showError
+                                          ? Colors.red
+                                          : isFilled
+                                              ? theme.colorScheme.primary
+                                              : theme.colorScheme.onSurface.withValues(alpha: 0.2),
+                                      border: !isFilled
+                                          ? Border.all(
+                                              color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                                              width: 1.5,
+                                            )
+                                          : null,
+                                      boxShadow: isFilled && !_showError
+                                          ? [
+                                              BoxShadow(
+                                                color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                                                blurRadius: 8,
+                                                spreadRadius: 1,
+                                              )
+                                            ]
+                                          : null,
+                                    ),
+                                  );
+                                }),
+                              ),
+                              const SizedBox(height: 24),
+                              if (_errorMessage != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Text(
+                                    _errorMessage!,
+                                    style: const TextStyle(
+                                      color: Colors.red,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              if (_isLoading)
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 20),
+                                  child: CircularProgressIndicator(),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-          ],
+              SlideTransition(
+                position: _keyboardSlide,
+                child: FadeTransition(
+                  opacity: _keyboardFade,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Column(
+                      children: [
+                        _buildRow(['1', '2', '3']),
+                        const SizedBox(height: 12),
+                        _buildRow(['4', '5', '6']),
+                        const SizedBox(height: 12),
+                        _buildRow(['7', '8', '9']),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          textDirection: TextDirection.ltr,
+                          children: [
+                            const SizedBox(width: 80),
+                            _buildNumberButton('0'),
+                            _buildDeleteButton(),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
         ),
       ),
     );

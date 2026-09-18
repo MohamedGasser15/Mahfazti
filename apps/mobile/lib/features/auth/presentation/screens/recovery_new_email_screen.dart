@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:my_wallet/core/constants/app_routes.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
+import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 
 class RecoveryNewEmailScreen extends StatefulWidget {
@@ -98,7 +100,7 @@ class _RecoveryNewEmailScreenState extends State<RecoveryNewEmailScreen> with Ti
         if (mounted) {
           Navigator.pushNamed(
             context,
-            '/recovery-otp',
+            AppRoutes.recoveryOtp,
             arguments: {
               'emailOrUsername': widget.emailOrUsername,
               'newEmail': newEmail,
@@ -135,12 +137,13 @@ class _RecoveryNewEmailScreenState extends State<RecoveryNewEmailScreen> with Ti
         ),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 28),
-                child: Column(
+        child: ResponsiveWrapper(
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 20),
@@ -320,6 +323,7 @@ class _RecoveryNewEmailScreenState extends State<RecoveryNewEmailScreen> with Ti
               ),
             ),
           ],
+        ),
         ),
       ),
     );

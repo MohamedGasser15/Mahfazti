@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:my_wallet/core/constants/app_routes.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
+import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 import 'package:my_wallet/features/onboarding/presentation/screens/onboarding_screen.dart';
 
@@ -216,7 +218,7 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
         if (mounted) {
           Navigator.pushNamed(
             context,
-            '/passcode',
+            AppRoutes.passcode,
             arguments: {
               'email': widget.email,
               'verificationCode': _code,
@@ -329,277 +331,268 @@ class _VerificationScreenState extends State<VerificationScreen> with TickerProv
       body: GestureDetector(
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 20),
+          child: ResponsiveWrapper(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 20),
 
-                // Logo
-                SlideTransition(
-                  position: _logoSlide,
-                  child: FadeTransition(
-                    opacity: _logoFade,
-                    child: Center(
-                      child: Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              theme.colorScheme.primary,
-                              theme.colorScheme.primary.withValues(alpha: 0.7),
+                  // Logo
+                  SlideTransition(
+                    position: _logoSlide,
+                    child: FadeTransition(
+                      opacity: _logoFade,
+                      child: Center(
+                        child: Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                theme.colorScheme.primary,
+                                theme.colorScheme.primary.withValues(alpha: 0.7),
+                              ],
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                                blurRadius: 20,
+                                offset: const Offset(0, 8),
+                              ),
                             ],
                           ),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.account_balance_wallet,
-                          size: 40,
-                          color: theme.colorScheme.onPrimary,
+                          child: Icon(
+                            Icons.account_balance_wallet,
+                            size: 40,
+                            color: theme.colorScheme.onPrimary,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 20),
+                  const SizedBox(height: 32),
 
-                // Email chip
-                SlideTransition(
-                  position: _titleSlide,
-                  child: FadeTransition(
-                    opacity: _titleFade,
-                    child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.email_outlined, size: 16, color: theme.colorScheme.primary),
-                            const SizedBox(width: 8),
-                            Flexible(
+                  // Title & Subtitle
+                  SlideTransition(
+                    position: _titleSlide,
+                    child: FadeTransition(
+                      opacity: _titleFade,
+                      child: Column(
+                        children: [
+                          Center(
+                            child: Text(
+                              context.l10n.enterVerificationCode,
+                              style: theme.textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Center(
+                            child: Text(
+                              context.l10n.enterVerificationCodeSentToEmail,
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                height: 1.5,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
                               child: Text(
                                 widget.email,
                                 style: TextStyle(
+                                  fontWeight: FontWeight.w600,
                                   color: theme.colorScheme.primary,
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 14,
                                 ),
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 12),
+                  const SizedBox(height: 48),
 
-                // Title & Subtitle
-                SlideTransition(
-                  position: _titleSlide,
-                  child: FadeTransition(
-                    opacity: _titleFade,
-                    child: Column(
-                      children: [
-                        Center(
-                          child: Text(
-                            widget.isLogin ? context.l10n.enterVerificationCode : context.l10n.verifyYourEmail,
-                            style: theme.textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Center(
-                          child: Text(
-                            widget.isLogin
-                                ? context.l10n.enterCodeSentToEmailForLogin
-                                : context.l10n.enterVerificationCodeSentToEmail,
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                  // Verification code inputs
+                  SlideTransition(
+                    position: _formSlide,
+                    child: FadeTransition(
+                      opacity: _formFade,
+                      child: Column(
+                        children: [
+                          _buildCodeBoxes(fieldWidth, theme),
+                          const SizedBox(height: 16),
 
-                const SizedBox(height: 36),
-
-                // OTP Form
-                SlideTransition(
-                  position: _formSlide,
-                  child: FadeTransition(
-                    opacity: _formFade,
-                    child: Column(
-                      children: [
-                        Opacity(
-                          opacity: 0,
-                          child: AbsorbPointer(
-                            child: TextField(
-                              controller: _hiddenController,
-                              focusNode: _hiddenFocusNode,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: false, signed: false),
-                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                              onChanged: _onHiddenTextChanged,
-                              textInputAction: TextInputAction.done,
-                              enableInteractiveSelection: true,
-                              autofillHints: const [AutofillHints.oneTimeCode],
-                            ),
-                          ),
-                        ),
-
-                        AnimatedBuilder(
-                          animation: _shakeAnimation,
-                          builder: (context, child) {
-                            return Transform.translate(
-                              offset: Offset(_shakeAnimation.value, 0),
-                              child: child,
-                            );
-                          },
-                          child: AutofillGroup(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              textDirection: TextDirection.ltr,
-                              children: List.generate(6, (index) => _buildDisplayBox(index, fieldWidth, theme)),
-                            ),
-                          ),
-                        ),
-
-                        if (_errorMessage != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 16),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.error.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: theme.colorScheme.error.withValues(alpha: 0.5)),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.error_outline, color: theme.colorScheme.error, size: 20),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      _errorMessage!,
-                                      style: TextStyle(color: theme.colorScheme.error),
+                          if (_errorMessage != null)
+                            AnimatedBuilder(
+                              animation: _shakeAnimation,
+                              builder: (context, child) {
+                                return Transform.translate(
+                                  offset: Offset(_shakeAnimation.value, 0),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(16),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // Timer and resend
-                SlideTransition(
-                  position: _socialSlide,
-                  child: FadeTransition(
-                    opacity: _socialFade,
-                    child: Column(
-                      children: [
-                        Center(
-                          child: Column(
-                            children: [
-                              if (_countdown > 0)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                  decoration: BoxDecoration(
-                                    color: isDark ? Colors.grey[900] : Colors.grey[50],
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.timer, size: 18, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                       context.l10n.resendIn(_formatCountdown(_countdown)),
-                                        style: TextStyle(
-                                          color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-
-                              if (_countdown == 0)
-                                TextButton(
-                                  onPressed: _isLoading ? null : _resendCode,
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: theme.colorScheme.primary,
-                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (!_isLoading) Icon(Icons.refresh, size: 18),
-                                      if (!_isLoading) const SizedBox(width: 8),
-                                      Text(
-                                        _isLoading ? context.l10n.resending : context.l10n.resendCode,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                      if (_isLoading)
-                                        Padding(
-                                          padding: const EdgeInsets.only(left: 12),
-                                          child: SizedBox(
-                                            width: 18,
-                                            height: 18,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: theme.colorScheme.primary,
-                                            ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.error_outline, size: 16, color: Colors.red),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          _errorMessage!,
+                                          style: const TextStyle(
+                                            color: Colors.red,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
                                           ),
                                         ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 40),
-                      ],
+                                );
+                              },
+                            ),
+
+                          if (_isLoading)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 20),
+                              child: CircularProgressIndicator(),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+
+                  const SizedBox(height: 32),
+
+                  // Timer and resend
+                  SlideTransition(
+                    position: _socialSlide,
+                    child: FadeTransition(
+                      opacity: _socialFade,
+                      child: Column(
+                        children: [
+                          Center(
+                            child: Column(
+                              children: [
+                                if (_countdown > 0)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? Colors.grey[900] : Colors.grey[50],
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.timer, size: 18, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                         context.l10n.resendIn(_formatCountdown(_countdown)),
+                                          style: TextStyle(
+                                            color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                if (_countdown == 0)
+                                  TextButton(
+                                    onPressed: _isLoading ? null : _resendCode,
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: theme.colorScheme.primary,
+                                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (!_isLoading) Icon(Icons.refresh, size: 18),
+                                        if (!_isLoading) const SizedBox(width: 8),
+                                        Text(
+                                          _isLoading ? context.l10n.resending : context.l10n.resendCode,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        if (_isLoading)
+                                          Padding(
+                                            padding: const EdgeInsets.only(left: 12),
+                                            child: SizedBox(
+                                              width: 18,
+                                              height: 18,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: theme.colorScheme.primary,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 40),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildCodeBoxes(double width, ThemeData theme) {
+    return Column(
+      children: [
+        Opacity(
+          opacity: 0,
+          child: AbsorbPointer(
+            child: TextField(
+              controller: _hiddenController,
+              focusNode: _hiddenFocusNode,
+              keyboardType: const TextInputType.numberWithOptions(decimal: false, signed: false),
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              onChanged: _onHiddenTextChanged,
+              textInputAction: TextInputAction.done,
+              enableInteractiveSelection: true,
+              autofillHints: const [AutofillHints.oneTimeCode],
+            ),
+          ),
+        ),
+        AutofillGroup(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            textDirection: TextDirection.ltr,
+            children: List.generate(6, (index) => _buildDisplayBox(index, width, theme)),
+          ),
+        ),
+      ],
     );
   }
 
