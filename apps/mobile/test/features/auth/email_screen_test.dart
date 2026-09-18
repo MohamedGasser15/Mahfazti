@@ -28,15 +28,15 @@ void main() {
     await tester.pumpWidget(createTestApp());
     await tester.pump(const Duration(milliseconds: 1500));
 
-    expect(find.byIcon(Icons.arrow_back_ios), findsWidgets);
+    expect(find.byIcon(Icons.arrow_back_ios_rounded), findsWidgets);
   });
 
   testWidgets('switches to register tab when tapped', (tester) async {
     await tester.pumpWidget(createTestApp());
     await tester.pump(const Duration(milliseconds: 1500));
 
-    // Tap register tab
-    await tester.tap(find.text('Register'));
+    // Tap register tab (first occurrence is the toggle tab)
+    await tester.tap(find.text('Register').first);
     await tester.pumpAndSettle();
 
     expect(find.byType(TextField), findsOneWidget); // Email input in step 0

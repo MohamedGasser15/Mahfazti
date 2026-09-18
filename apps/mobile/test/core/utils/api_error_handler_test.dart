@@ -64,7 +64,7 @@ void main() {
         expect(ApiErrorHandler.getErrorMessage(error), 'Server error');
       });
 
-      test('returns joined errors from response data errors map', () {
+      test('returns first error from response data errors map', () {
         final error = DioException(
           requestOptions: RequestOptions(path: ''),
           type: DioExceptionType.badResponse,
@@ -74,7 +74,7 @@ void main() {
             data: {'errors': {'field1': 'Error 1', 'field2': 'Error 2'}},
           ),
         );
-        expect(ApiErrorHandler.getErrorMessage(error), 'Error 1\nError 2');
+        expect(ApiErrorHandler.getErrorMessage(error), 'Error 1');
       });
 
       test('returns status code fallback when badResponse has no data', () {
@@ -111,7 +111,7 @@ void main() {
         );
       });
 
-      test('returns default error message', () {
+      test('returns error message when message is present', () {
         final error = DioException(
           requestOptions: RequestOptions(path: ''),
           type: DioExceptionType.unknown,
@@ -119,7 +119,7 @@ void main() {
         );
         expect(
           ApiErrorHandler.getErrorMessage(error),
-          'An unexpected error occurred: Something went wrong',
+          'Something went wrong',
         );
       });
 
