@@ -31,10 +31,10 @@ A comprehensive personal wallet and expense tracking application with a .NET bac
 /workspace
 ├── apps/
 │   ├── api/                      # .NET Backend API
-│   │   ├── MyWallet/             # API Layer (Controllers, Program.cs)
-│   │   ├── MyWallet.Application/ # Business Logic & Services
-│   │   ├── MyWallet.Domain/      # Domain Entities
-│   │   └── MyWallet.Infrastructure/ # Data Access & Repositories
+│   │   ├── Mahfazti.Api/         # API Layer (Controllers, Program.cs)
+│   │   ├── Mahfazti.Core/        # Domain Entities & Business Logic Services
+│   │   ├── Mahfazti.Infrastructure/ # Data Access & Repositories
+│   │   └── Mahfazti.UnitTests/   # Unit Tests
 │   │
 │   └── mobile/                   # Flutter Mobile Application
 │       ├── lib/                  # Dart source code
@@ -70,7 +70,7 @@ A comprehensive personal wallet and expense tracking application with a .NET bac
 2. Update the connection string in `appsettings.json`:
    ```json
    "ConnectionStrings": {
-     "DefaultConnection": "Server=YOUR_SERVER;Database=MyWallet;Trusted_Connection=True;TrustServerCertificate=True;"
+     "DefaultConnection": "Server=YOUR_SERVER;Database=Mahfazti;Trusted_Connection=True;TrustServerCertificate=True;"
    }
    ```
 
@@ -78,15 +78,15 @@ A comprehensive personal wallet and expense tracking application with a .NET bac
    ```json
    "Jwt": {
      "Key": "YourSuperSecretKeyThatIsAtLeast32CharactersLong",
-     "Issuer": "MyWalletAPI",
-     "Audience": "MyWalletUsers"
+     "Issuer": "MahfaztiAPI",
+     "Audience": "Mahfazti"
    }
    ```
 
 4. Restore packages and run:
    ```bash
    dotnet restore
-   dotnet run --project MyWallet/MyWallet.API.csproj
+   dotnet run --project Mahfazti.Api/Mahfazti.Api.csproj
    ```
 
 5. Access the API documentation at: `https://localhost:7000/scalar`
