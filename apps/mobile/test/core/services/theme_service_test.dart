@@ -3,9 +3,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:my_wallet/core/services/theme_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:flutter/services.dart';
+import 'package:my_wallet/core/utils/shared_prefs.dart';
+
 void main() {
-  setUp(() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() async {
     SharedPreferences.setMockInitialValues({});
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      (MethodCall methodCall) async => null,
+    );
+    await SharedPrefs.init();
   });
 
   group('ThemeService', () {
@@ -16,12 +27,14 @@ void main() {
 
     test('init() loads saved light theme', () async {
       SharedPreferences.setMockInitialValues({'selected_theme': 'light'});
+      await SharedPrefs.init();
       await ThemeService.init();
       expect(ThemeService.themeNotifier.value, ThemeMode.light);
     });
 
     test('init() loads saved dark theme', () async {
       SharedPreferences.setMockInitialValues({'selected_theme': 'dark'});
+      await SharedPrefs.init();
       await ThemeService.init();
       expect(ThemeService.themeNotifier.value, ThemeMode.dark);
     });
@@ -62,6 +75,7 @@ void main() {
 
     test('getSavedTheme() returns saved value', () async {
       SharedPreferences.setMockInitialValues({'selected_theme': 'dark'});
+      await SharedPrefs.init();
       final theme = await ThemeService.getSavedTheme();
       expect(theme, 'dark');
     });
@@ -73,6 +87,7 @@ void main() {
 
     test('getCurrentThemeMode() returns saved theme mode', () async {
       SharedPreferences.setMockInitialValues({'selected_theme': 'dark'});
+      await SharedPrefs.init();
       final mode = await ThemeService.getCurrentThemeMode();
       expect(mode, ThemeMode.dark);
     });

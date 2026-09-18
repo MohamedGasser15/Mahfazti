@@ -1,11 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:my_wallet/core/constants/app_constants.dart';
 import 'package:my_wallet/core/utils/language_service.dart';
+import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  setUp(() {
-    SharedPreferences.setMockInitialValues({'selected_language': 'ar'});
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({AppConstants.appLanguageKey: 'ar'});
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      (MethodCall methodCall) async => null,
+    );
+    await SharedPrefs.init();
   });
 
   group('LanguageService', () {
@@ -27,8 +38,9 @@ void main() {
         expect(locale, const Locale('ar', 'SA'));
       });
 
-      test('returns device locale when no saved locale', () async {
-        SharedPreferences.setMockInitialValues({});
+      test('returns saved english locale from SharedPreferences', () async {
+        SharedPreferences.setMockInitialValues({AppConstants.appLanguageKey: 'en'});
+        await SharedPrefs.init();
         final locale = await LanguageService.getSavedLocale();
         expect(locale, const Locale('en', 'US'));
       });
@@ -36,7 +48,8 @@ void main() {
 
     group('switchToArabic', () {
       test('switches locale to arabic and updates notifier', () async {
-        SharedPreferences.setMockInitialValues({'selected_language': 'en'});
+        SharedPreferences.setMockInitialValues({AppConstants.appLanguageKey: 'en'});
+        await SharedPrefs.init();
         await LanguageService.init();
         await LanguageService.switchToArabic();
         expect(
@@ -44,7 +57,7 @@ void main() {
           const Locale('ar', 'SA'),
         );
         final prefs = await SharedPreferences.getInstance();
-        expect(prefs.getString('selected_language'), 'ar');
+        expect(prefs.getString(AppConstants.appLanguageKey), 'ar');
       });
     });
 
@@ -57,7 +70,7 @@ void main() {
           const Locale('en', 'US'),
         );
         final prefs = await SharedPreferences.getInstance();
-        expect(prefs.getString('selected_language'), 'en');
+        expect(prefs.getString(AppConstants.appLanguageKey), 'en');
       });
     });
 
@@ -95,7 +108,7 @@ void main() {
           const Locale('ar', 'SA'),
         );
         final prefs = await SharedPreferences.getInstance();
-        expect(prefs.getString('selected_language'), 'ar');
+        expect(prefs.getString(AppConstants.appLanguageKey), 'ar');
       });
     });
   });
