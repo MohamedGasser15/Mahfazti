@@ -9,6 +9,9 @@ import 'package:my_wallet/core/services/social_auth_service.dart';
 import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
+import 'package:my_wallet/features/auth/presentation/widgets/auth_header.dart';
+import 'package:my_wallet/features/auth/presentation/widgets/forgot_password_sheet.dart';
+import 'package:my_wallet/features/auth/presentation/widgets/otp_input_field.dart';
 
 class EmailScreen extends StatefulWidget {
   const EmailScreen({super.key});
@@ -18,7 +21,7 @@ class EmailScreen extends StatefulWidget {
 }
 
 class _EmailScreenState extends State<EmailScreen>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   final AuthRepository _authRepository = AuthRepository();
   final SocialAuthService _socialAuthService = SocialAuthService();
 
@@ -55,53 +58,33 @@ class _EmailScreenState extends State<EmailScreen>
   late final List<FocusNode> _codeFocusNodes;
 
   late AnimationController _fadeController;
-  late Animation<double> _logoFade;
-  late Animation<Offset> _logoSlide;
-  late Animation<double> _contentFade;
-  late Animation<Offset> _contentSlide;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
-    _codeControllers = List.generate(_codeLength, (_) => TextEditingController());
+    _codeControllers =
+        List.generate(_codeLength, (_) => TextEditingController());
     _codeFocusNodes = List.generate(_codeLength, (_) => FocusNode());
 
     _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 600),
       vsync: this,
     );
 
-    _logoFade = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _fadeController,
-        curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
-      ),
-    );
-    _logoSlide = Tween<Offset>(
-      begin: const Offset(0, -0.2),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _fadeController,
-        curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
-      ),
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOutCubic,
     );
 
-    _contentFade = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _fadeController,
-        curve: const Interval(0.2, 0.8, curve: Curves.easeOut),
-      ),
-    );
-    _contentSlide = Tween<Offset>(
-      begin: const Offset(0, 0.1),
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.05),
       end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _fadeController,
-        curve: const Interval(0.2, 0.8, curve: Curves.easeOut),
-      ),
-    );
+    ).animate(CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOutCubic,
+    ));
 
     _fadeController.forward();
   }
@@ -172,10 +155,12 @@ class _EmailScreenState extends State<EmailScreen>
   // =================== REGISTER STEP 0: SEND CODE ===================
   Future<void> _handleSendCode() async {
     final email = _registerEmailController.text.trim();
-    if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(email)) {
+    if (email.isEmpty ||
+        !RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+            .hasMatch(email)) {
       MessageService.showError(
         context: context,
-        message: context.l10n.enterYourEmailDescription,
+        message: context.l10n.validEmailRequired,
       );
       return;
     }
@@ -211,7 +196,7 @@ class _EmailScreenState extends State<EmailScreen>
     if (code.length != _codeLength) {
       MessageService.showError(
         context: context,
-        message: context.l10n.invalidVerificationCode,
+        message: context.l10n.digitCodeRequired,
       );
       return;
     }
@@ -349,13 +334,13 @@ class _EmailScreenState extends State<EmailScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => _ForgotPasswordSheet(
+      builder: (ctx) => ForgotPasswordSheet(
         authRepository: _authRepository,
         onSuccess: () {
           Navigator.pop(ctx);
           MessageService.showSuccess(
             context: context,
-            message: 'Password reset successfully. Please login.',
+            message: context.l10n.passwordResetSuccess,
           );
         },
       ),
@@ -369,197 +354,203 @@ class _EmailScreenState extends State<EmailScreen>
     final isRTL = Directionality.of(context) == TextDirection.rtl;
 
     return Scaffold(
-      backgroundColor: isDark ? Colors.black : Colors.white,
+      backgroundColor: isDark ? Colors.black : const Color(0xFFF9FAFB),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            isRTL ? Icons.arrow_forward_ios : Icons.arrow_back_ios,
-            size: 20,
+        leading: Padding(
+          padding: const EdgeInsetsDirectional.only(start: 12),
+          child: IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isDark ? Colors.white12 : Colors.grey.shade200,
+                ),
+              ),
+              child: Icon(
+                isRTL ? Icons.arrow_forward_ios_rounded : Icons.arrow_back_ios_rounded,
+                size: 16,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            onPressed: () {
+              if (_registerStep > 0 && !_isLoginTab) {
+                setState(() => _registerStep--);
+              } else {
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  AppRoutes.onboarding,
+                  (route) => false,
+                );
+              }
+            },
           ),
-          onPressed: () {
-            if (_registerStep > 0 && !_isLoginTab) {
-              setState(() => _registerStep--);
-            } else {
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                AppRoutes.onboarding,
-                (route) => false,
-              );
-            }
-          },
         ),
       ),
       body: SafeArea(
         child: ResponsiveWrapper(
           child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SlideTransition(
-                  position: _logoSlide,
-                  child: FadeTransition(
-                    opacity: _logoFade,
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 72,
-                          height: 72,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                theme.colorScheme.primary,
-                                theme.colorScheme.primary.withValues(alpha: 0.8),
-                              ],
-                            ),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: theme.colorScheme.primary.withValues(alpha: 0.35),
-                                blurRadius: 20,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            Icons.account_balance_wallet,
-                            size: 38,
-                            color: theme.colorScheme.onPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          context.l10n.appTitle,
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          context.l10n.manageYourMoneyEasily,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                        ),
-                      ],
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Dynamic Header
+                    AuthHeader(
+                      title: context.l10n.appTitle,
+                      subtitle: _isLoginTab
+                          ? context.l10n.signInSubtitle
+                          : context.l10n.signUpSubtitle,
+                      icon: _isLoginTab
+                          ? Icons.account_balance_wallet_rounded
+                          : Icons.person_add_alt_1_rounded,
                     ),
-                  ),
-                ),
-                const SizedBox(height: 24),
 
-                // Tab Switcher
-                SlideTransition(
-                  position: _contentSlide,
-                  child: FadeTransition(
-                    opacity: _contentFade,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: isDark ? Colors.grey[900] : Colors.grey[100],
-                            borderRadius: BorderRadius.circular(16),
+                    const SizedBox(height: 28),
+
+                    // Modern Pill Segmented Switcher
+                    _buildTabSwitcher(theme, isDark),
+
+                    const SizedBox(height: 24),
+
+                    // Active Form with animated transitions
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder: (child, animation) {
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0, 0.03),
+                              end: Offset.zero,
+                            ).animate(animation),
+                            child: child,
                           ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () => setState(() => _isLoginTab = true),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                    decoration: BoxDecoration(
-                                      color: _isLoginTab
-                                          ? (isDark ? Colors.grey[800] : Colors.white)
-                                          : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: _isLoginTab
-                                          ? [
-                                              BoxShadow(
-                                                color: Colors.black.withValues(alpha: 0.05),
-                                                blurRadius: 4,
-                                                offset: const Offset(0, 2),
-                                              ),
-                                            ]
-                                          : null,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        context.l10n.login,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          color: _isLoginTab
-                                              ? theme.colorScheme.primary
-                                              : theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () => setState(() => _isLoginTab = false),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                    decoration: BoxDecoration(
-                                      color: !_isLoginTab
-                                          ? (isDark ? Colors.grey[800] : Colors.white)
-                                          : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: !_isLoginTab
-                                          ? [
-                                              BoxShadow(
-                                                color: Colors.black.withValues(alpha: 0.05),
-                                                blurRadius: 4,
-                                                offset: const Offset(0, 2),
-                                              ),
-                                            ]
-                                          : null,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        context.l10n.register,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          color: !_isLoginTab
-                                              ? theme.colorScheme.primary
-                                              : theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Form Content
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 300),
-                          child: _isLoginTab
-                              ? _buildLoginForm(theme, isDark)
-                              : _buildRegisterWizard(theme, isDark),
-                        ),
-
-                        const SizedBox(height: 20),
-                        _buildSocialSection(theme, isDark),
-                        const SizedBox(height: 20),
-                      ],
+                        );
+                      },
+                      child: _isLoginTab
+                          ? _buildLoginForm(theme, isDark)
+                          : _buildRegisterWizard(theme, isDark),
                     ),
-                  ),
+
+                    // Social logins (shown on login or register step 0)
+                    if (_isLoginTab || _registerStep == 0) ...[
+                      const SizedBox(height: 24),
+                      _buildSocialSection(theme, isDark),
+                    ],
+
+                    const SizedBox(height: 24),
+
+                    // Bottom Toggle Link
+                    _buildBottomToggle(theme),
+
+                    const SizedBox(height: 16),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  // =================== TAB SWITCHER ===================
+  Widget _buildTabSwitcher(ThemeData theme, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(5),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFE5E7EB),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                if (!_isLoginTab) setState(() => _isLoginTab = true);
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: _isLoginTab
+                      ? (isDark ? const Color(0xFF2C2C2C) : Colors.white)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: _isLoginTab
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Center(
+                  child: Text(
+                    context.l10n.login,
+                    style: TextStyle(
+                      fontWeight: _isLoginTab ? FontWeight.w700 : FontWeight.w500,
+                      fontSize: 15,
+                      color: _isLoginTab
+                          ? (isDark ? Colors.white : theme.colorScheme.primary)
+                          : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                if (_isLoginTab) setState(() => _isLoginTab = false);
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: !_isLoginTab
+                      ? (isDark ? const Color(0xFF2C2C2C) : Colors.white)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: !_isLoginTab
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Center(
+                  child: Text(
+                    context.l10n.register,
+                    style: TextStyle(
+                      fontWeight: !_isLoginTab ? FontWeight.w700 : FontWeight.w500,
+                      fontSize: 15,
+                      color: !_isLoginTab
+                          ? (isDark ? Colors.white : theme.colorScheme.primary)
+                          : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -575,16 +566,25 @@ class _EmailScreenState extends State<EmailScreen>
             controller: _loginEmailController,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
+            textDirection: TextDirection.ltr,
+            inputFormatters: [
+              FilteringTextInputFormatter.deny(
+                RegExp(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]'),
+              ),
+            ],
             decoration: _inputDecoration(
               theme: theme,
               isDark: isDark,
               hint: context.l10n.email,
-              icon: Icons.email_outlined,
+              icon: Icons.mail_outline_rounded,
             ),
             validator: (val) {
-              if (val == null || val.trim().isEmpty) return 'Email is required';
-              if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(val.trim())) {
-                return 'Please enter a valid email address';
+              if (val == null || val.trim().isEmpty) {
+                return context.l10n.emailRequired;
+              }
+              if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+                  .hasMatch(val.trim())) {
+                return context.l10n.validEmailRequired;
               }
               return null;
             },
@@ -594,30 +594,47 @@ class _EmailScreenState extends State<EmailScreen>
             controller: _loginPasswordController,
             obscureText: _obscureLoginPassword,
             textInputAction: TextInputAction.done,
+            textDirection: TextDirection.ltr,
+            inputFormatters: [
+              FilteringTextInputFormatter.deny(
+                RegExp(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]'),
+              ),
+            ],
             decoration: _inputDecoration(
               theme: theme,
               isDark: isDark,
               hint: context.l10n.password,
-              icon: Icons.lock_outline,
+              icon: Icons.lock_outline_rounded,
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscureLoginPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                  _obscureLoginPassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  size: 20,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                 ),
-                onPressed: () => setState(() => _obscureLoginPassword = !_obscureLoginPassword),
+                onPressed: () =>
+                    setState(() => _obscureLoginPassword = !_obscureLoginPassword),
               ),
             ),
             validator: (val) {
-              if (val == null || val.isEmpty) return 'Password is required';
+              if (val == null || val.isEmpty) {
+                return context.l10n.passwordRequired;
+              }
               return null;
             },
             onFieldSubmitted: (_) => _handleLogin(),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Align(
             alignment: AlignmentDirectional.centerEnd,
             child: TextButton(
               onPressed: _showForgotPasswordBottomSheet,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
               child: Text(
                 context.l10n.forgotPassword,
                 style: TextStyle(
@@ -628,7 +645,7 @@ class _EmailScreenState extends State<EmailScreen>
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 18),
           ElevatedButton(
             onPressed: _isLoggingIn ? null : _handleLogin,
             style: ElevatedButton.styleFrom(
@@ -638,7 +655,8 @@ class _EmailScreenState extends State<EmailScreen>
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
-              elevation: 3,
+              elevation: isDark ? 0 : 2,
+              shadowColor: theme.colorScheme.primary.withValues(alpha: 0.3),
             ),
             child: _isLoggingIn
                 ? const SizedBox(
@@ -664,56 +682,41 @@ class _EmailScreenState extends State<EmailScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Steps indicator
-        Row(
-          children: List.generate(3, (index) {
-            final done = index < _registerStep;
-            final active = index == _registerStep;
-            return Expanded(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: (done || active)
-                            ? theme.colorScheme.primary
-                            : (isDark ? Colors.grey[800] : Colors.grey[300]),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  if (index < 2) const SizedBox(width: 6),
-                ],
-              ),
-            );
-          }),
-        ),
-        const SizedBox(height: 20),
+        // Stepper Progress Header
+        _buildWizardStepperHeader(theme, isDark),
+        const SizedBox(height: 24),
 
+        // Step 0: Email
         if (_registerStep == 0) ...[
-          // Step 1: Email
           Text(
             context.l10n.whatIsYourEmail,
             style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             context.l10n.enterYourEmailDescription,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           TextField(
             controller: _registerEmailController,
             keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.done,
+            textDirection: TextDirection.ltr,
+            inputFormatters: [
+              FilteringTextInputFormatter.deny(
+                RegExp(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]'),
+              ),
+            ],
             decoration: _inputDecoration(
               theme: theme,
               isDark: isDark,
               hint: context.l10n.email,
-              icon: Icons.email_outlined,
+              icon: Icons.mail_outline_rounded,
             ),
+            onSubmitted: (_) => _handleSendCode(),
           ),
           const SizedBox(height: 20),
           ElevatedButton(
@@ -723,6 +726,7 @@ class _EmailScreenState extends State<EmailScreen>
               foregroundColor: theme.colorScheme.onPrimary,
               minimumSize: const Size(double.infinity, 54),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              elevation: isDark ? 0 : 2,
             ),
             child: _isSendingCode
                 ? const SizedBox(
@@ -730,68 +734,61 @@ class _EmailScreenState extends State<EmailScreen>
                     height: 24,
                     child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                   )
-                : Text(context.l10n.continueText, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                : Text(
+                    context.l10n.continueText,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                  ),
           ),
-        ] else if (_registerStep == 1) ...[
-          // Step 2: OTP Verification
-          Text(
-            context.l10n.enterVerificationCode,
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            context.l10n.verificationCodeSent(_registeredEmail ?? ''),
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
+        ]
+        // Step 1: OTP Verification
+        else if (_registerStep == 1) ...[
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.l10n.enterVerificationCode,
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      context.l10n.verificationCodeSent(_registeredEmail ?? ''),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: () => setState(() => _registerStep = 0),
+                child: Text(
+                  context.l10n.changeEmail,
+                  style: TextStyle(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(_codeLength, (index) {
-              return SizedBox(
-                width: 46,
-                height: 54,
-                child: TextField(
-                  controller: _codeControllers[index],
-                  focusNode: _codeFocusNodes[index],
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  maxLength: 1,
-                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: InputDecoration(
-                    counterText: '',
-                    filled: true,
-                    fillColor: isDark ? Colors.grey[900] : Colors.grey[100],
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
-                    ),
-                  ),
-                  onChanged: (val) {
-                    if (val.isNotEmpty && index < _codeLength - 1) {
-                      _codeFocusNodes[index + 1].requestFocus();
-                    } else if (val.isEmpty && index > 0) {
-                      _codeFocusNodes[index - 1].requestFocus();
-                    }
-                  },
-                ),
-              );
-            }),
+          OtpInputField(
+            controllers: _codeControllers,
+            focusNodes: _codeFocusNodes,
+            onCompleted: (_) => _handleVerifyCode(),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 _resendSeconds > 0
-                    ? 'Resend code in ${_resendSeconds}s'
-                    : "Didn't receive code?",
+                    ? '${context.l10n.resendCodeIn} $_resendSeconds ${context.l10n.seconds}'
+                    : context.l10n.resendCode,
                 style: TextStyle(
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   fontSize: 13,
@@ -811,7 +808,7 @@ class _EmailScreenState extends State<EmailScreen>
                 ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           ElevatedButton(
             onPressed: _isVerifying ? null : _handleVerifyCode,
             style: ElevatedButton.styleFrom(
@@ -826,10 +823,14 @@ class _EmailScreenState extends State<EmailScreen>
                     height: 24,
                     child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                   )
-                : Text(context.l10n.verify, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                : Text(
+                    context.l10n.verify,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                  ),
           ),
-        ] else ...[
-          // Step 3: Name & Password
+        ]
+        // Step 2: Name & Password
+        else ...[
           Form(
             key: _registerFormKey,
             child: Column(
@@ -838,15 +839,25 @@ class _EmailScreenState extends State<EmailScreen>
                 TextFormField(
                   controller: _registerNameController,
                   textInputAction: TextInputAction.next,
+                  textDirection: TextDirection.ltr,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.deny(
+                      RegExp(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]'),
+                    ),
+                  ],
                   decoration: _inputDecoration(
                     theme: theme,
                     isDark: isDark,
                     hint: context.l10n.fullName,
-                    icon: Icons.person_outline,
+                    icon: Icons.person_outline_rounded,
                   ),
                   validator: (val) {
-                    if (val == null || val.trim().isEmpty) return 'Full name is required';
-                    if (val.trim().length < 3) return 'Name must be at least 3 characters';
+                    if (val == null || val.trim().isEmpty) {
+                      return context.l10n.fullNameRequired;
+                    }
+                    if (val.trim().length < 3) {
+                      return 'Name must be at least 3 characters';
+                    }
                     return null;
                   },
                 ),
@@ -855,22 +866,36 @@ class _EmailScreenState extends State<EmailScreen>
                   controller: _registerPasswordController,
                   obscureText: _obscureRegisterPassword,
                   textInputAction: TextInputAction.next,
+                  textDirection: TextDirection.ltr,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.deny(
+                      RegExp(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]'),
+                    ),
+                  ],
                   decoration: _inputDecoration(
                     theme: theme,
                     isDark: isDark,
                     hint: context.l10n.password,
-                    icon: Icons.lock_outline,
+                    icon: Icons.lock_outline_rounded,
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscureRegisterPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                        _obscureRegisterPassword
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        size: 20,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
-                      onPressed: () => setState(() => _obscureRegisterPassword = !_obscureRegisterPassword),
+                      onPressed: () => setState(() =>
+                          _obscureRegisterPassword = !_obscureRegisterPassword),
                     ),
                   ),
                   validator: (val) {
-                    if (val == null || val.isEmpty) return 'Password is required';
-                    if (val.length < 8) return 'Password must be at least 8 characters';
+                    if (val == null || val.isEmpty) {
+                      return context.l10n.passwordRequired;
+                    }
+                    if (val.length < 8) {
+                      return context.l10n.passwordMinLength;
+                    }
                     return null;
                   },
                 ),
@@ -879,27 +904,42 @@ class _EmailScreenState extends State<EmailScreen>
                   controller: _registerConfirmPasswordController,
                   obscureText: _obscureRegisterConfirmPassword,
                   textInputAction: TextInputAction.done,
+                  textDirection: TextDirection.ltr,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.deny(
+                      RegExp(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]'),
+                    ),
+                  ],
                   decoration: _inputDecoration(
                     theme: theme,
                     isDark: isDark,
                     hint: context.l10n.confirmPassword,
-                    icon: Icons.lock_outline,
+                    icon: Icons.lock_outline_rounded,
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscureRegisterConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                        _obscureRegisterConfirmPassword
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        size: 20,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
-                      onPressed: () => setState(() => _obscureRegisterConfirmPassword = !_obscureRegisterConfirmPassword),
+                      onPressed: () => setState(() =>
+                          _obscureRegisterConfirmPassword =
+                              !_obscureRegisterConfirmPassword),
                     ),
                   ),
                   validator: (val) {
-                    if (val == null || val.isEmpty) return 'Please confirm your password';
-                    if (val != _registerPasswordController.text) return 'Passwords do not match';
+                    if (val == null || val.isEmpty) {
+                      return context.l10n.confirmPassword;
+                    }
+                    if (val != _registerPasswordController.text) {
+                      return context.l10n.passcodesDoNotMatch;
+                    }
                     return null;
                   },
                   onFieldSubmitted: (_) => _handleRegister(),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 22),
                 ElevatedButton(
                   onPressed: _isRegistering ? null : _handleRegister,
                   style: ElevatedButton.styleFrom(
@@ -914,7 +954,10 @@ class _EmailScreenState extends State<EmailScreen>
                           height: 24,
                           child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                         )
-                      : Text(context.l10n.register, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                      : Text(
+                          context.l10n.register,
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                        ),
                 ),
               ],
             ),
@@ -924,37 +967,97 @@ class _EmailScreenState extends State<EmailScreen>
     );
   }
 
-  // =================== SOCIAL SECTION ===================
+  // =================== STEPPER HEADER ===================
+  Widget _buildWizardStepperHeader(ThemeData theme, bool isDark) {
+    final stepTitles = [
+      context.l10n.stepEmail,
+      context.l10n.stepOtp,
+      context.l10n.stepProfile,
+    ];
+
+    return Row(
+      children: List.generate(3, (index) {
+        final isDone = index < _registerStep;
+        final isActive = index == _registerStep;
+
+        return Expanded(
+          child: Column(
+            children: [
+              Container(
+                margin: EdgeInsetsDirectional.only(end: index < 2 ? 8 : 0),
+                height: 4,
+                decoration: BoxDecoration(
+                  color: (isDone || isActive)
+                      ? theme.colorScheme.primary
+                      : (isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE5E7EB)),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                stepTitles[index],
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: (isDone || isActive) ? FontWeight.w700 : FontWeight.w500,
+                  color: (isDone || isActive)
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
+  // =================== SOCIAL LOGIN SECTION ===================
   Widget _buildSocialSection(ThemeData theme, bool isDark) {
     return Column(
       children: [
         Row(
           children: [
-            Expanded(child: Divider(color: theme.colorScheme.outline.withValues(alpha: 0.2))),
+            Expanded(
+              child: Divider(
+                color: theme.colorScheme.outline.withValues(alpha: 0.15),
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
                 context.l10n.orContinueWith,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),
-            Expanded(child: Divider(color: theme.colorScheme.outline.withValues(alpha: 0.2))),
+            Expanded(
+              child: Divider(
+                color: theme.colorScheme.outline.withValues(alpha: 0.15),
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 18),
         Row(
           children: [
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: _isSocialLoading ? null : () => _handleSocialLogin('Google'),
-                icon: const FaIcon(FontAwesomeIcons.google, color: Color(0xFFEA4335), size: 18),
+                icon: const FaIcon(
+                  FontAwesomeIcons.google,
+                  color: Color(0xFFEA4335),
+                  size: 18,
+                ),
                 label: const Text('Google', style: TextStyle(fontWeight: FontWeight.w600)),
                 style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  side: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
+                  backgroundColor: isDark ? const Color(0xFF141414) : Colors.white,
+                  minimumSize: const Size(0, 52),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  side: BorderSide(
+                    color: isDark ? Colors.white12 : Colors.grey.shade200,
+                  ),
                 ),
               ),
             ),
@@ -962,12 +1065,19 @@ class _EmailScreenState extends State<EmailScreen>
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: _isSocialLoading ? null : () => _handleSocialLogin('Facebook'),
-                icon: const FaIcon(FontAwesomeIcons.facebook, color: Color(0xFF1877F2), size: 18),
+                icon: const FaIcon(
+                  FontAwesomeIcons.facebook,
+                  color: Color(0xFF1877F2),
+                  size: 18,
+                ),
                 label: const Text('Facebook', style: TextStyle(fontWeight: FontWeight.w600)),
                 style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  side: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
+                  backgroundColor: isDark ? const Color(0xFF141414) : Colors.white,
+                  minimumSize: const Size(0, 52),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  side: BorderSide(
+                    color: isDark ? Colors.white12 : Colors.grey.shade200,
+                  ),
                 ),
               ),
             ),
@@ -977,6 +1087,39 @@ class _EmailScreenState extends State<EmailScreen>
     );
   }
 
+  // =================== BOTTOM TOGGLE ===================
+  Widget _buildBottomToggle(ThemeData theme) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          _isLoginTab ? context.l10n.dontHaveAccount : context.l10n.alreadyHaveAccount,
+          style: TextStyle(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            fontSize: 14,
+          ),
+        ),
+        TextButton(
+          onPressed: () {
+            setState(() {
+              _isLoginTab = !_isLoginTab;
+              if (!_isLoginTab) _registerStep = 0;
+            });
+          },
+          child: Text(
+            _isLoginTab ? context.l10n.register : context.l10n.login,
+            style: TextStyle(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // =================== INPUT DECORATION ===================
   InputDecoration _inputDecoration({
     required ThemeData theme,
     required bool isDark,
@@ -986,10 +1129,17 @@ class _EmailScreenState extends State<EmailScreen>
   }) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+      hintStyle: TextStyle(
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+        fontSize: 14,
+      ),
       filled: true,
-      fillColor: isDark ? Colors.grey[900] : Colors.grey[50],
-      prefixIcon: Icon(icon, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+      fillColor: isDark ? const Color(0xFF141414) : Colors.white,
+      prefixIcon: Icon(
+        icon,
+        size: 20,
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+      ),
       suffixIcon: suffixIcon,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       border: OutlineInputBorder(
@@ -998,237 +1148,31 @@ class _EmailScreenState extends State<EmailScreen>
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
+        borderSide: BorderSide(
+          color: isDark ? Colors.white12 : Colors.grey.shade200,
+          width: 1,
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+        borderSide: BorderSide(
+          color: theme.colorScheme.primary,
+          width: 2,
+        ),
       ),
-    );
-  }
-}
-
-// =================== FORGOT PASSWORD BOTTOM SHEET ===================
-class _ForgotPasswordSheet extends StatefulWidget {
-  final AuthRepository authRepository;
-  final VoidCallback onSuccess;
-
-  const _ForgotPasswordSheet({
-    required this.authRepository,
-    required this.onSuccess,
-  });
-
-  @override
-  State<_ForgotPasswordSheet> createState() => _ForgotPasswordSheetState();
-}
-
-class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
-  int _step = 0; // 0: Email, 1: Code, 2: New Password
-  bool _isLoading = false;
-  final _emailController = TextEditingController();
-  final _codeController = TextEditingController();
-  final _newPasswordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _codeController.dispose();
-    _newPasswordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _sendForgotCode() async {
-    final email = _emailController.text.trim();
-    if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(email)) {
-      MessageService.showError(context: context, message: 'Please enter a valid email');
-      return;
-    }
-    setState(() => _isLoading = true);
-    try {
-      await widget.authRepository.forgotPassword(email: email);
-      if (!mounted) return;
-      setState(() => _step = 1);
-    } catch (e) {
-      if (!mounted) return;
-      MessageService.showError(context: context, message: e.toString().replaceAll('Exception: ', ''));
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _verifyResetCode() async {
-    final code = _codeController.text.trim();
-    if (code.length != 6) {
-      MessageService.showError(context: context, message: 'Please enter the 6-digit code');
-      return;
-    }
-    setState(() => _isLoading = true);
-    try {
-      await widget.authRepository.verifyResetCode(
-        email: _emailController.text.trim(),
-        code: code,
-      );
-      if (!mounted) return;
-      setState(() => _step = 2);
-    } catch (e) {
-      if (!mounted) return;
-      MessageService.showError(context: context, message: e.toString().replaceAll('Exception: ', ''));
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _resetPassword() async {
-    final newPass = _newPasswordController.text;
-    final confirmPass = _confirmPasswordController.text;
-    if (newPass.length < 8) {
-      MessageService.showError(context: context, message: 'Password must be at least 8 characters');
-      return;
-    }
-    if (newPass != confirmPass) {
-      MessageService.showError(context: context, message: 'Passwords do not match');
-      return;
-    }
-    setState(() => _isLoading = true);
-    try {
-      await widget.authRepository.resetPassword(
-        email: _emailController.text.trim(),
-        newPassword: newPass,
-        confirmPassword: confirmPass,
-      );
-      if (!mounted) return;
-      widget.onSuccess();
-    } catch (e) {
-      if (!mounted) return;
-      MessageService.showError(context: context, message: e.toString().replaceAll('Exception: ', ''));
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? Colors.grey[900] : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(
+          color: Colors.redAccent,
+          width: 1,
+        ),
       ),
-      padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            context.l10n.forgotPassword,
-            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 16),
-          if (_step == 0) ...[
-            TextField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(
-                hintText: context.l10n.email,
-                filled: true,
-                fillColor: isDark ? Colors.black : Colors.grey[100],
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _isLoading ? null : _sendForgotCode,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
-                foregroundColor: theme.colorScheme.onPrimary,
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              child: _isLoading
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : Text(context.l10n.sendCode),
-            ),
-          ] else if (_step == 1) ...[
-            TextField(
-              controller: _codeController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                hintText: '6-digit Reset Code',
-                filled: true,
-                fillColor: isDark ? Colors.black : Colors.grey[100],
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _isLoading ? null : _verifyResetCode,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
-                foregroundColor: theme.colorScheme.onPrimary,
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              child: _isLoading
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : Text(context.l10n.verify),
-            ),
-          ] else ...[
-            TextField(
-              controller: _newPasswordController,
-              obscureText: true,
-              decoration: InputDecoration(
-                hintText: 'New Password',
-                filled: true,
-                fillColor: isDark ? Colors.black : Colors.grey[100],
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _confirmPasswordController,
-              obscureText: true,
-              decoration: InputDecoration(
-                hintText: context.l10n.confirmPassword,
-                filled: true,
-                fillColor: isDark ? Colors.black : Colors.grey[100],
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _isLoading ? null : _resetPassword,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
-                foregroundColor: theme.colorScheme.onPrimary,
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              child: _isLoading
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text('Reset Password'),
-            ),
-          ],
-        ],
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(
+          color: Colors.redAccent,
+          width: 2,
+        ),
       ),
     );
   }

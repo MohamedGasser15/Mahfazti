@@ -57,11 +57,15 @@ class AuthRepository {
   }
 
   /// Send email verification code for registration
-  Future<Map<String, dynamic>> sendCode({required String email}) async {
+  Future<Map<String, dynamic>> sendCode({required String email, String? language}) async {
+    final currentLang = language ?? SharedPrefs.appLanguage;
     try {
       final response = await _apiService.post(
         ApiEndpoints.sendCode,
-        {'email': email},
+        {
+          'email': email,
+          'language': currentLang,
+        },
       );
       final data = _apiService.handleResponse(response);
       if (data['success'] == false) {
@@ -104,7 +108,9 @@ class AuthRepository {
     required String email,
     required String password,
     required String confirmPassword,
+    String? preferredLanguage,
   }) async {
+    final currentLang = preferredLanguage ?? SharedPrefs.appLanguage;
     try {
       final response = await _apiService.post(
         ApiEndpoints.register,
@@ -113,6 +119,7 @@ class AuthRepository {
           'email': email,
           'password': password,
           'confirmPassword': confirmPassword,
+          'preferredLanguage': currentLang,
         },
       );
       final data = _apiService.handleResponse(response);
@@ -250,6 +257,19 @@ class AuthRepository {
       throw Exception(data['message'] ?? 'Failed to set currency');
     }
     await SharedPrefs.setCurrency(currency);
+  }
+
+  /// Set user preferred language on backend
+  Future<void> setUserLanguage(String language) async {
+    final response = await _apiService.post(
+      ApiEndpoints.setLanguage,
+      {'language': language},
+      requiresAuth: true,
+    );
+    final data = _apiService.handleResponse(response);
+    if (data['success'] != true) {
+      throw Exception(data['message'] ?? 'Failed to set language');
+    }
   }
 
   /// Social login (Google / Facebook)
