@@ -1,5 +1,5 @@
 name: my_wallet
-description: "A new Flutter project."
+description: "Mahfazti - personal wallet and expense tracking app with voice entry, budgets, and analytics."
 publish_to: 'none'
 
 version: 1.0.0+1
