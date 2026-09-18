@@ -3,6 +3,7 @@ class UserProfile {
   final String userName;
   final String email;
   final String phoneNumber;
+  final String? preferredLanguage;
   final String? profileImageUrl;
 
   UserProfile({
@@ -10,6 +11,7 @@ class UserProfile {
     required this.userName,
     required this.email,
     required this.phoneNumber,
+    this.preferredLanguage,
     this.profileImageUrl,
   });
 
@@ -19,7 +21,8 @@ class UserProfile {
       userName: json['userName'] ?? '',
       email: json['email'] ?? '',
       phoneNumber: json['phoneNumber'] ?? '',
-      profileImageUrl: json['profileImageUrl'],
+      preferredLanguage: json['preferredLanguage'],
+      profileImageUrl: json['profileImageUrl'] ?? json['imagePath'],
     );
   }
 
@@ -29,6 +32,7 @@ class UserProfile {
       'userName': userName,
       'email': email,
       'phoneNumber': phoneNumber,
+      'preferredLanguage': preferredLanguage,
       'profileImageUrl': profileImageUrl,
     };
   }

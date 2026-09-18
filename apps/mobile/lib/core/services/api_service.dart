@@ -24,10 +24,12 @@ class ApiService {
       ),
     );
 
-    // Auth Interceptor
+    // Auth and Language Interceptor
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
+          options.headers['Accept-Language'] = SharedPrefs.appLanguage;
+
           final requiresAuth = options.extra['requiresAuth'] == true;
           if (requiresAuth) {
             final token = SharedPrefs.authToken;

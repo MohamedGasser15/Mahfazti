@@ -1168,4 +1168,60 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get continueWithFacebook => 'Continue with Facebook';
+
+  @override
+  String get signInSubtitle =>
+      'Welcome back! Please enter your details to sign in.';
+
+  @override
+  String get signUpSubtitle =>
+      'Create an account to start managing your money easily.';
+
+  @override
+  String get resetPasswordTitle => 'Reset Password';
+
+  @override
+  String get resetPasswordSubtitle =>
+      'Enter your email address to receive a recovery code.';
+
+  @override
+  String get enterNewPassword => 'Enter New Password';
+
+  @override
+  String get setNewPasswordDescription =>
+      'Choose a strong password with at least 8 characters.';
+
+  @override
+  String get passwordResetSuccess =>
+      'Password reset successfully! Please sign in.';
+
+  @override
+  String get stepEmail => 'Email';
+
+  @override
+  String get stepOtp => 'Verification';
+
+  @override
+  String get stepProfile => 'Security';
+
+  @override
+  String get changeEmail => 'Change Email';
+
+  @override
+  String get passwordMinLength => 'Password must be at least 8 characters';
+
+  @override
+  String get fullNameRequired => 'Full name is required';
+
+  @override
+  String get emailRequired => 'Email is required';
+
+  @override
+  String get validEmailRequired => 'Please enter a valid email address';
+
+  @override
+  String get passwordRequired => 'Password is required';
+
+  @override
+  String get digitCodeRequired => 'Please enter the 6-digit code';
 }

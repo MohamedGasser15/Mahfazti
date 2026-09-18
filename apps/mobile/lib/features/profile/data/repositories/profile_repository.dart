@@ -79,6 +79,7 @@ class ProfileRepository {
     required String fullName,
     required String userName,
     required String phoneNumber,
+    String? preferredLanguage,
     String? profileImage,
   }) async {
     final response = await _apiService.put(
@@ -87,6 +88,7 @@ class ProfileRepository {
         'fullName': fullName,
         'userName': userName,
         'phoneNumber': phoneNumber,
+        if (preferredLanguage != null) 'preferredLanguage': preferredLanguage,
       },
       requiresAuth: true,
     );
@@ -99,6 +101,9 @@ class ProfileRepository {
     currentUserData['fullName'] = updated.fullName;
     currentUserData['userName'] = updated.userName;
     currentUserData['phoneNumber'] = updated.phoneNumber;
+    if (updated.preferredLanguage != null) {
+      currentUserData['preferredLanguage'] = updated.preferredLanguage;
+    }
     if (updated.profileImageUrl != null) {
       currentUserData['profileImageUrl'] = updated.profileImageUrl;
     }

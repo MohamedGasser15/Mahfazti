@@ -1,7 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:my_wallet/core/constants/api_constants.dart';
 import 'package:my_wallet/core/constants/app_constants.dart';
+import 'package:my_wallet/core/services/api_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 
 class LanguageService {
@@ -41,6 +43,20 @@ class LanguageService {
     try {
       await SharedPrefs.setAppLanguage(locale.languageCode);
       localeNotifier.value = locale;
+
+      // If user is authenticated, sync preferred language to server in background
+      final token = SharedPrefs.authToken;
+      if (token != null && token.isNotEmpty) {
+        try {
+          await ApiService().post(
+            ApiEndpoints.setLanguage,
+            {'language': locale.languageCode},
+            requiresAuth: true,
+          );
+        } catch (e) {
+          debugPrint('Failed to sync preferred language to server: $e');
+        }
+      }
     } catch (e) {
       debugPrint('Error saving locale: $e');
     }

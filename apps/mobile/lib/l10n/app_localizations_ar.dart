@@ -1155,11 +1155,66 @@ class AppLocalizationsAr extends AppLocalizations {
   String get insights => 'الإحصائيات';
 
   @override
-  String get orContinueWith => 'أو متابعة عن طريق';
+  String get orContinueWith => 'أو المتابعة عن طريق';
 
   @override
   String get continueWithGoogle => 'متابعة عبر Google';
 
   @override
   String get continueWithFacebook => 'متابعة عبر Facebook';
+
+  @override
+  String get signInSubtitle => 'أهلاً بك مجدداً! يرجى إدخال بياناتك للمتابعة.';
+
+  @override
+  String get signUpSubtitle =>
+      'أنشئ حساباً جديداً للبدء في إدارة أموالك بسهولة.';
+
+  @override
+  String get resetPasswordTitle => 'استعادة كلمة المرور';
+
+  @override
+  String get resetPasswordSubtitle =>
+      'أدخل بريدك الإلكتروني لتلقي رمز استعادة الحساب.';
+
+  @override
+  String get enterNewPassword => 'تعيين كلمة المرور الجديدة';
+
+  @override
+  String get setNewPasswordDescription =>
+      'اختر كلمة مرور قوية لا تقل عن 8 أحرف.';
+
+  @override
+  String get passwordResetSuccess =>
+      'تمت إعادة تعيين كلمة المرور بنجاح! يمكنك الآن تسجيل الدخول.';
+
+  @override
+  String get stepEmail => 'البريد الإلكتروني';
+
+  @override
+  String get stepOtp => 'رمز التحقق';
+
+  @override
+  String get stepProfile => 'كلمة المرور';
+
+  @override
+  String get changeEmail => 'تعديل البريد';
+
+  @override
+  String get passwordMinLength => 'يجب أن تكون كلمة المرور 8 أحرف على الأقل';
+
+  @override
+  String get fullNameRequired => 'الاسم الكامل مطلوب';
+
+  @override
+  String get emailRequired => 'البريد الإلكتروني مطلوب';
+
+  @override
+  String get validEmailRequired => 'يرجى إدخال بريد إلكتروني صالح';
+
+  @override
+  String get passwordRequired => 'كلمة المرور مطلوبة';
+
+  @override
+  String get digitCodeRequired => 'يرجى إدخال الرمز المكون من 6 أرقام';
 }

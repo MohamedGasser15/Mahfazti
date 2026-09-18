@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
+import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/widgets/custom_button.dart';
 import 'package:my_wallet/core/widgets/custom_text_field.dart';
@@ -74,21 +75,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 12),
-                Expanded(child: Text(context.l10n.profileUpdatedSuccess)),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
+        MessageService.showSuccess(
+          context: context,
+          message: context.l10n.profileUpdatedSuccess,
         );
         widget.onProfileUpdated?.call();
         Navigator.pop(context);

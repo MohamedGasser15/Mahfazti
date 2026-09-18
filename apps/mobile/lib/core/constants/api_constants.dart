@@ -14,6 +14,7 @@ class ApiEndpoints {
   static const String googleLogin = 'api/Auth/GoogleMobile';
   static const String facebookLogin = 'api/Auth/FacebookMobile';
   static const String setCurrency = 'api/Auth/set-currency';
+  static const String setLanguage = 'api/Auth/set-language';
 
   // Wallet
   static const String walletHome = 'api/wallet/home';

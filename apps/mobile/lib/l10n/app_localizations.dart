@@ -2257,6 +2257,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Continue with Facebook'**
   String get continueWithFacebook;
+
+  /// No description provided for @signInSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome back! Please enter your details to sign in.'**
+  String get signInSubtitle;
+
+  /// No description provided for @signUpSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create an account to start managing your money easily.'**
+  String get signUpSubtitle;
+
+  /// No description provided for @resetPasswordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Password'**
+  String get resetPasswordTitle;
+
+  /// No description provided for @resetPasswordSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email address to receive a recovery code.'**
+  String get resetPasswordSubtitle;
+
+  /// No description provided for @enterNewPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter New Password'**
+  String get enterNewPassword;
+
+  /// No description provided for @setNewPasswordDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a strong password with at least 8 characters.'**
+  String get setNewPasswordDescription;
+
+  /// No description provided for @passwordResetSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Password reset successfully! Please sign in.'**
+  String get passwordResetSuccess;
+
+  /// No description provided for @stepEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get stepEmail;
+
+  /// No description provided for @stepOtp.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification'**
+  String get stepOtp;
+
+  /// No description provided for @stepProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Security'**
+  String get stepProfile;
+
+  /// No description provided for @changeEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Email'**
+  String get changeEmail;
+
+  /// No description provided for @passwordMinLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must be at least 8 characters'**
+  String get passwordMinLength;
+
+  /// No description provided for @fullNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Full name is required'**
+  String get fullNameRequired;
+
+  /// No description provided for @emailRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Email is required'**
+  String get emailRequired;
+
+  /// No description provided for @validEmailRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email address'**
+  String get validEmailRequired;
+
+  /// No description provided for @passwordRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Password is required'**
+  String get passwordRequired;
+
+  /// No description provided for @digitCodeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter the 6-digit code'**
+  String get digitCodeRequired;
 }
 
 class _AppLocalizationsDelegate
