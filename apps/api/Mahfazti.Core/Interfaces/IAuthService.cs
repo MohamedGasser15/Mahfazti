@@ -10,6 +10,7 @@ namespace Mahfazti.Core.Interfaces
         Task RevokeRefreshToken(string userId, string refreshToken);
         Task<bool> CheckEmailExists(string email);
         Task<ApiResponse<object>> SetUserCurrencyAsync(string userId, string currency);
+        Task<ApiResponse<object>> SetUserLanguageAsync(string userId, string language);
         Task<ApiResponse<object>> LogoutAsync(string userId);
     }
 }

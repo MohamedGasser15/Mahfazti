@@ -302,7 +302,12 @@ namespace Mahfazti.Api.Controllers
                     return BadRequest(ApiResponse<object>.FailResponse("Validation failed", errors));
                 }
 
-                var preferredLanguage = CultureInfo.CurrentUICulture.Name;
+                var preferredLanguage = !string.IsNullOrWhiteSpace(model?.PreferredLanguage)
+                    ? model.PreferredLanguage
+                    : (Request.Headers.TryGetValue("Accept-Language", out var langHeader) && !string.IsNullOrWhiteSpace(langHeader)
+                        ? langHeader.ToString()
+                        : (CultureInfo.CurrentUICulture.Name.StartsWith("ar", StringComparison.OrdinalIgnoreCase) ? "ar" : "en"));
+
                 var response = await _userService.Register(model!, preferredLanguage);
                 if (response == null)
                 {
@@ -379,7 +384,13 @@ namespace Mahfazti.Api.Controllers
                     return BadRequest(ApiResponse<object>.FailResponse("Validation failed", errors));
                 }
 
-                var response = await _userService.SendVerificationCodeAsync(dto!.Email);
+                var language = !string.IsNullOrWhiteSpace(dto?.Language)
+                    ? dto.Language
+                    : (Request.Headers.TryGetValue("Accept-Language", out var langHeader) && !string.IsNullOrWhiteSpace(langHeader)
+                        ? langHeader.ToString()
+                        : "ar");
+
+                var response = await _userService.SendVerificationCodeAsync(dto!.Email, language);
                 if (response == null)
                 {
                     return StatusCode(500, ApiResponse<object>.FailResponse("حدث خطأ أثناء إرسال كود التفعيل"));
@@ -427,6 +438,15 @@ namespace Mahfazti.Api.Controllers
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var result = await _authService.SetUserCurrencyAsync(userId, dto.Currency);
+            return StatusCode((int)result.StatusCode, result);
+        }
+
+        [Authorize]
+        [HttpPost("set-language")]
+        public async Task<IActionResult> SetLanguage([FromBody] SetLanguageDto dto)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var result = await _authService.SetUserLanguageAsync(userId, dto.Language);
             return StatusCode((int)result.StatusCode, result);
         }
 

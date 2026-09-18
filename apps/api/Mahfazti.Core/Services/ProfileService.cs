@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Mahfazti.Core.DTOs.Profile;
 using Mahfazti.Core.Interfaces;
 using Mahfazti.Core.Entities;
@@ -23,6 +23,7 @@ namespace Mahfazti.Core.Services
                 UserName = user.UserName ?? "",
                 Email = user.Email ?? "",
                 PhoneNumber = user.PhoneNumber ?? "",
+                PreferredLanguage = user.PreferredLanguage,
                 ImagePath = user.ImagePath
             };
         }
@@ -32,10 +33,14 @@ namespace Mahfazti.Core.Services
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) throw new Exception("User not found");
 
-            user.FullName = dto.FullName;
-            user.UserName = dto.UserName;
-            user.PhoneNumber = dto.PhoneNumber;
-
+            if (!string.IsNullOrWhiteSpace(dto.FullName))
+                user.FullName = dto.FullName;
+            if (!string.IsNullOrWhiteSpace(dto.UserName))
+                user.UserName = dto.UserName;
+            if (!string.IsNullOrWhiteSpace(dto.PhoneNumber))
+                user.PhoneNumber = dto.PhoneNumber;
+            if (!string.IsNullOrWhiteSpace(dto.PreferredLanguage))
+                user.PreferredLanguage = dto.PreferredLanguage;
 
             var result = await _userManager.UpdateAsync(user);
             if (!result.Succeeded)

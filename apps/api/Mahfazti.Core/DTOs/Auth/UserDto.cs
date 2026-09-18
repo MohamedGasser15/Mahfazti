@@ -8,6 +8,7 @@ namespace Mahfazti.Core.DTOs.Auth
         public string UserName { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
         public string? Currency { get; set; }
+        public string? PreferredLanguage { get; set; } = "ar";
         public string? ImagePath { get; set; }
         public string? Role { get; set; }
         public bool IsLocked { get; set; }

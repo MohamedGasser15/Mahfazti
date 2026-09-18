@@ -170,7 +170,7 @@ namespace Mahfazti.Core.Services
             }
         }
 
-        public async Task<ApiResponse<object>> SendVerificationCodeAsync(string email)
+        public async Task<ApiResponse<object>> SendVerificationCodeAsync(string email, string language = "ar")
         {
             try
             {
@@ -185,10 +185,10 @@ namespace Mahfazti.Core.Services
                 var code = GenerateRandomCode();
                 _cache.Set($"verify:{email}", code, TimeSpan.FromMinutes(10));
 
-                var emailBody = _emailTemplateService.GenerateVerificationEmail(code, "ar");
+                var emailBody = _emailTemplateService.GenerateVerificationEmail(code, language);
                 await _emailSender.SendEmailAsync(
                     email,
-                    _emailTemplateService.GetLocalizedText("EmailSubjectVerificationCode", "ar"),
+                    _emailTemplateService.GetLocalizedText("EmailSubjectVerificationCode", language),
                     emailBody
                 );
 
@@ -259,21 +259,13 @@ namespace Mahfazti.Core.Services
                     );
                 }
 
-                if (await IsFullNameExistsAsync(request.FullName))
-                {
-                    return ApiResponse<object>.FailResponse(
-                        "هذا الاسم مستخدم مسبقاً",
-                        new List<string> { "Duplicate full name" }
-                    );
-                }
-
                 var user = new ApplicationUser
                 {
                     UserName = request.Email,
                     Email = request.Email,
                     FullName = request.FullName,
                     EmailConfirmed = true,
-                    PreferredLanguage = preferredLanguage ?? "ar",
+                    PreferredLanguage = preferredLanguage ?? request.PreferredLanguage ?? "ar",
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -296,6 +288,7 @@ namespace Mahfazti.Core.Services
                     UserName = user.UserName ?? "",
                     PhoneNumber = user.PhoneNumber ?? "",
                     Currency = user.Currency,
+                    PreferredLanguage = user.PreferredLanguage,
                     Role = Roles.User,
                     CreatedAt = user.CreatedAt
                 };
@@ -331,6 +324,7 @@ namespace Mahfazti.Core.Services
                     Email = user.Email ?? "",
                     PhoneNumber = user.PhoneNumber ?? "",
                     Currency = user.Currency,
+                    PreferredLanguage = user.PreferredLanguage,
                     ImagePath = user.ImagePath,
                     Role = roles.FirstOrDefault() ?? Roles.User,
                     IsLocked = await _userManager.IsLockedOutAsync(user),

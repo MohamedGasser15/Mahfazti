@@ -133,6 +133,7 @@ namespace Mahfazti.Core.Services
                     UserName = user.UserName ?? "",
                     PhoneNumber = user.PhoneNumber ?? "",
                     Currency = user.Currency,
+                    PreferredLanguage = user.PreferredLanguage,
                     ImagePath = user.ImagePath,
                     Role = roles.FirstOrDefault() ?? "User",
                     CreatedAt = user.CreatedAt
@@ -282,6 +283,35 @@ namespace Mahfazti.Core.Services
             catch (Exception ex)
             {
                 return ApiResponse<object>.FailResponse("حدث خطأ أثناء تحديث العملة", new List<string> { ex.Message });
+            }
+        }
+
+        public async Task<ApiResponse<object>> SetUserLanguageAsync(string userId, string language)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return ApiResponse<object>.FailResponse("المستخدم غير موجود");
+                }
+
+                user.PreferredLanguage = language;
+                var result = await _userManager.UpdateAsync(user);
+
+                if (!result.Succeeded)
+                {
+                    return ApiResponse<object>.FailResponse(
+                        "فشل تحديث اللغة المفضلة",
+                        result.Errors.Select(e => e.Description).ToList()
+                    );
+                }
+
+                return ApiResponse<object>.SuccessResponse(null, "تم تحديث اللغة المفضلة بنجاح");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<object>.FailResponse("حدث خطأ أثناء تحديث اللغة", new List<string> { ex.Message });
             }
         }
 

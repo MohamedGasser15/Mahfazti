@@ -1,4 +1,4 @@
-﻿namespace Mahfazti.Core.DTOs.Profile
+namespace Mahfazti.Core.DTOs.Profile
 {
     public class ProfileResponseDto
     {
@@ -6,6 +6,7 @@
         public string UserName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
+        public string? PreferredLanguage { get; set; }
         public string? ImagePath { get; set; }
     }
 }

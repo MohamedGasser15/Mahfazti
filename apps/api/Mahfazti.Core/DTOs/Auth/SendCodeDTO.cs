@@ -7,5 +7,7 @@ namespace Mahfazti.Core.DTOs.Auth
         [Required(ErrorMessage = "البريد الإلكتروني مطلوب")]
         [EmailAddress(ErrorMessage = "صيغة البريد الإلكتروني غير صحيحة")]
         public string Email { get; set; } = string.Empty;
+
+        public string? Language { get; set; } = "ar";
     }
 }

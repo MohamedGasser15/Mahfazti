@@ -22,5 +22,7 @@ namespace Mahfazti.Core.DTOs.Auth
         [DataType(DataType.Password)]
         [Compare("Password", ErrorMessage = "كلمة المرور وتأكيدها غير متطابقين")]
         public string ConfirmPassword { get; set; } = string.Empty;
+
+        public string? PreferredLanguage { get; set; } = "ar";
     }
 }
