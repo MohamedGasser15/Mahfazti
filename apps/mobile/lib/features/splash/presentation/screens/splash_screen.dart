@@ -1,11 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:my_wallet/core/constants/app_constants.dart';
 import 'package:my_wallet/core/constants/app_routes.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
-import 'package:my_wallet/core/services/wallet_cache_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
-import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 
 class SplashScreen extends StatefulWidget {
   final Function(Locale) onLocaleChanged;
@@ -19,7 +15,6 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  final AuthRepository _authRepository = AuthRepository();
 
   late Animation<double> _logoScale;
   late Animation<double> _logoRotation;
@@ -104,78 +99,39 @@ class _SplashScreenState extends State<SplashScreen>
     _controller.forward();
   }
 
-  String? _getCachedEmail() {
-    final directEmail = SharedPrefs.getStringValue(AppConstants.userEmailKey);
-    if (directEmail != null && directEmail.isNotEmpty) return directEmail;
-
-    final userData = SharedPrefs.userData;
-    if (userData != null) {
-      try {
-        final decoded = jsonDecode(userData) as Map<String, dynamic>;
-        return decoded['email'] as String?;
-      } catch (_) {}
-    }
-    return null;
-  }
-
-  void _navigateToSecurityScreen() {
+  void _navigateToMain() {
     if (!mounted) return;
-
-    final hasPasscode = SharedPrefs.getStringValue(AppConstants.userPasswordKey) != null;
-    final route = hasPasscode ? AppRoutes.pin : AppRoutes.setPasscode;
-
-    Navigator.of(context).pushReplacementNamed(
-      route,
-      arguments: hasPasscode
-          ? {
-              'isFirstTime': false,
-              'showBiometricFirst': true,
-            }
-          : null,
-    );
+    final currency = SharedPrefs.currency;
+    if (currency == null || currency.isEmpty) {
+      Navigator.of(context).pushReplacementNamed(AppRoutes.currencySelection);
+    } else {
+      Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+    }
   }
 
   Future<void> _checkAuthStatus() async {
     final token = SharedPrefs.authToken;
 
     if (token == null || token.isEmpty) {
-      _navigateToOnboarding();
-      return;
-    }
-
-    final email = _getCachedEmail();
-    if (email == null || email.isEmpty) {
-      _navigateToSecurityScreen();
-      return;
-    }
-
-    try {
-      final exists = await _authRepository.checkEmail(email);
-      if (!exists) {
-        await _forceLogout();
-        if (!mounted) return;
+      if (SharedPrefs.isFirstTime) {
         _navigateToOnboarding();
-        return;
+      } else {
+        _navigateToLogin();
       }
-    } catch (_) {
-      // Allow offline PIN entry if server is unreachable
+      return;
     }
 
-    _navigateToSecurityScreen();
-  }
-
-  Future<void> _forceLogout() async {
-    await SharedPrefs.removeAuthToken();
-    await SharedPrefs.removeUserData();
-    await SharedPrefs.removeKey(AppConstants.userPasswordKey);
-    await SharedPrefs.removeKey(AppConstants.userEmailKey);
-    await SharedPrefs.removeSecureKey(AppConstants.userEmailKey);
-    await WalletCacheService.invalidateAll();
+    _navigateToMain();
   }
 
   void _navigateToOnboarding() {
     if (!mounted) return;
     Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
+  }
+
+  void _navigateToLogin() {
+    if (!mounted) return;
+    Navigator.of(context).pushReplacementNamed(AppRoutes.email);
   }
 
   @override

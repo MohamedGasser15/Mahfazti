@@ -6,6 +6,7 @@ class AppConstants {
   // Storage Keys
   static const String isFirstTimeKey = 'isFirstTime';
   static const String authTokenKey = 'authToken';
+  static const String refreshTokenKey = 'refreshToken';
   static const String userDataKey = 'userData';
   static const String appLanguageKey = 'appLanguage';
   static const String hideBalancesKey = 'hideBalances';

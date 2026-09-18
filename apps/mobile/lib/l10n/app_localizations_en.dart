@@ -15,6 +15,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get account => 'Account';
 
   @override
+  String get accountCreatedSuccess => 'Account created successfully!';
+
+  @override
+  String get verify => 'Verify';
+
+  @override
+  String get sendCode => 'Send Code';
+
+  @override
   String get add => 'Add';
 
   @override

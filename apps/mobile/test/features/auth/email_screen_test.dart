@@ -17,11 +17,11 @@ Widget createTestApp() {
 }
 
 void main() {
-  testWidgets('renders email text field', (tester) async {
+  testWidgets('renders email and password text fields on login tab', (tester) async {
     await tester.pumpWidget(createTestApp());
     await tester.pump(const Duration(milliseconds: 1500));
 
-    expect(find.byType(TextField), findsOneWidget);
+    expect(find.byType(TextFormField), findsNWidgets(2));
   });
 
   testWidgets('back button is rendered', (tester) async {
@@ -31,26 +31,14 @@ void main() {
     expect(find.byIcon(Icons.arrow_back_ios), findsWidgets);
   });
 
-  testWidgets('shows clear button when text is entered', (tester) async {
+  testWidgets('switches to register tab when tapped', (tester) async {
     await tester.pumpWidget(createTestApp());
     await tester.pump(const Duration(milliseconds: 1500));
 
-    await tester.enterText(find.byType(TextField), 'test@example.com');
-    await tester.pump();
+    // Tap register tab
+    await tester.tap(find.text('Register'));
+    await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.cancel_outlined), findsOneWidget);
-  });
-
-  testWidgets('clears text when clear button is pressed', (tester) async {
-    await tester.pumpWidget(createTestApp());
-    await tester.pump(const Duration(milliseconds: 1500));
-
-    await tester.enterText(find.byType(TextField), 'test@example.com');
-    await tester.pump();
-
-    await tester.tap(find.byIcon(Icons.cancel_outlined));
-    await tester.pump();
-
-    expect(find.byIcon(Icons.cancel_outlined), findsNothing);
+    expect(find.byType(TextField), findsOneWidget); // Email input in step 0
   });
 }

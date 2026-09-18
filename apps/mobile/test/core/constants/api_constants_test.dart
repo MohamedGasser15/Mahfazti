@@ -4,18 +4,20 @@ import 'package:my_wallet/core/constants/api_constants.dart';
 void main() {
   group('ApiEndpoints', () {
     final endpoints = [
-      ApiEndpoints.sendVerification,
-      ApiEndpoints.verifyCode,
-      ApiEndpoints.resendCode,
-      ApiEndpoints.verifyAndComplete,
+      ApiEndpoints.login,
+      ApiEndpoints.register,
+      ApiEndpoints.sendCode,
+      ApiEndpoints.verifyEmail,
+      ApiEndpoints.forgotPassword,
+      ApiEndpoints.verifyResetCode,
+      ApiEndpoints.resetPassword,
+      ApiEndpoints.refresh,
+      ApiEndpoints.revoke,
       ApiEndpoints.logout,
       ApiEndpoints.checkEmail,
-      ApiEndpoints.recoveryCheckUser,
-      ApiEndpoints.recoveryVerifyPassword,
-      ApiEndpoints.recoveryRequestEmailChange,
-      ApiEndpoints.recoveryConfirmEmailChange,
-      ApiEndpoints.forgotPasscode,
-      ApiEndpoints.resetPasscode,
+      ApiEndpoints.googleLogin,
+      ApiEndpoints.facebookLogin,
+      ApiEndpoints.setCurrency,
       ApiEndpoints.walletHome,
       ApiEndpoints.walletBalance,
       ApiEndpoints.walletTransactions,
@@ -23,7 +25,6 @@ void main() {
       ApiEndpoints.walletDeleteTransaction,
       ApiEndpoints.walletSummary,
       ApiEndpoints.budget,
-      ApiEndpoints.setCurrency,
       ApiEndpoints.walletUpdateTransaction,
       ApiEndpoints.categories,
       ApiEndpoints.categoryById,
@@ -46,55 +47,36 @@ void main() {
       }
     });
 
-    test('sendVerification has expected value', () {
-      expect(ApiEndpoints.sendVerification, 'api/auth/send-verification');
+    test('login has expected value', () {
+      expect(ApiEndpoints.login, 'api/Auth/Login');
     });
 
-    test('verifyCode has expected value', () {
-      expect(ApiEndpoints.verifyCode, 'api/auth/verify-code');
+    test('register has expected value', () {
+      expect(ApiEndpoints.register, 'api/Auth/Register');
     });
 
-    test('resendCode has expected value', () {
-      expect(ApiEndpoints.resendCode, 'api/auth/resend-code');
+    test('sendCode has expected value', () {
+      expect(ApiEndpoints.sendCode, 'api/Auth/send-code');
     });
 
-    test('verifyAndComplete has expected value', () {
-      expect(ApiEndpoints.verifyAndComplete, 'api/auth/verify-complete');
+    test('verifyEmail has expected value', () {
+      expect(ApiEndpoints.verifyEmail, 'api/Auth/verify-email');
     });
 
     test('logout has expected value', () {
-      expect(ApiEndpoints.logout, 'api/auth/logout');
+      expect(ApiEndpoints.logout, 'api/Auth/logout');
     });
 
     test('checkEmail has expected value', () {
-      expect(ApiEndpoints.checkEmail, 'api/auth/check-email');
+      expect(ApiEndpoints.checkEmail, 'api/Auth/check-email');
     });
 
-    test('recoveryCheckUser has expected value', () {
-      expect(ApiEndpoints.recoveryCheckUser, 'api/auth/recovery/check-user');
+    test('forgotPassword has expected value', () {
+      expect(ApiEndpoints.forgotPassword, 'api/Auth/forgot-password');
     });
 
-    test('recoveryVerifyPassword has expected value', () {
-      expect(
-          ApiEndpoints.recoveryVerifyPassword, 'api/auth/recovery/verify-password');
-    });
-
-    test('recoveryRequestEmailChange has expected value', () {
-      expect(ApiEndpoints.recoveryRequestEmailChange,
-          'api/auth/recovery/request-email-change');
-    });
-
-    test('recoveryConfirmEmailChange has expected value', () {
-      expect(ApiEndpoints.recoveryConfirmEmailChange,
-          'api/auth/recovery/confirm-email-change');
-    });
-
-    test('forgotPasscode has expected value', () {
-      expect(ApiEndpoints.forgotPasscode, 'api/auth/passcode/forgot');
-    });
-
-    test('resetPasscode has expected value', () {
-      expect(ApiEndpoints.resetPasscode, 'api/auth/passcode/reset');
+    test('resetPassword has expected value', () {
+      expect(ApiEndpoints.resetPassword, 'api/Auth/reset-password');
     });
 
     test('walletHome has expected value', () {
@@ -127,7 +109,7 @@ void main() {
     });
 
     test('setCurrency has expected value', () {
-      expect(ApiEndpoints.setCurrency, 'api/auth/set-currency');
+      expect(ApiEndpoints.setCurrency, 'api/Auth/set-currency');
     });
 
     test('walletUpdateTransaction has expected value', () {

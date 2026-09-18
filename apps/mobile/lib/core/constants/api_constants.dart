@@ -1,21 +1,19 @@
 class ApiEndpoints {
   // Auth
-  static const String sendVerification = 'api/auth/send-verification';
-  static const String verifyCode = 'api/auth/verify-code';
-  static const String resendCode = 'api/auth/resend-code';
-  static const String verifyAndComplete = 'api/auth/verify-complete';
-  static const String logout = 'api/auth/logout';
-  static const String checkEmail = 'api/auth/check-email';
-  static const String recoveryCheckUser = 'api/auth/recovery/check-user';
-  static const String recoveryVerifyPassword = 'api/auth/recovery/verify-password';
-  static const String recoveryRequestEmailChange = 'api/auth/recovery/request-email-change';
-  static const String recoveryConfirmEmailChange = 'api/auth/recovery/confirm-email-change';
-  static const String forgotPasscode = 'api/auth/passcode/forgot';
-  static const String resetPasscode = 'api/auth/passcode/reset';
-  static const String createPasscode = 'api/auth/passcode/create';
-  static const String googleLogin = 'api/auth/GoogleMobile';
-  static const String facebookLogin = 'api/auth/FacebookMobile';
-  static const String setCurrency = 'api/auth/set-currency';
+  static const String login = 'api/Auth/Login';
+  static const String register = 'api/Auth/Register';
+  static const String sendCode = 'api/Auth/send-code';
+  static const String verifyEmail = 'api/Auth/verify-email';
+  static const String forgotPassword = 'api/Auth/forgot-password';
+  static const String verifyResetCode = 'api/Auth/verify-reset-code';
+  static const String resetPassword = 'api/Auth/reset-password';
+  static const String refresh = 'api/Auth/refresh';
+  static const String revoke = 'api/Auth/revoke';
+  static const String logout = 'api/Auth/logout';
+  static const String checkEmail = 'api/Auth/check-email';
+  static const String googleLogin = 'api/Auth/GoogleMobile';
+  static const String facebookLogin = 'api/Auth/FacebookMobile';
+  static const String setCurrency = 'api/Auth/set-currency';
 
   // Wallet
   static const String walletHome = 'api/wallet/home';

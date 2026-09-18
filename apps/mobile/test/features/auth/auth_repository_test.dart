@@ -73,120 +73,129 @@ void main() {
       repository = AuthRepository();
     });
 
-    group('sendVerification', () {
-      test('sends verification code and stores temp data', () async {
+    group('login', () {
+      test('logs in and saves tokens and user data', () async {
         ApiService().dioForTesting = _mockDio({
-          'send-verification': (options) => _jsonResponse(options, {
+          'Login': (options) => _jsonResponse(options, {
+                'success': true,
+                'data': {
+                  'token': 'mock-access-token',
+                  'refreshToken': 'mock-refresh-token',
+                  'user': {
+                    'id': 'u1',
+                    'email': 'test@example.com',
+                    'fullName': 'Test User',
+                    'currency': 'USD',
+                  },
+                },
+              }),
+        });
+
+        final result = await repository.login(
+          email: 'test@example.com',
+          password: 'Password123',
+        );
+
+        expect(result['success'], isTrue);
+        expect(SharedPrefs.authToken, 'mock-access-token');
+        expect(SharedPrefs.refreshToken, 'mock-refresh-token');
+        expect(SharedPrefs.currency, 'USD');
+      });
+    });
+
+    group('sendCode', () {
+      test('sends code successfully', () async {
+        ApiService().dioForTesting = _mockDio({
+          'send-code': (options) => _jsonResponse(options, {
                 'success': true,
                 'message': 'Code sent',
               }),
         });
 
-        final result = await repository.sendVerification(
-          email: 'test@example.com',
-          isLogin: false,
-        );
-
+        final result = await repository.sendCode(email: 'test@example.com');
         expect(result['success'], isTrue);
-        expect(
-            await SharedPrefs.getSecureString('temp_email'), 'test@example.com');
-        expect(
-            await SharedPrefs.getSecureString('temp_is_login'), 'false');
       });
     });
 
-    group('verifyCode', () {
-      test('stores verified data on success', () async {
+    group('verifyEmail', () {
+      test('verifies email code successfully', () async {
         ApiService().dioForTesting = _mockDio({
-          'verify-code': (options) => _jsonResponse(options, {
+          'verify-email': (options) => _jsonResponse(options, {
                 'success': true,
-                'message': 'Code verified',
+                'message': 'Email verified',
               }),
         });
 
-        final result = await repository.verifyCode(
+        final result = await repository.verifyEmail(
           email: 'test@example.com',
-          verificationCode: '123456',
+          code: '123456',
         );
-
         expect(result['success'], isTrue);
-        expect(
-            await SharedPrefs.getSecureString('verified_email'),
-            'test@example.com');
-        expect(
-            await SharedPrefs.getSecureString('verified_code'), '123456');
-        expect(
-            await SharedPrefs.getSecureString('is_code_verified'), 'true');
       });
     });
 
-    group('completeRegistration', () {
-      test('throws if code is not verified', () async {
-        expect(
-          () => repository.completeRegistration(
-            email: 'test@example.com',
-            verificationCode: '123456',
-            password: 'pass',
-            fullName: 'Test User',
-            userName: 'testuser',
-            phoneNumber: '1234567890',
-          ),
-          throwsA(isA<Exception>()),
-        );
-      });
-
-      test('registers user and stores token when verified', () async {
-        await SharedPrefs.setBool('is_code_verified', true);
+    group('register', () {
+      test('registers user successfully', () async {
         ApiService().dioForTesting = _mockDio({
-          'verify-complete': (options) => _jsonResponse(options, {
+          'Register': (options) => _jsonResponse(options, {
                 'success': true,
-                'token': 'test-token',
+                'message': 'User registered successfully',
               }),
         });
 
-        final result = await repository.completeRegistration(
-          email: 'test@example.com',
-          verificationCode: '123456',
-          password: 'pass',
+        final result = await repository.register(
           fullName: 'Test User',
-          userName: 'testuser',
-          phoneNumber: '1234567890',
+          email: 'test@example.com',
+          password: 'Password123',
+          confirmPassword: 'Password123',
         );
 
         expect(result['success'], isTrue);
-        expect(SharedPrefs.authToken, 'test-token');
       });
     });
 
-    group('completeLogin', () {
-      test('throws if code is not verified', () async {
-        expect(
-          () => repository.completeLogin(
-            email: 'test@example.com',
-            verificationCode: '123456',
-            password: 'pass',
-          ),
-          throwsA(isA<Exception>()),
-        );
-      });
-
-      test('logs in user and stores token when verified', () async {
-        await SharedPrefs.setSecureString('is_code_verified', 'true');
+    group('forgotPassword & resetPassword', () {
+      test('forgotPassword sends reset code', () async {
         ApiService().dioForTesting = _mockDio({
-          'verify-complete': (options) => _jsonResponse(options, {
+          'forgot-password': (options) => _jsonResponse(options, {
                 'success': true,
-                'token': 'login-token',
+                'message': 'Reset code sent',
               }),
         });
 
-        final result = await repository.completeLogin(
-          email: 'test@example.com',
-          verificationCode: '123456',
-          password: 'pass',
-        );
-
+        final result = await repository.forgotPassword(email: 'test@example.com');
         expect(result['success'], isTrue);
-        expect(SharedPrefs.authToken, 'login-token');
+      });
+
+      test('verifyResetCode verifies reset code', () async {
+        ApiService().dioForTesting = _mockDio({
+          'verify-reset-code': (options) => _jsonResponse(options, {
+                'success': true,
+                'message': 'Code valid',
+              }),
+        });
+
+        final result = await repository.verifyResetCode(
+          email: 'test@example.com',
+          code: '123456',
+        );
+        expect(result['success'], isTrue);
+      });
+
+      test('resetPassword resets password successfully', () async {
+        ApiService().dioForTesting = _mockDio({
+          'reset-password': (options) => _jsonResponse(options, {
+                'success': true,
+                'message': 'Password reset',
+              }),
+        });
+
+        final result = await repository.resetPassword(
+          email: 'test@example.com',
+          newPassword: 'NewPassword123',
+          confirmPassword: 'NewPassword123',
+        );
+        expect(result['success'], isTrue);
       });
     });
 
@@ -224,12 +233,14 @@ void main() {
           repository.setUserCurrency('USD'),
           completes,
         );
+        expect(SharedPrefs.currency, 'USD');
       });
     });
 
     group('logout', () {
       test('clears auth data on logout', () async {
         await SharedPrefs.setAuthToken('my-token');
+        await SharedPrefs.setRefreshToken('my-refresh-token');
         await SharedPrefs.setUserData('{"name":"test"}');
         ApiService().dioForTesting = _mockDio({
           'logout': (options) =>
@@ -239,6 +250,7 @@ void main() {
         await repository.logout();
 
         expect(SharedPrefs.authToken, isNull);
+        expect(SharedPrefs.refreshToken, isNull);
         expect(SharedPrefs.userData, isNull);
       });
     });

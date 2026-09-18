@@ -9,10 +9,19 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
-  String get aboutUs => 'معلومات عنا';
+  String get aboutUs => 'من نحن';
 
   @override
   String get account => 'الحساب';
+
+  @override
+  String get accountCreatedSuccess => 'تم إنشاء الحساب بنجاح!';
+
+  @override
+  String get verify => 'تأكيد';
+
+  @override
+  String get sendCode => 'إرسال الرمز';
 
   @override
   String get add => 'إضافة';

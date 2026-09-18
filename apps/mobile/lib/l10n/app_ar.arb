@@ -1,7 +1,10 @@
 {
   "@@locale": "ar",
-  "aboutUs": "معلومات عنا",
+  "aboutUs": "من نحن",
   "account": "الحساب",
+  "accountCreatedSuccess": "تم إنشاء الحساب بنجاح!",
+  "verify": "تأكيد",
+  "sendCode": "إرسال الرمز",
   "add": "إضافة",
   "addDeposit": "إضافة إيداع",
   "addTransaction": "إضافة معاملة",

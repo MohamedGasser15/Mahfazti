@@ -1,14 +1,14 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter/services.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_wallet/core/constants/app_routes.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
-import 'package:my_wallet/core/services/device_info_service.dart';
+import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/services/social_auth_service.dart';
 import 'package:my_wallet/core/utils/app_responsive.dart';
+import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
-import 'package:my_wallet/core/services/message_service.dart';
 
 class EmailScreen extends StatefulWidget {
   const EmailScreen({super.key});
@@ -19,267 +19,287 @@ class EmailScreen extends StatefulWidget {
 
 class _EmailScreenState extends State<EmailScreen>
     with TickerProviderStateMixin {
-  final TextEditingController _emailController = TextEditingController();
-  final FocusNode _emailFocusNode = FocusNode();
   final AuthRepository _authRepository = AuthRepository();
   final SocialAuthService _socialAuthService = SocialAuthService();
 
-  bool _isEmailValid = false;
-  bool _isLoading = false;
-  bool _emailExists = false;
-  String? _deviceName;
-  String? _ipAddress;
+  bool _isLoginTab = true;
+  bool _obscureLoginPassword = true;
+  bool _obscureRegisterPassword = true;
+  bool _obscureRegisterConfirmPassword = true;
 
-  late AnimationController _waveController;
+  bool _isLoggingIn = false;
+  bool _isRegistering = false;
+  bool _isSendingCode = false;
+  bool _isVerifying = false;
+  bool _isSocialLoading = false;
+
+  // Login Form
+  final _loginFormKey = GlobalKey<FormState>();
+  final _loginEmailController = TextEditingController();
+  final _loginPasswordController = TextEditingController();
+
+  // Register Form
+  final _registerFormKey = GlobalKey<FormState>();
+  final _registerEmailController = TextEditingController();
+  final _registerNameController = TextEditingController();
+  final _registerPasswordController = TextEditingController();
+  final _registerConfirmPasswordController = TextEditingController();
+
+  int _registerStep = 0; // 0: Email, 1: OTP, 2: Name & Password
+  String? _registeredEmail;
+  int _resendSeconds = 90;
+  Timer? _resendTimer;
+
+  static const int _codeLength = 6;
+  late final List<TextEditingController> _codeControllers;
+  late final List<FocusNode> _codeFocusNodes;
+
   late AnimationController _fadeController;
   late Animation<double> _logoFade;
   late Animation<Offset> _logoSlide;
-  late Animation<double> _titleFade;
-  late Animation<Offset> _titleSlide;
-  late Animation<double> _formFade;
-  late Animation<Offset> _formSlide;
-  late Animation<double> _socialFade;
-  late Animation<Offset> _socialSlide;
-  final List<double> _dotScales = [1.0, 1.0, 1.0];
-  final List<double> _dotOpacities = [0.5, 0.5, 0.5];
+  late Animation<double> _contentFade;
+  late Animation<Offset> _contentSlide;
 
   @override
   void initState() {
     super.initState();
-    _emailController.addListener(_validateEmail);
-    _loadDeviceInfo();
-
-    _waveController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    );
+    _codeControllers = List.generate(_codeLength, (_) => TextEditingController());
+    _codeFocusNodes = List.generate(_codeLength, (_) => FocusNode());
 
     _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 900),
       vsync: this,
     );
 
     _logoFade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _fadeController,
-        curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
+        curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
       ),
     );
     _logoSlide = Tween<Offset>(
-      begin: const Offset(0, -0.3),
+      begin: const Offset(0, -0.2),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(
         parent: _fadeController,
-        curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
+        curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
       ),
     );
 
-    _titleFade = Tween<double>(begin: 0, end: 1).animate(
+    _contentFade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _fadeController,
-        curve: const Interval(0.2, 0.5, curve: Curves.easeOut),
+        curve: const Interval(0.2, 0.8, curve: Curves.easeOut),
       ),
     );
-    _titleSlide = Tween<Offset>(
-      begin: const Offset(0, 0.2),
+    _contentSlide = Tween<Offset>(
+      begin: const Offset(0, 0.1),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(
         parent: _fadeController,
-        curve: const Interval(0.2, 0.5, curve: Curves.easeOut),
-      ),
-    );
-
-    _formFade = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _fadeController,
-        curve: const Interval(0.4, 0.7, curve: Curves.easeOut),
-      ),
-    );
-    _formSlide = Tween<Offset>(
-      begin: const Offset(0, 0.2),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _fadeController,
-        curve: const Interval(0.4, 0.7, curve: Curves.easeOut),
-      ),
-    );
-
-    _socialFade = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _fadeController,
-        curve: const Interval(0.6, 1.0, curve: Curves.easeOut),
-      ),
-    );
-    _socialSlide = Tween<Offset>(
-      begin: const Offset(0, 0.2),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _fadeController,
-        curve: const Interval(0.6, 1.0, curve: Curves.easeOut),
+        curve: const Interval(0.2, 0.8, curve: Curves.easeOut),
       ),
     );
 
     _fadeController.forward();
   }
 
-  Future<void> _loadDeviceInfo() async {
-    final deviceName = await DeviceInfoService().getDeviceName();
-    final ip = await DeviceInfoService().getPublicIp();
-    if (mounted) {
-      setState(() {
-        _deviceName = deviceName;
-        _ipAddress = ip;
-      });
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _resendTimer?.cancel();
+    _loginEmailController.dispose();
+    _loginPasswordController.dispose();
+    _registerEmailController.dispose();
+    _registerNameController.dispose();
+    _registerPasswordController.dispose();
+    _registerConfirmPasswordController.dispose();
+    for (final c in _codeControllers) {
+      c.dispose();
+    }
+    for (final n in _codeFocusNodes) {
+      n.dispose();
+    }
+    super.dispose();
+  }
+
+  void _onNavigateAfterAuth() {
+    if (!mounted) return;
+    final currency = SharedPrefs.currency;
+    if (currency == null || currency.isEmpty) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.currencySelection,
+        (route) => false,
+      );
+    } else {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.home,
+        (route) => false,
+      );
     }
   }
 
-  void _startWaveAnimation() {
-    _waveController.repeat(reverse: true);
+  // =================== LOGIN ===================
+  Future<void> _handleLogin() async {
+    if (!(_loginFormKey.currentState?.validate() ?? false)) return;
+    final email = _loginEmailController.text.trim();
+    final password = _loginPasswordController.text;
 
-    Timer.periodic(const Duration(milliseconds: 200), (timer) {
-      if (!mounted || !_isLoading) {
+    setState(() => _isLoggingIn = true);
+    try {
+      await _authRepository.login(email: email, password: password);
+      if (!mounted) return;
+      MessageService.showSuccess(
+        context: context,
+        message: context.l10n.loginSuccess,
+      );
+      _onNavigateAfterAuth();
+    } catch (e) {
+      if (!mounted) return;
+      MessageService.showError(
+        context: context,
+        message: e.toString().replaceAll('Exception: ', ''),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoggingIn = false);
+    }
+  }
+
+  // =================== REGISTER STEP 0: SEND CODE ===================
+  Future<void> _handleSendCode() async {
+    final email = _registerEmailController.text.trim();
+    if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(email)) {
+      MessageService.showError(
+        context: context,
+        message: context.l10n.enterYourEmailDescription,
+      );
+      return;
+    }
+
+    setState(() => _isSendingCode = true);
+    try {
+      await _authRepository.sendCode(email: email);
+      if (!mounted) return;
+      _registeredEmail = email;
+      for (final c in _codeControllers) {
+        c.clear();
+      }
+      setState(() => _registerStep = 1);
+      _startCountdown();
+      MessageService.showSuccess(
+        context: context,
+        message: context.l10n.verificationCodeSent(email),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      MessageService.showError(
+        context: context,
+        message: e.toString().replaceAll('Exception: ', ''),
+      );
+    } finally {
+      if (mounted) setState(() => _isSendingCode = false);
+    }
+  }
+
+  // =================== REGISTER STEP 1: VERIFY CODE ===================
+  Future<void> _handleVerifyCode() async {
+    final code = _codeControllers.map((c) => c.text).join();
+    if (code.length != _codeLength) {
+      MessageService.showError(
+        context: context,
+        message: context.l10n.invalidVerificationCode,
+      );
+      return;
+    }
+
+    setState(() => _isVerifying = true);
+    try {
+      await _authRepository.verifyEmail(
+        email: _registeredEmail!,
+        code: code,
+      );
+      if (!mounted) return;
+      _resendTimer?.cancel();
+      setState(() => _registerStep = 2);
+    } catch (e) {
+      if (!mounted) return;
+      MessageService.showError(
+        context: context,
+        message: e.toString().replaceAll('Exception: ', ''),
+      );
+    } finally {
+      if (mounted) setState(() => _isVerifying = false);
+    }
+  }
+
+  // =================== REGISTER STEP 2: COMPLETE REGISTRATION ===================
+  Future<void> _handleRegister() async {
+    if (!(_registerFormKey.currentState?.validate() ?? false)) return;
+    final fullName = _registerNameController.text.trim();
+    final password = _registerPasswordController.text;
+    final confirmPassword = _registerConfirmPasswordController.text;
+
+    setState(() => _isRegistering = true);
+    try {
+      await _authRepository.register(
+        fullName: fullName,
+        email: _registeredEmail!,
+        password: password,
+        confirmPassword: confirmPassword,
+      );
+      if (!mounted) return;
+
+      // Auto-login user after registration
+      await _authRepository.login(
+        email: _registeredEmail!,
+        password: password,
+      );
+      if (!mounted) return;
+
+      MessageService.showSuccess(
+        context: context,
+        message: context.l10n.accountCreatedSuccess,
+      );
+      _onNavigateAfterAuth();
+    } catch (e) {
+      if (!mounted) return;
+      MessageService.showError(
+        context: context,
+        message: e.toString().replaceAll('Exception: ', ''),
+      );
+    } finally {
+      if (mounted) setState(() => _isRegistering = false);
+    }
+  }
+
+  void _startCountdown() {
+    _resendTimer?.cancel();
+    setState(() => _resendSeconds = 90);
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
         timer.cancel();
         return;
       }
-
-      setState(() {
-        final time = DateTime.now().millisecondsSinceEpoch / 500;
-
-        for (int i = 0; i < 3; i++) {
-          double phase = i * 0.8;
-          double waveValue = sin(time - phase);
-
-          _dotOpacities[i] = 0.5 + ((waveValue + 1) / 2) * 0.5;
-          _dotScales[i] = 0.8 + ((waveValue + 1) / 2) * 0.4;
-        }
-      });
+      setState(() => _resendSeconds--);
+      if (_resendSeconds <= 0) timer.cancel();
     });
   }
 
-  void _stopWaveAnimation() {
-    _waveController.stop();
-    setState(() {
-      for (int i = 0; i < 3; i++) {
-        _dotScales[i] = 1.0;
-        _dotOpacities[i] = 0.5;
-      }
-    });
-  }
-
-  void _validateEmail() {
-    final email = _emailController.text.trim();
-    final emailRegex =
-        RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-
-    setState(() {
-      _isEmailValid = emailRegex.hasMatch(email);
-    });
-  }
-
-  Future<void> _checkEmail() async {
-    if (!_isEmailValid) return;
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    _startWaveAnimation();
-
-    try {
-      final email = _emailController.text.trim();
-      final exists = await _authRepository.checkEmail(email);
-
-      setState(() {
-        _emailExists = exists;
-      });
-
-      await _sendVerificationCode();
-
-      if (!mounted) return;
-      MessageService.showSuccess(
-          context: context,
-          message: context.l10n.verificationCodeSent(email));
-    } catch (e) {
-      if (!mounted) return;
-      MessageService.showError(
-          context: context, message: context.l10n.failedToSendCode);
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-      _stopWaveAnimation();
-    }
-  }
-
-  Future<void> _sendVerificationCode() async {
-    final email = _emailController.text.trim();
-    final isLogin = _emailExists;
-
-    final deviceName =
-        _deviceName ?? await DeviceInfoService().getDeviceName();
-
-    try {
-      await _authRepository.sendVerification(
-        email: email,
-        isLogin: isLogin,
-        deviceName: deviceName,
-        ipAddress: _ipAddress,
-      );
-
-      if (!mounted) return;
-      Navigator.pushNamed(
-        context,
-        AppRoutes.verification,
-        arguments: {
-          'email': email,
-          'isLogin': isLogin,
-          'deviceName': deviceName,
-          'ipAddress': _ipAddress,
-        },
-      );
-    } catch (e) {
-      if (!mounted) return;
-      MessageService.showError(
-          context: context, message: context.l10n.failedToSendCode);
-    }
-  }
-
-  void _onBackPressed() {
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      AppRoutes.onboarding,
-      (route) => false,
-    );
-  }
-
-  void _onLostAccess() {
-    Navigator.pushNamed(context, AppRoutes.recoveryCheckUser);
-  }
-
-  Future<void> _onSocialLogin(String provider) async {
-    setState(() => _isLoading = true);
+  // =================== SOCIAL LOGIN ===================
+  Future<void> _handleSocialLogin(String provider) async {
+    if (_isSocialLoading || _isLoggingIn) return;
+    setState(() => _isSocialLoading = true);
 
     try {
       Map<String, String?> tokenData;
-      switch (provider.toLowerCase()) {
-        case 'google':
-          tokenData = await _socialAuthService.signInWithGoogle();
-          break;
-        case 'facebook':
-          tokenData = await _socialAuthService.signInWithFacebook();
-          break;
-        default:
-          if (!mounted) return;
-          MessageService.showError(
-            context: context,
-            message: 'Unknown provider',
-          );
-          setState(() => _isLoading = false);
-          return;
+      if (provider.toLowerCase() == 'google') {
+        tokenData = await _socialAuthService.signInWithGoogle();
+      } else {
+        tokenData = await _socialAuthService.signInWithFacebook();
       }
 
       if (tokenData.containsKey('error')) {
@@ -290,7 +310,6 @@ class _EmailScreenState extends State<EmailScreen>
             message: tokenData['error'] ?? context.l10n.somethingWentWrong,
           );
         }
-        setState(() => _isLoading = false);
         return;
       }
 
@@ -302,57 +321,45 @@ class _EmailScreenState extends State<EmailScreen>
       if (!mounted) return;
 
       if (result['success'] == true) {
-        final hasPassword = result['hasPassword'] == true;
-        if (hasPassword) {
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            AppRoutes.home,
-            (route) => false,
-          );
-        } else {
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            AppRoutes.setPasscode,
-            (route) => false,
-          );
-        }
+        MessageService.showSuccess(
+          context: context,
+          message: context.l10n.loginSuccess,
+        );
+        _onNavigateAfterAuth();
       } else {
-        final needsRegistration = result['needsRegistration'] == true;
-        if (needsRegistration && result['email'] != null) {
-          Navigator.pushNamed(
-            context,
-            AppRoutes.register,
-            arguments: {
-              'email': result['email'],
-              'isSocialLogin': true,
-              'provider': provider,
-            },
-          );
-        } else {
-          MessageService.showError(
-            context: context,
-            message: result['message'] ?? context.l10n.somethingWentWrong,
-          );
-        }
+        MessageService.showError(
+          context: context,
+          message: result['message'] ?? context.l10n.somethingWentWrong,
+        );
       }
     } catch (e) {
       if (!mounted) return;
       MessageService.showError(
         context: context,
-        message: e.toString(),
+        message: e.toString().replaceAll('Exception: ', ''),
       );
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isSocialLoading = false);
     }
   }
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _emailFocusNode.dispose();
-    _waveController.dispose();
-    _fadeController.dispose();
-    super.dispose();
+  // =================== FORGOT PASSWORD MODAL ===================
+  void _showForgotPasswordBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _ForgotPasswordSheet(
+        authRepository: _authRepository,
+        onSuccess: () {
+          Navigator.pop(ctx);
+          MessageService.showSuccess(
+            context: context,
+            message: 'Password reset successfully. Please login.',
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -371,50 +378,183 @@ class _EmailScreenState extends State<EmailScreen>
             isRTL ? Icons.arrow_forward_ios : Icons.arrow_back_ios,
             size: 20,
           ),
-          onPressed: _onBackPressed,
+          onPressed: () {
+            if (_registerStep > 0 && !_isLoginTab) {
+              setState(() => _registerStep--);
+            } else {
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                AppRoutes.onboarding,
+                (route) => false,
+              );
+            }
+          },
         ),
       ),
       body: SafeArea(
         child: ResponsiveWrapper(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 20),
-                _AnimatedLogo(logoFade: _logoFade, logoSlide: _logoSlide, theme: theme),
-                const SizedBox(height: 32),
-                _AnimatedTitle(titleFade: _titleFade, titleSlide: _titleSlide, theme: theme),
-                const SizedBox(height: 36),
-                _EmailFormSection(
-                  formFade: _formFade,
-                  formSlide: _formSlide,
-                  theme: theme,
-                  isDark: isDark,
-                  emailController: _emailController,
-                  emailFocusNode: _emailFocusNode,
-                  isEmailValid: _isEmailValid,
-                  isLoading: _isLoading,
-                  dotScales: _dotScales,
-                  dotOpacities: _dotOpacities,
-                  onClear: () {
-                    setState(() {
-                      _emailController.clear();
-                      _isEmailValid = false;
-                      _emailExists = false;
-                    });
-                  },
-                  onSubmit: _checkEmail,
+                SlideTransition(
+                  position: _logoSlide,
+                  child: FadeTransition(
+                    opacity: _logoFade,
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 72,
+                          height: 72,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                theme.colorScheme.primary,
+                                theme.colorScheme.primary.withValues(alpha: 0.8),
+                              ],
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: theme.colorScheme.primary.withValues(alpha: 0.35),
+                                blurRadius: 20,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.account_balance_wallet,
+                            size: 38,
+                            color: theme.colorScheme.onPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          context.l10n.appTitle,
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          context.l10n.manageYourMoneyEasily,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                _SocialLoginSection(
-                  socialFade: _socialFade,
-                  socialSlide: _socialSlide,
-                  theme: theme,
-                  isDark: isDark,
-                  isRTL: isRTL,
-                  onGoogleLogin: () => _onSocialLogin('Google'),
-                  onFacebookLogin: () => _onSocialLogin('Facebook'),
-                  onLostAccess: _onLostAccess,
+                const SizedBox(height: 24),
+
+                // Tab Switcher
+                SlideTransition(
+                  position: _contentSlide,
+                  child: FadeTransition(
+                    opacity: _contentFade,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.grey[900] : Colors.grey[100],
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => setState(() => _isLoginTab = true),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: _isLoginTab
+                                          ? (isDark ? Colors.grey[800] : Colors.white)
+                                          : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: _isLoginTab
+                                          ? [
+                                              BoxShadow(
+                                                color: Colors.black.withValues(alpha: 0.05),
+                                                blurRadius: 4,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ]
+                                          : null,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        context.l10n.login,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          color: _isLoginTab
+                                              ? theme.colorScheme.primary
+                                              : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => setState(() => _isLoginTab = false),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: !_isLoginTab
+                                          ? (isDark ? Colors.grey[800] : Colors.white)
+                                          : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: !_isLoginTab
+                                          ? [
+                                              BoxShadow(
+                                                color: Colors.black.withValues(alpha: 0.05),
+                                                blurRadius: 4,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ]
+                                          : null,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        context.l10n.register,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          color: !_isLoginTab
+                                              ? theme.colorScheme.primary
+                                              : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Form Content
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          child: _isLoginTab
+                              ? _buildLoginForm(theme, isDark)
+                              : _buildRegisterWizard(theme, isDark),
+                        ),
+
+                        const SizedBox(height: 20),
+                        _buildSocialSection(theme, isDark),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -423,488 +563,672 @@ class _EmailScreenState extends State<EmailScreen>
       ),
     );
   }
-}
 
-class _AnimatedLogo extends StatelessWidget {
-  final Animation<double> logoFade;
-  final Animation<Offset> logoSlide;
-  final ThemeData theme;
-
-  const _AnimatedLogo({
-    required this.logoFade,
-    required this.logoSlide,
-    required this.theme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SlideTransition(
-      position: logoSlide,
-      child: FadeTransition(
-        opacity: logoFade,
-        child: Center(
-          child: Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  theme.colorScheme.primary,
-                  theme.colorScheme.primary.withValues(alpha: 0.7),
-                ],
-              ),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+  // =================== LOGIN FORM ===================
+  Widget _buildLoginForm(ThemeData theme, bool isDark) {
+    return Form(
+      key: _loginFormKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextFormField(
+            controller: _loginEmailController,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            decoration: _inputDecoration(
+              theme: theme,
+              isDark: isDark,
+              hint: context.l10n.email,
+              icon: Icons.email_outlined,
             ),
-            child: Icon(
-              Icons.account_balance_wallet,
-              size: 40,
-              color: theme.colorScheme.onPrimary,
-            ),
+            validator: (val) {
+              if (val == null || val.trim().isEmpty) return 'Email is required';
+              if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(val.trim())) {
+                return 'Please enter a valid email address';
+              }
+              return null;
+            },
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AnimatedTitle extends StatelessWidget {
-  final Animation<double> titleFade;
-  final Animation<Offset> titleSlide;
-  final ThemeData theme;
-
-  const _AnimatedTitle({
-    required this.titleFade,
-    required this.titleSlide,
-    required this.theme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SlideTransition(
-      position: titleSlide,
-      child: FadeTransition(
-        opacity: titleFade,
-        child: Column(
-          children: [
-            Center(
-              child: Text(
-                context.l10n.whatIsYourEmail,
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Center(
-              child: Text(
-                context.l10n.enterYourEmailDescription,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EmailFormSection extends StatelessWidget {
-  final Animation<double> formFade;
-  final Animation<Offset> formSlide;
-  final ThemeData theme;
-  final bool isDark;
-  final TextEditingController emailController;
-  final FocusNode emailFocusNode;
-  final bool isEmailValid;
-  final bool isLoading;
-  final List<double> dotScales;
-  final List<double> dotOpacities;
-  final VoidCallback onClear;
-  final VoidCallback onSubmit;
-
-  const _EmailFormSection({
-    required this.formFade,
-    required this.formSlide,
-    required this.theme,
-    required this.isDark,
-    required this.emailController,
-    required this.emailFocusNode,
-    required this.isEmailValid,
-    required this.isLoading,
-    required this.dotScales,
-    required this.dotOpacities,
-    required this.onClear,
-    required this.onSubmit,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SlideTransition(
-      position: formSlide,
-      child: FadeTransition(
-        opacity: formFade,
-        child: Column(
-          children: [
-            TextField(
-              controller: emailController,
-              focusNode: emailFocusNode,
-              keyboardType: TextInputType.emailAddress,
-              autofillHints: const [AutofillHints.email],
-              textInputAction: TextInputAction.done,
-              decoration: InputDecoration(
-                hintText: context.l10n.email,
-                hintStyle: TextStyle(
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _loginPasswordController,
+            obscureText: _obscureLoginPassword,
+            textInputAction: TextInputAction.done,
+            decoration: _inputDecoration(
+              theme: theme,
+              isDark: isDark,
+              hint: context.l10n.password,
+              icon: Icons.lock_outline,
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscureLoginPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                 ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(
-                    color: theme.colorScheme.outline.withValues(alpha: 0.2),
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(
-                    color: theme.colorScheme.primary,
-                    width: 2,
-                  ),
-                ),
-                filled: true,
-                fillColor: isDark ? Colors.grey[900] : Colors.grey[50],
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 18,
-                ),
-                prefixIcon: Padding(
-                  padding: const EdgeInsets.only(left: 16, right: 12),
-                  child: Icon(
-                    Icons.email_outlined,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                  ),
-                ),
-                suffixIcon: emailController.text.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(
-                          Icons.cancel_outlined,
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
-                        ),
-                        onPressed: onClear,
-                      )
-                    : null,
-              ),
-              style: theme.textTheme.bodyLarge,
-              onSubmitted: (_) {
-                if (isEmailValid) onSubmit();
-              },
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: isEmailValid && !isLoading ? onSubmit : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isEmailValid
-                      ? (isDark ? Colors.white : theme.colorScheme.primary)
-                      : (isDark ? Colors.grey[800] : Colors.grey[200]),
-                  foregroundColor: isEmailValid
-                      ? (isDark ? Colors.black : theme.colorScheme.onPrimary)
-                      : (isDark ? Colors.white38 : Colors.black38),
-                  disabledBackgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
-                  disabledForegroundColor: isDark ? Colors.white38 : Colors.black38,
-                  minimumSize: const Size(double.infinity, 56),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: isEmailValid ? 4 : 0,
-                  shadowColor: theme.colorScheme.primary.withValues(alpha: 0.3),
-                ),
-                child: isLoading
-                    ? _LoadingDots(dotScales: dotScales, dotOpacities: dotOpacities, theme: theme)
-                    : Text(
-                        context.l10n.continueText,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                          color: isEmailValid && !isLoading
-                              ? (isDark ? Colors.black : theme.colorScheme.onPrimary)
-                              : (isDark ? Colors.white38 : Colors.black38),
-                        ),
-                      ),
+                onPressed: () => setState(() => _obscureLoginPassword = !_obscureLoginPassword),
               ),
             ),
-          ],
-        ),
+            validator: (val) {
+              if (val == null || val.isEmpty) return 'Password is required';
+              return null;
+            },
+            onFieldSubmitted: (_) => _handleLogin(),
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: TextButton(
+              onPressed: _showForgotPasswordBottomSheet,
+              child: Text(
+                context.l10n.forgotPassword,
+                style: TextStyle(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: _isLoggingIn ? null : _handleLogin,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: theme.colorScheme.onPrimary,
+              minimumSize: const Size(double.infinity, 54),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation: 3,
+            ),
+            child: _isLoggingIn
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                : Text(
+                    context.l10n.login,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                  ),
+          ),
+        ],
       ),
     );
   }
-}
 
-class _LoadingDots extends StatelessWidget {
-  final List<double> dotScales;
-  final List<double> dotOpacities;
-  final ThemeData theme;
-
-  const _LoadingDots({
-    required this.dotScales,
-    required this.dotOpacities,
-    required this.theme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 60,
-      height: 24,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(3, (index) {
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            margin: const EdgeInsets.symmetric(horizontal: 3),
-            width: 8 * dotScales[index],
-            height: 8 * dotScales[index],
-            decoration: BoxDecoration(
-              color: theme.colorScheme.onPrimary.withValues(
-                alpha: dotOpacities[index],
-              ),
-              shape: BoxShape.circle,
-            ),
-          );
-        }),
-      ),
-    );
-  }
-}
-
-class _SocialLoginSection extends StatelessWidget {
-  final Animation<double> socialFade;
-  final Animation<Offset> socialSlide;
-  final ThemeData theme;
-  final bool isDark;
-  final bool isRTL;
-  final VoidCallback onGoogleLogin;
-  final VoidCallback onFacebookLogin;
-  final VoidCallback onLostAccess;
-
-  const _SocialLoginSection({
-    required this.socialFade,
-    required this.socialSlide,
-    required this.theme,
-    required this.isDark,
-    required this.isRTL,
-    required this.onGoogleLogin,
-    required this.onFacebookLogin,
-    required this.onLostAccess,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SlideTransition(
-      position: socialSlide,
-      child: FadeTransition(
-        opacity: socialFade,
-        child: Column(
-          children: [
-            const SizedBox(height: 28),
-            _SocialDivider(theme: theme),
-            const SizedBox(height: 20),
-            _GoogleSignInButton(theme: theme, isDark: isDark, onPressed: onGoogleLogin),
-            const SizedBox(height: 12),
-            _FacebookSignInButton(theme: theme, isDark: isDark, onPressed: onFacebookLogin),
-            const SizedBox(height: 24),
-            _LostAccessLink(theme: theme, isRTL: isRTL, onTap: onLostAccess),
-            const SizedBox(height: 40),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SocialDivider extends StatelessWidget {
-  final ThemeData theme;
-
-  const _SocialDivider({required this.theme});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
+  // =================== REGISTER 3-STEP WIZARD ===================
+  Widget _buildRegisterWizard(ThemeData theme, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: Divider(
-            color: theme.colorScheme.outline.withValues(alpha: 0.2),
-          ),
+        // Steps indicator
+        Row(
+          children: List.generate(3, (index) {
+            final done = index < _registerStep;
+            final active = index == _registerStep;
+            return Expanded(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: (done || active)
+                            ? theme.colorScheme.primary
+                            : (isDark ? Colors.grey[800] : Colors.grey[300]),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  if (index < 2) const SizedBox(width: 6),
+                ],
+              ),
+            );
+          }),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            context.l10n.orContinueWith,
+        const SizedBox(height: 20),
+
+        if (_registerStep == 0) ...[
+          // Step 1: Email
+          Text(
+            context.l10n.whatIsYourEmail,
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            context.l10n.enterYourEmailDescription,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
-        ),
-        Expanded(
-          child: Divider(
-            color: theme.colorScheme.outline.withValues(alpha: 0.2),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _registerEmailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: _inputDecoration(
+              theme: theme,
+              isDark: isDark,
+              hint: context.l10n.email,
+              icon: Icons.email_outlined,
+            ),
           ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: _isSendingCode ? null : _handleSendCode,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: theme.colorScheme.onPrimary,
+              minimumSize: const Size(double.infinity, 54),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            child: _isSendingCode
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                  )
+                : Text(context.l10n.continueText, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+          ),
+        ] else if (_registerStep == 1) ...[
+          // Step 2: OTP Verification
+          Text(
+            context.l10n.enterVerificationCode,
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            context.l10n.verificationCodeSent(_registeredEmail ?? ''),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(_codeLength, (index) {
+              return SizedBox(
+                width: 46,
+                height: 54,
+                child: TextField(
+                  controller: _codeControllers[index],
+                  focusNode: _codeFocusNodes[index],
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.center,
+                  maxLength: 1,
+                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: InputDecoration(
+                    counterText: '',
+                    filled: true,
+                    fillColor: isDark ? Colors.grey[900] : Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+                    ),
+                  ),
+                  onChanged: (val) {
+                    if (val.isNotEmpty && index < _codeLength - 1) {
+                      _codeFocusNodes[index + 1].requestFocus();
+                    } else if (val.isEmpty && index > 0) {
+                      _codeFocusNodes[index - 1].requestFocus();
+                    }
+                  },
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                _resendSeconds > 0
+                    ? 'Resend code in ${_resendSeconds}s'
+                    : "Didn't receive code?",
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  fontSize: 13,
+                ),
+              ),
+              if (_resendSeconds <= 0)
+                TextButton(
+                  onPressed: _handleSendCode,
+                  child: Text(
+                    context.l10n.resendCode,
+                    style: TextStyle(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _isVerifying ? null : _handleVerifyCode,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: theme.colorScheme.onPrimary,
+              minimumSize: const Size(double.infinity, 54),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            child: _isVerifying
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                  )
+                : Text(context.l10n.verify, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+          ),
+        ] else ...[
+          // Step 3: Name & Password
+          Form(
+            key: _registerFormKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextFormField(
+                  controller: _registerNameController,
+                  textInputAction: TextInputAction.next,
+                  decoration: _inputDecoration(
+                    theme: theme,
+                    isDark: isDark,
+                    hint: context.l10n.fullName,
+                    icon: Icons.person_outline,
+                  ),
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) return 'Full name is required';
+                    if (val.trim().length < 3) return 'Name must be at least 3 characters';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _registerPasswordController,
+                  obscureText: _obscureRegisterPassword,
+                  textInputAction: TextInputAction.next,
+                  decoration: _inputDecoration(
+                    theme: theme,
+                    isDark: isDark,
+                    hint: context.l10n.password,
+                    icon: Icons.lock_outline,
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureRegisterPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                      ),
+                      onPressed: () => setState(() => _obscureRegisterPassword = !_obscureRegisterPassword),
+                    ),
+                  ),
+                  validator: (val) {
+                    if (val == null || val.isEmpty) return 'Password is required';
+                    if (val.length < 8) return 'Password must be at least 8 characters';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _registerConfirmPasswordController,
+                  obscureText: _obscureRegisterConfirmPassword,
+                  textInputAction: TextInputAction.done,
+                  decoration: _inputDecoration(
+                    theme: theme,
+                    isDark: isDark,
+                    hint: context.l10n.confirmPassword,
+                    icon: Icons.lock_outline,
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureRegisterConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                      ),
+                      onPressed: () => setState(() => _obscureRegisterConfirmPassword = !_obscureRegisterConfirmPassword),
+                    ),
+                  ),
+                  validator: (val) {
+                    if (val == null || val.isEmpty) return 'Please confirm your password';
+                    if (val != _registerPasswordController.text) return 'Passwords do not match';
+                    return null;
+                  },
+                  onFieldSubmitted: (_) => _handleRegister(),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _isRegistering ? null : _handleRegister,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    minimumSize: const Size(double.infinity, 54),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  child: _isRegistering
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                        )
+                      : Text(context.l10n.register, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  // =================== SOCIAL SECTION ===================
+  Widget _buildSocialSection(ThemeData theme, bool isDark) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(child: Divider(color: theme.colorScheme.outline.withValues(alpha: 0.2))),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                context.l10n.orContinueWith,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                ),
+              ),
+            ),
+            Expanded(child: Divider(color: theme.colorScheme.outline.withValues(alpha: 0.2))),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _isSocialLoading ? null : () => _handleSocialLogin('Google'),
+                icon: const FaIcon(FontAwesomeIcons.google, color: Color(0xFFEA4335), size: 18),
+                label: const Text('Google', style: TextStyle(fontWeight: FontWeight.w600)),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  side: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _isSocialLoading ? null : () => _handleSocialLogin('Facebook'),
+                icon: const FaIcon(FontAwesomeIcons.facebook, color: Color(0xFF1877F2), size: 18),
+                label: const Text('Facebook', style: TextStyle(fontWeight: FontWeight.w600)),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  side: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
-}
 
-class _GoogleSignInButton extends StatelessWidget {
-  final ThemeData theme;
-  final bool isDark;
-  final VoidCallback onPressed;
-
-  static const String _googleSvg = '''
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
-  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-  <path fill="none" d="M0 0h48v48H0z"/>
-</svg>
-''';
-
-  const _GoogleSignInButton({
-    required this.theme,
-    required this.isDark,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(
-            color: theme.colorScheme.outline.withValues(alpha: 0.2),
-          ),
-          backgroundColor: isDark
-              ? Colors.white.withValues(alpha: 0.05)
-              : Colors.grey.withValues(alpha: 0.05),
-          minimumSize: const Size(double.infinity, 54),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-        icon: SvgPicture.string(
-          _googleSvg,
-          width: 22,
-          height: 22,
-        ),
-        label: Text(
-          context.l10n.continueWithGoogle,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: theme.colorScheme.onSurface,
-          ),
-        ),
+  InputDecoration _inputDecoration({
+    required ThemeData theme,
+    required bool isDark,
+    required String hint,
+    required IconData icon,
+    Widget? suffixIcon,
+  }) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+      filled: true,
+      fillColor: isDark ? Colors.grey[900] : Colors.grey[50],
+      prefixIcon: Icon(icon, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+      suffixIcon: suffixIcon,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
       ),
     );
   }
 }
 
-class _FacebookSignInButton extends StatelessWidget {
-  final ThemeData theme;
-  final bool isDark;
-  final VoidCallback onPressed;
+// =================== FORGOT PASSWORD BOTTOM SHEET ===================
+class _ForgotPasswordSheet extends StatefulWidget {
+  final AuthRepository authRepository;
+  final VoidCallback onSuccess;
 
-  const _FacebookSignInButton({
-    required this.theme,
-    required this.isDark,
-    required this.onPressed,
+  const _ForgotPasswordSheet({
+    required this.authRepository,
+    required this.onSuccess,
   });
 
   @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(
-            color: Colors.blue.withValues(alpha: 0.3),
-          ),
-          backgroundColor: Colors.blue.withValues(alpha: isDark ? 0.15 : 0.05),
-          minimumSize: const Size(double.infinity, 54),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-        icon: Icon(
-          Icons.facebook,
-          color: Colors.blue[700],
-          size: 24,
-        ),
-        label: Text(
-          context.l10n.continueWithFacebook,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: Colors.blue[700],
-          ),
-        ),
-      ),
-    );
-  }
+  State<_ForgotPasswordSheet> createState() => _ForgotPasswordSheetState();
 }
 
-class _LostAccessLink extends StatelessWidget {
-  final ThemeData theme;
-  final bool isRTL;
-  final VoidCallback onTap;
+class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
+  int _step = 0; // 0: Email, 1: Code, 2: New Password
+  bool _isLoading = false;
+  final _emailController = TextEditingController();
+  final _codeController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
-  const _LostAccessLink({
-    required this.theme,
-    required this.isRTL,
-    required this.onTap,
-  });
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _codeController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendForgotCode() async {
+    final email = _emailController.text.trim();
+    if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(email)) {
+      MessageService.showError(context: context, message: 'Please enter a valid email');
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      await widget.authRepository.forgotPassword(email: email);
+      if (!mounted) return;
+      setState(() => _step = 1);
+    } catch (e) {
+      if (!mounted) return;
+      MessageService.showError(context: context, message: e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _verifyResetCode() async {
+    final code = _codeController.text.trim();
+    if (code.length != 6) {
+      MessageService.showError(context: context, message: 'Please enter the 6-digit code');
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      await widget.authRepository.verifyResetCode(
+        email: _emailController.text.trim(),
+        code: code,
+      );
+      if (!mounted) return;
+      setState(() => _step = 2);
+    } catch (e) {
+      if (!mounted) return;
+      MessageService.showError(context: context, message: e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _resetPassword() async {
+    final newPass = _newPasswordController.text;
+    final confirmPass = _confirmPasswordController.text;
+    if (newPass.length < 8) {
+      MessageService.showError(context: context, message: 'Password must be at least 8 characters');
+      return;
+    }
+    if (newPass != confirmPass) {
+      MessageService.showError(context: context, message: 'Passwords do not match');
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      await widget.authRepository.resetPassword(
+        email: _emailController.text.trim(),
+        newPassword: newPass,
+        confirmPassword: confirmPass,
+      );
+      if (!mounted) return;
+      widget.onSuccess();
+    } catch (e) {
+      if (!mounted) return;
+      MessageService.showError(context: context, message: e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              context.l10n.lostAccessToEmail,
-              style: TextStyle(
-                color: theme.colorScheme.primary,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey[900] : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const SizedBox(width: 4),
-            Icon(
-              isRTL ? Icons.arrow_back_ios : Icons.arrow_forward_ios,
-              size: 12,
-              color: theme.colorScheme.primary,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            context.l10n.forgotPassword,
+            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 16),
+          if (_step == 0) ...[
+            TextField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(
+                hintText: context.l10n.email,
+                filled: true,
+                fillColor: isDark ? Colors.black : Colors.grey[100],
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _isLoading ? null : _sendForgotCode,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary,
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              child: _isLoading
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : Text(context.l10n.sendCode),
+            ),
+          ] else if (_step == 1) ...[
+            TextField(
+              controller: _codeController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                hintText: '6-digit Reset Code',
+                filled: true,
+                fillColor: isDark ? Colors.black : Colors.grey[100],
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _isLoading ? null : _verifyResetCode,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary,
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              child: _isLoading
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : Text(context.l10n.verify),
+            ),
+          ] else ...[
+            TextField(
+              controller: _newPasswordController,
+              obscureText: true,
+              decoration: InputDecoration(
+                hintText: 'New Password',
+                filled: true,
+                fillColor: isDark ? Colors.black : Colors.grey[100],
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _confirmPasswordController,
+              obscureText: true,
+              decoration: InputDecoration(
+                hintText: context.l10n.confirmPassword,
+                filled: true,
+                fillColor: isDark ? Colors.black : Colors.grey[100],
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _isLoading ? null : _resetPassword,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary,
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              child: _isLoading
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('Reset Password'),
             ),
           ],
-        ),
+        ],
       ),
     );
   }

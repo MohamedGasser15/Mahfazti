@@ -7,11 +7,13 @@ class SharedPrefs {
   static const FlutterSecureStorage _secure = FlutterSecureStorage();
 
   static String? _authToken;
+  static String? _refreshToken;
   static String? _userData;
 
   static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
     _authToken = await _secure.read(key: AppConstants.authTokenKey);
+    _refreshToken = await _secure.read(key: AppConstants.refreshTokenKey);
     _userData = await _secure.read(key: AppConstants.userDataKey);
   }
 
@@ -35,6 +37,19 @@ class SharedPrefs {
   static Future<void> removeAuthToken() async {
     _authToken = null;
     await _secure.delete(key: AppConstants.authTokenKey);
+  }
+
+  // Refresh Token (stored securely)
+  static String? get refreshToken => _refreshToken;
+
+  static Future<void> setRefreshToken(String token) async {
+    _refreshToken = token;
+    await _secure.write(key: AppConstants.refreshTokenKey, value: token);
+  }
+
+  static Future<void> removeRefreshToken() async {
+    _refreshToken = null;
+    await _secure.delete(key: AppConstants.refreshTokenKey);
   }
 
   // Selected Currency
@@ -128,6 +143,7 @@ class SharedPrefs {
     await _prefs.clear();
     await _secure.deleteAll();
     _authToken = null;
+    _refreshToken = null;
     _userData = null;
   }
 }

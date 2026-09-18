@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:my_wallet/core/constants/app_routes.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
-import 'package:my_wallet/core/services/biometric_service.dart';
 import 'package:my_wallet/core/services/hide_balance_service.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/services/theme_service.dart';
@@ -29,14 +28,12 @@ class SettingsContent extends StatefulWidget {
 }
 
 class _SettingsContentState extends State<SettingsContent> {
-  bool _biometricEnabled = false;
   bool _isEnglish = true;
   String _currentTheme = 'system';
   String _currencyCode = 'USD';
   UserProfile? _profile;
   bool _isLoadingProfile = true;
-  bool _hasBiometricSupport = false;
-String _biometricType = ''; // 'face' or 'fingerprint'
+
   @override
   void initState() {
     super.initState();
@@ -316,14 +313,6 @@ onPressed: isSubmitting
   );
 }
 Future<void> _loadSettings() async {
-  // تحميل إعدادات البايومتريك
-  _hasBiometricSupport = await BiometricService.hasBiometricSupport();
-  if (_hasBiometricSupport) {
-    final biometricName = await BiometricService.getBiometricName();
-    _biometricType = biometricName.toLowerCase();
-  }
-  final isEnabled = await BiometricService.isBiometricEnabled();
-  
   // تحميل اللغة الحالية
   final locale = await LanguageService.getSavedLocale();
   
@@ -331,7 +320,6 @@ Future<void> _loadSettings() async {
   await _loadCurrentTheme();
   
   setState(() {
-    _biometricEnabled = _hasBiometricSupport && isEnabled;
     _isEnglish = LanguageService.isEnglish(locale);
   });
 }
@@ -1177,104 +1165,6 @@ Widget _buildSecuritySettings(bool isDarkMode) {
         ),
         child: Column(
           children: [
-            // Change Passcode
-            ListTile(
-              leading: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.lock_outline,
-                  color: isDarkMode ? Colors.white : Colors.black,
-                  size: 20,
-                ),
-              ),
-              title: Text(
-                context.l10n.changePasscode,
-                style: TextStyle(
-                  color: isDarkMode ? Colors.white : Colors.black,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              subtitle: Text(
-                context.l10n.updateYour6DigitPasscode,
-                style: TextStyle(
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  fontSize: 12,
-                ),
-              ),
-              trailing: Icon(
-                Icons.chevron_right,
-                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                size: 20,
-              ),
-              onTap: () {
-                Navigator.pushNamed(context, AppRoutes.changePasscode);
-              },
-            ),
-            Divider(
-              height: 1,
-              color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-            ),
-            
-            // Sign with Face ID / Fingerprint
-            if (_hasBiometricSupport) ...[
-              SwitchListTile(
-                value: _biometricEnabled,
-                onChanged: (value) async {
-                  if (value) {
-                    final success = await BiometricService.enableBiometric();
-                    if (success) {
-                      setState(() {
-                        _biometricEnabled = true;
-                      });
-                    } else {
-                      if (!mounted) return;
-                      MessageService.showError(context: context, message: 'Could not enable biometric authentication');
-                    }
-                  } else {
-                    await BiometricService.disableBiometric();
-                    setState(() {
-                      _biometricEnabled = false;
-                    });
-                  }
-                },
-                title: Text(
-                  context.l10n.signWithFaceIDFingerprint,
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.white : Colors.black,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                subtitle: Text(
-                  context.l10n.useBiometricAuthentication,
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                    fontSize: 12,
-                  ),
-                ),
-                secondary: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    _biometricType.contains('face') ? Icons.face : Icons.fingerprint,
-                    color: isDarkMode ? Colors.white : Colors.black,
-                    size: 20,
-                  ),
-                ),
-              ),
-              Divider(
-                height: 1,
-                color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-              ),
-            ],
             // Hide Balances
             SwitchListTile(
               value: hideService.isHidden,

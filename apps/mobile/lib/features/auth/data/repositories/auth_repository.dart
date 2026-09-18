@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:my_wallet/core/constants/api_constants.dart';
 import 'package:my_wallet/core/constants/app_constants.dart';
 import 'package:my_wallet/core/services/api_service.dart';
@@ -8,268 +9,236 @@ import 'package:my_wallet/core/utils/shared_prefs.dart';
 class AuthRepository {
   final ApiService _apiService = ApiService();
 
-  Future<Map<String, dynamic>> sendVerification({
+  /// Login with email and password
+  Future<Map<String, dynamic>> login({
     required String email,
-    required bool isLogin,
-    String? deviceName,
-    String? ipAddress,
-  }) async {
-    final response = await _apiService.post(
-      ApiEndpoints.sendVerification,
-      {
-        'email': email,
-        'isLogin': isLogin,
-        'deviceName': deviceName,
-        'ipAddress': ipAddress,
-      },
-    );
-    final data = _apiService.handleResponse(response);
-    await SharedPrefs.setSecureString(AppConstants.tempEmailKey, email);
-    await SharedPrefs.setSecureString(AppConstants.tempIsLoginKey, isLogin.toString());
-    return data;
-  }
-
-  Future<Map<String, dynamic>> verifyCode({
-    required String email,
-    required String verificationCode,
-  }) async {
-    final response = await _apiService.post(
-      ApiEndpoints.verifyCode,
-      {
-        'email': email,
-        'verificationCode': verificationCode,
-      },
-    );
-
-    final data = _apiService.handleResponse(response);
-
-    if (data['success'] == true) {
-      await SharedPrefs.setSecureString(AppConstants.verifiedEmailKey, email);
-      await SharedPrefs.setSecureString(AppConstants.verifiedCodeKey, verificationCode);
-      await SharedPrefs.setSecureString(AppConstants.isCodeVerifiedKey, 'true');
-    }
-
-    return data;
-  }
-
-  Future<Map<String, dynamic>> recoveryCheckUser(String emailOrUsername) async {
-    final response = await _apiService.post(
-      ApiEndpoints.recoveryCheckUser,
-      {'emailOrUsername': emailOrUsername},
-    );
-    return _apiService.handleResponse(response);
-  }
-
-  Future<Map<String, dynamic>> recoveryVerifyPassword({
-    required String emailOrUsername,
     required String password,
   }) async {
-    final response = await _apiService.post(
-      ApiEndpoints.recoveryVerifyPassword,
-      {
-        'emailOrUsername': emailOrUsername,
-        'password': password,
-      },
-    );
-    return _apiService.handleResponse(response);
-  }
+    try {
+      final response = await _apiService.post(
+        ApiEndpoints.login,
+        {
+          'email': email,
+          'password': password,
+        },
+      );
 
-  Future<Map<String, dynamic>> recoveryRequestEmailChange({
-    required String emailOrUsername,
-    required String newEmail,
-  }) async {
-    final response = await _apiService.post(
-      ApiEndpoints.recoveryRequestEmailChange,
-      {
-        'emailOrUsername': emailOrUsername,
-        'newEmail': newEmail,
-      },
-    );
-    return _apiService.handleResponse(response);
-  }
+      final data = _apiService.handleResponse(response);
 
-  Future<Map<String, dynamic>> forgotPasscode({required String email}) async {
-    final response = await _apiService.post(
-      ApiEndpoints.forgotPasscode,
-      {'email': email},
-    );
-    return _apiService.handleResponse(response);
-  }
+      if (data['success'] == true && data['data'] != null) {
+        final payload = data['data'] as Map<String, dynamic>;
+        final token = payload['token'] as String?;
+        final refreshToken = payload['refreshToken'] as String?;
+        final user = payload['user'] as Map<String, dynamic>?;
 
-  Future<Map<String, dynamic>> resetPasscode({
-    required String email,
-    required String otpCode,
-    required String newPasscode,
-  }) async {
-    final response = await _apiService.post(
-      ApiEndpoints.resetPasscode,
-      {
-        'email': email,
-        'otpCode': otpCode,
-        'newPasscode': newPasscode,
-      },
-    );
-    return _apiService.handleResponse(response);
-  }
-
-  Future<Map<String, dynamic>> recoveryConfirmEmailChange({
-    required String emailOrUsername,
-    required String newEmail,
-    required String otpCode,
-  }) async {
-    final response = await _apiService.post(
-      ApiEndpoints.recoveryConfirmEmailChange,
-      {
-        'emailOrUsername': emailOrUsername,
-        'newEmail': newEmail,
-        'otpCode': otpCode,
-      },
-    );
-    final data = _apiService.handleResponse(response);
-    if (data['success'] == true && data['token'] != null) {
-      await SharedPrefs.setAuthToken(data['token']);
-      if (data['user'] != null) {
-        await SharedPrefs.setUserData(jsonEncode(data['user']));
+        if (token != null && token.isNotEmpty) {
+          await SharedPrefs.setAuthToken(token);
+        }
+        if (refreshToken != null && refreshToken.isNotEmpty) {
+          await SharedPrefs.setRefreshToken(refreshToken);
+        }
+        if (user != null) {
+          await SharedPrefs.setUserData(jsonEncode(user));
+          if (user['currency'] != null && (user['currency'] as String).isNotEmpty) {
+            await SharedPrefs.setCurrency(user['currency']);
+          }
+        }
+        await SharedPrefs.setString(AppConstants.userEmailKey, email);
+        await SharedPrefs.setSecureString(AppConstants.userEmailKey, email);
+      } else if (data['success'] == false) {
+        throw Exception(data['message'] ?? 'Login failed');
       }
+
+      return data;
+    } on DioException catch (e) {
+      final message = _extractDioErrorMessage(e);
+      throw Exception(message);
     }
-    return data;
   }
 
-  Future<Map<String, dynamic>> resendCode({
+  /// Send email verification code for registration
+  Future<Map<String, dynamic>> sendCode({required String email}) async {
+    try {
+      final response = await _apiService.post(
+        ApiEndpoints.sendCode,
+        {'email': email},
+      );
+      final data = _apiService.handleResponse(response);
+      if (data['success'] == false) {
+        throw Exception(data['message'] ?? 'Failed to send verification code');
+      }
+      return data;
+    } on DioException catch (e) {
+      final message = _extractDioErrorMessage(e);
+      throw Exception(message);
+    }
+  }
+
+  /// Verify email verification code for registration
+  Future<Map<String, dynamic>> verifyEmail({
     required String email,
-    required bool isLogin,
-    String? deviceName,
-    String? ipAddress,
+    required String code,
   }) async {
-    final response = await _apiService.post(
-      ApiEndpoints.resendCode,
-      {
-        'email': email,
-        'isLogin': isLogin,
-        'deviceName': deviceName,
-        'ipAddress': ipAddress,
-      },
-    );
-    return _apiService.handleResponse(response);
+    try {
+      final response = await _apiService.post(
+        ApiEndpoints.verifyEmail,
+        {
+          'email': email,
+          'code': code,
+        },
+      );
+      final data = _apiService.handleResponse(response);
+      if (data['success'] == false) {
+        throw Exception(data['message'] ?? 'Invalid verification code');
+      }
+      return data;
+    } on DioException catch (e) {
+      final message = _extractDioErrorMessage(e);
+      throw Exception(message);
+    }
   }
 
-  Future<Map<String, dynamic>> completeRegistration({
-    required String email,
-    required String verificationCode,
-    required String password,
+  /// Complete user registration
+  Future<Map<String, dynamic>> register({
     required String fullName,
-    required String userName,
-    required String phoneNumber,
-  }) async {
-    final isVerified = (await SharedPrefs.getSecureString(AppConstants.isCodeVerifiedKey)) == 'true' ||
-        (SharedPrefs.getBoolValue(AppConstants.isCodeVerifiedKey) ?? false);
-    if (!isVerified) {
-      throw Exception('Please verify your code first');
-    }
-
-    final response = await _apiService.post(
-      ApiEndpoints.verifyAndComplete,
-      {
-        'email': email,
-        'verificationCode': verificationCode,
-        'password': password,
-        'fullName': fullName,
-        'userName': userName,
-        'phoneNumber': phoneNumber,
-      },
-    );
-
-    final data = _apiService.handleResponse(response);
-
-    if (data['success'] == true && data['token'] != null) {
-      await SharedPrefs.setAuthToken(data['token']);
-      await SharedPrefs.setSecureString(AppConstants.userEmailKey, email);
-      await SharedPrefs.setString(AppConstants.userEmailKey, email);
-      await SharedPrefs.setUserData(jsonEncode({
-        'email': email,
-        'fullName': fullName,
-        'userName': userName,
-        'phoneNumber': phoneNumber,
-      }));
-      await _cleanTempData();
-    }
-
-    return data;
-  }
-
-  Future<Map<String, dynamic>> completeLogin({
     required String email,
-    required String verificationCode,
     required String password,
+    required String confirmPassword,
   }) async {
-    final isVerified = await SharedPrefs.getSecureString(AppConstants.isCodeVerifiedKey);
-    if (isVerified != 'true') {
-      throw Exception('Please verify your code first');
+    try {
+      final response = await _apiService.post(
+        ApiEndpoints.register,
+        {
+          'fullName': fullName,
+          'email': email,
+          'password': password,
+          'confirmPassword': confirmPassword,
+        },
+      );
+      final data = _apiService.handleResponse(response);
+      if (data['success'] == false) {
+        throw Exception(data['message'] ?? 'Registration failed');
+      }
+      return data;
+    } on DioException catch (e) {
+      final message = _extractDioErrorMessage(e);
+      throw Exception(message);
     }
-
-    final response = await _apiService.post(
-      ApiEndpoints.verifyAndComplete,
-      {
-        'email': email,
-        'verificationCode': verificationCode,
-        'password': password,
-        'fullName': '',
-        'userName': '',
-        'phoneNumber': '',
-      },
-    );
-
-    final data = _apiService.handleResponse(response);
-
-    if (data['success'] == true && data['token'] != null) {
-      await SharedPrefs.setAuthToken(data['token']);
-      await SharedPrefs.setSecureString(AppConstants.userEmailKey, email);
-      await SharedPrefs.setString(AppConstants.userEmailKey, email);
-      await SharedPrefs.setUserData(jsonEncode({
-        'email': email,
-      }));
-      await _cleanTempData();
-    }
-
-    return data;
   }
 
+  /// Request forgot password code
+  Future<Map<String, dynamic>> forgotPassword({required String email}) async {
+    try {
+      final response = await _apiService.post(
+        ApiEndpoints.forgotPassword,
+        {'email': email},
+      );
+      final data = _apiService.handleResponse(response);
+      if (data['success'] == false) {
+        throw Exception(data['message'] ?? 'Failed to process forgot password');
+      }
+      return data;
+    } on DioException catch (e) {
+      final message = _extractDioErrorMessage(e);
+      throw Exception(message);
+    }
+  }
+
+  /// Verify reset code
+  Future<Map<String, dynamic>> verifyResetCode({
+    required String email,
+    required String code,
+  }) async {
+    try {
+      final response = await _apiService.post(
+        ApiEndpoints.verifyResetCode,
+        {
+          'email': email,
+          'code': code,
+        },
+      );
+      final data = _apiService.handleResponse(response);
+      if (data['success'] == false) {
+        throw Exception(data['message'] ?? 'Invalid reset code');
+      }
+      return data;
+    } on DioException catch (e) {
+      final message = _extractDioErrorMessage(e);
+      throw Exception(message);
+    }
+  }
+
+  /// Reset password with new password
+  Future<Map<String, dynamic>> resetPassword({
+    required String email,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    try {
+      final response = await _apiService.post(
+        ApiEndpoints.resetPassword,
+        {
+          'email': email,
+          'newPassword': newPassword,
+          'confirmPassword': confirmPassword,
+        },
+      );
+      final data = _apiService.handleResponse(response);
+      if (data['success'] == false) {
+        throw Exception(data['message'] ?? 'Failed to reset password');
+      }
+      return data;
+    } on DioException catch (e) {
+      final message = _extractDioErrorMessage(e);
+      throw Exception(message);
+    }
+  }
+
+  /// Refresh tokens
+  Future<bool> refreshToken() async {
+    final token = SharedPrefs.authToken;
+    final refreshToken = SharedPrefs.refreshToken;
+    if (token == null || refreshToken == null) return false;
+
+    try {
+      final response = await _apiService.post(
+        ApiEndpoints.refresh,
+        {
+          'accessToken': token,
+          'refreshToken': refreshToken,
+        },
+      );
+      final data = _apiService.handleResponse(response);
+      if (data['success'] == true && data['data'] != null) {
+        final payload = data['data'] as Map<String, dynamic>;
+        final newAccessToken = payload['accessToken'] as String?;
+        final newRefreshToken = payload['refreshToken'] as String?;
+        if (newAccessToken != null) await SharedPrefs.setAuthToken(newAccessToken);
+        if (newRefreshToken != null) await SharedPrefs.setRefreshToken(newRefreshToken);
+        return true;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Check if email exists
   Future<bool> checkEmail(String email) async {
-    final response = await _apiService.get(
-      ApiEndpoints.checkEmail,
-      queryParams: {'email': email},
-    );
+    try {
+      final response = await _apiService.get(
+        ApiEndpoints.checkEmail,
+        queryParams: {'email': email},
+      );
 
-    final data = _apiService.handleResponse(response);
-    return data['exists'] ?? false;
-  }
-
-  Future<void> _cleanTempData() async {
-    await SharedPrefs.removeSecureKey(AppConstants.tempEmailKey);
-    await SharedPrefs.removeSecureKey(AppConstants.tempIsLoginKey);
-    await SharedPrefs.removeSecureKey(AppConstants.verifiedEmailKey);
-    await SharedPrefs.removeSecureKey(AppConstants.verifiedCodeKey);
-    await SharedPrefs.removeSecureKey(AppConstants.isCodeVerifiedKey);
-    await SharedPrefs.removeKey(AppConstants.isCodeVerifiedKey);
-  }
-
-  Future<Map<String, dynamic>> createPasscode(String passcode) async {
-    final response = await _apiService.post(
-      ApiEndpoints.createPasscode,
-      {
-        'passcode': passcode,
-        'confirmPasscode': passcode,
-      },
-      requiresAuth: true,
-    );
-    final data = _apiService.handleResponse(response);
-    if (data['success'] == true) {
-      await SharedPrefs.setString(AppConstants.userPasswordKey, passcode);
-      await SharedPrefs.setSecureString(AppConstants.userPasswordKey, passcode);
+      final data = _apiService.handleResponse(response);
+      return data['exists'] ?? (data['data']?['exists'] ?? false);
+    } catch (_) {
+      return false;
     }
-    return data;
   }
 
+  /// Set user currency
   Future<void> setUserCurrency(String currency) async {
     final response = await _apiService.post(
       ApiEndpoints.setCurrency,
@@ -280,40 +249,58 @@ class AuthRepository {
     if (data['success'] != true) {
       throw Exception(data['message'] ?? 'Failed to set currency');
     }
+    await SharedPrefs.setCurrency(currency);
   }
 
+  /// Social login (Google / Facebook)
   Future<Map<String, dynamic>> socialLogin({
     required String provider,
     required Map<String, String?> tokenData,
   }) async {
-    final response = await _apiService.post(
-      _getSocialEndpoint(provider),
-      tokenData,
-    );
+    try {
+      final endpoint = provider.toLowerCase() == 'facebook'
+          ? ApiEndpoints.facebookLogin
+          : ApiEndpoints.googleLogin;
 
-    final data = _apiService.handleResponse(response);
+      final response = await _apiService.post(
+        endpoint,
+        tokenData,
+      );
 
-    if (data['success'] == true && data['token'] != null) {
-      await SharedPrefs.setAuthToken(data['token']);
-      if (data['user'] != null) {
-        await SharedPrefs.setUserData(jsonEncode(data['user']));
+      final data = _apiService.handleResponse(response);
+
+      if (data['success'] == true && data['data'] != null) {
+        final payload = data['data'] as Map<String, dynamic>;
+        final token = payload['token'] as String?;
+        final refreshToken = payload['refreshToken'] as String?;
+        final user = payload['user'] as Map<String, dynamic>?;
+
+        if (token != null && token.isNotEmpty) {
+          await SharedPrefs.setAuthToken(token);
+        }
+        if (refreshToken != null && refreshToken.isNotEmpty) {
+          await SharedPrefs.setRefreshToken(refreshToken);
+        }
+        if (user != null) {
+          await SharedPrefs.setUserData(jsonEncode(user));
+          if (user['currency'] != null && (user['currency'] as String).isNotEmpty) {
+            await SharedPrefs.setCurrency(user['currency']);
+          }
+          if (user['email'] != null) {
+            await SharedPrefs.setString(AppConstants.userEmailKey, user['email']);
+            await SharedPrefs.setSecureString(AppConstants.userEmailKey, user['email']);
+          }
+        }
       }
-    }
 
-    return data;
-  }
-
-  String _getSocialEndpoint(String provider) {
-    switch (provider.toLowerCase()) {
-      case 'google':
-        return ApiEndpoints.googleLogin;
-      case 'facebook':
-        return ApiEndpoints.facebookLogin;
-      default:
-        throw Exception('Unknown provider: $provider');
+      return data;
+    } on DioException catch (e) {
+      final message = _extractDioErrorMessage(e);
+      throw Exception(message);
     }
   }
 
+  /// Logout
   Future<void> logout() async {
     try {
       await _apiService.post(
@@ -326,8 +313,34 @@ class AuthRepository {
     }
 
     await SharedPrefs.removeAuthToken();
+    await SharedPrefs.removeRefreshToken();
     await SharedPrefs.removeUserData();
-    await _cleanTempData();
     await WalletCacheService.invalidateAll();
+  }
+
+  String _extractDioErrorMessage(DioException e) {
+    if (e.response?.data != null) {
+      final data = e.response!.data;
+      if (data is Map<String, dynamic>) {
+        if (data['message'] != null && (data['message'] as String).isNotEmpty) {
+          return data['message'];
+        }
+        if (data['errors'] != null) {
+          if (data['errors'] is List && (data['errors'] as List).isNotEmpty) {
+            return (data['errors'] as List).first.toString();
+          } else if (data['errors'] is Map) {
+            final map = data['errors'] as Map;
+            if (map.isNotEmpty) {
+              final firstVal = map.values.first;
+              if (firstVal is List && firstVal.isNotEmpty) {
+                return firstVal.first.toString();
+              }
+              return firstVal.toString();
+            }
+          }
+        }
+      }
+    }
+    return e.message ?? 'An unexpected error occurred';
   }
 }
