@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Mahfazti.Core/Mahfazti.Core.csproj" />
+  <Project Path="Mahfazti.Infrastructure/Mahfazti.Infrastructure.csproj" />
+  <Project Path="Mahfazti.UnitTests/Mahfazti.UnitTests.csproj" Id="7ab8bd4a-dcd4-4397-8e3f-89f146c15e4b" />
+  <Project Path="Mahfazti.Api/Mahfazti.Api.csproj" />
+</Solution>
