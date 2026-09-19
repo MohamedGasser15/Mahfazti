@@ -15,3 +15,5 @@ Thumbs.db
 bin/
 obj/
 *.tmp
+.vercel
+.env*
