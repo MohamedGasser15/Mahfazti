@@ -78,6 +78,103 @@ namespace Mahfazti.Core.Services
             }
         }
 
+        public async Task<ApiResponse<object>> AdminForgotPasswordAsync(string email, string? clientUrl = null)
+        {
+            try
+            {
+                _logger.LogInformation("Admin forgot password request for email: {Email}", email);
+
+                var user = await _userManager.FindByEmailAsync(email);
+                if (user == null)
+                {
+                    var failRes = ApiResponse<object>.FailResponse(
+                        "هذا البريد الإلكتروني غير مسجل في النظام كمسؤول",
+                        new List<string> { "Access Denied: Email is not registered as an administrator" }
+                    );
+                    failRes.StatusCode = System.Net.HttpStatusCode.Forbidden;
+                    return failRes;
+                }
+
+                var roles = await _userManager.GetRolesAsync(user);
+                var isAdmin = roles.Any(r => r.Equals(Roles.Admin, StringComparison.OrdinalIgnoreCase) ||
+                                             r.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
+                                             r.Equals("Auditor", StringComparison.OrdinalIgnoreCase));
+                if (!isAdmin)
+                {
+                    _logger.LogWarning("Admin forgot password rejected: User {Email} is not in an admin role", email);
+                    var failRes = ApiResponse<object>.FailResponse(
+                        "تم رفض الوصول: هذا الحساب لا يملك صلاحيات إدارية لاستعادة كلمة المرور من لوحة التحكم",
+                        new List<string> { "Access Denied: Not an admin" }
+                    );
+                    failRes.StatusCode = System.Net.HttpStatusCode.Forbidden;
+                    return failRes;
+                }
+
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var encodedToken = System.Web.HttpUtility.UrlEncode(token);
+                var defaultBaseUrl = "https://mahfazti-six.vercel.app/reset-password";
+                var baseUrl = (!string.IsNullOrWhiteSpace(clientUrl) && !clientUrl.Contains("localhost", StringComparison.OrdinalIgnoreCase))
+                    ? clientUrl.TrimEnd('/')
+                    : defaultBaseUrl;
+                var resetLink = $"{baseUrl}?email={Uri.EscapeDataString(email)}&token={encodedToken}";
+
+                var isEn = (user.PreferredLanguage ?? "ar").Equals("en", StringComparison.OrdinalIgnoreCase);
+                var subject = isEn ? "Admin Password Reset - Mahfazti Console" : "إعادة تعيين كلمة مرور المسؤول - لوحة تحكم محفظتي";
+                var emailBody = $@"
+<!DOCTYPE html>
+<html lang='{(isEn ? "en" : "ar")}' dir='{(isEn ? "ltr" : "rtl")}'>
+<head>
+  <meta charset='UTF-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+</head>
+<body style='font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background-color: #f8f9fa; padding: 32px 16px; margin: 0; color: #1e293b;'>
+  <div style='max-width: 540px; margin: 0 auto; background: #ffffff; padding: 40px 32px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.03);'>
+    <div style='margin-bottom: 24px; text-align: center;'>
+      <span style='font-size: 24px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;'>Mahfazti <span style='color: #2563eb;'>Admin</span></span>
+    </div>
+    <h2 style='margin-top: 0; margin-bottom: 12px; color: #0f172a; font-size: 20px; font-weight: 700; text-align: center;'>
+      {(isEn ? "Reset Your Password" : "إعادة تعيين كلمة المرور")}
+    </h2>
+    <p style='font-size: 14px; line-height: 1.6; color: #475569; text-align: center; margin-bottom: 28px;'>
+      {(isEn 
+        ? "We received a request to reset the password for your administrator account. Click the button below to choose a new password." 
+        : "تلقينا طلباً لإعادة تعيين كلمة المرور الخاصة بحسابك الإداري. اضغط على الزر أدناه لاختيار كلمة مرور جديدة.")}
+    </p>
+    <div style='text-align: center; margin: 32px 0;'>
+      <a href='{resetLink}' target='_blank' style='background-color: #0f172a; color: #ffffff; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-block; box-shadow: 0 2px 6px rgba(15,23,42,0.2);'>
+        {(isEn ? "Reset Password" : "إعادة تعيين كلمة المرور")}
+      </a>
+    </div>
+    <div style='background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-top: 24px;'>
+      <span style='font-size: 11px; color: #64748b; display: block; margin-bottom: 6px;'>{(isEn ? "Or copy and paste this link in your browser:" : "أو انسخ الرابط التالي وضعه في المتصفح:")}</span>
+      <a href='{resetLink}' style='color: #2563eb; word-break: break-all; font-size: 11px; text-decoration: underline;'>{resetLink}</a>
+    </div>
+    <hr style='border: none; border-top: 1px solid #f1f5f9; margin: 28px 0 20px;' />
+    <p style='font-size: 12px; color: #94a3b8; text-align: center; margin: 0; line-height: 1.5;'>
+      {(isEn ? "This link is valid for 15 minutes. If you did not request a password reset, you can safely ignore this email." : "هذا الرابط صالح لمدة 15 دقيقة فقط. إذا لم تكن قد طلبت استعادة كلمة المرور، يمكنك تجاهل هذه الرسالة بأمان.")}
+    </p>
+  </div>
+</body>
+</html>";
+
+                await _emailSender.SendEmailAsync(email, subject, emailBody);
+                _logger.LogInformation("Admin password reset email dispatched to: {Email}", email);
+
+                return ApiResponse<object>.SuccessResponse(
+                    new { email, sent = true },
+                    isEn ? "Password reset link sent to your admin email." : "تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني بنجاح."
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing admin forgot password for: {Email}", email);
+                return ApiResponse<object>.FailResponse(
+                    "حدث خطأ أثناء معالجة طلب استعادة كلمة المرور",
+                    new List<string> { ex.Message }
+                );
+            }
+        }
+
         public async Task<ApiResponse<object>> VerifyResetCodeAsync(string email, string code)
         {
             try
@@ -163,6 +260,68 @@ namespace Mahfazti.Core.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error resetting password for: {Email}", dto.Email);
+                return ApiResponse<object>.FailResponse(
+                    "حدث خطأ أثناء إعادة تعيين كلمة المرور",
+                    new List<string> { ex.Message }
+                );
+            }
+        }
+
+        public async Task<ApiResponse<object>> AdminResetPasswordAsync(AdminResetPasswordDTO dto)
+        {
+            try
+            {
+                _logger.LogInformation("Admin password reset attempt for email: {Email}", dto.Email);
+
+                var user = await _userManager.FindByEmailAsync(dto.Email);
+                if (user == null)
+                {
+                    return ApiResponse<object>.FailResponse(
+                        "المستخدم غير موجود أو غير مسجل كمسؤول",
+                        new List<string> { "User not found" }
+                    );
+                }
+
+                var roles = await _userManager.GetRolesAsync(user);
+                var isAdmin = roles.Any(r => r.Equals(Roles.Admin, StringComparison.OrdinalIgnoreCase) ||
+                                             r.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
+                                             r.Equals("Auditor", StringComparison.OrdinalIgnoreCase));
+                if (!isAdmin)
+                {
+                    _logger.LogWarning("Admin reset password rejected: User {Email} is not in an admin role", dto.Email);
+                    var failRes = ApiResponse<object>.FailResponse(
+                        "تم رفض الوصول: هذا الحساب لا يملك صلاحيات إدارية",
+                        new List<string> { "Access Denied: Not an admin" }
+                    );
+                    failRes.StatusCode = System.Net.HttpStatusCode.Forbidden;
+                    return failRes;
+                }
+
+                var result = await _userManager.ResetPasswordAsync(user, dto.Token, dto.NewPassword);
+                if (result.Succeeded)
+                {
+                    var isEn = (user.PreferredLanguage ?? "ar").Equals("en", StringComparison.OrdinalIgnoreCase);
+                    var emailBody = _emailTemplateService.GeneratePasswordResetConfirmationEmail(user.PreferredLanguage ?? "ar");
+                    await _emailSender.SendEmailAsync(
+                        dto.Email,
+                        _emailTemplateService.GetLocalizedText("EmailSubjectPasswordChanged", user.PreferredLanguage ?? "ar"),
+                        emailBody
+                    );
+
+                    _logger.LogInformation("Admin password reset successful for email: {Email}", dto.Email);
+                    return ApiResponse<object>.SuccessResponse(
+                        new { email = dto.Email, reset = true },
+                        isEn ? "Password reset successfully. You can now log in." : "تم تغيير كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول."
+                    );
+                }
+
+                var errors = result.Errors.Select(e => e.Description).ToList();
+                _logger.LogWarning("Admin password reset failed for {Email}: {Errors}", dto.Email, string.Join(", ", errors));
+                return ApiResponse<object>.FailResponse("فشل إعادة تعيين كلمة المرور، يرجى التأكد من صلاحية الرابط والمحاولة مجدداً", errors);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error resetting admin password for: {Email}", dto.Email);
                 return ApiResponse<object>.FailResponse(
                     "حدث خطأ أثناء إعادة تعيين كلمة المرور",
                     new List<string> { ex.Message }

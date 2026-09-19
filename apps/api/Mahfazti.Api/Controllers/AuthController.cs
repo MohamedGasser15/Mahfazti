@@ -116,6 +116,80 @@ namespace Mahfazti.Api.Controllers
         }
 
         /// <summary>
+        /// Initiates the forgot password process specifically for administrators.
+        /// Rejects non-admin users with 403 Forbidden.
+        /// </summary>
+        [HttpPost("admin/forgot-password")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> AdminForgotPassword([FromBody] ForgotPasswordDTO dto)
+        {
+            try
+            {
+                _logger.LogInformation("Admin forgot password request for email: {Email}", dto?.Email);
+
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+                    return BadRequest(ApiResponse<object>.FailResponse("Validation failed", errors));
+                }
+
+                var origin = Request.Headers.Origin.ToString();
+                var clientUrl = (!string.IsNullOrWhiteSpace(origin) && !origin.Contains("localhost", StringComparison.OrdinalIgnoreCase))
+                    ? $"{origin.TrimEnd('/')}/reset-password"
+                    : "https://mahfazti-six.vercel.app/reset-password";
+
+                var response = await _userService.AdminForgotPasswordAsync(dto!.Email, clientUrl);
+                return StatusCode((int)response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error during admin forgot password");
+                return StatusCode(500, new ProblemDetails
+                {
+                    Title = "Internal server error",
+                    Detail = "An error occurred while processing your request."
+                });
+            }
+        }
+
+        /// <summary>
+        /// Resets the administrator password using the security token sent to their email.
+        /// </summary>
+        [HttpPost("admin/reset-password")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> AdminResetPassword([FromBody] AdminResetPasswordDTO dto)
+        {
+            try
+            {
+                _logger.LogInformation("Admin reset password requested for email: {Email}", dto?.Email);
+
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+                    return BadRequest(ApiResponse<object>.FailResponse("Validation failed", errors));
+                }
+
+                var response = await _userService.AdminResetPasswordAsync(dto!);
+                return StatusCode((int)response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error during admin reset password");
+                return StatusCode(500, new ProblemDetails
+                {
+                    Title = "Internal server error",
+                    Detail = "An error occurred while processing your request."
+                });
+            }
+        }
+
+        /// <summary>
         /// Verifies the password reset code.
         /// </summary>
         [HttpPost("verify-reset-code")]
