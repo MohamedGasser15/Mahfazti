@@ -23,10 +23,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return saved ? JSON.parse(saved) : mockDefaultAdmin;
   });
 
-  const login = (email?: string) => {
+  const login = (email?: string, _password?: string) => {
+    const rawEmail = (email || mockDefaultAdmin.email).toLowerCase();
+    let role: 'SuperAdmin' | 'Admin' | 'Auditor' = 'SuperAdmin';
+    let fullName = 'Mohamed Gasser';
+
+    if (rawEmail.includes('finance')) {
+      role = 'Admin';
+      fullName = 'Youssef Mansour (Finance)';
+    } else if (rawEmail.includes('audit')) {
+      role = 'Auditor';
+      fullName = 'Sarah Hany (Compliance)';
+    }
+
     const adminSession: AdminUser = {
       ...mockDefaultAdmin,
       email: email || mockDefaultAdmin.email,
+      role,
+      fullName,
     };
     localStorage.setItem('mahfazti_admin_session', JSON.stringify(adminSession));
     setUser(adminSession);
