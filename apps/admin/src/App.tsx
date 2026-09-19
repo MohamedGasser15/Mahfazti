@@ -5,6 +5,7 @@ import { ThemeProvider, useTheme } from './core/context/ThemeContext';
 import { LocaleProvider, useLocale } from './core/context/LocaleContext';
 import { AuthProvider } from './features/auth/context/AuthContext';
 import { AppRoutes } from './routes/AppRoutes';
+import { ErrorBoundary } from './core/components/ErrorBoundary';
 import { Toaster } from 'sonner';
 import { CheckCircle2, AlertCircle, AlertTriangle, Info, Loader2 } from 'lucide-react';
 
@@ -30,7 +31,7 @@ const ThemedToaster: React.FC = () => {
       toastOptions={{
         classNames: {
           toast:
-            'group !bg-white/95 dark:!bg-[#0c0c0e]/95 !backdrop-blur-xl !border !border-zinc-200/90 dark:!border-zinc-800/90 !shadow-xl !shadow-black/10 dark:!shadow-[0_20px_45px_-10px_rgba(0,0,0,0.8)] !font-sans transition-all',
+            'group !bg-white/95 dark:!bg-[#0c0c0e]/95 !backdrop-blur-xl !border !border-zinc-200/90 dark:!border-zinc-800/90 !shadow-xl !shadow-black/10 dark:!shadow-[0_20px_45px_-10px_rgba(0,0,0,0.8)] transition-all',
           title: '!text-xs sm:!text-sm !font-bold !text-zinc-950 dark:!text-white !tracking-tight',
           description: '!text-[11px] sm:!text-xs !text-zinc-500 dark:!text-zinc-400 !font-normal !mt-0.5 leading-relaxed',
           actionButton:
@@ -57,7 +58,9 @@ export const App: React.FC = () => {
         <LocaleProvider>
           <BrowserRouter>
             <AuthProvider>
-              <AppRoutes />
+              <ErrorBoundary>
+                <AppRoutes />
+              </ErrorBoundary>
               <ThemedToaster />
             </AuthProvider>
           </BrowserRouter>

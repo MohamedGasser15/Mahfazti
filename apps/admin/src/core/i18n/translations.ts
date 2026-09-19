@@ -48,6 +48,38 @@ export interface TranslationSchema {
       missingCredsDesc: string;
       resetDispatchedTitle: string;
       resetDispatchedDesc: string;
+      authFailedTitle: string;
+    };
+    errors: {
+      accessDenied: string;
+      invalidCredentials: string;
+      missingCredentials: string;
+      accountBanned: string;
+      accountLocked: string;
+      networkError: string;
+      serverError: string;
+      unexpectedError: string;
+      resetFailed: string;
+    };
+    resetPasswordPage: {
+      title: string;
+      subtitle: string;
+      emailLabel: string;
+      newPasswordLabel: string;
+      newPasswordPlaceholder: string;
+      confirmPasswordLabel: string;
+      confirmPasswordPlaceholder: string;
+      submitBtn: string;
+      submittingBtn: string;
+      backToLogin: string;
+      invalidLinkTitle: string;
+      invalidLinkDesc: string;
+      requestNewLink: string;
+      successTitle: string;
+      successDesc: string;
+      goToLogin: string;
+      passwordMismatch: string;
+      passwordTooShort: string;
     };
     slides: Array<{
       badge: string;
@@ -142,9 +174,9 @@ export const translations: Record<Locale, TranslationSchema> = {
       signInTitle: 'Sign In',
       signInSubtitle: 'Enter your administrative credentials to access your dashboard.',
       emailLabel: 'Email Address',
-      emailPlaceholder: 'admin@mahfazti.app',
+      emailPlaceholder: 'name@mahfazti.app',
       passwordLabel: 'Password',
-      passwordPlaceholder: '••••••••',
+      passwordPlaceholder: 'Enter your password',
       forgotPassword: 'Forgot password?',
       showPassword: 'Show password',
       hidePassword: 'Hide password',
@@ -159,7 +191,7 @@ export const translations: Record<Locale, TranslationSchema> = {
         description:
           'Enter your account email address and we will send you a secure link to reset your password.',
         emailLabel: 'Email Address',
-        emailPlaceholder: 'admin@mahfazti.app',
+        emailPlaceholder: 'name@mahfazti.app',
         cancelBtn: 'Cancel',
         submitBtn: 'Send Reset Link',
         submittingBtn: 'Sending...',
@@ -173,6 +205,38 @@ export const translations: Record<Locale, TranslationSchema> = {
         missingCredsDesc: 'Please enter both your email address and password.',
         resetDispatchedTitle: 'Reset Link Dispatched',
         resetDispatchedDesc: 'Password recovery instructions sent to your email.',
+        authFailedTitle: 'Authentication Failed',
+      },
+      errors: {
+        accessDenied: 'Access Denied: You do not have administrator permissions to access this console.',
+        invalidCredentials: 'Invalid email address or password. Please check your credentials and try again.',
+        missingCredentials: 'Please enter both your email address and password.',
+        accountBanned: 'This account has been suspended by administration.',
+        accountLocked: 'Account is temporarily locked out due to multiple failed login attempts. Please try again later.',
+        networkError: 'Unable to reach the server. Please check your internet connection and try again.',
+        serverError: 'Server is temporarily unavailable. Please try again shortly.',
+        unexpectedError: 'An unexpected error occurred during authentication. Please try again.',
+        resetFailed: 'Failed to send password reset instructions. Please try again.',
+      },
+      resetPasswordPage: {
+        title: 'Set New Password',
+        subtitle: 'Enter and confirm your new administrator password below.',
+        emailLabel: 'Account Email',
+        newPasswordLabel: 'New Password',
+        newPasswordPlaceholder: 'Enter new password (min. 8 chars)',
+        confirmPasswordLabel: 'Confirm New Password',
+        confirmPasswordPlaceholder: 'Re-enter your new password',
+        submitBtn: 'Update Password',
+        submittingBtn: 'Updating Password...',
+        backToLogin: 'Back to Sign In',
+        invalidLinkTitle: 'Invalid or Expired Link',
+        invalidLinkDesc: 'This password reset link is invalid or has expired. Please request a new link from the login page.',
+        requestNewLink: 'Request New Link',
+        successTitle: 'Password Reset Complete',
+        successDesc: 'Your administrator password has been updated successfully. You can now sign in with your new credentials.',
+        goToLogin: 'Proceed to Sign In',
+        passwordMismatch: 'Passwords do not match. Please verify and try again.',
+        passwordTooShort: 'Password must be at least 8 characters long.',
       },
       slides: [
         {
@@ -341,9 +405,9 @@ export const translations: Record<Locale, TranslationSchema> = {
       signInTitle: 'تسجيل الدخول',
       signInSubtitle: 'أدخل بيانات الاعتماد الإدارية للوصول إلى لوحة التحكم الخاصة بك.',
       emailLabel: 'البريد الإلكتروني',
-      emailPlaceholder: 'admin@mahfazti.app',
+      emailPlaceholder: 'name@mahfazti.app',
       passwordLabel: 'كلمة المرور',
-      passwordPlaceholder: '••••••••',
+      passwordPlaceholder: 'أدخل كلمة المرور',
       forgotPassword: 'نسيت كلمة المرور؟',
       showPassword: 'إظهار كلمة المرور',
       hidePassword: 'إخفاء كلمة المرور',
@@ -358,7 +422,7 @@ export const translations: Record<Locale, TranslationSchema> = {
         description:
           'أدخل عنوان بريدك الإلكتروني المسجل وسنرسل لك رابطاً آمناً لإعادة تعيين كلمة المرور.',
         emailLabel: 'البريد الإلكتروني',
-        emailPlaceholder: 'admin@mahfazti.app',
+        emailPlaceholder: 'name@mahfazti.app',
         cancelBtn: 'إلغاء',
         submitBtn: 'إرسال رابط الاستعادة',
         submittingBtn: 'جاري الإرسال...',
@@ -372,6 +436,38 @@ export const translations: Record<Locale, TranslationSchema> = {
         missingCredsDesc: 'يرجى إدخال البريد الإلكتروني وكلمة المرور للمتابعة.',
         resetDispatchedTitle: 'تم إرسال رابط الاستعادة',
         resetDispatchedDesc: 'تم إرسال تعليمات استعادة كلمة المرور إلى بريدك الإلكتروني.',
+        authFailedTitle: 'فشل تسجيل الدخول',
+      },
+      errors: {
+        accessDenied: 'تم رفض الوصول: هذا الحساب لا يملك صلاحيات إدارية للدخول إلى لوحة التحكم.',
+        invalidCredentials: 'البريد الإلكتروني أو كلمة المرور غير صحيحة. يرجى التحقق والمحاولة مجدداً.',
+        missingCredentials: 'يرجى إدخال البريد الإلكتروني وكلمة المرور للمتابعة.',
+        accountBanned: 'تم حظر هذا الحساب من قِبل إدارة النظام.',
+        accountLocked: 'تم قفل الحساب مؤقتاً لكثرة المحاولات غير الناجحة. يرجى المحاولة لاحقاً.',
+        networkError: 'تعذر الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.',
+        serverError: 'الخادم غير متاح حالياً. يرجى المحاولة بعد قليل.',
+        unexpectedError: 'حدث خطأ غير متوقع أثناء تسجيل الدخول. يرجى المحاولة مرة أخرى.',
+        resetFailed: 'فشل إرسال رابط استعادة كلمة المرور. يرجى المحاولة مرة أخرى.',
+      },
+      resetPasswordPage: {
+        title: 'تعيين كلمة مرور جديدة',
+        subtitle: 'أدخل كلمة المرور الجديدة لحسابك الإداري وقم بتأكيدها للمتابعة.',
+        emailLabel: 'البريد الإلكتروني للحساب',
+        newPasswordLabel: 'كلمة المرور الجديدة',
+        newPasswordPlaceholder: 'أدخل كلمة المرور الجديدة (8 خانات على الأقل)',
+        confirmPasswordLabel: 'تأكيد كلمة المرور الجديدة',
+        confirmPasswordPlaceholder: 'أعد إدخال كلمة المرور الجديدة',
+        submitBtn: 'حفظ وتحديث كلمة المرور',
+        submittingBtn: 'جاري التحديث...',
+        backToLogin: 'العودة لتسجيل الدخول',
+        invalidLinkTitle: 'رابط غير صالح أو منتهي الصلاحية',
+        invalidLinkDesc: 'يبدو أن رابط استعادة كلمة المرور هذا غير صحيح أو انتهت صلاحيته. يرجى طلب رابط جديد من صفحة تسجيل الدخول.',
+        requestNewLink: 'طلب رابط جديد',
+        successTitle: 'تم تغيير كلمة المرور بنجاح',
+        successDesc: 'تم تحديث كلمة المرور لحسابك الإداري بنجاح. يمكنك الآن تسجيل الدخول ببياناتك الجديدة.',
+        goToLogin: 'الانتقال لتسجيل الدخول',
+        passwordMismatch: 'كلمتا المرور غير متطابقتين. يرجى التحقق وإعادة المحاولة.',
+        passwordTooShort: 'يجب ألا تقل كلمة المرور عن 8 أحرف وأرقام.',
       },
       slides: [
         {

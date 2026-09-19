@@ -1,52 +1,60 @@
 import React, { createContext, useContext, useState } from 'react';
 import type { AdminUser } from '../types';
+import { authApi } from '../api/authApi';
 
 interface AuthContextType {
   user: AdminUser | null;
   isAuthenticated: boolean;
-  login: (email?: string, password?: string) => void;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
-
-const mockDefaultAdmin: AdminUser = {
-  id: 'admin-1',
-  email: 'admin@mahfazti.app',
-  fullName: 'Mohamed Gasser',
-  role: 'SuperAdmin',
-};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AdminUser | null>(() => {
-    const saved = localStorage.getItem('mahfazti_admin_session');
-    return saved ? JSON.parse(saved) : mockDefaultAdmin;
+    try {
+      const token = localStorage.getItem('mahfazti_admin_access_token');
+      const saved = localStorage.getItem('mahfazti_admin_session');
+      if (token && saved) {
+        return JSON.parse(saved);
+      }
+    } catch {
+      // In case localStorage is unavailable or corrupted
+    }
+    return null;
   });
 
-  const login = (email?: string, _password?: string) => {
-    const rawEmail = (email || mockDefaultAdmin.email).toLowerCase();
-    let role: 'SuperAdmin' | 'Admin' | 'Auditor' = 'SuperAdmin';
-    let fullName = 'Mohamed Gasser';
+  const login = async (email: string, password: string): Promise<void> => {
+    const data = await authApi.login({ email, password });
 
-    if (rawEmail.includes('finance')) {
-      role = 'Admin';
-      fullName = 'Youssef Mansour (Finance)';
-    } else if (rawEmail.includes('audit')) {
-      role = 'Auditor';
-      fullName = 'Sarah Hany (Compliance)';
+    if (data.token) {
+      localStorage.setItem('mahfazti_admin_access_token', data.token);
+    }
+    if (data.refreshToken) {
+      localStorage.setItem('mahfazti_admin_refresh_token', data.refreshToken);
     }
 
+    const backendUser = data.user;
     const adminSession: AdminUser = {
-      ...mockDefaultAdmin,
-      email: email || mockDefaultAdmin.email,
-      role,
-      fullName,
+      id: backendUser?.id || 'admin',
+      email: backendUser?.email || email,
+      fullName: backendUser?.fullName || 'Administrator',
+      userName: backendUser?.userName || email,
+      role: backendUser?.role || 'Admin',
+      currency: backendUser?.currency,
+      preferredLanguage: backendUser?.preferredLanguage,
+      avatarUrl: backendUser?.imagePath,
+      phoneNumber: backendUser?.phoneNumber,
     };
+
     localStorage.setItem('mahfazti_admin_session', JSON.stringify(adminSession));
     setUser(adminSession);
   };
 
   const logout = () => {
+    localStorage.removeItem('mahfazti_admin_access_token');
+    localStorage.removeItem('mahfazti_admin_refresh_token');
     localStorage.removeItem('mahfazti_admin_session');
     setUser(null);
   };

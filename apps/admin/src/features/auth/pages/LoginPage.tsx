@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mail,
@@ -22,10 +22,38 @@ import {
   Languages,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { authApi } from '../api/authApi';
+import { AuthError, type AuthErrorCode } from '../types';
 import { useTheme } from '../../../core/context/ThemeContext';
 import { useLocale } from '../../../core/context/LocaleContext';
+import type { TranslationSchema } from '../../../core/i18n/translations';
 import { MahfaztiLogo } from '../../../core/components/ui/MahfaztiLogo';
-import { toast } from 'sonner';
+import { ThreeDotLoader } from '../../../core/components/ui/ThreeDotLoader';
+import { AnimatedAuthBackground } from '../../../core/components/ui/AnimatedAuthBackground';
+
+const getAuthErrorMessage = (code: AuthErrorCode, t: TranslationSchema): string => {
+  switch (code) {
+    case 'ACCESS_DENIED':
+      return t.auth.errors.accessDenied;
+    case 'INVALID_CREDENTIALS':
+      return t.auth.errors.invalidCredentials;
+    case 'MISSING_CREDENTIALS':
+      return t.auth.errors.missingCredentials;
+    case 'ACCOUNT_BANNED':
+      return t.auth.errors.accountBanned;
+    case 'ACCOUNT_LOCKED':
+      return t.auth.errors.accountLocked;
+    case 'NETWORK_ERROR':
+      return t.auth.errors.networkError;
+    case 'SERVER_ERROR':
+      return t.auth.errors.serverError;
+    case 'RESET_FAILED':
+      return t.auth.errors.resetFailed;
+    case 'UNEXPECTED_ERROR':
+    default:
+      return t.auth.errors.unexpectedError;
+  }
+};
 
 const STATIC_SLIDE_ICONS = [
   {
@@ -49,71 +77,119 @@ const STATIC_SLIDE_ICONS = [
 ];
 
 export const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState('admin@mahfazti.app');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<AuthErrorCode | null>(null);
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
+  const [resetErrorCode, setResetErrorCode] = useState<AuthErrorCode | null>(null);
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [isResetSent, setIsResetSent] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
+
+  // Helper to restrict input strictly to English / ASCII characters
+  const sanitizeEnglish = (val: string, allowSpaces = false) => {
+    return allowSpaces
+      ? val.replace(/[^\x20-\x7E]/g, '')
+      : val.replace(/[^\x21-\x7E]/g, '');
+  };
+
+  const handleEnglishKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    allowSpaces = false
+  ) => {
+    // Allow control keys (Backspace, Delete, Enter, Tab, Arrow keys, shortcuts)
+    if (e.key.length !== 1 || e.ctrlKey || e.altKey || e.metaKey) {
+      return;
+    }
+    if (!allowSpaces && e.key === ' ') {
+      e.preventDefault();
+      return;
+    }
+    // Block non-ASCII characters (including Arabic)
+    if (/[^\x20-\x7E]/.test(e.key)) {
+      e.preventDefault();
+    }
+  };
 
   const { login } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { locale, dir, toggleLocale, t } = useLocale();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Rotate between the 3 showcase items every 5 seconds (resets on manual selection)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveSlide((prev) => (prev + 1) % STATIC_SLIDE_ICONS.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [activeSlide]);
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setErrorCode(null);
 
     if (!email.trim() || !password.trim()) {
-      setError(t.auth.toasts.missingCredsDesc);
-      toast.error(t.auth.toasts.missingCredsTitle, {
-        description: t.auth.toasts.missingCredsDesc,
-      });
+      setErrorCode('MISSING_CREDENTIALS');
       return;
     }
 
     setIsLoading(true);
 
-    setTimeout(() => {
-      login(email, password);
+    try {
+      await login(email.trim(), password);
+      const targetPath =
+        (location.state as { from?: { pathname?: string } })?.from?.pathname || '/';
+      navigate(targetPath, { replace: true });
+    } catch (err: unknown) {
+      let code: AuthErrorCode = 'UNEXPECTED_ERROR';
+      if (err instanceof AuthError) {
+        code = err.code;
+      } else if (err instanceof Error) {
+        const lower = err.message.toLowerCase();
+        if (lower.includes('access denied') || lower.includes('permission')) {
+          code = 'ACCESS_DENIED';
+        } else if (
+          lower.includes('credential') ||
+          lower.includes('password') ||
+          lower.includes('invalid') ||
+          lower.includes('email') ||
+          lower.includes('user')
+        ) {
+          code = 'INVALID_CREDENTIALS';
+        } else if (lower.includes('banned')) {
+          code = 'ACCOUNT_BANNED';
+        } else if (lower.includes('lock')) {
+          code = 'ACCOUNT_LOCKED';
+        } else if (lower.includes('network') || lower.includes('connect')) {
+          code = 'NETWORK_ERROR';
+        } else if (lower.includes('server') || lower.includes('unreachable')) {
+          code = 'SERVER_ERROR';
+        }
+      }
+
+      setErrorCode(code);
+    } finally {
       setIsLoading(false);
-      toast.success(t.auth.toasts.signedInTitle, {
-        description: t.auth.toasts.signedInDesc,
-      });
-      navigate('/');
-    }, 400);
+    }
   };
 
-  const handleSendResetLink = (e: React.FormEvent) => {
+  const handleSendResetLink = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!forgotEmail) return;
+    if (!forgotEmail.trim()) return;
     setIsSendingReset(true);
-    setTimeout(() => {
-      setIsSendingReset(false);
+    setResetErrorCode(null);
+    try {
+      await authApi.forgotPassword(forgotEmail.trim());
       setIsResetSent(true);
-      toast.success(t.auth.toasts.resetDispatchedTitle, {
-        description: `${t.auth.toasts.resetDispatchedDesc} (${forgotEmail})`,
-      });
       setTimeout(() => {
         setShowForgotModal(false);
         setIsResetSent(false);
         setForgotEmail('');
-      }, 1500);
-    }, 500);
+      }, 2000);
+    } catch (err: unknown) {
+      const code: AuthErrorCode =
+        err instanceof AuthError ? err.code : 'RESET_FAILED';
+      setResetErrorCode(code);
+    } finally {
+      setIsSendingReset(false);
+    }
   };
 
   const currentSlide = t.auth.slides[activeSlide];
@@ -125,25 +201,8 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="relative min-h-screen w-full bg-[#f8f9fa] dark:bg-[#000000] text-zinc-900 dark:text-white transition-colors duration-200 flex flex-col justify-between overflow-x-hidden select-none">
-      {/* Moving Background Dot Grid */}
-      <style>{`
-        @keyframes driftDots {
-          0% { background-position: 0 0; }
-          100% { background-position: 240px 240px; }
-        }
-      `}</style>
-
-      <div
-        className="pointer-events-none fixed inset-0 z-0 opacity-60 dark:opacity-45 transition-opacity"
-        style={{
-          backgroundImage:
-            theme === 'dark'
-              ? 'radial-gradient(rgba(255, 255, 255, 0.45) 1.5px, transparent 1.5px)'
-              : 'radial-gradient(rgba(0, 0, 0, 0.22) 1.5px, transparent 1.5px)',
-          backgroundSize: '28px 28px',
-          animation: 'driftDots 30s linear infinite',
-        }}
-      />
+      {/* Dynamic Animated Ambient Background */}
+      <AnimatedAuthBackground />
 
       {/* Top Header */}
       <header className="relative z-20 w-full px-6 py-5 max-w-7xl mx-auto flex items-center justify-between">
@@ -296,10 +355,10 @@ export const LoginPage: React.FC = () => {
                     key={idx}
                     type="button"
                     onClick={() => setActiveSlide(idx)}
-                    className={`relative h-2 sm:h-2.5 rounded-full overflow-hidden transition-all duration-300 cursor-pointer focus:outline-none ${
+                    className={`relative h-2 sm:h-2.5 rounded-full overflow-hidden transition-[width,background-color,border-color] duration-300 cursor-pointer focus:outline-none ${
                       isActive
                         ? 'w-10 sm:w-12 bg-zinc-200 dark:bg-zinc-800 border border-zinc-300/80 dark:border-zinc-700 shadow-2xs'
-                        : 'w-2.5 sm:w-3.5 bg-zinc-300 dark:bg-zinc-600 hover:bg-zinc-400 dark:hover:bg-zinc-500'
+                        : 'w-2.5 sm:w-3.5 bg-zinc-300 dark:bg-zinc-600 hover:bg-zinc-400 dark:hover:bg-zinc-500 border border-transparent'
                     }`}
                     aria-label={`Slide ${idx + 1}`}
                   >
@@ -309,7 +368,10 @@ export const LoginPage: React.FC = () => {
                         initial={{ width: '0%' }}
                         animate={{ width: '100%' }}
                         transition={{ duration: 5, ease: 'linear' }}
-                        className="absolute inset-0 bg-black dark:bg-white rounded-full"
+                        onAnimationComplete={() =>
+                          setActiveSlide((prev) => (prev + 1) % STATIC_SLIDE_ICONS.length)
+                        }
+                        className="absolute inset-y-0 start-0 bg-black dark:bg-white rounded-full"
                       />
                     )}
                   </button>
@@ -365,9 +427,9 @@ export const LoginPage: React.FC = () => {
             </div>
 
             {/* Inline Error Message */}
-            {error && (
+            {errorCode && (
               <div className="mb-4 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/30 px-3.5 py-2.5 text-xs text-rose-600 dark:text-rose-400 font-medium">
-                {error}
+                {getAuthErrorMessage(errorCode, t)}
               </div>
             )}
 
@@ -385,10 +447,16 @@ export const LoginPage: React.FC = () => {
                   <input
                     type="email"
                     required
+                    dir="ltr"
+                    lang="en"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    spellCheck={false}
                     value={email}
+                    onKeyDown={(e) => handleEnglishKeyDown(e, false)}
                     onChange={(e) => {
-                      setEmail(e.target.value);
-                      setError(null);
+                      setEmail(sanitizeEnglish(e.target.value, false));
+                      setErrorCode(null);
                     }}
                     placeholder={t.auth.emailPlaceholder}
                     className={`w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/60 py-2.5 text-xs sm:text-sm text-zinc-950 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 focus:border-black dark:focus:border-white focus:bg-white dark:focus:bg-black focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10 transition-all shadow-2xs ${
@@ -406,7 +474,10 @@ export const LoginPage: React.FC = () => {
                   </label>
                   <button
                     type="button"
-                    onClick={() => setShowForgotModal(true)}
+                    onClick={() => {
+                      setShowForgotModal(true);
+                      setResetErrorCode(null);
+                    }}
                     className="text-[11px] font-medium text-zinc-500 hover:text-black dark:text-zinc-400 dark:hover:text-white underline cursor-pointer transition-colors"
                   >
                     {t.auth.forgotPassword}
@@ -419,10 +490,16 @@ export const LoginPage: React.FC = () => {
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
+                    dir="ltr"
+                    lang="en"
+                    autoCapitalize="none"
+                    autoComplete="current-password"
+                    spellCheck={false}
                     value={password}
+                    onKeyDown={(e) => handleEnglishKeyDown(e, true)}
                     onChange={(e) => {
-                      setPassword(e.target.value);
-                      setError(null);
+                      setPassword(sanitizeEnglish(e.target.value, true));
+                      setErrorCode(null);
                     }}
                     placeholder={t.auth.passwordPlaceholder}
                     className={`w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/60 py-2.5 text-xs sm:text-sm text-zinc-950 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 focus:border-black dark:focus:border-white focus:bg-white dark:focus:bg-black focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10 transition-all shadow-2xs font-mono ${
@@ -465,10 +542,7 @@ export const LoginPage: React.FC = () => {
                 className="w-full h-11 sm:h-12 mt-2 flex items-center justify-center gap-2 rounded-xl bg-black text-white hover:bg-zinc-800 active:bg-zinc-900 dark:bg-white dark:text-black dark:hover:bg-zinc-200 dark:active:bg-zinc-300 text-xs sm:text-sm font-bold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-all active:scale-[0.99]"
               >
                 {isLoading ? (
-                  <div className="flex items-center gap-2">
-                    <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                    <span>{t.auth.signingIn}</span>
-                  </div>
+                  <ThreeDotLoader size="md" />
                 ) : (
                   <>
                     <span>{t.auth.signInButton}</span>
@@ -507,15 +581,15 @@ export const LoginPage: React.FC = () => {
           <span>&copy; {new Date().getFullYear()} Mahfazti. All rights reserved.</span>
         </div>
         <div className="flex items-center gap-4 text-[11px]">
-          <span className="hover:text-black dark:hover:text-white cursor-pointer transition">
-            Privacy Policy
-          </span>
-          <span className="hover:text-black dark:hover:text-white cursor-pointer transition">
-            Terms of Service
-          </span>
-          <span className="hover:text-black dark:hover:text-white cursor-pointer transition">
-            Support
-          </span>
+          <Link to="/privacy" className="hover:text-black dark:hover:text-white cursor-pointer transition">
+            {locale === 'ar' ? 'سياسة الخصوصية' : 'Privacy Policy'}
+          </Link>
+          <Link to="/terms" className="hover:text-black dark:hover:text-white cursor-pointer transition">
+            {locale === 'ar' ? 'شروط الخدمة' : 'Terms of Service'}
+          </Link>
+          <Link to="/help" className="hover:text-black dark:hover:text-white cursor-pointer transition">
+            {locale === 'ar' ? 'الدعم الفني' : 'Support'}
+          </Link>
         </div>
       </footer>
 
@@ -575,6 +649,12 @@ export const LoginPage: React.FC = () => {
                     {t.auth.resetModal.description}
                   </p>
 
+                  {resetErrorCode && (
+                    <div className="mt-3 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/30 px-3.5 py-2.5 text-xs text-rose-600 dark:text-rose-400 font-medium">
+                      {getAuthErrorMessage(resetErrorCode, t)}
+                    </div>
+                  )}
+
                   <form onSubmit={handleSendResetLink} className="mt-4 space-y-4">
                     <div>
                       <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
@@ -583,8 +663,17 @@ export const LoginPage: React.FC = () => {
                       <input
                         type="email"
                         required
+                        dir="ltr"
+                        lang="en"
+                        autoCapitalize="none"
+                        autoComplete="email"
+                        spellCheck={false}
                         value={forgotEmail}
-                        onChange={(e) => setForgotEmail(e.target.value)}
+                        onKeyDown={(e) => handleEnglishKeyDown(e, false)}
+                        onChange={(e) => {
+                          setForgotEmail(sanitizeEnglish(e.target.value, false));
+                          setResetErrorCode(null);
+                        }}
                         placeholder={t.auth.resetModal.emailPlaceholder}
                         className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 px-3.5 py-2.5 text-xs text-zinc-950 dark:text-white focus:border-black dark:focus:border-white focus:outline-none shadow-2xs text-start"
                       />
@@ -601,9 +690,9 @@ export const LoginPage: React.FC = () => {
                       <button
                         type="submit"
                         disabled={isSendingReset}
-                        className="px-4 py-2 rounded-xl bg-black text-white hover:bg-zinc-800 active:bg-zinc-900 dark:bg-white dark:text-black dark:hover:bg-zinc-200 text-xs font-semibold transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                        className="px-4 py-2 rounded-xl bg-black text-white hover:bg-zinc-800 active:bg-zinc-900 dark:bg-white dark:text-black dark:hover:bg-zinc-200 text-xs font-semibold transition flex items-center justify-center min-w-[110px] cursor-pointer disabled:opacity-50"
                       >
-                        {isSendingReset ? t.auth.resetModal.submittingBtn : t.auth.resetModal.submitBtn}
+                        {isSendingReset ? <ThreeDotLoader size="sm" /> : t.auth.resetModal.submitBtn}
                       </button>
                     </div>
                   </form>

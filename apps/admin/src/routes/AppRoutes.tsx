@@ -3,6 +3,14 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { AdminLayout } from '../core/layouts/AdminLayout';
 import { PrivateRoute } from './PrivateRoute';
 import { LoginPage } from '../features/auth/pages/LoginPage';
+import { ResetPasswordPage } from '../features/auth/pages/ResetPasswordPage';
+import { PrivacyPolicyPage } from '../features/legal/pages/PrivacyPolicyPage';
+import { TermsOfServicePage } from '../features/legal/pages/TermsOfServicePage';
+import { PublicSupportPage } from '../features/legal/pages/PublicSupportPage';
+import { NotFoundPage } from '../features/errors/pages/NotFoundPage';
+import { UnauthorizedPage } from '../features/errors/pages/UnauthorizedPage';
+import { AccessDeniedPage } from '../features/errors/pages/AccessDeniedPage';
+import { ServerErrorPage } from '../features/errors/pages/ServerErrorPage';
 import { DashboardPage } from '../features/dashboard/pages/DashboardPage';
 import { UsersPage } from '../features/users/pages/UsersPage';
 import { RolesPage } from '../features/users/pages/RolesPage';
@@ -24,8 +32,21 @@ import { SystemHealthPage } from '../features/developer/pages/SystemHealthPage';
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      {/* Public Route */}
+      {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/privacy" element={<PrivacyPolicyPage />} />
+      <Route path="/privacy-policy" element={<Navigate to="/privacy" replace />} />
+      <Route path="/terms" element={<TermsOfServicePage />} />
+      <Route path="/terms-of-service" element={<Navigate to="/terms" replace />} />
+      <Route path="/help" element={<PublicSupportPage />} />
+      <Route path="/contact" element={<PublicSupportPage />} />
+
+      {/* Error Routes */}
+      <Route path="/404" element={<NotFoundPage />} />
+      <Route path="/401" element={<UnauthorizedPage />} />
+      <Route path="/403" element={<AccessDeniedPage />} />
+      <Route path="/500" element={<ServerErrorPage />} />
 
       {/* Protected Admin Routes */}
       <Route element={<PrivateRoute />}>
@@ -56,8 +77,8 @@ export const AppRoutes: React.FC = () => {
         </Route>
       </Route>
 
-      {/* Catch-all Redirect */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* Catch-all Route -> 404 Not Found Page */}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 };
