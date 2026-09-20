@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState } from 'react';
 import type { AdminUser } from '../types';
 import { authApi } from '../api/authApi';
@@ -58,6 +59,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('mahfazti_admin_session');
     setUser(null);
   };
+
+  // Cross-tab security synchronization (instant logout propagation across all open tabs)
+  React.useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'mahfazti_admin_session' || e.key === 'mahfazti_admin_access_token') {
+        if (!e.newValue) {
+          setUser(null);
+        } else if (e.key === 'mahfazti_admin_session' && e.newValue) {
+          try {
+            setUser(JSON.parse(e.newValue));
+          } catch {
+            setUser(null);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   return (
     <AuthContext.Provider

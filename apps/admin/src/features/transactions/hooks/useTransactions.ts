@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { TransactionItem } from '../types';
 import { transactionsService } from '../services/transactionsService';
 
@@ -15,14 +15,16 @@ export const useTransactions = () => {
     });
   }, []);
 
-  const filtered = transactions.filter((tx) => {
-    const matchesSearch =
-      tx.userEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tx.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (tx.note && tx.note.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesType = typeFilter === 'all' ? true : tx.type === typeFilter;
-    return matchesSearch && matchesType;
-  });
+  const filtered = useMemo(() => {
+    return transactions.filter((tx) => {
+      const matchesSearch =
+        tx.userEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        tx.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (tx.note && tx.note.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesType = typeFilter === 'all' ? true : tx.type === typeFilter;
+      return matchesSearch && matchesType;
+    });
+  }, [transactions, searchTerm, typeFilter]);
 
   return {
     transactions: filtered,

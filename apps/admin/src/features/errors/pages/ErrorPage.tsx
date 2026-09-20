@@ -114,7 +114,10 @@ export const ErrorPage: React.FC<ErrorPageProps> = ({
       {/* Top Header */}
       <header className="relative z-20 w-full px-6 py-5 max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link to="/" className="flex items-center gap-3 group">
+          <Link
+            to={isAuthenticated ? '/' : '/login'}
+            className="flex items-center gap-3 group"
+          >
             <MahfaztiLogo
               size={36}
               className="shadow-xs border border-zinc-200/80 dark:border-zinc-800 transition group-hover:scale-105"
@@ -249,10 +252,18 @@ export const ErrorPage: React.FC<ErrorPageProps> = ({
               </span>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <Link
-                  to="/"
+                  to={isAuthenticated ? '/' : '/login'}
                   className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-900 transition flex items-center justify-between text-zinc-700 dark:text-zinc-300"
                 >
-                  <span>{isAr ? 'لوحة التحكم' : 'Dashboard'}</span>
+                  <span>
+                    {isAuthenticated
+                      ? isAr
+                        ? 'لوحة التحكم'
+                        : 'Dashboard'
+                      : isAr
+                      ? 'تسجيل الدخول'
+                      : 'Sign In'}
+                  </span>
                   <span className="text-zinc-400">&rarr;</span>
                 </Link>
                 <Link

@@ -21,6 +21,7 @@ import {
   Check,
   Languages,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api/authApi';
 import { AuthError, type AuthErrorCode } from '../types';
@@ -134,8 +135,21 @@ export const LoginPage: React.FC = () => {
 
     try {
       await login(email.trim(), password);
-      const targetPath =
+      toast.success(t.auth.toasts.signedInTitle, {
+        description: t.auth.toasts.signedInDesc,
+      });
+      let targetPath =
         (location.state as { from?: { pathname?: string } })?.from?.pathname || '/';
+      if (
+        !targetPath ||
+        targetPath === '/login' ||
+        targetPath === '/401' ||
+        targetPath === '/403' ||
+        targetPath === '/500' ||
+        targetPath === '/503'
+      ) {
+        targetPath = '/';
+      }
       navigate(targetPath, { replace: true });
     } catch (err: unknown) {
       let code: AuthErrorCode = 'UNEXPECTED_ERROR';

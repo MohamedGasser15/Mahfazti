@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { UserItem } from '../types';
 import { usersService } from '../services/usersService';
 
@@ -20,18 +20,20 @@ export const useUsers = () => {
     setUsers((prev) => prev.map((u) => (u.id === userId ? updated : u)));
   };
 
-  const filteredUsers = users.filter((u) => {
-    const matchesSearch =
-      u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus =
-      statusFilter === 'all'
-        ? true
-        : statusFilter === 'active'
-        ? u.isActive
-        : !u.isActive;
-    return matchesSearch && matchesStatus;
-  });
+  const filteredUsers = useMemo(() => {
+    return users.filter((u) => {
+      const matchesSearch =
+        u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus =
+        statusFilter === 'all'
+          ? true
+          : statusFilter === 'active'
+          ? u.isActive
+          : !u.isActive;
+      return matchesSearch && matchesStatus;
+    });
+  }, [users, searchTerm, statusFilter]);
 
   return {
     users: filteredUsers,

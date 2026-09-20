@@ -14,7 +14,7 @@ export const PrivateRoute: React.FC<PrivateRouteProps> = ({ allowedRoles }) => {
     if (location.pathname === '/support') {
       return <Navigate to="/help" replace />;
     }
-    return <Navigate to="/401" state={{ from: location }} replace />;
+    return <Navigate to="/login" replace />;
   }
 
   // Role-Based Access Control (RBAC) Check -> redirects to /403 if unauthorized

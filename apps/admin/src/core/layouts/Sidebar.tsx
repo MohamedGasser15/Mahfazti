@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -14,7 +14,6 @@ import {
 import { useAuth } from '../../features/auth/context/AuthContext';
 import { useLocale } from '../context/LocaleContext';
 import { MahfaztiLogo } from '../components/ui/MahfaztiLogo';
-import { toast } from 'sonner';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -40,7 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const navGroups: NavGroup[] = [
+  const navGroups: NavGroup[] = useMemo(() => [
     {
       id: 'finance',
       label: t.sidebar.groups.finance.label,
@@ -99,7 +98,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         { label: t.sidebar.groups.devOps.settings, path: '/settings' },
       ],
     },
-  ];
+  ], [t]);
 
   const getInitialOpenState = () => ({
     finance: true,
@@ -124,7 +123,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         setExpandedGroups((prev) => ({ ...prev, [group.id]: true }));
       }
     });
-  }, [location.pathname]);
+  }, [location.pathname, navGroups]);
 
   const toggleGroup = (groupId: string) => {
     setExpandedGroups((prev) => ({
@@ -135,8 +134,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   const handleLogout = () => {
     logout();
-    toast.info(t.sidebar.signedOutToast);
-    navigate('/login');
+    navigate('/login', { replace: true });
   };
 
   const handleNavClick = () => {
