@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Mahfazti.Core.Entities
@@ -8,6 +8,9 @@ namespace Mahfazti.Core.Entities
         public int Id { get; set; }
         public string NameAr { get; set; } = string.Empty; 
         public string NameEn { get; set; } = string.Empty; 
+        public string Type { get; set; } = "Expense";
+        public string Icon { get; set; } = "layers";
+        public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 

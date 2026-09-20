@@ -1,4 +1,4 @@
-﻿
+
 
 namespace Mahfazti.Core.DTOs.Category
 {
@@ -6,5 +6,7 @@ namespace Mahfazti.Core.DTOs.Category
     {
         public string NameAr { get; set; } = string.Empty;
         public string NameEn { get; set; } = string.Empty;
+        public string Type { get; set; } = "Expense";
+        public string? Icon { get; set; }
     }
 }

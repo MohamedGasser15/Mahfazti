@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mahfazti.Core.DTOs.Category;
 using Mahfazti.Core.Interfaces;
@@ -54,6 +54,30 @@ namespace Mahfazti.Api.Controllers
             var deleted = await _categoryService.DeleteCategoryAsync(id);
             if (!deleted) return NotFound();
             return NoContent();
+        }
+
+        [HttpPost("{id}/restore")]
+        public async Task<IActionResult> Restore(int id)
+        {
+            var restored = await _categoryService.RestoreCategoryAsync(id);
+            if (!restored) return NotFound();
+            return Ok(new { success = true, message = "Category restored successfully" });
+        }
+
+        [HttpPost("bulk-delete")]
+        public async Task<IActionResult> BulkDelete([FromBody] List<int> ids)
+        {
+            if (ids == null || !ids.Any()) return BadRequest("No category IDs provided");
+            var result = await _categoryService.BulkDeleteCategoriesAsync(ids);
+            return Ok(result);
+        }
+
+        [HttpPost("bulk-restore")]
+        public async Task<IActionResult> BulkRestore([FromBody] List<int> ids)
+        {
+            if (ids == null || !ids.Any()) return BadRequest("No category IDs provided");
+            var count = await _categoryService.BulkRestoreCategoriesAsync(ids);
+            return Ok(new { success = true, restoredCount = count, message = $"Successfully restored {count} categories" });
         }
     }
 }
