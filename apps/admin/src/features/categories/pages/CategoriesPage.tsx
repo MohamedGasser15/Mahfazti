@@ -7,7 +7,6 @@ import {
   Layers,
   Search,
   X,
-  RefreshCw,
   AlertTriangle,
   RotateCcw,
   Archive,
@@ -16,20 +15,27 @@ import {
   Receipt,
   ChevronLeft,
   ChevronRight,
+  LayoutList,
+  LayoutGrid,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLocale } from '../../../core/context/LocaleContext';
+import { useViewMode } from '../../../core/context/ViewModeContext';
 import { useCategories } from '../hooks/useCategories';
 import { Card } from '../../../core/components/ui/Card';
 import { Badge } from '../../../core/components/ui/Badge';
 import { Button } from '../../../core/components/ui/Button';
 import type { CategoryItem, UpdateCategoryDto } from '../types';
 import { CategoryFormModal } from '../components/CategoryFormModal';
+import { CategoriesTable } from '../components/CategoriesTable';
+import { CategoriesSkeleton } from '../components/CategoriesSkeleton';
+import { CategoriesKpiCards } from '../components/CategoriesKpiCards';
 import { renderCategoryIcon } from '../utils/categoryIcons';
 
 export const CategoriesPage: React.FC = () => {
   const { locale, dir } = useLocale();
   const isAr = locale === 'ar';
+  const { viewMode, setViewMode } = useViewMode();
 
   const {
     categories,
@@ -238,143 +244,170 @@ export const CategoriesPage: React.FC = () => {
     };
   }, [rawCategories, selectedIds]);
 
+  const startRecord = totalFilteredCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endRecord = Math.min(currentPage * pageSize, totalFilteredCount);
+
   return (
     <div dir={dir} className="space-y-6">
-      {/* Page Header */}
+      {/* 1. Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-950 dark:text-white">
-              {isAr ? 'تصنيفات النظام المالية' : 'System Financial Categories'}
-            </h1>
-            <Badge variant="default" className="font-mono text-xs shadow-2xs">
-              {counts.all}
-            </Badge>
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-bold shadow-xs">
+              <Layers className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-zinc-950 dark:text-white">
+                {isAr ? 'تصنيفات النظام المالية' : 'System Financial Categories'}
+              </h1>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                {isAr
+                  ? 'إدارة وتخصيص التصنيفات المالية المعتمدة لكافة محافظ ومعاملات المستخدمين في محفظتي'
+                  : 'Manage and customize global predefined categories provisioned across user wallets and transactions'}
+              </p>
+            </div>
           </div>
-          <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 mt-1.5 leading-relaxed max-w-2xl">
-            {isAr
-              ? 'إدارة وتخصيص التصنيفات المعتمدة والافتراضية لكافة محافظ ومعاملات المستخدمين في محفظتي، مع حماية أمان المعاملات المالية.'
-              : 'Manage and customize global predefined categories provisioned across user wallets and transactions with transaction protection.'}
-          </p>
         </div>
-        <div className="flex items-center gap-2.5">
+
+        <div className="flex items-center gap-2">
           <Button
+            type="button"
             variant="outline"
             size="sm"
             onClick={() => refetch()}
             disabled={isLoading}
-            title={isAr ? 'تحديث البيانات' : 'Refresh data'}
-            className="shadow-2xs"
+            className="font-bold border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300"
           >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <RotateCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''} me-1.5`} />
+            <span>{isAr ? 'تحديث البيانات' : 'Refresh Feed'}</span>
           </Button>
-          <Button onClick={openCreateModal} size="sm" className="shadow-xs font-semibold">
-            <Plus className="h-4 w-4" />
+
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={openCreateModal}
+            className="font-bold shadow-xs"
+          >
+            <Plus className="h-4 w-4 me-1.5" />
             <span>{isAr ? 'إضافة تصنيف جديد' : 'New Category'}</span>
           </Button>
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3.5">
-        {/* Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-          <button
-            onClick={() => setActiveTab('all')}
-            className={`rounded-xl px-4 py-2 text-xs font-bold transition cursor-pointer flex items-center gap-2 ${
-              activeTab === 'all'
-                ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs border border-zinc-950 dark:border-white'
-                : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:text-zinc-950 dark:hover:text-white shadow-2xs'
-            }`}
-          >
-            <span>{isAr ? 'كافة التصنيفات' : 'All Categories'}</span>
-            <span
-              className={`text-[11px] font-mono px-1.5 py-0.5 rounded-md ${
-                activeTab === 'all'
-                  ? 'bg-white/20 text-white dark:bg-zinc-950/20 dark:text-zinc-950'
-                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
-              }`}
-            >
-              {counts.all}
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab('Expense')}
-            className={`rounded-xl px-4 py-2 text-xs font-bold transition cursor-pointer flex items-center gap-2 ${
-              activeTab === 'Expense'
-                ? 'bg-rose-600 text-white dark:bg-rose-600 dark:text-white shadow-xs border border-rose-600'
-                : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:text-zinc-950 dark:hover:text-white shadow-2xs'
-            }`}
-          >
-            <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
-            <span>{isAr ? 'مصاريف' : 'Expenses'}</span>
-            <span
-              className={`text-[11px] font-mono px-1.5 py-0.5 rounded-md ${
-                activeTab === 'Expense'
-                  ? 'bg-white/20 text-white'
-                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
-              }`}
-            >
-              {counts.expenses}
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab('Income')}
-            className={`rounded-xl px-4 py-2 text-xs font-bold transition cursor-pointer flex items-center gap-2 ${
-              activeTab === 'Income'
-                ? 'bg-emerald-600 text-white dark:bg-emerald-600 dark:text-white shadow-xs border border-emerald-600'
-                : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:text-zinc-950 dark:hover:text-white shadow-2xs'
-            }`}
-          >
-            <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-            <span>{isAr ? 'إيرادات ودخل' : 'Income'}</span>
-            <span
-              className={`text-[11px] font-mono px-1.5 py-0.5 rounded-md ${
-                activeTab === 'Income'
-                  ? 'bg-white/20 text-white'
-                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
-              }`}
-            >
-              {counts.income}
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab('Archived')}
-            className={`rounded-xl px-4 py-2 text-xs font-bold transition cursor-pointer flex items-center gap-2 ${
-              activeTab === 'Archived'
-                ? 'bg-amber-600 text-white dark:bg-amber-600 dark:text-white shadow-xs border border-amber-600'
-                : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:text-zinc-950 dark:hover:text-white shadow-2xs'
-            }`}
-          >
-            <Archive className="h-3.5 w-3.5 opacity-90" />
-            <span>{isAr ? 'المؤرشفة' : 'Archived'}</span>
-            <span
-              className={`text-[11px] font-mono px-1.5 py-0.5 rounded-md ${
-                activeTab === 'Archived'
-                  ? 'bg-white/20 text-white'
-                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
-              }`}
-            >
-              {counts.archived}
-            </span>
-          </button>
-        </div>
+      {/* 2. Top KPI Metrics Summary Cards */}
+      <CategoriesKpiCards
+        stats={counts}
+        isLoading={isLoading}
+        hasCategories={rawCategories.length > 0}
+        isAr={isAr}
+      />
 
-        {/* Selection Toggle & Search Input */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          {categories.length > 0 && (
+      {/* 3. Filter Tabs & Search Bar */}
+      <div className="space-y-3">
+        {/* Status Tabs Bar & View Mode Toggle */}
+        <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1">
+          <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-200/50 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800">
+            {(
+              [
+                { id: 'all', label: isAr ? 'كافة التصنيفات' : 'All Categories', count: counts.all },
+                { id: 'Expense', label: isAr ? 'مصاريف' : 'Expenses', count: counts.expenses },
+                { id: 'Income', label: isAr ? 'إيرادات ودخل' : 'Income', count: counts.income },
+                { id: 'Archived', label: isAr ? 'المؤرشفة' : 'Archived', count: counts.archived },
+              ] as const
+            ).map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 shadow-xs'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-zinc-800/60'
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <span
+                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                      isActive
+                        ? 'bg-zinc-800 dark:bg-zinc-200 text-zinc-100 dark:text-zinc-900'
+                        : 'bg-zinc-300/60 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* View Mode Toggle (Table / Cards) */}
+          <div className="flex items-center gap-1 p-1 rounded-2xl bg-zinc-200/50 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800">
             <button
               type="button"
+              onClick={() => setViewMode('table')}
+              title={isAr ? 'عرض الجدول' : 'Table View'}
+              className={`p-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+                viewMode === 'table'
+                  ? 'bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 shadow-xs'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+              }`}
+            >
+              <LayoutList className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('cards')}
+              title={isAr ? 'عرض الكروت' : 'Cards View'}
+              className={`p-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+                viewMode === 'cards'
+                  ? 'bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 shadow-xs'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+              }`}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Search & Selection Bar */}
+        <Card className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white dark:bg-[#121215] border-zinc-200 dark:border-zinc-800/80 shadow-2xs">
+          <div className="relative flex-1">
+            <Search className="absolute top-1/2 start-3.5 h-4 w-4 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
+            <input
+              type="text"
+              placeholder={isAr ? 'بحث بالاسم العربي أو الإنجليزي...' : 'Search categories...'}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/80 py-2 ps-10 pe-9 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:border-zinc-950 dark:focus:border-white focus:outline-none transition-colors"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute top-1/2 end-3 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {categories.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={() => (isAllSelected ? clearSelection() : selectAll())}
-              className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border transition cursor-pointer shrink-0 shadow-2xs ${
+              className={`text-xs font-semibold px-3 py-2 shadow-2xs border ${
                 isAllSelected
                   ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 border-zinc-950 dark:border-white'
-                  : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                  : 'border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200'
               }`}
-              title={isAllSelected ? (isAr ? 'إلغاء تحديد الكل' : 'Deselect All') : (isAr ? 'تحديد الكل' : 'Select All')}
             >
               <div
-                className={`h-4 w-4 rounded-md flex items-center justify-center transition-colors border ${
+                className={`h-4 w-4 rounded-md flex items-center justify-center transition-colors border me-1.5 ${
                   isAllSelected
                     ? 'bg-white text-zinc-950 dark:bg-zinc-950 dark:text-white border-transparent'
                     : 'border-zinc-400 dark:border-zinc-500 bg-transparent'
@@ -382,40 +415,18 @@ export const CategoriesPage: React.FC = () => {
               >
                 {isAllSelected && <Check className="h-3 w-3 stroke-[3]" />}
               </div>
-              <span className="hidden sm:inline">
+              <span>
                 {isAllSelected
                   ? isAr
                     ? 'إلغاء التحديد'
-                    : 'Deselect'
+                    : 'Deselect All'
                   : isAr
                   ? 'تحديد الكل'
                   : 'Select All'}
               </span>
-            </button>
+            </Button>
           )}
-
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 dark:text-zinc-500" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={
-                isAr ? 'بحث بالاسم العربي أو الإنجليزي...' : 'Search categories...'
-              }
-              className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 py-2 ps-10 pe-8 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 shadow-2xs focus:bg-white focus:border-zinc-950 dark:focus:border-white focus:outline-hidden focus:ring-1 focus:ring-zinc-950 dark:focus:ring-white transition"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute end-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition p-1 cursor-pointer"
-                title={isAr ? 'مسح البحث' : 'Clear search'}
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-        </div>
+        </Card>
       </div>
 
       {/* Error Banner */}
@@ -431,29 +442,9 @@ export const CategoriesPage: React.FC = () => {
         </div>
       )}
 
-      {/* Categories Grid or Skeletons */}
+      {/* Categories Grid, Table, or Skeletons */}
       {isLoading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div
-              key={i}
-              className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 p-5 space-y-4 animate-pulse shadow-xs"
-            >
-              <div className="flex items-start justify-between">
-                <div className="h-12 w-12 rounded-2xl bg-zinc-200 dark:bg-zinc-800" />
-                <div className="h-6 w-18 rounded-full bg-zinc-200 dark:bg-zinc-800" />
-              </div>
-              <div className="space-y-2 pt-2">
-                <div className="h-5 w-3/4 rounded-md bg-zinc-200 dark:bg-zinc-800" />
-                <div className="h-4 w-1/2 rounded-md bg-zinc-200 dark:bg-zinc-800" />
-              </div>
-              <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
-                <div className="h-4 w-16 rounded-md bg-zinc-200 dark:bg-zinc-800" />
-                <div className="h-6 w-14 rounded-md bg-zinc-200 dark:bg-zinc-800" />
-              </div>
-            </div>
-          ))}
-        </div>
+        <CategoriesSkeleton count={pageSize} viewMode={viewMode} isAr={isAr} />
       ) : categories.length === 0 ? (
         <div className="p-12 text-center rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xs">
           <Layers className="h-12 w-12 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
@@ -495,6 +486,19 @@ export const CategoriesPage: React.FC = () => {
             </Button>
           ) : null}
         </div>
+      ) : viewMode === 'table' ? (
+        <CategoriesTable
+          categories={categories}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelect}
+          onSelectAll={selectAll}
+          onClearSelection={clearSelection}
+          isAllSelected={isAllSelected}
+          onEdit={openEditModal}
+          onDelete={(category) => setDeletingCategory(category)}
+          onRestore={handleRestore}
+          isAr={isAr}
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {categories.map((category) => {
@@ -663,110 +667,77 @@ export const CategoriesPage: React.FC = () => {
         </div>
       )}
 
-      {/* Pagination Controls - Only displayed when categories exceed 20 items */}
-      {!isLoading && totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-zinc-200 dark:border-zinc-800 text-xs">
-          {/* Item Count Summary */}
-          <div className="text-zinc-600 dark:text-zinc-400 font-medium">
+      {/* 5. Pagination Toolbar */}
+      {!isLoading && totalFilteredCount > 0 && (
+        <Card className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3.5 bg-white dark:bg-[#121215] border-zinc-200 dark:border-zinc-800/80 shadow-2xs">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center sm:text-start">
             {isAr ? (
-              <span>
-                عرض{' '}
-                <span className="font-bold text-zinc-950 dark:text-white font-mono">
-                  {(currentPage - 1) * pageSize + 1}
-                </span>{' '}
-                إلى{' '}
-                <span className="font-bold text-zinc-950 dark:text-white font-mono">
-                  {Math.min(currentPage * pageSize, totalFilteredCount)}
-                </span>{' '}
-                من أصل{' '}
-                <span className="font-bold text-zinc-950 dark:text-white font-mono">
-                  {totalFilteredCount}
-                </span>{' '}
-                تصنيف
-              </span>
+              <>
+                عرض <strong className="text-zinc-900 dark:text-white font-mono">{startRecord}</strong> إلى{' '}
+                <strong className="text-zinc-900 dark:text-white font-mono">{endRecord}</strong> من أصل{' '}
+                <strong className="text-zinc-900 dark:text-white font-mono">{totalFilteredCount}</strong> تصنيف
+              </>
             ) : (
-              <span>
-                Showing{' '}
-                <span className="font-bold text-zinc-950 dark:text-white font-mono">
-                  {(currentPage - 1) * pageSize + 1}
-                </span>{' '}
-                to{' '}
-                <span className="font-bold text-zinc-950 dark:text-white font-mono">
-                  {Math.min(currentPage * pageSize, totalFilteredCount)}
-                </span>{' '}
-                of{' '}
-                <span className="font-bold text-zinc-950 dark:text-white font-mono">
-                  {totalFilteredCount}
-                </span>{' '}
-                categories
-              </span>
+              <>
+                Showing <strong className="text-zinc-900 dark:text-white font-mono">{startRecord}</strong> to{' '}
+                <strong className="text-zinc-900 dark:text-white font-mono">{endRecord}</strong> of{' '}
+                <strong className="text-zinc-900 dark:text-white font-mono">{totalFilteredCount}</strong> categories
+              </>
             )}
-          </div>
+          </p>
 
-          {/* Page Navigation Buttons */}
-          <div className="flex items-center gap-1">
-            <button
+          <div className="flex items-center justify-center gap-1.5">
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={prevPage}
               disabled={currentPage === 1}
-              className="rounded-lg p-1.5 border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer shadow-2xs"
-              title={isAr ? 'الصفحة السابقة' : 'Previous page'}
+              className="text-xs font-bold px-2.5"
             >
-              {dir === 'rtl' ? (
-                <ChevronRight className="h-4 w-4" />
-              ) : (
-                <ChevronLeft className="h-4 w-4" />
-              )}
-            </button>
+              {isAr ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+              <span className="ms-1">{isAr ? 'السابق' : 'Prev'}</span>
+            </Button>
 
-            {/* Page numbers */}
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter((p) => {
-                return (
-                  p === 1 ||
-                  p === totalPages ||
-                  Math.abs(p - currentPage) <= 1
-                );
-              })
-              .map((p, idx, arr) => {
-                const prevP = arr[idx - 1];
-                const showEllipsis = prevP && p - prevP > 1;
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                .map((p, idx, arr) => {
+                  const prevP = arr[idx - 1];
+                  const showEllipsis = prevP && p - prevP > 1;
 
-                return (
-                  <React.Fragment key={p}>
-                    {showEllipsis && (
-                      <span className="px-1 text-zinc-400 font-mono">...</span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => goToPage(p)}
-                      className={`h-7 w-7 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
-                        currentPage === p
-                          ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs border border-zinc-950 dark:border-white'
-                          : 'border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 shadow-2xs'
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  </React.Fragment>
-                );
-              })}
+                  return (
+                    <React.Fragment key={p}>
+                      {showEllipsis && <span className="px-1 text-zinc-400 font-mono">...</span>}
+                      <button
+                        type="button"
+                        onClick={() => goToPage(p)}
+                        className={`h-8 w-8 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                          currentPage === p
+                            ? 'bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 shadow-xs'
+                            : 'border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    </React.Fragment>
+                  );
+                })}
+            </div>
 
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={nextPage}
               disabled={currentPage === totalPages}
-              className="rounded-lg p-1.5 border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer shadow-2xs"
-              title={isAr ? 'الصفحة التالية' : 'Next page'}
+              className="text-xs font-bold px-2.5"
             >
-              {dir === 'rtl' ? (
-                <ChevronLeft className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
-            </button>
+              <span className="me-1">{isAr ? 'التالي' : 'Next'}</span>
+              {isAr ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </Button>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Floating Bulk Actions Bar */}

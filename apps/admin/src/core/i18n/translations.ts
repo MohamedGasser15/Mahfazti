@@ -1,3 +1,7 @@
+import { usersEn, usersAr, type UsersTranslationSchema } from './modules/users';
+import { auditLogsEn, auditLogsAr, type AuditLogsTranslationSchema } from './modules/auditLogs';
+import { rolesTranslationsEn, rolesTranslationsAr, type RolesTranslationSchema } from './modules/roles';
+
 export type Locale = 'en' | 'ar';
 export type Direction = 'ltr' | 'rtl';
 
@@ -153,6 +157,9 @@ export interface TranslationSchema {
     superAdmin: string;
     routes: Record<string, { section: string; title: string }>;
   };
+  users: UsersTranslationSchema;
+  auditLogs: AuditLogsTranslationSchema;
+  roles: RolesTranslationSchema;
 }
 
 export const translations: Record<Locale, TranslationSchema> = {
@@ -386,6 +393,9 @@ export const translations: Record<Locale, TranslationSchema> = {
         '/settings': { section: 'Developer & Health', title: 'General Settings' },
       },
     },
+    users: usersEn,
+    auditLogs: auditLogsEn,
+    roles: rolesTranslationsEn,
   },
   ar: {
     common: {
@@ -617,5 +627,8 @@ export const translations: Record<Locale, TranslationSchema> = {
         '/settings': { section: 'المطورون والعمليات', title: 'الإعدادات العامة' },
       },
     },
+    users: usersAr,
+    auditLogs: auditLogsAr,
+    roles: rolesTranslationsAr,
   },
 };

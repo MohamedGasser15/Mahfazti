@@ -9,6 +9,7 @@ import {
 
 interface LocaleContextType {
   locale: Locale;
+  isAr: boolean;
   dir: Direction;
   t: TranslationSchema;
   setLocale: (locale: Locale) => void;
@@ -24,7 +25,8 @@ export const LocaleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return 'en';
   });
 
-  const dir: Direction = locale === 'ar' ? 'rtl' : 'ltr';
+  const isAr = locale === 'ar';
+  const dir: Direction = isAr ? 'rtl' : 'ltr';
 
   useEffect(() => {
     const root = document.documentElement;
@@ -44,7 +46,7 @@ export const LocaleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const t = translations[locale];
 
   return (
-    <LocaleContext.Provider value={{ locale, dir, t, setLocale, toggleLocale }}>
+    <LocaleContext.Provider value={{ locale, isAr, dir, t, setLocale, toggleLocale }}>
       {children}
     </LocaleContext.Provider>
   );

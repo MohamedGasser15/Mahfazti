@@ -8,9 +8,10 @@ export const formatCurrency = (amount: number, currency: string = 'EGP'): string
     .replace('EGP', 'EGP ');
 };
 
-export const formatDate = (dateString: string): string => {
+export const formatDate = (dateString: string, locale: string = 'en-US'): string => {
   const date = new Date(dateString);
-  return new Intl.DateTimeFormat('en-US', {
+  if (isNaN(date.getTime())) return dateString;
+  return new Intl.DateTimeFormat(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -19,13 +20,21 @@ export const formatDate = (dateString: string): string => {
   }).format(date);
 };
 
-export const formatTimeAgo = (dateString: string): string => {
+export const formatTimeAgo = (dateString: string, isAr: boolean = false): string => {
   const date = new Date(dateString);
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-  if (diffInSeconds < 60) return 'Just now';
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} mins ago`;
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
-  return `${Math.floor(diffInSeconds / 86400)} days ago`;
+  if (diffInSeconds < 60) return isAr ? 'الآن' : 'Just now';
+  if (diffInSeconds < 3600) {
+    const mins = Math.floor(diffInSeconds / 60);
+    return isAr ? `منذ ${mins} دقيقة` : `${mins} mins ago`;
+  }
+  if (diffInSeconds < 86400) {
+    const hours = Math.floor(diffInSeconds / 3600);
+    return isAr ? `منذ ${hours} ساعة` : `${hours} hours ago`;
+  }
+  const days = Math.floor(diffInSeconds / 86400);
+  return isAr ? `منذ ${days} يوم` : `${days} days ago`;
 };
+

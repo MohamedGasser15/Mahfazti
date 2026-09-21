@@ -8,16 +8,31 @@ import {
   Sparkles,
   DollarSign,
   Users,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { useSubscriptions } from '../hooks/useSubscriptions';
 import { Card } from '../../../core/components/ui/Card';
 import { Badge } from '../../../core/components/ui/Badge';
+import { Button } from '../../../core/components/ui/Button';
 import { formatCurrency, formatDate } from '../../../core/utils/formatters';
 
 export const SubscriptionsPage: React.FC = () => {
   const { subscriptions, isLoading } = useSubscriptions();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'Active' | 'Expired'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 8;
+
+  const handleSearchTerm = (val: string) => {
+    setSearchTerm(val);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilter = (val: 'all' | 'Active' | 'Expired') => {
+    setStatusFilter(val);
+    setCurrentPage(1);
+  };
 
   const filtered = subscriptions.filter((s) => {
     const matchSearch =
@@ -27,6 +42,17 @@ export const SubscriptionsPage: React.FC = () => {
     const matchStatus = statusFilter === 'all' ? true : s.status === statusFilter;
     return matchSearch && matchStatus;
   });
+
+  const totalCount = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const validCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+
+  const paginatedSubscriptions = filtered.slice(
+    (validCurrentPage - 1) * pageSize,
+    validCurrentPage * pageSize
+  );
+  const startRecord = totalCount > 0 ? (validCurrentPage - 1) * pageSize + 1 : 0;
+  const endRecord = Math.min(validCurrentPage * pageSize, totalCount);
 
   return (
     <div className="space-y-6">
@@ -95,7 +121,7 @@ export const SubscriptionsPage: React.FC = () => {
             type="text"
             placeholder="Search by subscriber name, email, or plan..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearchTerm(e.target.value)}
             className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 py-2 pr-4 pl-10 text-xs font-medium text-black dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none"
           />
         </div>
@@ -103,7 +129,7 @@ export const SubscriptionsPage: React.FC = () => {
         <div className="flex items-center gap-2">
           <select
             value={statusFilter}
-            onChange={(e: any) => setStatusFilter(e.target.value)}
+            onChange={(e: any) => handleStatusFilter(e.target.value)}
             className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 px-3 py-2 text-xs font-semibold text-black dark:text-white focus:outline-none"
           >
             <option value="all">All Statuses</option>
@@ -132,7 +158,7 @@ export const SubscriptionsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60 text-zinc-700 dark:text-zinc-300">
-                {filtered.map((sub) => (
+                {paginatedSubscriptions.map((sub) => (
                   <tr key={sub.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/40 transition">
                     <td className="py-3.5 px-4">
                       <div>
@@ -187,6 +213,60 @@ export const SubscriptionsPage: React.FC = () => {
           </div>
         )}
       </Card>
+
+      {/* Pagination Toolbar */}
+      {!isLoading && totalCount > 0 && (
+        <Card className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3.5 bg-white dark:bg-[#121215] border-zinc-200 dark:border-zinc-800/80 shadow-2xs">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center sm:text-start">
+            Showing <strong className="text-zinc-900 dark:text-white font-mono">{startRecord}</strong> to{' '}
+            <strong className="text-zinc-900 dark:text-white font-mono">{endRecord}</strong> of{' '}
+            <strong className="text-zinc-900 dark:text-white font-mono">{totalCount}</strong> subscriptions
+          </p>
+
+          <div className="flex items-center justify-center gap-1.5">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              disabled={validCurrentPage === 1}
+              className="text-xs font-bold px-2.5"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span className="ms-1">Prev</span>
+            </Button>
+
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setCurrentPage(p)}
+                  className={`h-8 w-8 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                    validCurrentPage === p
+                      ? 'bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 shadow-xs'
+                      : 'border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              disabled={validCurrentPage === totalPages}
+              className="text-xs font-bold px-2.5"
+            >
+              <span className="me-1">Next</span>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </Card>
+      )}
     </div>
   );
 };

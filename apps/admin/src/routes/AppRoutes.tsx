@@ -28,6 +28,7 @@ const AccessDeniedPage = lazy(() => import('../features/errors/pages/AccessDenie
 const DashboardPage = lazy(() => import('../features/dashboard/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
 const UsersPage = lazy(() => import('../features/users/pages/UsersPage').then((m) => ({ default: m.UsersPage })));
 const RolesPage = lazy(() => import('../features/users/pages/RolesPage').then((m) => ({ default: m.RolesPage })));
+const RolePermissionsPage = lazy(() => import('../features/users/pages/RolePermissionsPage').then((m) => ({ default: m.RolePermissionsPage })));
 const CategoriesPage = lazy(() => import('../features/categories/pages/CategoriesPage').then((m) => ({ default: m.CategoriesPage })));
 const TransactionsPage = lazy(() => import('../features/transactions/pages/TransactionsPage').then((m) => ({ default: m.TransactionsPage })));
 const AiLogsPage = lazy(() => import('../features/ai-logs/pages/AiLogsPage').then((m) => ({ default: m.AiLogsPage })));
@@ -69,6 +70,7 @@ export const AppRoutes: React.FC = () => {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/users" element={<UsersPage />} />
             <Route path="/roles" element={<RolesPage />} />
+            <Route path="/roles/:id/permissions" element={<RolePermissionsPage />} />
             <Route path="/transactions" element={<TransactionsPage />} />
 
             {/* Monetization & Billing */}

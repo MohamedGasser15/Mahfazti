@@ -1,0 +1,175 @@
+import React from 'react';
+import { Card } from '../../../core/components/ui/Card';
+
+export interface RolesCardsSkeletonProps {
+  count?: number;
+}
+
+export const RolesCardsSkeleton: React.FC<RolesCardsSkeletonProps> = ({
+  count = 8,
+}) => {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {Array.from({ length: count }).map((_, i) => (
+        <Card
+          key={i}
+          className="p-5 bg-white dark:bg-[#121215] border-zinc-200 dark:border-zinc-800/80 flex flex-col justify-between space-y-4 shadow-2xs animate-pulse"
+        >
+          <div>
+            {/* Top Bar: Icon & Type Badge */}
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="h-10 w-10 rounded-xl bg-zinc-200 dark:bg-zinc-800 shrink-0" />
+                <div className="space-y-1.5 min-w-0">
+                  <div
+                    className="h-4 rounded-md bg-zinc-200 dark:bg-zinc-800"
+                    style={{ width: `${80 + (i % 3) * 20}px` }}
+                  />
+                  <div
+                    className="h-2.5 rounded-md bg-zinc-200/70 dark:bg-zinc-800/60"
+                    style={{ width: `${60 + (i % 2) * 15}px` }}
+                  />
+                </div>
+              </div>
+              <div className="h-5 w-14 rounded-full bg-zinc-200 dark:bg-zinc-800" />
+            </div>
+
+            {/* Description lines */}
+            <div className="space-y-1.5 mt-4">
+              <div
+                className="h-3 rounded-md bg-zinc-200/80 dark:bg-zinc-800/70"
+                style={{ width: `${90 - (i % 3) * 10}%` }}
+              />
+              <div
+                className="h-3 rounded-md bg-zinc-200/60 dark:bg-zinc-800/50"
+                style={{ width: `${60 + (i % 4) * 8}%` }}
+              />
+            </div>
+
+            {/* Permissions section placeholder */}
+            <div className="mt-4 pt-3 border-t border-zinc-100 dark:border-zinc-800/80">
+              <div className="h-2.5 w-24 rounded bg-zinc-200 dark:bg-zinc-800 mb-2.5" />
+              <div className="flex flex-wrap gap-1.5">
+                <div className="h-5 w-20 rounded-md bg-zinc-200/70 dark:bg-zinc-800/60" />
+                <div className="h-5 w-24 rounded-md bg-zinc-200/70 dark:bg-zinc-800/60" />
+                <div className="h-5 w-16 rounded-md bg-zinc-200/70 dark:bg-zinc-800/60" />
+              </div>
+            </div>
+          </div>
+
+          {/* Action buttons matching Cards */}
+          <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between gap-1.5">
+            <div className="h-8 flex-1 rounded-xl bg-zinc-200 dark:bg-zinc-800" />
+            <div className="h-8 w-8 rounded-xl bg-zinc-200 dark:bg-zinc-800 shrink-0" />
+            <div className="h-8 w-8 rounded-xl bg-zinc-200 dark:bg-zinc-800 shrink-0" />
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+};
+
+export interface RolesTableSkeletonProps {
+  count?: number;
+  isAr?: boolean;
+}
+
+export const RolesTableSkeleton: React.FC<RolesTableSkeletonProps> = ({
+  count = 8,
+  isAr = false,
+}) => {
+  return (
+    <Card className="p-0 overflow-hidden bg-white dark:bg-[#121215] border-zinc-200 dark:border-zinc-800/80 shadow-2xs min-h-[380px]">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left rtl:text-right text-xs">
+          <thead className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/50 text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            <tr>
+              <th className="py-3.5 px-6">{isAr ? 'الرتبة الإدارية' : 'Role'}</th>
+              <th className="py-3.5 px-6">{isAr ? 'النوع والحماية' : 'Type'}</th>
+              <th className="py-3.5 px-6">{isAr ? 'الصلاحيات' : 'Permissions'}</th>
+              <th className="py-3.5 px-6 text-center">{isAr ? 'المشرفين المعينين' : 'Assigned Users'}</th>
+              <th className="py-3.5 px-6 text-center">{isAr ? 'الإجراءات' : 'Actions'}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-200/70 dark:divide-zinc-800/60">
+            {Array.from({ length: count }).map((_, i) => (
+              <tr key={i} className="animate-pulse">
+                {/* Role Icon & Info */}
+                <td className="py-3.5 px-6">
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 shrink-0 rounded-xl bg-zinc-200 dark:bg-zinc-800" />
+                    <div className="space-y-1.5">
+                      <div
+                        className="h-4 rounded-md bg-zinc-200 dark:bg-zinc-800"
+                        style={{ width: `${100 + (i % 4) * 25}px` }}
+                      />
+                      <div
+                        className="h-3 rounded-md bg-zinc-200/70 dark:bg-zinc-800/60"
+                        style={{ width: `${130 + (i % 3) * 30}px` }}
+                      />
+                    </div>
+                  </div>
+                </td>
+
+                {/* Type Badge */}
+                <td className="py-3.5 px-6">
+                  <div className="h-5 w-16 rounded-full bg-zinc-200 dark:bg-zinc-800" />
+                </td>
+
+                {/* Permissions Pills */}
+                <td className="py-3.5 px-6">
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-5 w-20 rounded-md bg-zinc-200 dark:bg-zinc-800" />
+                    <div className="h-5 w-24 rounded-md bg-zinc-200 dark:bg-zinc-800" />
+                    <div className="h-5 w-16 rounded-md bg-zinc-200 dark:bg-zinc-800" />
+                  </div>
+                </td>
+
+                {/* Assigned Users Count */}
+                <td className="py-3.5 px-6 text-center">
+                  <div className="h-6 w-20 rounded-lg bg-zinc-200 dark:bg-zinc-800 mx-auto" />
+                </td>
+
+                {/* Action Buttons matching Table */}
+                <td className="py-3.5 px-6 text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    <div className="h-8 w-8 rounded-xl bg-zinc-200 dark:bg-zinc-800" />
+                    <div className="h-8 w-8 rounded-xl bg-zinc-200 dark:bg-zinc-800" />
+                    <div className="h-8 w-8 rounded-xl bg-zinc-200 dark:bg-zinc-800" />
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+};
+
+export interface RolesSkeletonProps {
+  count?: number;
+  viewMode?: 'table' | 'cards';
+  isAr?: boolean;
+}
+
+export const RolesSkeleton: React.FC<RolesSkeletonProps> = ({
+  count = 8,
+  viewMode = 'table',
+  isAr = false,
+}) => {
+  if (viewMode === 'cards') {
+    return <RolesCardsSkeleton count={count} />;
+  }
+
+  return (
+    <>
+      <div className="hidden lg:block">
+        <RolesTableSkeleton count={count} isAr={isAr} />
+      </div>
+      <div className="lg:hidden">
+        <RolesCardsSkeleton count={count} />
+      </div>
+    </>
+  );
+};

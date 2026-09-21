@@ -19,7 +19,7 @@ export const useCategories = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 20;
+  const pageSize = 8;
 
   const loadCategories = useCallback(() => {
     categoriesService

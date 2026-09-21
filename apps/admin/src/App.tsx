@@ -3,6 +3,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider, useTheme } from './core/context/ThemeContext';
 import { LocaleProvider, useLocale } from './core/context/LocaleContext';
+import { ViewModeProvider } from './core/context/ViewModeContext';
 import { AuthProvider } from './features/auth/context/AuthContext';
 import { AppRoutes } from './routes/AppRoutes';
 import { ErrorBoundary } from './core/components/ErrorBoundary';
@@ -58,14 +59,16 @@ export const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <LocaleProvider>
-          <BrowserRouter>
-            <AuthProvider>
-              <ErrorBoundary>
-                <AppRoutes />
-              </ErrorBoundary>
-              <ThemedToaster />
-            </AuthProvider>
-          </BrowserRouter>
+          <ViewModeProvider>
+            <BrowserRouter>
+              <AuthProvider>
+                <ErrorBoundary>
+                  <AppRoutes />
+                </ErrorBoundary>
+                <ThemedToaster />
+              </AuthProvider>
+            </BrowserRouter>
+          </ViewModeProvider>
         </LocaleProvider>
       </ThemeProvider>
     </QueryClientProvider>

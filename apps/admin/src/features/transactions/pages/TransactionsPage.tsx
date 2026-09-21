@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Filter, ArrowUpRight, ArrowDownRight, Download } from 'lucide-react';
+import { Search, Filter, ArrowUpRight, ArrowDownRight, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTransactions } from '../hooks/useTransactions';
 import { Card } from '../../../core/components/ui/Card';
 import { Badge } from '../../../core/components/ui/Badge';
@@ -9,12 +9,22 @@ import { formatCurrency, formatDate } from '../../../core/utils/formatters';
 export const TransactionsPage: React.FC = () => {
   const {
     transactions,
+    totalCount,
+    currentPage,
+    pageSize,
+    totalPages,
+    goToPage,
+    nextPage,
+    prevPage,
     searchTerm,
     setSearchTerm,
     typeFilter,
     setTypeFilter,
     isLoading,
   } = useTransactions();
+
+  const startRecord = totalCount > 0 ? (currentPage - 1) * pageSize + 1 : 0;
+  const endRecord = Math.min(currentPage * pageSize, totalCount);
 
   return (
     <div className="space-y-6">
@@ -114,6 +124,60 @@ export const TransactionsPage: React.FC = () => {
           </div>
         )}
       </Card>
+
+      {/* Pagination Toolbar */}
+      {!isLoading && totalCount > 0 && (
+        <Card className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3.5 bg-white dark:bg-[#121215] border-zinc-200 dark:border-zinc-800/80 shadow-2xs">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center sm:text-start">
+            Showing <strong className="text-zinc-900 dark:text-white font-mono">{startRecord}</strong> to{' '}
+            <strong className="text-zinc-900 dark:text-white font-mono">{endRecord}</strong> of{' '}
+            <strong className="text-zinc-900 dark:text-white font-mono">{totalCount}</strong> transactions
+          </p>
+
+          <div className="flex items-center justify-center gap-1.5">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={prevPage}
+              disabled={currentPage === 1}
+              className="text-xs font-bold px-2.5"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span className="ms-1">Prev</span>
+            </Button>
+
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => goToPage(p)}
+                  className={`h-8 w-8 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                    currentPage === p
+                      ? 'bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 shadow-xs'
+                      : 'border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={nextPage}
+              disabled={currentPage === totalPages}
+              className="text-xs font-bold px-2.5"
+            >
+              <span className="me-1">Next</span>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </Card>
+      )}
     </div>
   );
 };
