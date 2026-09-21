@@ -28,6 +28,9 @@ namespace Mahfazti.Core.DependencyInjection
             services.AddScoped<IProfileService, ProfileService>();
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IExternalLoginService, ExternalLoginService>();
+            services.AddScoped<IAdminUserService, AdminUserService>();
+            services.AddScoped<IAuditLogService, AuditLogService>();
+            services.AddScoped<IRoleService, RoleService>();
             return services;
         }
     }

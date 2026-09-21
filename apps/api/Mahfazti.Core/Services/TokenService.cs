@@ -59,14 +59,21 @@ namespace Mahfazti.Core.Services
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
                 };
 
-                // Add user roles
+                // Add user roles and role claims
                 var roles = await _userManager.GetRolesAsync(user);
-                foreach (var role in roles)
+                foreach (var roleName in roles)
                 {
-                    claims.Add(new Claim(ClaimTypes.Role, role));
+                    claims.Add(new Claim(ClaimTypes.Role, roleName));
+
+                    var role = await _roleManager.FindByNameAsync(roleName);
+                    if (role != null)
+                    {
+                        var roleClaims = await _roleManager.GetClaimsAsync(role);
+                        claims.AddRange(roleClaims);
+                    }
                 }
 
-                // Add user claims
+                // Add user direct claims
                 var userClaims = await _userManager.GetClaimsAsync(user);
                 claims.AddRange(userClaims);
 

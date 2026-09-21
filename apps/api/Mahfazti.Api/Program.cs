@@ -1,4 +1,4 @@
-﻿using Mahfazti.Api.MappingConfig;
+using Mahfazti.Api.MappingConfig;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -10,6 +10,7 @@ using Mahfazti.Infrastructure.Data;
 using Mahfazti.Infrastructure.Data.Seeders;
 using Scalar.AspNetCore;
 using System.Security.Claims;
+using Mahfazti.Core.Constants;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -84,8 +85,8 @@ builder.Services.AddHttpClient();
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("AdminPolicy", policy => policy.RequireRole("Admin"));
-    options.AddPolicy("UserPolicy", policy => policy.RequireRole("User"));
+    options.AddPolicy("AdminPolicy", policy => policy.RequireRole(Roles.SuperAdmin, Roles.Admin));
+    options.AddPolicy("UserPolicy", policy => policy.RequireRole(Roles.User));
 });
 
 // =======================
@@ -202,5 +203,8 @@ using (var scope = app.Services.CreateScope())
 
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
     await RoleSeeder.SeedAsync(roleManager);
+
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    await UserSeeder.SeedAsync(userManager, roleManager);
 }
 app.Run();

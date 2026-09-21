@@ -11,6 +11,7 @@ namespace Mahfazti.Infrastructure.Data
         public DbSet<UserBudget> UserBudgets { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<AuditLog> AuditLogs { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
@@ -45,6 +46,18 @@ namespace Mahfazti.Infrastructure.Data
                 .WithMany(u => u.RefreshTokens)
                 .HasForeignKey(rt => rt.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<AuditLog>()
+                .HasOne(al => al.Admin)
+                .WithMany()
+                .HasForeignKey(al => al.AdminId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<AuditLog>()
+                .HasIndex(al => al.CreatedAt);
+
+            builder.Entity<AuditLog>()
+                .HasIndex(al => al.Category);
         }
     }
 }
