@@ -13,6 +13,10 @@ namespace Mahfazti.Infrastructure.Data
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<Currency> Currencies { get; set; }
+        public DbSet<PricingPlan> PricingPlans { get; set; }
+        public DbSet<UserSubscription> UserSubscriptions { get; set; }
+        public DbSet<PaymentLog> PaymentLogs { get; set; }
+        public DbSet<PromoCode> PromoCodes { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {

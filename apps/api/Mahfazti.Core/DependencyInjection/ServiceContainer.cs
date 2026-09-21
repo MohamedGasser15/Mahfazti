@@ -33,6 +33,8 @@ namespace Mahfazti.Core.DependencyInjection
             services.AddScoped<IRoleService, RoleService>();
             services.AddHttpClient<IExchangeRateService, ExchangeRateService>();
             services.AddScoped<ICurrencyService, CurrencyService>();
+            services.AddScoped<ISubscriptionService, SubscriptionService>();
+            services.AddScoped<IStripePaymentService, StripePaymentService>();
             return services;
         }
     }

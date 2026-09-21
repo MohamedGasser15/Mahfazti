@@ -11,6 +11,7 @@ using Mahfazti.Infrastructure.Data.Seeders;
 using Scalar.AspNetCore;
 using System.Security.Claims;
 using Mahfazti.Core.Constants;
+using Mahfazti.Core.Settings;
 using Mahfazti.Infrastructure.BackgroundJobs;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,6 +21,9 @@ var builder = WebApplication.CreateBuilder(args);
 // =======================
 
 builder.Services.AddControllers();
+
+// Stripe Configuration
+builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("Stripe"));
 
 // DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -203,6 +207,7 @@ using (var scope = app.Services.CreateScope())
     await db.Database.MigrateAsync();
     await CategorySeeder.SeedAsync(db);
     await CurrencySeeder.SeedAsync(db);
+    await SubscriptionSeeder.SeedAsync(db);
 
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
     await RoleSeeder.SeedAsync(roleManager);
