@@ -32,8 +32,9 @@ export const LocaleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const root = document.documentElement;
     root.setAttribute('dir', dir);
     root.setAttribute('lang', locale);
+    document.title = isAr ? 'محفظتي' : 'Mahfazti';
     localStorage.setItem('mahfazti_admin_locale', locale);
-  }, [locale, dir]);
+  }, [locale, dir, isAr]);
 
   const toggleLocale = () => {
     setLocaleState((prev) => (prev === 'en' ? 'ar' : 'en'));

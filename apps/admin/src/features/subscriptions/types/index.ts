@@ -9,13 +9,57 @@ export interface PricingPlan {
   priceEgp: number;
   billingCycle: PlanBillingCycle;
   description: string;
+  descriptionAr?: string;
   features: string[];
+  featuresAr?: string[];
   isPopular?: boolean;
   isActive: boolean;
-  maxWallets: number; // e.g. 1 for Free, 999 for Pro
-  maxAiRequestsPerMonth: number; // e.g. 10 for Free, unlimited for Pro
+  displayOrder?: number;
+  maxWallets: number;
+  maxAiRequestsPerMonth: number;
   canExportReports: boolean;
   canUseMultiCurrency: boolean;
+}
+
+export interface CreatePricingPlanPayload {
+  id?: string;
+  name: string;
+  nameAr: string;
+  priceEgp: number;
+  billingCycle: PlanBillingCycle;
+  description: string;
+  descriptionAr?: string;
+  features: string[];
+  featuresAr?: string[];
+  isPopular?: boolean;
+  isActive?: boolean;
+  displayOrder?: number;
+  maxWallets: number;
+  maxAiRequestsPerMonth: number;
+  canExportReports: boolean;
+  canUseMultiCurrency: boolean;
+}
+
+export interface UpdatePricingPlanPayload {
+  name: string;
+  nameAr: string;
+  priceEgp: number;
+  billingCycle: PlanBillingCycle;
+  description: string;
+  descriptionAr?: string;
+  features: string[];
+  featuresAr?: string[];
+  isPopular?: boolean;
+  isActive: boolean;
+  displayOrder?: number;
+  maxWallets: number;
+  maxAiRequestsPerMonth: number;
+  canExportReports: boolean;
+  canUseMultiCurrency: boolean;
+}
+
+export interface ReorderPricingPlansPayload {
+  planIds: string[];
 }
 
 export interface UserSubscription {
@@ -27,10 +71,18 @@ export interface UserSubscription {
   planName: string;
   status: SubscriptionStatus;
   amountPaidEgp: number;
-  gateway: 'Paymob' | 'Fawry' | 'Stripe' | 'ApplePay' | 'GooglePay';
+  gateway: 'Paymob' | 'Fawry' | 'Stripe' | 'ApplePay' | 'GooglePay' | string;
   startDate: string;
   endDate: string;
   autoRenew: boolean;
+}
+
+export interface SubscriptionStats {
+  monthlyRecurringRevenue: number;
+  activePaidSubscribers: number;
+  expiredSubscribers: number;
+  totalSubscribers: number;
+  churnRatePercentage: number;
 }
 
 export interface PaymentLog {
@@ -40,7 +92,7 @@ export interface PaymentLog {
   planName: string;
   amount: number;
   currency: string;
-  gateway: 'Paymob' | 'Fawry' | 'Stripe' | 'ApplePay' | 'GooglePay';
+  gateway: 'Paymob' | 'Fawry' | 'Stripe' | 'ApplePay' | 'GooglePay' | string;
   status: PaymentStatus;
   transactionRef: string;
   createdAt: string;
@@ -52,6 +104,15 @@ export interface PromoCode {
   discountPercentage: number;
   maxUses: number;
   usedCount: number;
-  expiresAt: string;
+  expiresAt?: string;
   isActive: boolean;
+  createdAt: string;
+}
+
+export interface CreatePromoCodePayload {
+  code: string;
+  discountPercentage: number;
+  maxUses: number;
+  expiresAt?: string;
+  isActive?: boolean;
 }

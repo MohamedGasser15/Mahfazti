@@ -8,10 +8,12 @@
     <!-- Security Headers -->
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
-    <title>Mahfazti Admin | محفظتي</title>  
+    <title>Mahfazti</title>  
     <script>
       (function() {
         try {
+          const savedLocale = localStorage.getItem('mahfazti_admin_locale');
+          document.title = savedLocale === 'ar' ? 'محفظتي' : 'Mahfazti';
           const savedTheme = localStorage.getItem('mahfazti_admin_theme');
           const isDark = savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
           if (isDark) {

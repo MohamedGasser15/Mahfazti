@@ -1,4 +1,12 @@
-export const formatCurrency = (amount: number, currency: string = 'EGP'): string => {
+export const formatCurrency = (amount: number, currency: string = 'EGP', isAr: boolean = false): string => {
+  if (isAr) {
+    const formattedNum = new Intl.NumberFormat('ar-EG', {
+      maximumFractionDigits: 2,
+      minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
+    }).format(amount);
+    return `${formattedNum} ج.م`;
+  }
+
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currency === 'EGP' ? 'EGP' : currency,
