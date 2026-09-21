@@ -16,7 +16,12 @@ bin/
 obj/
 *.tmp
 .vercel
+# Environment & Settings files
 .env
 .env.*
 !.env.example
+appsettings.json
+appsettings.*.json
+!appsettings.Example.json
+!appsettings.example.json
 
