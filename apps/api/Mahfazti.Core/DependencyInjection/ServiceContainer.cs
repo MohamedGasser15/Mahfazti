@@ -31,6 +31,8 @@ namespace Mahfazti.Core.DependencyInjection
             services.AddScoped<IAdminUserService, AdminUserService>();
             services.AddScoped<IAuditLogService, AuditLogService>();
             services.AddScoped<IRoleService, RoleService>();
+            services.AddHttpClient<IExchangeRateService, ExchangeRateService>();
+            services.AddScoped<ICurrencyService, CurrencyService>();
             return services;
         }
     }

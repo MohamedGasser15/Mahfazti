@@ -12,6 +12,7 @@ namespace Mahfazti.Infrastructure.Data
         public DbSet<Category> Categories { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<Currency> Currencies { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
@@ -58,6 +59,10 @@ namespace Mahfazti.Infrastructure.Data
 
             builder.Entity<AuditLog>()
                 .HasIndex(al => al.Category);
+
+            builder.Entity<Currency>()
+                .Property(c => c.ExchangeRateToEgp)
+                .HasColumnType("decimal(18,4)");
         }
     }
 }

@@ -11,6 +11,7 @@ using Mahfazti.Infrastructure.Data.Seeders;
 using Scalar.AspNetCore;
 using System.Security.Claims;
 using Mahfazti.Core.Constants;
+using Mahfazti.Infrastructure.BackgroundJobs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -95,6 +96,7 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureRepositories();
+builder.Services.AddHostedService<ExchangeRateSyncBackgroundService>();
 
 // =======================
 // OpenAPI + Scalar
@@ -200,6 +202,7 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await db.Database.MigrateAsync();
     await CategorySeeder.SeedAsync(db);
+    await CurrencySeeder.SeedAsync(db);
 
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
     await RoleSeeder.SeedAsync(roleManager);
