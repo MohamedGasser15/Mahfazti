@@ -16,11 +16,11 @@ export const AdminLayout: React.FC = () => {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen bg-[#F8F9FA] dark:bg-[#000000] text-zinc-900 dark:text-zinc-100 transition-colors duration-200">
+    <div className="flex h-screen max-h-screen overflow-hidden bg-[#F8F9FA] dark:bg-[#000000] text-zinc-900 dark:text-zinc-100 transition-colors duration-200">
       {/* Sidebar with responsive scalable width */}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
-      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
+      <div className="flex flex-1 flex-col min-w-0 h-screen max-h-screen overflow-hidden">
         {/* Unified Top Navbar */}
         <Navbar onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)} />
 

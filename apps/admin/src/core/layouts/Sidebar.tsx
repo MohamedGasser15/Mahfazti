@@ -155,7 +155,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
       {/* Dynamic Sidebar: 100% Height Locked with Pinned Header & Footer */}
       <aside
-        className={`fixed top-0 z-50 flex h-screen max-h-screen w-64 lg:w-72 2xl:w-80 shrink-0 flex-col overflow-hidden bg-white dark:bg-[#000000] text-zinc-900 dark:text-white transition-transform duration-200 lg:static lg:translate-x-0 select-none shadow-xs ${
+        className={`fixed top-0 z-50 flex h-screen max-h-screen w-64 lg:w-72 2xl:w-80 shrink-0 flex-col overflow-hidden bg-white dark:bg-[#000000] text-zinc-900 dark:text-white transition-transform duration-200 lg:sticky lg:top-0 lg:translate-x-0 select-none shadow-xs ${
           dir === 'rtl'
             ? 'right-0 border-l border-zinc-200/80 dark:border-zinc-800/80'
             : 'left-0 border-r border-zinc-200/80 dark:border-zinc-800/80'

@@ -1,6 +1,7 @@
 import { usersEn, usersAr, type UsersTranslationSchema } from './modules/users';
 import { auditLogsEn, auditLogsAr, type AuditLogsTranslationSchema } from './modules/auditLogs';
 import { rolesTranslationsEn, rolesTranslationsAr, type RolesTranslationSchema } from './modules/roles';
+import { currenciesEn, currenciesAr, type CurrenciesTranslationSchema } from './modules/currencies';
 
 export type Locale = 'en' | 'ar';
 export type Direction = 'ltr' | 'rtl';
@@ -160,6 +161,7 @@ export interface TranslationSchema {
   users: UsersTranslationSchema;
   auditLogs: AuditLogsTranslationSchema;
   roles: RolesTranslationSchema;
+  currencies: CurrenciesTranslationSchema;
 }
 
 export const translations: Record<Locale, TranslationSchema> = {
@@ -396,6 +398,7 @@ export const translations: Record<Locale, TranslationSchema> = {
     users: usersEn,
     auditLogs: auditLogsEn,
     roles: rolesTranslationsEn,
+    currencies: currenciesEn,
   },
   ar: {
     common: {
@@ -630,5 +633,6 @@ export const translations: Record<Locale, TranslationSchema> = {
     users: usersAr,
     auditLogs: auditLogsAr,
     roles: rolesTranslationsAr,
+    currencies: currenciesAr,
   },
 };
