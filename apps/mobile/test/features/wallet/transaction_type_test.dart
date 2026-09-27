@@ -4,10 +4,11 @@ import 'package:my_wallet/features/wallet/presentation/widgets/home_tab_models.d
 void main() {
   group('TransactionType', () {
     test('has all expected values', () {
-      expect(TransactionType.values.length, 3);
+      expect(TransactionType.values.length, 4);
       expect(TransactionType.values, contains(TransactionType.all));
       expect(TransactionType.values, contains(TransactionType.income));
       expect(TransactionType.values, contains(TransactionType.expense));
+      expect(TransactionType.values, contains(TransactionType.transfer));
     });
 
     test('all represents all transactions', () {
@@ -20,6 +21,10 @@ void main() {
 
     test('expense represents withdrawals', () {
       expect(TransactionType.expense.name, 'expense');
+    });
+
+    test('transfer represents transfers', () {
+      expect(TransactionType.transfer.name, 'transfer');
     });
   });
 

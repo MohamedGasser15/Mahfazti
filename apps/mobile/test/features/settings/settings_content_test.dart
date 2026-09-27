@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_wallet/core/services/api_service.dart';
+import 'package:my_wallet/core/services/app_lock_service.dart';
 import 'package:my_wallet/core/services/hide_balance_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/settings/presentation/widgets/settings_content.dart';
@@ -19,8 +20,11 @@ Widget createTestApp({required Function(Locale) onLocaleChanged}) {
       GlobalWidgetsLocalizations.delegate,
     ],
     supportedLocales: AppLocalizations.supportedLocales,
-    home: ChangeNotifierProvider<HideBalanceService>(
-      create: (_) => HideBalanceService(),
+    home: MultiProvider(
+      providers: [
+        ChangeNotifierProvider<HideBalanceService>(create: (_) => HideBalanceService()),
+        ChangeNotifierProvider<AppLockService>(create: (_) => AppLockService()),
+      ],
       child: Scaffold(
         body: SettingsContent(onLocaleChanged: onLocaleChanged),
       ),
