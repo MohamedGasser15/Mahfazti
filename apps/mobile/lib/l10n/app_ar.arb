@@ -378,5 +378,12 @@
   "passwordRequired": "كلمة المرور مطلوبة",
   "digitCodeRequired": "يرجى إدخال الرمز المكون من 6 أرقام",
   "dontHaveAccount": "ليس لديك حساب؟",
-  "alreadyHaveAccount": "لديك حساب بالفعل؟"
+  "alreadyHaveAccount": "لديك حساب بالفعل؟",
+  "appLock": "قفل التطبيق",
+  "appLockSubtitle": "حماية التطبيق بالبصمة أو قفل الجهاز",
+  "appLockDeviceNotSupported": "قفل الشاشة أو البصمة غير مدعوم أو غير مفعل على هذا الجهاز",
+  "appLockPrompt": "قم بالمصادقة للوصول إلى محفظتي",
+  "appLockUnlock": "فتح القفل",
+  "appLockLockedTitle": "محفظتي مقفل",
+  "appLockLockedMessage": "قم بتأكيد هويتك للوصول إلى بياناتك المالية"
 }

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:my_wallet/core/constants/app_routes.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
@@ -99,9 +100,24 @@ class _SplashScreenState extends State<SplashScreen>
     _controller.forward();
   }
 
-  void _navigateToMain() {
+  Future<void> _navigateToMain() async {
     if (!mounted) return;
-    final currency = SharedPrefs.currency;
+    var currency = SharedPrefs.currency;
+    if (currency == null || currency.isEmpty) {
+      final userDataStr = SharedPrefs.userData;
+      if (userDataStr != null && userDataStr.isNotEmpty) {
+        try {
+          final userMap = jsonDecode(userDataStr) as Map<String, dynamic>;
+          final c = userMap['currency'] as String?;
+          if (c != null && c.isNotEmpty) {
+            currency = c;
+            await SharedPrefs.setCurrency(c);
+          }
+        } catch (_) {}
+      }
+    }
+
+    if (!mounted) return;
     if (currency == null || currency.isEmpty) {
       Navigator.of(context).pushReplacementNamed(AppRoutes.currencySelection);
     } else {
@@ -121,7 +137,7 @@ class _SplashScreenState extends State<SplashScreen>
       return;
     }
 
-    _navigateToMain();
+    await _navigateToMain();
   }
 
   void _navigateToOnboarding() {

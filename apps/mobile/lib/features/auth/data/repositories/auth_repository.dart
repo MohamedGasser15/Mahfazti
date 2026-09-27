@@ -247,16 +247,24 @@ class AuthRepository {
 
   /// Set user currency
   Future<void> setUserCurrency(String currency) async {
-    final response = await _apiService.post(
-      ApiEndpoints.setCurrency,
-      {'currency': currency},
-      requiresAuth: true,
-    );
-    final data = _apiService.handleResponse(response);
-    if (data['success'] != true) {
-      throw Exception(data['message'] ?? 'Failed to set currency');
+    try {
+      final response = await _apiService.post(
+        ApiEndpoints.setCurrency,
+        {'currency': currency},
+        requiresAuth: true,
+      );
+      final data = _apiService.handleResponse(response);
+      if (data['success'] != true) {
+        throw Exception(data['message'] ?? 'Failed to set currency');
+      }
+      await SharedPrefs.setCurrency(currency);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        throw Exception('401: Unauthorized');
+      }
+      final message = _extractDioErrorMessage(e);
+      throw Exception(message);
     }
-    await SharedPrefs.setCurrency(currency);
   }
 
   /// Set user preferred language on backend

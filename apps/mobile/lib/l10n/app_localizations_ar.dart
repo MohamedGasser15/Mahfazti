@@ -1217,4 +1217,27 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get digitCodeRequired => 'يرجى إدخال الرمز المكون من 6 أرقام';
+
+  @override
+  String get appLock => 'قفل التطبيق';
+
+  @override
+  String get appLockSubtitle => 'حماية التطبيق بالبصمة أو قفل الجهاز';
+
+  @override
+  String get appLockDeviceNotSupported =>
+      'قفل الشاشة أو البصمة غير مدعوم أو غير مفعل على هذا الجهاز';
+
+  @override
+  String get appLockPrompt => 'قم بالمصادقة للوصول إلى محفظتي';
+
+  @override
+  String get appLockUnlock => 'فتح القفل';
+
+  @override
+  String get appLockLockedTitle => 'محفظتي مقفل';
+
+  @override
+  String get appLockLockedMessage =>
+      'قم بتأكيد هويتك للوصول إلى بياناتك المالية';
 }

@@ -1,7 +1,12 @@
 import 'dart:io';
+import 'package:cupertino_native_better/cupertino_native_better.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:my_wallet/core/constants/app_routes.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
+import 'package:my_wallet/core/services/app_lock_service.dart';
+import 'package:my_wallet/core/services/biometric_service.dart';
 import 'package:my_wallet/core/services/hide_balance_service.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/services/theme_service.dart';
@@ -17,7 +22,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 class SettingsContent extends StatefulWidget {
   final Function(Locale) onLocaleChanged;
-  
+
   const SettingsContent({
     super.key,
     required this.onLocaleChanged,
@@ -39,311 +44,352 @@ class _SettingsContentState extends State<SettingsContent> {
     super.initState();
     _loadSettings();
     _loadCurrency();
-     _loadProfile();
-    // الاستماع لتغييرات الثيم
-    ThemeService.themeNotifier.addListener(() {
-      if (mounted) {
-        _loadCurrentTheme();
-      }
-    });
+    _loadProfile();
+
+    ThemeService.themeNotifier.addListener(_onThemeChanged);
+  }
+
+  void _onThemeChanged() {
+    if (mounted) {
+      _loadCurrentTheme();
+    }
   }
 
   @override
   void dispose() {
-    ThemeService.themeNotifier.removeListener(() {});
+    ThemeService.themeNotifier.removeListener(_onThemeChanged);
     super.dispose();
   }
-// دالة لتحميل العملة
-Future<void> _loadCurrency() async {
-  final code = await SharedPrefs.getCurrency();
-  setState(() {
-    _currencyCode = code ?? 'USD';
-  });
-}
-Future<void> _loadProfile({bool forceRefresh = false}) async {
-  // If we already have data and not forcing refresh, do nothing
-  if (_profile != null && !forceRefresh) return;
 
-  // Try to load from cache immediately
-  final cached = await ProfileRepository().getCachedProfile();
-  if (cached != null && !forceRefresh) {
-    setState(() {
-      _profile = cached;
-      _isLoadingProfile = false;
-    });
-  } else {
-    setState(() => _isLoadingProfile = true);
-  }
-
-  // Then refresh from API (always when forceRefresh or if no cache)
-  try {
-    final fresh = await ProfileRepository().getProfile();
-    if (mounted && fresh != _profile) {
-      setState(() => _profile = fresh);
-    }
-  } catch (e) {
-    // If API fails, keep the cached data (if any)
-  } finally {
+  // Load Currency
+  Future<void> _loadCurrency() async {
+    final code = await SharedPrefs.getCurrency();
     if (mounted) {
-      setState(() => _isLoadingProfile = false);
+      setState(() {
+        _currencyCode = code ?? 'USD';
+      });
     }
   }
-}
-  
-void _openCurrencySelection() {
-  final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) {
-      String? tempSelected = _currencyCode;
+  // Load Profile with fast cache-first approach
+  Future<void> _loadProfile({bool forceRefresh = false}) async {
+    if (_profile != null && !forceRefresh) return;
 
-      final List<Map<String, String>> currencies = [
-        {'code': 'USD', 'flag': '🇺🇸', 'name': 'US Dollar'},
-        {'code': 'EUR', 'flag': '🇪🇺', 'name': 'Euro'},
-        {'code': 'EGP', 'flag': '🇪🇬', 'name': 'Egyptian Pound'},
-        {'code': 'SAR', 'flag': '🇸🇦', 'name': 'Saudi Riyal'},
-        {'code': 'AED', 'flag': '🇦🇪', 'name': 'UAE Dirham'},
-        {'code': 'KWD', 'flag': '🇰🇼', 'name': 'Kuwaiti Dinar'},
-      ];
-bool isSubmitting = false;
-    return StatefulBuilder(
-      builder: (context, setState) {
-        return Container(
-            decoration: BoxDecoration(
-              color: isDarkMode ? Colors.black : Colors.white,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(24),
-                topRight: Radius.circular(24),
+    final cached = await ProfileRepository().getCachedProfile();
+    if (cached != null && !forceRefresh) {
+      if (mounted) {
+        setState(() {
+          _profile = cached;
+          _isLoadingProfile = false;
+        });
+      }
+    } else {
+      if (mounted) {
+        setState(() => _isLoadingProfile = true);
+      }
+    }
+
+    try {
+      final fresh = await ProfileRepository().getProfile();
+      if (mounted && fresh != _profile) {
+        setState(() => _profile = fresh);
+      }
+    } catch (_) {
+      // Keep cached data if API fails
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingProfile = false);
+      }
+    }
+  }
+
+  void _onProfileUpdated() {
+    _loadProfile(forceRefresh: true);
+  }
+
+  String _getInitials(String? name) {
+    if (name == null || name.trim().isEmpty) return '';
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.length == 1) {
+      return parts[0].isNotEmpty ? parts[0][0].toUpperCase() : '';
+    }
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+
+  // Currency Selection Modal
+  void _openCurrencySelection() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
+    final itemBorder = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
+    final selectedBg = const Color(0xFF3B82F6).withValues(alpha: isDarkMode ? 0.14 : 0.08);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        String? tempSelected = _currencyCode;
+
+        final List<Map<String, String>> currencies = [
+          {'code': 'USD', 'flag': '🇺🇸', 'name': 'US Dollar'},
+          {'code': 'EUR', 'flag': '🇪🇺', 'name': 'Euro'},
+          {'code': 'EGP', 'flag': '🇪🇬', 'name': 'Egyptian Pound'},
+          {'code': 'SAR', 'flag': '🇸🇦', 'name': 'Saudi Riyal'},
+          {'code': 'AED', 'flag': '🇦🇪', 'name': 'UAE Dirham'},
+          {'code': 'KWD', 'flag': '🇰🇼', 'name': 'Kuwaiti Dinar'},
+        ];
+        bool isSubmitting = false;
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(28),
+                  topRight: Radius.circular(28),
+                ),
+                border: Border(
+                  top: BorderSide(
+                    color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                    width: 1,
+                  ),
+                ),
               ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Handle
-                Container(
-                  height: 4,
-                  width: 40,
-                  margin: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Handle
+                  Container(
+                    height: 4,
+                    width: 36,
+                    margin: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                ),
 
-                // Header
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        context.l10n.selectCurrency,
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: isDarkMode ? Colors.white : Colors.black,
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(22, 6, 16, 14),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          context.l10n.selectCurrency,
+                          style: TextStyle(
+                            fontSize: 19,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.3,
+                            color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: Icon(
-                          Icons.close,
-                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: Icon(
+                            Icons.close_rounded,
+                            size: 20,
+                            color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
 
-                // Currency List
-                ...currencies.map((currency) {
-                  final isSelected = tempSelected == currency['code'];
-                  return GestureDetector(
-                    onTap: () => setState(() => tempSelected = currency['code']),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? (isDarkMode
-                                ? Colors.white.withValues(alpha: 0.08)
-                                : Colors.black.withValues(alpha: 0.05))
-                            : (isDarkMode ? Colors.grey[900] : Colors.grey[50]),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
+                  // Currency List
+                  ...currencies.map((currency) {
+                    final isSelected = tempSelected == currency['code'];
+                    return GestureDetector(
+                      onTap: () => setModalState(() => tempSelected = currency['code']),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
                           color: isSelected
-                              ? (isDarkMode ? Colors.white : Colors.black)
-                              : (isDarkMode ? Colors.grey[800]! : Colors.grey[200]!),
-                          width: isSelected ? 1.5 : 1,
+                              ? selectedBg
+                              : (isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF9F9FB)),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isSelected ? const Color(0xFF3B82F6) : itemBorder,
+                            width: isSelected ? 1.5 : 1,
+                          ),
                         ),
-                      ),
-                      child: Row(
-                        children: [
-                          // Flag
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: isDarkMode ? Colors.grey[800] : Colors.grey[100],
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: Text(
-                                currency['flag']!,
-                                style: const TextStyle(fontSize: 22),
+                        child: Row(
+                          children: [
+                            // Flag
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF1F1F5),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  currency['flag']!,
+                                  style: const TextStyle(fontSize: 20),
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 14),
-                          // Name & Code
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  currency['name']!,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 15,
-                                    color: isDarkMode ? Colors.white : Colors.black,
+                            const SizedBox(width: 14),
+                            // Name & Code
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    currency['name']!,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 15,
+                                      color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  currency['code']!,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    currency['code']!,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                          // Check
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 200),
-                            child: isSelected
-                                ? Container(
-                                    key: const ValueKey('check'),
-                                    width: 26,
-                                    height: 26,
-                                    decoration: BoxDecoration(
-                                      color: isDarkMode ? Colors.white : Colors.black,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      Icons.check,
-                                      size: 16,
-                                      color: isDarkMode ? Colors.black : Colors.white,
-                                    ),
-                                  )
-                                : const SizedBox(key: ValueKey('empty'), width: 26),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-
-                // Save Button
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    20,
-                    20,
-                    20,
-                    MediaQuery.of(context).padding.bottom + 20,
-                  ),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-onPressed: isSubmitting
-    ? null
-    : () async {
-        final currentContext = context;
-        if (tempSelected == null) return;
-        setState(() => isSubmitting = true);
-        try {
-          await AuthRepository().setUserCurrency(tempSelected!);
-          await SharedPrefs.setCurrency(tempSelected!);
-          this.setState(() => _currencyCode = tempSelected!);
-          if (!currentContext.mounted) return;
-          Navigator.pop(currentContext);
-          MessageService.showSuccess(context: currentContext, message: currentContext.l10n.currencySavedSuccess);
-        } catch (e) {
-          if (!currentContext.mounted) return;
-          MessageService.showError(context: currentContext, message: e.toString());
-          setState(() => isSubmitting = false);
-        }
-      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: isDarkMode ? Colors.white : Colors.black,
-                        foregroundColor: isDarkMode ? Colors.black : Colors.white,
-                        minimumSize: const Size(double.infinity, 52),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                            // Check
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 180),
+                              child: isSelected
+                                  ? Container(
+                                      key: const ValueKey('check'),
+                                      width: 24,
+                                      height: 24,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFF3B82F6),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.check_rounded,
+                                        size: 15,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const SizedBox(key: ValueKey('empty'), width: 24),
+                            ),
+                          ],
                         ),
-                        elevation: 0,
                       ),
-                      child: isSubmitting
-    ? const SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      )
-    : Text(
-        context.l10n.save,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+                    );
+                  }),
+
+                  // Save Button
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      18,
+                      16,
+                      18,
+                      MediaQuery.of(context).padding.bottom + 16,
+                    ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: isSubmitting
+                            ? null
+                            : () async {
+                                final currentContext = context;
+                                if (tempSelected == null) return;
+                                setModalState(() => isSubmitting = true);
+                                try {
+                                  await AuthRepository().setUserCurrency(tempSelected!);
+                                  await SharedPrefs.setCurrency(tempSelected!);
+                                  setState(() => _currencyCode = tempSelected!);
+                                  if (!currentContext.mounted) return;
+                                  Navigator.pop(currentContext);
+                                  MessageService.showSuccess(
+                                    context: currentContext,
+                                    message: currentContext.l10n.currencySavedSuccess,
+                                  );
+                                } catch (e) {
+                                  if (!currentContext.mounted) return;
+                                  MessageService.showError(
+                                    context: currentContext,
+                                    message: e.toString(),
+                                  );
+                                  setModalState(() => isSubmitting = false);
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                          foregroundColor: isDarkMode ? const Color(0xFF09090B) : Colors.white,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: isSubmitting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : Text(
+                                context.l10n.save,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
-      );
-    },
-  );
-}
-Future<void> _loadSettings() async {
-  // تحميل اللغة الحالية
-  final locale = await LanguageService.getSavedLocale();
-  
-  // تحميل الثيم الحالي
-  await _loadCurrentTheme();
-  
-  setState(() {
-    _isEnglish = LanguageService.isEnglish(locale);
-  });
-}
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _loadSettings() async {
+    final locale = await LanguageService.getSavedLocale();
+    await _loadCurrentTheme();
+    if (mounted) {
+      setState(() {
+        _isEnglish = LanguageService.isEnglish(locale);
+      });
+    }
+  }
 
   Future<void> _loadCurrentTheme() async {
     final theme = await ThemeService.getSavedTheme();
-    setState(() {
-      _currentTheme = theme;
-    });
+    if (mounted) {
+      setState(() {
+        _currentTheme = theme;
+      });
+    }
   }
 
   Future<void> _switchToArabic() async {
     await LanguageService.switchToArabic();
-    setState(() {
-      _isEnglish = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isEnglish = false;
+      });
+    }
     widget.onLocaleChanged(LanguageService.arabic);
   }
 
   Future<void> _switchToEnglish() async {
     await LanguageService.switchToEnglish();
-    setState(() {
-      _isEnglish = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isEnglish = true;
+      });
+    }
     widget.onLocaleChanged(LanguageService.english);
   }
 
@@ -351,11 +397,11 @@ Future<void> _loadSettings() async {
     await ThemeService.saveTheme(theme);
   }
 
-  // دوال فتح الروابط الخارجية
+  // External Links
   Future<void> _openStore() async {
     const appStoreUrl = 'https://apps.apple.com/app/idYOUR_APP_ID';
     const playStoreUrl = 'https://play.google.com/store/apps/details?id=YOUR_PACKAGE_NAME';
-    
+
     try {
       if (Platform.isIOS) {
         if (await canLaunchUrl(Uri.parse(appStoreUrl))) {
@@ -419,1092 +465,809 @@ Future<void> _loadSettings() async {
     MessageService.showInfo(context: context, message: context.l10n.featureComingSoon);
   }
 
-  // دالة لفتح modal اختيار الثيم
-  void _showThemeSelectionModal() {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                context.l10n.selectDisplayTheme,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: isDarkMode ? Colors.white : Colors.black,
-                ),
-              ),
-              const SizedBox(height: 20),
-              _buildThemeOptionInModal(
-                icon: Icons.light_mode_outlined,
-                label: context.l10n.light,
-                value: ThemeService.light,
-                isSelected: _currentTheme == ThemeService.light,
-                iconColor: Colors.orange[700],
-                isDarkMode: isDarkMode,
-              ),
-              const SizedBox(height: 12),
-              _buildThemeOptionInModal(
-                icon: Icons.dark_mode_outlined,
-                label: context.l10n.dark,
-                value: ThemeService.dark,
-                isSelected: _currentTheme == ThemeService.dark,
-                iconColor: Colors.blueGrey[400],
-                isDarkMode: isDarkMode,
-              ),
-              const SizedBox(height: 12),
-              _buildThemeOptionInModal(
-                icon: Icons.settings_suggest_outlined,
-                label: context.l10n.system,
-                value: ThemeService.system,
-                isSelected: _currentTheme == ThemeService.system,
-                iconColor: Colors.grey[600],
-                isDarkMode: isDarkMode,
-              ),
-              const SizedBox(height: 24),
-            ],
-          ),
-        );
+  // Theme Toggle (Native CupertinoSwitch)
+  Widget _buildThemeToggle(bool isDarkMode) {
+    final isDark = _currentTheme == ThemeService.dark || (_currentTheme == ThemeService.system && isDarkMode);
+    return CupertinoSwitch(
+      value: isDark,
+      activeTrackColor: const Color(0xFF3B82F6),
+      onChanged: (value) {
+        HapticFeedback.selectionClick();
+        final newTheme = value ? ThemeService.dark : ThemeService.light;
+        setState(() => _currentTheme = newTheme);
+        _setTheme(newTheme);
       },
     );
   }
 
-  Widget _buildThemeOptionInModal({
-    required IconData icon,
-    required String label,
-    required String value,
-    required bool isSelected,
-    required Color? iconColor,
-    required bool isDarkMode,
-  }) {
-    return GestureDetector(
-      onTap: () {
-        _setTheme(value);
-        Navigator.pop(context);
-      },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? (isDarkMode ? Colors.blueGrey[800] : Colors.blueGrey[100])
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected
-                ? (isDarkMode ? Colors.blueAccent : Colors.blue[600]!)
-                : (isDarkMode ? Colors.grey[700]! : Colors.grey[300]!),
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 24,
-              color: isSelected
-                  ? (isDarkMode ? Colors.white : Colors.blue[800])
-                  : iconColor,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  color: isSelected
-                      ? (isDarkMode ? Colors.white : Colors.blue[800])
-                      : (isDarkMode ? Colors.grey[300] : Colors.grey[700]),
-                ),
-              ),
-            ),
-            if (isSelected)
-              Icon(
-                Icons.check_circle,
-                color: isDarkMode ? Colors.blueAccent : Colors.blue[600],
-                size: 20,
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Widget لعرض زر الثيم الحالي
-  Widget _buildThemeButton() {
+  // Language Button (Native iOS UIMenu on iOS / Material PopupMenuButton on Android)
+  Widget _buildLanguageButton() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    String currentThemeLabel = '';
-    IconData currentThemeIcon = Icons.settings_suggest_outlined;
-    Color? iconColor = Colors.grey[600];
-    
-    if (_currentTheme == ThemeService.light) {
-      currentThemeLabel = context.l10n.light;
-      currentThemeIcon = Icons.light_mode_outlined;
-      iconColor = Colors.orange[700];
-    } else if (_currentTheme == ThemeService.dark) {
-      currentThemeLabel = context.l10n.dark;
-      currentThemeIcon = Icons.dark_mode_outlined;
-      iconColor = Colors.blueGrey[400];
-    } else {
-      currentThemeLabel = context.l10n.system;
-      currentThemeIcon = Icons.settings_suggest_outlined;
-      iconColor = Colors.grey[600];
-    }
-    
-    return GestureDetector(
-      onTap: _showThemeSelectionModal,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    final isIOS = Platform.isIOS;
+    String currentLanguageLabel = _isEnglish ? context.l10n.english : context.l10n.arabic;
+
+    if (isIOS) {
+      return Container(
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
-          color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-          borderRadius: BorderRadius.circular(12),
+          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+            color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
             width: 1,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              currentThemeIcon,
-              size: 18,
-              color: iconColor,
+            CNPopupMenuButton(
+              buttonLabel: currentLanguageLabel,
+              height: 28,
+              tint: isDarkMode ? Colors.white : const Color(0xFF09090B),
+              shrinkWrap: true,
+              buttonStyle: CNButtonStyle.plain,
+              items: [
+                CNPopupMenuItem(
+                  label: 'العربية',
+                  icon: const CNSymbol('globe', size: 16.0),
+                  checked: !_isEnglish,
+                ),
+                CNPopupMenuItem(
+                  label: 'English',
+                  icon: const CNSymbol('globe', size: 16.0),
+                  checked: _isEnglish,
+                ),
+              ],
+              onSelected: (index) {
+                HapticFeedback.selectionClick();
+                if (index == 0) {
+                  _switchToArabic();
+                } else if (index == 1) {
+                  _switchToEnglish();
+                }
+              },
             ),
-            const SizedBox(width: 8),
-            Text(
-              currentThemeLabel,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
-              ),
-            ),
-            const SizedBox(width: 4),
-            Icon(
-              Icons.arrow_drop_down,
-              size: 18,
-              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-      child: ResponsiveWrapper(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Profile Section
-            _buildProfileHeader(isDarkMode),
-            const SizedBox(height: 32),
-            
-            // App Section
-            _buildAppSettings(isDarkMode),
-            const SizedBox(height: 32),
-            
-            // Profile Settings Section
-            _buildProfileSettings(isDarkMode),
-            const SizedBox(height: 32),
-            
-            // Security Section
-            _buildSecuritySettings(isDarkMode),
-            const SizedBox(height: 32),
-            
-            // About Us Section
-            _buildAboutUsSection(isDarkMode),
-            const SizedBox(height: 32),
-            
-            // Close Account Section
-            _buildCloseAccountSection(isDarkMode),
-            const SizedBox(height: 32),
-            
-            // Logout
-            _buildLogoutButton(isDarkMode),
-            const SizedBox(height: 40),
-          ],
-        ),
-      ),
-    );
-  }
-void _onProfileUpdated() {
-  _loadProfile(forceRefresh: true);
-}
-
-Widget _buildProfileHeader(bool isDarkMode) {
-  final iconColor = isDarkMode ? Colors.white : Colors.black;
-  final bgColor = isDarkMode ? Colors.grey[900] : Colors.grey[50];
-  final borderColor = isDarkMode ? Colors.grey[800]! : Colors.grey[200]!;
-
-  return Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: bgColor,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: borderColor),
-    ),
-    child: Row(
-      children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: isDarkMode ? Colors.grey[800] : Colors.grey[200], // subtle background
-            border: Border.all(color: borderColor, width: 1),
-            image: _profile?.profileImageUrl != null
-                ? DecorationImage(
-                    image: NetworkImage(_profile!.profileImageUrl!),
-                    fit: BoxFit.cover,
-                  )
-                : null,
-          ),
-          child: _profile?.profileImageUrl == null
-              ? Icon(
-                  Icons.person,
-                  size: 40,
-                  color: iconColor,
-                )
-              : null,
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                  _isLoadingProfile
-                      ? context.l10n.loading
-                      : (_profile?.fullName ?? context.l10n.user),
-                style: TextStyle(
-                  color: isDarkMode ? Colors.white : Colors.black,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                _profile?.email ?? context.l10n.emailPlaceholder,
-                style: TextStyle(
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ProfileEditScreen(
-                        onProfileUpdated: _onProfileUpdated,
-                      ),
-                    ),
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[800] : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    context.l10n.manage,
-                    style: TextStyle(
-                      color: isDarkMode ? Colors.white : Colors.black,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-} 
-Widget _buildAppSettings(bool isDarkMode) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          context.l10n.app,
-          style: TextStyle(
-            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          decoration: BoxDecoration(
-            color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
-            ),
-          ),
-          child: Column(
-            children: [
-              // Display Mode
-              ListTile(
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.dark_mode,
-                    color: isDarkMode ? Colors.white : Colors.black,
-                    size: 20,
-                  ),
-                ),
-                title: Text(
-                  context.l10n.displayMode,
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.white : Colors.black,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                subtitle: Text(
-                  context.l10n.selectDisplayTheme,
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                    fontSize: 12,
-                  ),
-                ),
-                trailing: _buildThemeButton(),
-              ),
-            Divider(
-  height: 1,
-  color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-),
-
-// Currency
-ListTile(
-  leading: Container(
-    width: 40,
-    height: 40,
-    decoration: BoxDecoration(
-      color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-      shape: BoxShape.circle,
-    ),
-    child: Icon(
-      Icons.attach_money,
-      color: isDarkMode ? Colors.white : Colors.black,
-      size: 20,
-    ),
-  ),
-  title: Text(
-    context.l10n.currency,
-    style: TextStyle(
-      color: isDarkMode ? Colors.white : Colors.black,
-      fontWeight: FontWeight.w600,
-    ),
-  ),
-  subtitle: Text(
-    _getCurrencyName(_currencyCode),
-    style: TextStyle(
-      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-      fontSize: 12,
-    ),
-  ),
-  trailing: Icon(
-    Icons.chevron_right,
-    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-    size: 20,
-  ),
-  onTap: _openCurrencySelection,
-),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-String _getCurrencyName(String code) {
-  switch (code) {
-    case 'USD': return context.l10n.currencyUSD;
-    case 'EUR': return context.l10n.currencyEUR;
-    case 'EGP': return context.l10n.currencyEGP;
-    case 'SAR': return context.l10n.currencySAR;
-    case 'AED': return context.l10n.currencyAED;
-    case 'KWD': return context.l10n.currencyKWD;
-    default: return code;
-  }
-}
-Widget _buildProfileSettings(bool isDarkMode) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        context.l10n.profileSettings,
-        style: TextStyle(
-          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      const SizedBox(height: 12),
-      Container(
-        decoration: BoxDecoration(
-          color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
-          ),
-        ),
-        child: Column(
-          children: [
-            // Personal Details
-            ListTile(
-              leading: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.person_outline,
-                  color: isDarkMode ? Colors.white : Colors.black,
-                  size: 20,
-                ),
-              ),
-              title: Text(
-                context.l10n.personalDetails,
-                style: TextStyle(
-                  color: isDarkMode ? Colors.white : Colors.black,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              subtitle: Text(
-                context.l10n.updateYourPersonalInformation,
-                style: TextStyle(
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  fontSize: 12,
-                ),
-              ),
-              trailing: Icon(
-                Icons.chevron_right,
-                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                size: 20,
-              ),
-onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ProfileEditScreen(
-                        onProfileUpdated: _onProfileUpdated,
-                      ),
-                    ),
-                  );
-                },
-              
-            ),
-            Divider(
-              height: 1,
-              color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-            ),
-            
-              ListTile(
-              leading: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.language,
-                  color: isDarkMode ? Colors.white : Colors.black,
-                  size: 20,
-                ),
-              ),
-              title: Text(
-                context.l10n.appLanguage,
-                style: TextStyle(
-                  color: isDarkMode ? Colors.white : Colors.black,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              subtitle: Text(
-                context.l10n.changeAppLanguage,
-                style: TextStyle(
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  fontSize: 12,
-                ),
-              ),
-              trailing: _buildLanguageButton(),
-            ),
-          ],
-        ),
-      ),
-    ],
-  );
-}
-
-Widget _buildLanguageButton() {
-  final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-  
-  String currentLanguageLabel = _isEnglish ? context.l10n.english : context.l10n.arabic;
-  
-  return GestureDetector(
-    onTap: _showLanguageSelectionModal,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-          width: 1,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            currentLanguageLabel,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
-            ),
-          ),
-          const SizedBox(width: 4),
-          Icon(
-            Icons.arrow_drop_down,
-            size: 18,
-            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-// إضافة دالة لفتح modal اختيار اللغة
-void _showLanguageSelectionModal() {
-  final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-  
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (context) {
-      return Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
+            const SizedBox(width: 2),
+            IgnorePointer(
+              child: Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 16,
+                color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
               ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              context.l10n.selectLanguage,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: isDarkMode ? Colors.white : Colors.black,
-              ),
-            ),
-            const SizedBox(height: 20),
-            _buildLanguageOptionInModal(
-              label: context.l10n.arabic,
-              value: false,
-              isSelected: !_isEnglish,
-              isDarkMode: isDarkMode,
-            ),
-            const SizedBox(height: 12),
-            _buildLanguageOptionInModal(
-              label: context.l10n.english,
-              value: true,
-              isSelected: _isEnglish,
-              isDarkMode: isDarkMode,
-            ),
-            const SizedBox(height: 24),
           ],
         ),
       );
-    },
-  );
-}
+    }
 
-// إضافة دالة لعرض خيار اللغة داخل الـ modal
-Widget _buildLanguageOptionInModal({
-  required String label,
-  required bool value,
-  required bool isSelected,
-  required bool isDarkMode,
-}) {
-  return GestureDetector(
-    onTap: () {
-      if (value) {
-        _switchToEnglish();
-      } else {
-        _switchToArabic();
-      }
-      Navigator.pop(context);
-    },
-    child: Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isSelected
-            ? (isDarkMode ? Colors.blueGrey[800] : Colors.blueGrey[100])
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isSelected
-              ? (isDarkMode ? Colors.blueAccent : Colors.blue[600]!)
-              : (isDarkMode ? Colors.grey[700]! : Colors.grey[300]!),
-          width: isSelected ? 2 : 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected
-                    ? (isDarkMode ? Colors.white : Colors.blue[800])
-                    : (isDarkMode ? Colors.grey[300] : Colors.grey[700]),
-              ),
+    // Android / Other Platforms: Styled Material PopupMenuButton
+    return Theme(
+      data: Theme.of(context).copyWith(
+        popupMenuTheme: PopupMenuThemeData(
+          color: isDarkMode ? const Color(0xFF1E1E24) : Colors.white,
+          surfaceTintColor: Colors.transparent,
+          elevation: 8,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: isDarkMode ? const Color(0xFF2E2E36) : const Color(0xFFE4E4E7),
+              width: 1,
             ),
           ),
-          if (isSelected)
-            Icon(
-              Icons.check_circle,
-              color: isDarkMode ? Colors.blueAccent : Colors.blue[600],
-              size: 20,
-            ),
-        ],
-      ),
-    ),
-  );
-}
-Widget _buildSecuritySettings(bool isDarkMode) {
-  final hideService = Provider.of<HideBalanceService>(context);
-  
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        context.l10n.security,
-        style: TextStyle(
-          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
+          shadowColor: Colors.black.withValues(alpha: 0.25),
         ),
       ),
-      const SizedBox(height: 12),
-      Container(
-        decoration: BoxDecoration(
-          color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
+      child: PopupMenuButton<bool>(
+        tooltip: context.l10n.selectLanguage,
+        offset: const Offset(0, 36),
+        position: PopupMenuPosition.under,
+        elevation: 8,
+        color: isDarkMode ? const Color(0xFF1E1E24) : Colors.white,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+          side: BorderSide(
+            color: isDarkMode ? const Color(0xFF2E2E36) : const Color(0xFFE4E4E7),
+            width: 1,
           ),
         ),
-        child: Column(
-          children: [
-            // Hide Balances
-            SwitchListTile(
-              value: hideService.isHidden,
-              onChanged: (value) => hideService.setHidden(value),
-              title: Text(
-                context.l10n.hideBalances,
-                style: TextStyle(
-                  color: isDarkMode ? Colors.white : Colors.black,
-                  fontWeight: FontWeight.w600,
+        splashRadius: 18,
+        padding: EdgeInsets.zero,
+        onSelected: (isEnglish) {
+          HapticFeedback.selectionClick();
+          if (isEnglish) {
+            _switchToEnglish();
+          } else {
+            _switchToArabic();
+          }
+        },
+        itemBuilder: (context) => [
+          PopupMenuItem<bool>(
+            value: false,
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Expanded(
+                  child: Text(
+                    context.l10n.arabic,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: !_isEnglish ? FontWeight.w700 : FontWeight.w500,
+                      color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                    ),
+                  ),
                 ),
-              ),
-              subtitle: Text(
-                context.l10n.hideYourBalancesForPrivacy,
-                style: TextStyle(
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  fontSize: 12,
-                ),
-              ),
-              secondary: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.visibility_off,
-                  color: isDarkMode ? Colors.white : Colors.black,
-                  size: 20,
-                ),
-              ),
+                if (!_isEnglish) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.check_rounded,
+                    size: 18,
+                    color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                  ),
+                ],
+              ],
             ),
-          ],
+          ),
+          const PopupMenuDivider(height: 1),
+          PopupMenuItem<bool>(
+            value: true,
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Expanded(
+                  child: Text(
+                    context.l10n.english,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: _isEnglish ? FontWeight.w700 : FontWeight.w500,
+                      color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                    ),
+                  ),
+                ),
+                if (_isEnglish) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.check_rounded,
+                    size: 18,
+                    color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                currentLanguageLabel,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 16,
+                color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+              ),
+            ],
+          ),
         ),
       ),
-    ],
-  );
-}
-  Widget _buildAboutUsSection(bool isDarkMode) {
+    );
+  }
+
+  String _getCurrencyName(String code) {
+    switch (code) {
+      case 'USD':
+        return context.l10n.currencyUSD;
+      case 'EUR':
+        return context.l10n.currencyEUR;
+      case 'EGP':
+        return context.l10n.currencyEGP;
+      case 'SAR':
+        return context.l10n.currencySAR;
+      case 'AED':
+        return context.l10n.currencyAED;
+      case 'KWD':
+        return context.l10n.currencyKWD;
+      default:
+        return code;
+    }
+  }
+
+  // Section Container Helper
+  Widget _buildSectionContainer({
+    required bool isDarkMode,
+    required String title,
+    required List<Widget> children,
+  }) {
+    final cardBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
+    final borderColor = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
+    final headerColor = isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          context.l10n.aboutUs,
-          style: TextStyle(
-            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          decoration: BoxDecoration(
-            color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+        Padding(
+          padding: const EdgeInsets.only(left: 4, right: 4, bottom: 8),
+          child: Text(
+            title.toUpperCase(),
+            style: TextStyle(
+              color: headerColor,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
             ),
           ),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: borderColor, width: 1),
+            boxShadow: isDarkMode
+                ? null
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+          ),
+          clipBehavior: Clip.antiAlias,
           child: Column(
-            children: [
-              // Rate us
-              ListTile(
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.star_outline,
-                    color: isDarkMode ? Colors.white : Colors.black,
-                    size: 20,
-                  ),
-                ),
-                title: Text(
-                  context.l10n.rateUsOnAppStorePlayStore,
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.white : Colors.black,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                trailing: Icon(
-                  Icons.chevron_right,
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  size: 20,
-                ),
-                onTap: _openStore,
-              ),
-              Divider(
-                height: 1,
-                color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-              ),
-              
-              // Like us on Facebook
-              ListTile(
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.thumb_up_outlined,
-                    color: isDarkMode ? Colors.white : Colors.black,
-                    size: 20,
-                  ),
-                ),
-                title: Text(
-                  context.l10n.likeUsOnFacebook,
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.white : Colors.black,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                trailing: Icon(
-                  Icons.chevron_right,
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  size: 20,
-                ),
-                onTap: _openFacebook,
-              ),
-              Divider(
-                height: 1,
-                color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-              ),
-              
-              // Follow us on Twitter
-              ListTile(
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.public_outlined,
-                    color: isDarkMode ? Colors.white : Colors.black,
-                    size: 20,
-                  ),
-                ),
-                title: Text(
-                  context.l10n.followUsOnTwitter,
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.white : Colors.black,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                trailing: Icon(
-                  Icons.chevron_right,
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  size: 20,
-                ),
-                onTap: _openTwitter,
-              ),
-              Divider(
-                height: 1,
-                color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-              ),
-              
-              // Follow us on Instagram
-              ListTile(
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.camera_alt_outlined,
-                    color: isDarkMode ? Colors.white : Colors.black,
-                    size: 20,
-                  ),
-                ),
-                title: Text(
-                  context.l10n.followUsOnInstagram,
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.white : Colors.black,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                trailing: Icon(
-                  Icons.chevron_right,
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  size: 20,
-                ),
-                onTap: _openInstagram,
-              ),
-              Divider(
-                height: 1,
-                color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-              ),
-              
-              // Privacy Policy
-              ListTile(
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.privacy_tip_outlined,
-                    color: isDarkMode ? Colors.white : Colors.black,
-                    size: 20,
-                  ),
-                ),
-                title: Text(
-                  context.l10n.privacyPolicy,
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.white : Colors.black,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                trailing: Icon(
-                  Icons.chevron_right,
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  size: 20,
-                ),
-                onTap: _openPrivacyPolicy,
-              ),
-              Divider(
-                height: 1,
-                color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-              ),
-              
-              // Terms & Conditions
-              ListTile(
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.description_outlined,
-                    color: isDarkMode ? Colors.white : Colors.black,
-                    size: 20,
-                  ),
-                ),
-                title: Text(
-                  context.l10n.termsConditions,
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.white : Colors.black,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                trailing: Icon(
-                  Icons.chevron_right,
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  size: 20,
-                ),
-                onTap: _openTerms,
-              ),
-            ],
+            children: children,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildCloseAccountSection(bool isDarkMode) {
+  // Setting Item Helper
+  Widget _buildSettingTile({
+    required bool isDarkMode,
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    String? subtitle,
+    Widget? trailing,
+    VoidCallback? onTap,
+    bool isDanger = false,
+    bool showDivider = true,
+  }) {
+    final titleColor = isDanger
+        ? const Color(0xFFEF4444)
+        : (isDarkMode ? Colors.white : const Color(0xFF09090B));
+    final subColor = isDanger
+        ? const Color(0xFFEF4444).withValues(alpha: 0.75)
+        : (isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A));
+    final dividerColor = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF1F1F5);
+    final chevronColor = isDanger
+        ? const Color(0xFFEF4444)
+        : (isDarkMode ? const Color(0xFF71717A) : const Color(0xFFA1A1AA));
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          context.l10n.account,
-          style: TextStyle(
-            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          decoration: BoxDecoration(
-            color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            splashColor: iconColor.withValues(alpha: 0.08),
+            highlightColor: iconColor.withValues(alpha: 0.04),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+              child: Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: iconColor.withValues(alpha: isDarkMode ? 0.16 : 0.10),
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        icon,
+                        size: 19,
+                        color: iconColor,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            color: titleColor,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.1,
+                          ),
+                        ),
+                        if (subtitle != null && subtitle.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            style: TextStyle(
+                              color: subColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (trailing != null)
+                    trailing
+                  else if (onTap != null)
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 13,
+                      color: chevronColor,
+                    ),
+                ],
+              ),
             ),
           ),
-          child: Column(
-            children: [
-              // Close Account
-              ListTile(
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.delete_outline,
-                    color: Colors.red,
-                    size: 20,
-                  ),
-                ),
-                title: Text(
-                  context.l10n.closeAccount,
-                  style: const TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                subtitle: Text(
-                  context.l10n.permanentlyDeleteYourAccount,
-                  style: TextStyle(
-                    color: Colors.red.withValues(alpha: 0.7),
-                    fontSize: 12,
-                  ),
-                ),
-                trailing: const Icon(
-                  Icons.chevron_right,
-                  color: Colors.red,
-                  size: 20,
-                ),
-                onTap: () {
-                  _showCloseAccountDialog(isDarkMode);
-                },
-              ),
-            ],
+        ),
+        if (showDivider)
+          Padding(
+            padding: const EdgeInsets.only(left: 68, right: 16),
+            child: Divider(
+              height: 1,
+              thickness: 1,
+              color: dividerColor,
+            ),
           ),
+      ],
+    );
+  }
+
+  // Profile Header Card
+  Widget _buildProfileHeader(bool isDarkMode) {
+    final cardBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
+    final borderColor = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
+    final titleColor = isDarkMode ? Colors.white : const Color(0xFF09090B);
+    final subtitleColor = isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
+    final pillBg = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5);
+    final pillBorder = isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7);
+    final pillText = isDarkMode ? Colors.white : const Color(0xFF09090B);
+
+    final initials = _getInitials(_profile?.fullName);
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: borderColor, width: 1),
+        boxShadow: isDarkMode
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+      ),
+      child: Row(
+        children: [
+          // Avatar with gradient ring
+          Container(
+            padding: const EdgeInsets.all(2.5),
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xFF3B82F6),
+                  Color(0xFF8B5CF6),
+                  Color(0xFFEC4899),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Container(
+              width: 68,
+              height: 68,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
+                image: _profile?.profileImageUrl != null
+                    ? DecorationImage(
+                        image: NetworkImage(_profile!.profileImageUrl!),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+              ),
+              child: _profile?.profileImageUrl == null
+                  ? Center(
+                      child: initials.isNotEmpty
+                          ? Text(
+                              initials,
+                              style: TextStyle(
+                                color: titleColor,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.5,
+                              ),
+                            )
+                          : Icon(
+                              Icons.person_rounded,
+                              size: 34,
+                              color: titleColor,
+                            ),
+                    )
+                  : null,
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Name, Email & Edit Button
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _isLoadingProfile
+                      ? context.l10n.loading
+                      : (_profile?.fullName.isNotEmpty == true
+                          ? _profile!.fullName
+                          : context.l10n.user),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: titleColor,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  _profile?.email ?? context.l10n.emailPlaceholder,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: subtitleColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // Manage / Edit pill button
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ProfileEditScreen(
+                            onProfileUpdated: _onProfileUpdated,
+                          ),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: pillBg,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: pillBorder, width: 1),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.edit_outlined,
+                            size: 13,
+                            color: pillText,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            context.l10n.manage,
+                            style: TextStyle(
+                              color: pillText,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // App Settings Section
+  Widget _buildAppSettings(bool isDarkMode) {
+    return _buildSectionContainer(
+      isDarkMode: isDarkMode,
+      title: context.l10n.app,
+      children: [
+        _buildSettingTile(
+          isDarkMode: isDarkMode,
+          icon: isDarkMode ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+          iconColor: isDarkMode ? const Color(0xFF8B5CF6) : const Color(0xFFF59E0B),
+          title: context.l10n.darkMode,
+          subtitle: isDarkMode ? context.l10n.dark : context.l10n.light,
+          trailing: _buildThemeToggle(isDarkMode),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            final newTheme = isDarkMode ? ThemeService.light : ThemeService.dark;
+            setState(() => _currentTheme = newTheme);
+            _setTheme(newTheme);
+          },
+        ),
+        _buildSettingTile(
+          isDarkMode: isDarkMode,
+          icon: Icons.payments_outlined,
+          iconColor: const Color(0xFF10B981),
+          title: context.l10n.currency,
+          subtitle: _getCurrencyName(_currencyCode),
+          trailing: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _currencyCode,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 11,
+                  color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                ),
+              ],
+            ),
+          ),
+          onTap: _openCurrencySelection,
+          showDivider: false,
+        ),
+      ],
+    );
+  }
+
+  // Profile Settings Section
+  Widget _buildProfileSettings(bool isDarkMode) {
+    return _buildSectionContainer(
+      isDarkMode: isDarkMode,
+      title: context.l10n.profileSettings,
+      children: [
+        _buildSettingTile(
+          isDarkMode: isDarkMode,
+          icon: Icons.person_outline_rounded,
+          iconColor: const Color(0xFF3B82F6),
+          title: context.l10n.personalDetails,
+          subtitle: context.l10n.updateYourPersonalInformation,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProfileEditScreen(
+                  onProfileUpdated: _onProfileUpdated,
+                ),
+              ),
+            );
+          },
+        ),
+        _buildSettingTile(
+          isDarkMode: isDarkMode,
+          icon: Icons.language_rounded,
+          iconColor: const Color(0xFF06B6D4),
+          title: context.l10n.appLanguage,
+          subtitle: context.l10n.changeAppLanguage,
+          trailing: _buildLanguageButton(),
+          showDivider: false,
+        ),
+      ],
+    );
+  }
+
+  // Security Settings Section
+  Widget _buildSecuritySettings(bool isDarkMode) {
+    final hideService = Provider.of<HideBalanceService>(context);
+    final appLockService = Provider.of<AppLockService>(context);
+
+    return _buildSectionContainer(
+      isDarkMode: isDarkMode,
+      title: context.l10n.security,
+      children: [
+        _buildSettingTile(
+          isDarkMode: isDarkMode,
+          icon: Icons.visibility_off_outlined,
+          iconColor: const Color(0xFFF59E0B),
+          title: context.l10n.hideBalances,
+          subtitle: context.l10n.hideYourBalancesForPrivacy,
+          trailing: CupertinoSwitch(
+            value: hideService.isHidden,
+            activeTrackColor: const Color(0xFF3B82F6),
+            onChanged: (value) => hideService.setHidden(value),
+          ),
+          showDivider: true,
+        ),
+        _buildSettingTile(
+          isDarkMode: isDarkMode,
+          icon: Icons.lock_outline_rounded,
+          iconColor: const Color(0xFF6366F1),
+          title: context.l10n.appLock,
+          subtitle: context.l10n.appLockSubtitle,
+          trailing: CupertinoSwitch(
+            value: appLockService.isEnabled,
+            activeTrackColor: const Color(0xFF3B82F6),
+            onChanged: (value) async {
+              final success = await appLockService.setAppLock(
+                value,
+                localizedReason: context.l10n.appLockPrompt,
+              );
+              if (!success && mounted) {
+                final isAvailable = await BiometricService.isDeviceLockAvailable();
+                if (!isAvailable && mounted) {
+                  MessageService.showWarning(
+                    context: context,
+                    message: context.l10n.appLockDeviceNotSupported,
+                  );
+                } else if (mounted) {
+                  MessageService.showError(
+                    context: context,
+                    message: context.l10n.biometricAuthenticationFailed,
+                  );
+                }
+              }
+            },
+          ),
+          showDivider: false,
+        ),
+      ],
+    );
+  }
+
+  // About Us Section
+  Widget _buildAboutUsSection(bool isDarkMode) {
+    return _buildSectionContainer(
+      isDarkMode: isDarkMode,
+      title: context.l10n.aboutUs,
+      children: [
+        _buildSettingTile(
+          isDarkMode: isDarkMode,
+          icon: Icons.star_rounded,
+          iconColor: const Color(0xFFF59E0B),
+          title: context.l10n.rateUsOnAppStorePlayStore,
+          onTap: _openStore,
+        ),
+        _buildSettingTile(
+          isDarkMode: isDarkMode,
+          icon: Icons.thumb_up_alt_rounded,
+          iconColor: const Color(0xFF2563EB),
+          title: context.l10n.likeUsOnFacebook,
+          onTap: _openFacebook,
+        ),
+        _buildSettingTile(
+          isDarkMode: isDarkMode,
+          icon: Icons.public_rounded,
+          iconColor: const Color(0xFF0EA5E9),
+          title: context.l10n.followUsOnTwitter,
+          onTap: _openTwitter,
+        ),
+        _buildSettingTile(
+          isDarkMode: isDarkMode,
+          icon: Icons.camera_alt_rounded,
+          iconColor: const Color(0xFFE1306C),
+          title: context.l10n.followUsOnInstagram,
+          onTap: _openInstagram,
+        ),
+        _buildSettingTile(
+          isDarkMode: isDarkMode,
+          icon: Icons.privacy_tip_outlined,
+          iconColor: const Color(0xFF64748B),
+          title: context.l10n.privacyPolicy,
+          onTap: _openPrivacyPolicy,
+        ),
+        _buildSettingTile(
+          isDarkMode: isDarkMode,
+          icon: Icons.description_outlined,
+          iconColor: const Color(0xFF64748B),
+          title: context.l10n.termsConditions,
+          onTap: _openTerms,
+          showDivider: false,
+        ),
+      ],
+    );
+  }
+
+  // Close Account Section
+  Widget _buildCloseAccountSection(bool isDarkMode) {
+    return _buildSectionContainer(
+      isDarkMode: isDarkMode,
+      title: context.l10n.account,
+      children: [
+        _buildSettingTile(
+          isDarkMode: isDarkMode,
+          icon: Icons.delete_outline_rounded,
+          iconColor: const Color(0xFFEF4444),
+          title: context.l10n.closeAccount,
+          subtitle: context.l10n.permanentlyDeleteYourAccount,
+          isDanger: true,
+          onTap: () => _showCloseAccountDialog(isDarkMode),
+          showDivider: false,
         ),
       ],
     );
   }
 
   void _showCloseAccountDialog(bool isDarkMode) {
+    final dialogBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
+        backgroundColor: dialogBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(
+            color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+            width: 1,
+          ),
+        ),
         title: Text(
           context.l10n.closeAccount,
           style: TextStyle(
-            color: isDarkMode ? Colors.white : Colors.black,
+            fontWeight: FontWeight.w700,
+            color: isDarkMode ? Colors.white : const Color(0xFF09090B),
           ),
         ),
         content: Text(
           context.l10n.closeAccountConfirmation,
           style: TextStyle(
-            color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+            color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
           ),
         ),
         actions: [
@@ -1513,7 +1276,7 @@ Widget _buildSecuritySettings(bool isDarkMode) {
             child: Text(
               context.l10n.cancel,
               style: TextStyle(
-                color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+                color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
               ),
             ),
           ),
@@ -1524,7 +1287,10 @@ Widget _buildSecuritySettings(bool isDarkMode) {
             },
             child: Text(
               context.l10n.closeAccount,
-              style: const TextStyle(color: Colors.red),
+              style: const TextStyle(
+                color: Color(0xFFEF4444),
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -1532,161 +1298,178 @@ Widget _buildSecuritySettings(bool isDarkMode) {
     );
   }
 
+  // Logout Button
   Widget _buildLogoutButton(bool isDarkMode) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: () {
-          _showLogoutDialog(isDarkMode);
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.red,
-          foregroundColor: Colors.white,
-          minimumSize: const Size(double.infinity, 56),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 0,
-        ),
-        child: Text(
-          context.l10n.logout,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-
-void _showLogoutDialog(bool isDarkMode) {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) => Container(
-      decoration: BoxDecoration(
-        color: isDarkMode ? Colors.grey[900] : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      padding: EdgeInsets.fromLTRB(
-        24, 16, 24,
-        24 + MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-              borderRadius: BorderRadius.circular(2),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _showLogoutDialog(isDarkMode),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          height: 52,
+          decoration: BoxDecoration(
+            color: const Color(0xFFEF4444).withValues(alpha: isDarkMode ? 0.12 : 0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: const Color(0xFFEF4444).withValues(alpha: isDarkMode ? 0.25 : 0.20),
+              width: 1,
             ),
           ),
-
-          const SizedBox(height: 28),
-
-          // Icon
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: Colors.red.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.logout_rounded,
-              size: 36,
-              color: Colors.red,
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          Text(
-            context.l10n.logout,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: isDarkMode ? Colors.white : Colors.black,
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          Text(
-            context.l10n.logoutConfirmation,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: isDarkMode
-                  ? Colors.grey[400]
-                  : Colors.grey[600],
-              height: 1.5,
-            ),
-          ),
-
-          const SizedBox(height: 32),
-
-          // Logout button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _logout();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                elevation: 0,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.logout_rounded,
+                color: Color(0xFFEF4444),
+                size: 18,
               ),
-              child: Text(
+              const SizedBox(width: 8),
+              Text(
                 context.l10n.logout,
                 style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                  color: Color(0xFFEF4444),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
                 ),
               ),
-            ),
+            ],
           ),
-
-          const SizedBox(height: 12),
-
-          // Cancel button
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(
-              onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              child: Text(
-                context.l10n.cancel,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: isDarkMode
-                      ? Colors.grey[400]
-                      : Colors.grey[600],
-                ),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
+
+  void _showLogoutDialog(bool isDarkMode) {
+    final sheetBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: sheetBg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border(
+            top: BorderSide(
+              color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+              width: 1,
+            ),
+          ),
+        ),
+        padding: EdgeInsets.fromLTRB(
+          24,
+          14,
+          24,
+          24 + MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).padding.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Icon
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.logout_rounded,
+                size: 30,
+                color: Color(0xFFEF4444),
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            Text(
+              context.l10n.logout,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.3,
+                color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            Text(
+              context.l10n.logoutConfirmation,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 28),
+
+            // Confirm Logout
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _logout();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFEF4444),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
+                ),
+                child: Text(
+                  context.l10n.logout,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // Cancel button
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Text(
+                  context.l10n.cancel,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   void _logout() async {
     try {
@@ -1695,12 +1478,56 @@ void _showLogoutDialog(bool isDarkMode) {
       await SharedPrefs.removeAuthToken();
       await SharedPrefs.removeUserData();
     }
-    
+
     if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(
       context,
       AppRoutes.onboarding,
       (route) => false,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: ResponsiveWrapper(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Profile Card Header
+            _buildProfileHeader(isDarkMode),
+            const SizedBox(height: 24),
+
+            // App Section
+            _buildAppSettings(isDarkMode),
+            const SizedBox(height: 24),
+
+            // Profile Settings Section
+            _buildProfileSettings(isDarkMode),
+            const SizedBox(height: 24),
+
+            // Security Section
+            _buildSecuritySettings(isDarkMode),
+            const SizedBox(height: 24),
+
+            // About Us Section
+            _buildAboutUsSection(isDarkMode),
+            const SizedBox(height: 24),
+
+            // Close Account Section
+            _buildCloseAccountSection(isDarkMode),
+            const SizedBox(height: 28),
+
+            // Logout Button
+            _buildLogoutButton(isDarkMode),
+            const SizedBox(height: 36),
+          ],
+        ),
+      ),
     );
   }
 }

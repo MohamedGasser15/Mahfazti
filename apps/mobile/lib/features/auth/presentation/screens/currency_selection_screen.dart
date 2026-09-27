@@ -93,6 +93,16 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
     super.dispose();
   }
 
+  void _handleBack() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      // If there is nowhere to pop (e.g. navigated directly from splash screen),
+      // navigate safely to email/login screen
+      Navigator.of(context).pushReplacementNamed(AppRoutes.email);
+    }
+  }
+
   Future<void> _saveCurrency() async {
     if (_selectedCurrency == null) {
       MessageService.showWarning(context: context, message: context.l10n.selectCurrencyWarning);
@@ -123,9 +133,52 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
       }
     } catch (e) {
       if (!mounted) return;
+
+      final errorStr = e.toString().toLowerCase();
+      final isAuthError = errorStr.contains('401') ||
+          errorStr.contains('unauthorized') ||
+          errorStr.contains('token');
+
+      if (isAuthError) {
+        final refreshed = await _authRepository.refreshToken();
+        if (refreshed) {
+          try {
+            await _authRepository.setUserCurrency(_selectedCurrency!);
+            await SharedPrefs.setCurrency(_selectedCurrency!);
+            if (mounted) {
+              MessageService.showSuccess(context: context, message: context.l10n.currencySavedSuccess);
+              await Future.delayed(const Duration(milliseconds: 500));
+              if (mounted) {
+                Navigator.pushNamedAndRemoveUntil(context, AppRoutes.home, (route) => false);
+              }
+            }
+            return;
+          } catch (_) {}
+        }
+
+        await _authRepository.logout();
+        if (mounted) {
+          final isAr = Directionality.of(context) == TextDirection.rtl;
+          MessageService.showError(
+            context: context,
+            message: isAr
+                ? 'انتهت صلاحية الجلسة، يرجى تسجيل الدخول مجدداً'
+                : 'Session expired. Please log in again.',
+          );
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.email,
+            (route) => false,
+          );
+        }
+        return;
+      }
+
       MessageService.showError(context: context, message: '${context.l10n.failedToSaveCurrency}: ${e.toString()}');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -147,23 +200,47 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
     final isRTL = Directionality.of(context) == TextDirection.rtl;
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: isDark ? Colors.black : Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            isRTL ? Icons.arrow_forward_ios : Icons.arrow_back_ios,
-            size: 20,
-            color: theme.colorScheme.onSurface,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _handleBack();
+      },
+      child: Scaffold(
+        backgroundColor: isDark ? Colors.black : Colors.white,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(
+              isRTL ? Icons.arrow_forward_ios : Icons.arrow_back_ios,
+              size: 20,
+              color: theme.colorScheme.onSurface,
+            ),
+            onPressed: _handleBack,
           ),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          actions: [
+            IconButton(
+              tooltip: context.l10n.logout,
+              icon: Icon(
+                Icons.logout_rounded,
+                size: 22,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+              onPressed: () async {
+                final nav = Navigator.of(context);
+                await _authRepository.logout();
+                if (mounted) {
+                  nav.pushNamedAndRemoveUntil(
+                    AppRoutes.email,
+                    (route) => false,
+                  );
+                }
+              },
+            ),
+          ],
+          title: null,
         ),
-        title: null,
-      ),
       body: SafeArea(
         child: ResponsiveWrapper(
           child: SingleChildScrollView(
@@ -396,6 +473,7 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

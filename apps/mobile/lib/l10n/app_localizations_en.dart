@@ -1224,4 +1224,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get digitCodeRequired => 'Please enter the 6-digit code';
+
+  @override
+  String get appLock => 'App Lock';
+
+  @override
+  String get appLockSubtitle => 'Protect with biometric or device lock';
+
+  @override
+  String get appLockDeviceNotSupported =>
+      'Device lock is not supported or set up on this device';
+
+  @override
+  String get appLockPrompt => 'Authenticate to access Mahfazti';
+
+  @override
+  String get appLockUnlock => 'Unlock';
+
+  @override
+  String get appLockLockedTitle => 'Mahfazti is Locked';
+
+  @override
+  String get appLockLockedMessage =>
+      'Authenticate to access your wallet and transactions';
 }

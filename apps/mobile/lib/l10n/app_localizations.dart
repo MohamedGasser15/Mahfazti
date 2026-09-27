@@ -2359,6 +2359,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please enter the 6-digit code'**
   String get digitCodeRequired;
+
+  /// No description provided for @appLock.
+  ///
+  /// In en, this message translates to:
+  /// **'App Lock'**
+  String get appLock;
+
+  /// No description provided for @appLockSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Protect with biometric or device lock'**
+  String get appLockSubtitle;
+
+  /// No description provided for @appLockDeviceNotSupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Device lock is not supported or set up on this device'**
+  String get appLockDeviceNotSupported;
+
+  /// No description provided for @appLockPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticate to access Mahfazti'**
+  String get appLockPrompt;
+
+  /// No description provided for @appLockUnlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock'**
+  String get appLockUnlock;
+
+  /// No description provided for @appLockLockedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mahfazti is Locked'**
+  String get appLockLockedTitle;
+
+  /// No description provided for @appLockLockedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticate to access your wallet and transactions'**
+  String get appLockLockedMessage;
 }
 
 class _AppLocalizationsDelegate

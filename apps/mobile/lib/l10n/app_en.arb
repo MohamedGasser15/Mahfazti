@@ -378,5 +378,12 @@
   "passwordRequired": "Password is required",
   "digitCodeRequired": "Please enter the 6-digit code",
   "dontHaveAccount": "Don't have an account?",
-  "alreadyHaveAccount": "Already have an account?"
+  "alreadyHaveAccount": "Already have an account?",
+  "appLock": "App Lock",
+  "appLockSubtitle": "Protect with biometric or device lock",
+  "appLockDeviceNotSupported": "Device lock is not supported or set up on this device",
+  "appLockPrompt": "Authenticate to access Mahfazti",
+  "appLockUnlock": "Unlock",
+  "appLockLockedTitle": "Mahfazti is Locked",
+  "appLockLockedMessage": "Authenticate to access your wallet and transactions"
 }
