@@ -1,43 +1,91 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:my_wallet/core/constants/app_constants.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 
 class BiometricService {
-  // Biometrics are temporarily disabled
-  static Future<bool> isBiometricAvailable() async => false;
+  static final LocalAuthentication _auth = LocalAuthentication();
 
-  static Future<bool> authenticateWithFallback({
-    int maxAttempts = 3,
-    Function()? onFallback,
-  }) async {
-    if (onFallback != null) {
-      onFallback();
+  /// Check if device supports biometrics or device credentials (passcode/PIN)
+  static Future<bool> isDeviceLockAvailable() async {
+    try {
+      final isSupported = await _auth.isDeviceSupported();
+      final canCheck = await _auth.canCheckBiometrics;
+      return isSupported || canCheck;
+    } on PlatformException catch (e) {
+      debugPrint('Error checking device lock availability: $e');
+      return false;
     }
-    return false;
   }
 
-  // Get available biometric types
-  static Future<List<BiometricType>> getAvailableBiometrics() async => [];
-
-  // Check if biometrics is enabled by user
-  static Future<bool> isBiometricEnabled() async => false;
-
-  // Authenticate with biometrics
-  static Future<bool> authenticate() async => false;
-
-  // Direct authentication (to enable biometric)
-  static Future<bool> authenticateDirectly() async => false;
-
-  static Future<bool> enableBiometric() async => false;
-
-  // Disable biometrics
-  static Future<void> disableBiometric() async {
-    await SharedPrefs.removeSecureKey(AppConstants.biometricEnabledKey);
+  /// Check if biometrics hardware specifically is available
+  static Future<bool> isBiometricAvailable() async {
+    try {
+      return await _auth.canCheckBiometrics;
+    } on PlatformException catch (e) {
+      debugPrint('Error checking biometric hardware: $e');
+      return false;
+    }
   }
 
-  // Get biometric display name based on hardware
-  static Future<String> getBiometricName() async => 'Biometric';
+  /// Get list of available enrolled biometrics on device
+  static Future<List<BiometricType>> getAvailableBiometrics() async {
+    try {
+      return await _auth.getAvailableBiometrics();
+    } on PlatformException catch (e) {
+      debugPrint('Error getting available biometrics: $e');
+      return [];
+    }
+  }
 
-  // Check if device supports biometrics
-  static Future<bool> hasBiometricSupport() async => false;
+  /// Check if App Lock is enabled in user settings
+  static bool isAppLockEnabled() {
+    return SharedPrefs.getBoolValue(AppConstants.biometricEnabledKey) ?? false;
+  }
+
+  /// Save App Lock preference
+  static Future<void> setAppLockEnabled(bool enabled) async {
+    await SharedPrefs.setBool(AppConstants.biometricEnabledKey, enabled);
+  }
+
+  /// Authenticate using biometrics or device passcode/PIN fallback
+  static Future<bool> authenticate({
+    String? localizedReason,
+    bool biometricOnly = false,
+  }) async {
+    try {
+      final canAuth = await isDeviceLockAvailable();
+      if (!canAuth) return false;
+
+      return await _auth.authenticate(
+        localizedReason: localizedReason ?? 'Authenticate to access Mahfazti',
+        options: AuthenticationOptions(
+          stickyAuth: true,
+          biometricOnly: biometricOnly,
+          useErrorDialogs: true,
+        ),
+      );
+    } on PlatformException catch (e) {
+      debugPrint('Biometric authentication error: $e');
+      return false;
+    }
+  }
+
+  /// Get friendly biometric name based on available hardware
+  static Future<String> getBiometricName() async {
+    try {
+      final biometrics = await getAvailableBiometrics();
+      if (biometrics.contains(BiometricType.face)) {
+        return 'Face ID';
+      } else if (biometrics.contains(BiometricType.fingerprint)) {
+        return 'Fingerprint';
+      } else if (biometrics.contains(BiometricType.iris)) {
+        return 'Iris';
+      }
+      return 'Device Lock';
+    } catch (_) {
+      return 'Device Lock';
+    }
+  }
 }

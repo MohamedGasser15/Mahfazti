@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:my_wallet/core/constants/app_routes.dart';
+import 'package:my_wallet/core/services/app_lock_service.dart';
 import 'package:my_wallet/core/services/hide_balance_service.dart';
 import 'package:my_wallet/core/services/theme_service.dart';
 import 'package:my_wallet/core/services/watch_service.dart';
@@ -9,6 +10,7 @@ import 'package:my_wallet/core/themes/app_theme.dart';
 import 'package:my_wallet/core/utils/language_service.dart';
 import 'package:my_wallet/core/utils/navigation_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
+import 'package:my_wallet/core/widgets/app_lock_gate.dart';
 import 'package:my_wallet/features/splash/presentation/screens/splash_screen.dart';
 import 'package:my_wallet/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
@@ -88,6 +90,7 @@ class _MyWalletAppState extends State<MyWalletApp> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => HideBalanceService()),
+        ChangeNotifierProvider(create: (_) => AppLockService()),
       ],
       child: ValueListenableBuilder<ThemeMode>(
         valueListenable: ThemeService.themeNotifier,
@@ -107,8 +110,8 @@ class _MyWalletAppState extends State<MyWalletApp> {
               Locale('en', 'US'),
               Locale('ar', 'SA'),
             ],
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
+            theme: AppTheme.getLightTheme(_currentLocale),
+            darkTheme: AppTheme.getDarkTheme(_currentLocale),
             themeMode: themeMode,
             home: SplashScreen(onLocaleChanged: _changeLocale),
             builder: (context, child) {
@@ -120,7 +123,7 @@ class _MyWalletAppState extends State<MyWalletApp> {
                   data: MediaQuery.of(context).copyWith(
                     textScaler: const TextScaler.linear(1.0),
                   ),
-                  child: child!,
+                  child: AppLockGate(child: child!),
                 ),
               );
             },

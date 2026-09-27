@@ -128,11 +128,19 @@ class SharedPrefs {
   }
 
   static String? getStringValue(String key) {
-    return _prefs.getString(key);
+    try {
+      return _prefs.getString(key);
+    } catch (_) {
+      return null;
+    }
   }
 
   static bool? getBoolValue(String key) {
-    return _prefs.getBool(key);
+    try {
+      return _prefs.getBool(key);
+    } catch (_) {
+      return null;
+    }
   }
 
   static Future<void> removeKey(String key) async {

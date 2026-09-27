@@ -1,6 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:my_wallet/core/constants/api_constants.dart';
 import 'package:my_wallet/core/constants/app_constants.dart';
+import 'package:my_wallet/core/constants/app_routes.dart';
+import 'package:my_wallet/core/services/wallet_cache_service.dart';
+import 'package:my_wallet/core/utils/navigation_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 
 class ApiService {
@@ -38,6 +42,75 @@ class ApiService {
             }
           }
           return handler.next(options);
+        },
+        onError: (DioException error, handler) async {
+          if (error.response?.statusCode == 401) {
+            final requiresAuth =
+                error.requestOptions.extra['requiresAuth'] == true;
+            final isRetry = error.requestOptions.extra['isRetry'] == true;
+            final path = error.requestOptions.path;
+            final isAuthEndpoint = path.contains(ApiEndpoints.login) ||
+                path.contains(ApiEndpoints.verifyEmail) ||
+                path.contains(ApiEndpoints.sendCode) ||
+                path.contains(ApiEndpoints.refresh);
+
+            if (requiresAuth && !isAuthEndpoint && !isRetry) {
+              final token = SharedPrefs.authToken;
+              final refreshToken = SharedPrefs.refreshToken;
+
+              if (token != null && refreshToken != null) {
+                try {
+                  final refreshDio =
+                      Dio(BaseOptions(baseUrl: AppConstants.baseUrl));
+                  final refreshRes = await refreshDio.post(
+                    ApiEndpoints.refresh,
+                    data: {
+                      'accessToken': token,
+                      'refreshToken': refreshToken,
+                    },
+                  );
+
+                  if (refreshRes.statusCode == 200 &&
+                      refreshRes.data != null) {
+                    final data = refreshRes.data;
+                    final payload = data['data'];
+                    if (payload != null) {
+                      final newAccess = payload['accessToken'] as String?;
+                      final newRefresh = payload['refreshToken'] as String?;
+                      if (newAccess != null && newAccess.isNotEmpty) {
+                        await SharedPrefs.setAuthToken(newAccess);
+                        if (newRefresh != null && newRefresh.isNotEmpty) {
+                          await SharedPrefs.setRefreshToken(newRefresh);
+                        }
+
+                        // Retry original request with new token
+                        final options = error.requestOptions;
+                        options.headers['Authorization'] = 'Bearer $newAccess';
+                        options.extra['isRetry'] = true;
+
+                        final clonedResponse = await _dio.fetch(options);
+                        return handler.resolve(clonedResponse);
+                      }
+                    }
+                  }
+                } catch (_) {
+                  // Refresh token failed or expired
+                }
+              }
+
+              // Clear session and navigate to login
+              await SharedPrefs.removeAuthToken();
+              await SharedPrefs.removeRefreshToken();
+              await SharedPrefs.removeUserData();
+              await WalletCacheService.invalidateAll();
+
+              if (NavigationService.context != null) {
+                NavigationService.navigateAndRemoveUntil(AppRoutes.email);
+              }
+            }
+          }
+
+          return handler.next(error);
         },
       ),
     );
