@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:my_wallet/core/constants/currency_constants.dart';
@@ -173,9 +172,9 @@ void _applyData(
       baseColor: isDark ? Colors.grey[800]! : Colors.grey[300]!,
       highlightColor: isDark ? Colors.grey[700]! : Colors.grey[100]!,
       child: SingleChildScrollView(
-        padding: EdgeInsets.only(
+        padding: const EdgeInsets.only(
           left: 20, right: 20, top: 24,
-          bottom: Platform.isIOS ? 110 : 40,
+          bottom: 110,
         ),
         child: ResponsiveWrapper(
           child: Column(
@@ -311,9 +310,9 @@ void _applyData(
     final isUp = diff >= 0;
 
     return SingleChildScrollView(
-      padding: EdgeInsets.only(
+      padding: const EdgeInsets.only(
         left: 20, right: 20, top: 24,
-        bottom: Platform.isIOS ? 110 : 40,
+        bottom: 110,
       ),
       child: ResponsiveWrapper(
         child: Column(

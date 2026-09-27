@@ -1,5 +1,4 @@
 // features/home/presentation/screens/TransactionsPage.dart (TransactionsTab)
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:my_wallet/core/constants/currency_constants.dart';
@@ -583,10 +582,10 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
                               color: isDarkMode ? Colors.white : Colors.black,
                               child: ListView.builder(
                                 controller: _scrollController,
-                                padding: EdgeInsets.only(
+                                padding: const EdgeInsets.only(
                                   left: 20,
                                   right: 20,
-                                  bottom: Platform.isIOS ? 75 : 20,
+                                  bottom: 110,
                                 ),
                                 itemCount: _filteredTransactions.length + (_isLoadingMore ? 1 : 0),
                                 itemBuilder: (context, index) {

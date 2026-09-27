@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
@@ -340,11 +339,11 @@ Future<void> _fetchFromApi({bool silent = false, BuildContext? context}) async {
               : _summaryData == null
                   ? Center(child: Text(context.l10n.noDataAvailable))
                   : SingleChildScrollView(
-                      padding: EdgeInsets.only(
+                      padding: const EdgeInsets.only(
                         left: 16,
                         right: 16,
                         top: 16,
-                        bottom: Platform.isIOS ? 75 : 5,
+                        bottom: 110,
                       ),
                       child: ResponsiveWrapper(
                         child: Column(

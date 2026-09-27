@@ -8,11 +8,17 @@ class VoiceExpenseButton extends StatefulWidget {
   final Function(VoiceExpenseResult result) onResult;
   final bool isDarkMode;
 
+  final bool isCircular;
+
   const VoiceExpenseButton({
     super.key,
     required this.onResult,
     required this.isDarkMode,
+    this.isCircular = false,
+    this.isInHero = false,
   });
+
+  final bool isInHero;
 
   @override
   State<VoiceExpenseButton> createState() => _VoiceExpenseButtonState();
@@ -147,107 +153,143 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
   Widget build(BuildContext context) {
     final isDark = widget.isDarkMode;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        GestureDetector(
-          onTap: _toggleLanguage,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            height: 36,
-            decoration: BoxDecoration(
-              color: isDark ? Colors.grey[850] : Colors.grey[100],
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-                width: 1,
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (context, child) {
+        if (widget.isCircular) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _isListening ? _stopAndProcess : _startListening,
+                  onLongPress: _toggleLanguage,
+                  borderRadius: BorderRadius.circular(28),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: _isListening
+                          ? const Color(0xFFF43F5E).withValues(alpha: 0.22)
+                          : (widget.isInHero
+                              ? Colors.white.withValues(alpha: 0.18)
+                              : (isDark ? const Color(0xFF18181B) : const Color(0xFFF4F4F5))),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: _isListening
+                            ? const Color(0xFFF43F5E)
+                            : (widget.isInHero
+                                ? Colors.white.withValues(alpha: 0.32)
+                                : (isDark ? const Color(0xFF27272A) : const Color(0xFFE4E4E7))),
+                        width: _isListening ? 1.5 : (widget.isInHero ? 1.2 : 1.0),
+                      ),
+                      boxShadow: _isListening
+                          ? [
+                              BoxShadow(
+                                color: const Color(0xFFF43F5E).withValues(alpha: 0.25 * _pulseController.value),
+                                blurRadius: 10,
+                                spreadRadius: 2,
+                              ),
+                            ]
+                          : (widget.isInHero && !isDark
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.10),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : null),
+                    ),
+                    child: Center(
+                      child: _isProcessing
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: widget.isInHero ? Colors.white : (isDark ? Colors.white : Colors.black),
+                              ),
+                            )
+                          : Icon(
+                              _isListening ? Icons.stop_rounded : Icons.mic_rounded,
+                              color: _isListening
+                                  ? const Color(0xFFF43F5E)
+                                  : (widget.isInHero ? Colors.white : (isDark ? Colors.white : Colors.black)),
+                              size: 22,
+                            ),
+                    ),
+                  ),
+                ),
               ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: _isArabic
-                        ? (isDark ? Colors.white : Colors.black)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Center(
-                    child: Text(
-                      'AR',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: _isArabic
-                            ? (isDark ? Colors.black : Colors.white)
-                            : (isDark ? Colors.grey[500] : Colors.grey[400]),
-                      ),
-                    ),
-                  ),
+              const SizedBox(height: 6),
+              Text(
+                _isListening
+                    ? (_isArabic ? 'أستمع...' : 'Listening...')
+                    : (_isArabic ? 'صوتي' : 'Voice'),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: widget.isInHero ? FontWeight.w700 : FontWeight.w600,
+                  color: _isListening
+                      ? const Color(0xFFF43F5E)
+                      : (widget.isInHero
+                          ? Colors.white
+                          : (isDark ? Colors.grey[400] : Colors.grey[600])),
+                  shadows: (widget.isInHero && !isDark && !_isListening)
+                      ? [
+                          Shadow(
+                            color: Colors.black.withValues(alpha: 0.60),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ]
+                      : null,
                 ),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: !_isArabic
-                        ? (isDark ? Colors.white : Colors.black)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Center(
-                    child: Text(
-                      'EN',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: !_isArabic
-                            ? (isDark ? Colors.black : Colors.white)
-                            : (isDark ? Colors.grey[500] : Colors.grey[400]),
-                      ),
-                    ),
-                  ),
+              ),
+            ],
+          );
+        }
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: _isListening ? _stopAndProcess : _startListening,
+            borderRadius: BorderRadius.circular(14),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: _isListening
+                    ? const Color(0xFFF43F5E).withValues(alpha: 0.18)
+                    : (isDark ? const Color(0xFF18181B) : const Color(0xFFF4F4F5)),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: _isListening
+                      ? const Color(0xFFF43F5E)
+                      : (isDark ? const Color(0xFF27272A) : const Color(0xFFE4E4E7)),
+                  width: _isListening ? 1.5 : 1.0,
                 ),
-              ],
-            ),
-          ),
-        ),
-
-        const SizedBox(width: 12),
-
-        GestureDetector(
-          onTap: _isListening ? _stopAndProcess : _startListening,
-          child: AnimatedBuilder(
-            animation: _pulseController,
-            builder: (context, child) {
-              final scale = _isListening
-                  ? 1.0 + (_pulseController.value * 0.12)
-                  : 1.0;
-              return Transform.scale(
-                scale: scale,
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _isListening
-                        ? Colors.red[700]
-                        : (isDark ? Colors.grey[800] : Colors.grey[200]),
-                    boxShadow: _isListening
-                        ? [BoxShadow(
-                            color: Colors.red.withValues(alpha: 0.35),
-                            blurRadius: 14,
-                            spreadRadius: 3,
-                          )]
-                        : null,
-                  ),
-                  child: _isProcessing
-                      ? Padding(
-                          padding: const EdgeInsets.all(16),
+                boxShadow: _isListening
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFFF43F5E).withValues(alpha: 0.25 * _pulseController.value),
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _isProcessing
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             color: isDark ? Colors.white : Colors.black,
@@ -256,38 +298,54 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
                       : Icon(
                           _isListening ? Icons.stop_rounded : Icons.mic_rounded,
                           color: _isListening
-                              ? Colors.white
+                              ? const Color(0xFFF43F5E)
                               : (isDark ? Colors.white : Colors.black),
-                          size: 26,
+                          size: 16,
                         ),
-                ),
-              );
-            },
-          ),
-        ),
-
-        if (_isListening && _recognizedText.isNotEmpty) ...[
-          const SizedBox(width: 10),
-          Container(
-            constraints: const BoxConstraints(maxWidth: 130),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.red.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
-            ),
-            child: Text(
-              _recognizedText,
-              style: TextStyle(
-                fontSize: 11,
-                color: isDark ? Colors.white60 : Colors.black54,
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      _isListening
+                          ? (_isArabic ? 'أستمع...' : 'Listening...')
+                          : (_isArabic ? 'صوتي' : 'Voice'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: _isListening
+                            ? const Color(0xFFF43F5E)
+                            : (isDark ? Colors.white : Colors.black),
+                        letterSpacing: -0.1,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _toggleLanguage,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        _isArabic ? 'AR' : 'EN',
+                        style: TextStyle(
+                          fontSize: 8,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? Colors.white70 : Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
-        ],
-      ],
+        );
+      },
     );
   }
 }

@@ -1,7 +1,7 @@
 import 'dart:io';
-import 'package:cupertino_native/cupertino_native.dart';
+import 'package:cupertino_native_better/cupertino_native_better.dart';
 import 'package:flutter/material.dart';
-import 'package:google_nav_bar/google_nav_bar.dart';
+import 'package:flutter/services.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/analytics_screen.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/home_tab.dart';
@@ -34,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: isIOS,
-      bottomNavigationBar: isIOS ? null : _buildAndroidBottomNav(context, isDarkMode),
+      bottomNavigationBar: isIOS ? null : _buildAndroidNavigationBar(context, isDarkMode),
       body: Stack(
         children: [
           PageView(
@@ -51,24 +51,26 @@ class _HomeScreenState extends State<HomeScreen> {
             Positioned(
               left: 20,
               right: 20,
-              bottom: 15,
+              bottom: 1,
               child: CNTabBar(
+                iconSize: 20.0,
+                autoHideOnPageTransition: false,
                 items: [
                   CNTabBarItem(
                     label: l10n.wallet,
-                    icon: const CNSymbol('creditcard.fill'),
+                    icon: const CNSymbol('wallet.pass', size: 20.0),
                   ),
                   CNTabBarItem(
                     label: l10n.insights,
-                    icon: const CNSymbol('lightbulb.fill'),
+                    icon: const CNSymbol('sparkles', size: 20.0),
                   ),
                   CNTabBarItem(
                     label: l10n.analytics,
-                    icon: const CNSymbol('chart.bar.fill'),
+                    icon: const CNSymbol('chart.pie', size: 20.0),
                   ),
                   CNTabBarItem(
                     label: l10n.transactions,
-                    icon: const CNSymbol('list.bullet.rectangle.fill'),
+                    icon: const CNSymbol('arrow.left.arrow.right', size: 20.0),
                   ),
                 ],
                 currentIndex: _currentIndex,
@@ -87,61 +89,93 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildAndroidBottomNav(BuildContext context, bool isDarkMode) {
+  Widget _buildAndroidNavigationBar(BuildContext context, bool isDarkMode) {
     final l10n = context.l10n;
-    final theme = Theme.of(context);
 
     return Container(
       decoration: BoxDecoration(
-        color: isDarkMode ? Colors.black : Colors.white,
+        color: isDarkMode ? const Color(0xFF141418) : Colors.white,
         border: Border(
           top: BorderSide(
-            color: isDarkMode ? Colors.grey[850]! : Colors.grey[200]!,
-            width: 1,
+            color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+            width: 0.8,
           ),
         ),
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: GNav(
-            selectedIndex: _currentIndex,
-            onTabChange: (index) {
-              setState(() => _currentIndex = index);
-              _pageController.animateToPage(
-                index,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-              );
-            },
-            gap: 8,
-            tabBorderRadius: 20,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            duration: const Duration(milliseconds: 300),
-            color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
-            activeColor: isDarkMode ? Colors.white : Colors.black,
-            tabBackgroundColor: isDarkMode
-                ? (Colors.grey[900] ?? theme.colorScheme.surface)
-                : (Colors.grey[100] ?? theme.colorScheme.surface),
-            tabs: [
-              GButton(
-                icon: Icons.account_balance_wallet_outlined,
-                text: l10n.wallet,
-              ),
-              GButton(
-                icon: Icons.lightbulb_outline,
-                text: l10n.insights,
-              ),
-              GButton(
-                icon: Icons.bar_chart_rounded,
-                text: l10n.analytics,
-              ),
-              GButton(
-                icon: Icons.receipt_long_outlined,
-                text: l10n.transactions,
-              ),
-            ],
+      child: NavigationBarTheme(
+        data: NavigationBarThemeData(
+          height: 68,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          indicatorColor: isDarkMode ? Colors.white : const Color(0xFFF4F4F5),
+          indicatorShape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: isDarkMode
+                ? BorderSide.none
+                : const BorderSide(color: Color(0xFFE4E4E7), width: 0.8),
           ),
+          iconTheme: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return IconThemeData(
+                color: isDarkMode ? Colors.black : const Color(0xFF18181B),
+                size: 22,
+              );
+            }
+            return IconThemeData(
+              color: isDarkMode ? Colors.white54 : const Color(0xFF71717A),
+              size: 22,
+            );
+          }),
+          labelTextStyle: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return TextStyle(
+                color: isDarkMode ? Colors.white : const Color(0xFF18181B),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.2,
+              );
+            }
+            return TextStyle(
+              color: isDarkMode ? Colors.white54 : const Color(0xFF71717A),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.2,
+            );
+          }),
+        ),
+        child: NavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: (index) {
+            HapticFeedback.selectionClick();
+            setState(() => _currentIndex = index);
+            _pageController.animateToPage(
+              index,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          },
+          destinations: [
+            NavigationDestination(
+              icon: const Icon(Icons.account_balance_wallet_outlined),
+              selectedIcon: const Icon(Icons.account_balance_wallet_rounded),
+              label: l10n.wallet,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.auto_awesome_outlined),
+              selectedIcon: const Icon(Icons.auto_awesome_rounded),
+              label: l10n.insights,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.pie_chart_outline_rounded),
+              selectedIcon: const Icon(Icons.pie_chart_rounded),
+              label: l10n.analytics,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.swap_horiz_rounded),
+              selectedIcon: const Icon(Icons.swap_horiz_rounded),
+              label: l10n.transactions,
+            ),
+          ],
         ),
       ),
     );
