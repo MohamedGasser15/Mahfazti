@@ -6,7 +6,7 @@ import FlutterMacOS
 import Foundation
 
 import connectivity_plus
-import cupertino_native
+import cupertino_native_better
 import device_info_plus
 import facebook_auth_desktop
 import flutter_secure_storage_darwin

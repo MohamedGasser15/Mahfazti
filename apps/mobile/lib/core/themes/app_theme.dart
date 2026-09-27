@@ -1,11 +1,32 @@
 // core/themes/app_theme.dart
 import 'package:flutter/material.dart';
+import 'package:my_wallet/core/utils/language_service.dart';
 import 'app_colors.dart';
 
 class AppTheme {
-  static ThemeData get lightTheme {
+  static String getFontFamily([Locale? locale]) {
+    final effectiveLocale = locale ?? LanguageService.localeNotifier.value;
+    return effectiveLocale.languageCode == 'ar' ? 'Cairo' : 'Inter';
+  }
+
+  static List<String> getFontFamilyFallback([Locale? locale]) {
+    final effectiveLocale = locale ?? LanguageService.localeNotifier.value;
+    return effectiveLocale.languageCode == 'ar'
+        ? const ['Inter']
+        : const ['Cairo'];
+  }
+
+  static ThemeData get lightTheme => getLightTheme();
+  static ThemeData get darkTheme => getDarkTheme();
+
+  static ThemeData getLightTheme([Locale? locale]) {
+    final font = getFontFamily(locale);
+    final fallback = getFontFamilyFallback(locale);
+
     return ThemeData(
       useMaterial3: true,
+      fontFamily: font,
+      fontFamilyFallback: fallback,
       brightness: Brightness.light,
       scaffoldBackgroundColor: AppColors.primaryWhite,
       appBarTheme: AppBarTheme(
@@ -14,7 +35,8 @@ class AppTheme {
         centerTitle: true,
         iconTheme: const IconThemeData(color: AppColors.primaryBlack),
         titleTextStyle: TextStyle(
-          fontFamily: 'Inter',
+          fontFamily: font,
+          fontFamilyFallback: fallback,
           fontSize: 20,
           fontWeight: FontWeight.w700,
           color: AppColors.primaryBlack,
@@ -28,37 +50,43 @@ class AppTheme {
       ),
       textTheme: TextTheme(
         displayLarge: TextStyle(
-          fontFamily: 'Inter',
+          fontFamily: font,
+          fontFamilyFallback: fallback,
           fontSize: 32,
           fontWeight: FontWeight.w700,
           color: AppColors.primaryBlack,
         ),
         displayMedium: TextStyle(
-          fontFamily: 'Inter',
+          fontFamily: font,
+          fontFamilyFallback: fallback,
           fontSize: 24,
           fontWeight: FontWeight.w600,
           color: AppColors.primaryBlack,
         ),
         displaySmall: TextStyle(
-          fontFamily: 'Inter',
+          fontFamily: font,
+          fontFamilyFallback: fallback,
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: AppColors.primaryBlack,
         ),
         bodyLarge: TextStyle(
-          fontFamily: 'Inter',
+          fontFamily: font,
+          fontFamilyFallback: fallback,
           fontSize: 16,
           fontWeight: FontWeight.w400,
           color: AppColors.gray900,
         ),
         bodyMedium: TextStyle(
-          fontFamily: 'Inter',
+          fontFamily: font,
+          fontFamilyFallback: fallback,
           fontSize: 14,
           fontWeight: FontWeight.w400,
           color: AppColors.gray700,
         ),
         bodySmall: TextStyle(
-          fontFamily: 'Inter',
+          fontFamily: font,
+          fontFamilyFallback: fallback,
           fontSize: 12,
           fontWeight: FontWeight.w400,
           color: AppColors.gray600,
@@ -102,8 +130,9 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle: const TextStyle(
-            fontFamily: 'Inter',
+          textStyle: TextStyle(
+            fontFamily: font,
+            fontFamilyFallback: fallback,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -118,8 +147,9 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle: const TextStyle(
-            fontFamily: 'Inter',
+          textStyle: TextStyle(
+            fontFamily: font,
+            fontFamilyFallback: fallback,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -128,8 +158,9 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.primaryBlack,
-          textStyle: const TextStyle(
-            fontFamily: 'Inter',
+          textStyle: TextStyle(
+            fontFamily: font,
+            fontFamilyFallback: fallback,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -146,9 +177,14 @@ class AppTheme {
     );
   }
   
-  static ThemeData get darkTheme {
+  static ThemeData getDarkTheme([Locale? locale]) {
+    final font = getFontFamily(locale);
+    final fallback = getFontFamilyFallback(locale);
+
     return ThemeData(
       useMaterial3: true,
+      fontFamily: font,
+      fontFamilyFallback: fallback,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: AppColors.primaryBlack,
       appBarTheme: AppBarTheme(
@@ -157,7 +193,8 @@ class AppTheme {
         centerTitle: true,
         iconTheme: const IconThemeData(color: AppColors.primaryWhite),
         titleTextStyle: TextStyle(
-          fontFamily: 'Inter',
+          fontFamily: font,
+          fontFamilyFallback: fallback,
           fontSize: 20,
           fontWeight: FontWeight.w700,
           color: AppColors.primaryWhite,
@@ -171,37 +208,43 @@ class AppTheme {
       ),
       textTheme: TextTheme(
         displayLarge: TextStyle(
-          fontFamily: 'Inter',
+          fontFamily: font,
+          fontFamilyFallback: fallback,
           fontSize: 32,
           fontWeight: FontWeight.w700,
           color: AppColors.primaryWhite,
         ),
         displayMedium: TextStyle(
-          fontFamily: 'Inter',
+          fontFamily: font,
+          fontFamilyFallback: fallback,
           fontSize: 24,
           fontWeight: FontWeight.w600,
           color: AppColors.primaryWhite,
         ),
         displaySmall: TextStyle(
-          fontFamily: 'Inter',
+          fontFamily: font,
+          fontFamilyFallback: fallback,
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: AppColors.primaryWhite,
         ),
         bodyLarge: TextStyle(
-          fontFamily: 'Inter',
+          fontFamily: font,
+          fontFamilyFallback: fallback,
           fontSize: 16,
           fontWeight: FontWeight.w400,
           color: AppColors.gray200,
         ),
         bodyMedium: TextStyle(
-          fontFamily: 'Inter',
+          fontFamily: font,
+          fontFamilyFallback: fallback,
           fontSize: 14,
           fontWeight: FontWeight.w400,
           color: AppColors.gray300,
         ),
         bodySmall: TextStyle(
-          fontFamily: 'Inter',
+          fontFamily: font,
+          fontFamilyFallback: fallback,
           fontSize: 12,
           fontWeight: FontWeight.w400,
           color: AppColors.gray400,
@@ -245,8 +288,9 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle: const TextStyle(
-            fontFamily: 'Inter',
+          textStyle: TextStyle(
+            fontFamily: font,
+            fontFamilyFallback: fallback,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -261,8 +305,9 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle: const TextStyle(
-            fontFamily: 'Inter',
+          textStyle: TextStyle(
+            fontFamily: font,
+            fontFamilyFallback: fallback,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -271,8 +316,9 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.primaryWhite,
-          textStyle: const TextStyle(
-            fontFamily: 'Inter',
+          textStyle: TextStyle(
+            fontFamily: font,
+            fontFamilyFallback: fallback,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),

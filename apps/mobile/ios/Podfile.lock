@@ -9,10 +9,14 @@ PODS:
     - GoogleUtilities/Environment (~> 8.0)
     - GoogleUtilities/UserDefaults (~> 8.0)
     - PromisesObjC (~> 2.4)
+  - CocoaLumberjack (3.10.0):
+    - CocoaLumberjack/Core (= 3.10.0)
+  - CocoaLumberjack/Core (3.10.0)
   - connectivity_plus (0.0.1):
     - Flutter
-  - cupertino_native (0.0.1):
+  - cupertino_native_better (0.0.1):
     - Flutter
+    - SVGKit (~> 3.0)
   - CwlCatchException (2.2.1):
     - CwlCatchExceptionSupport (~> 2.2.1)
   - CwlCatchExceptionSupport (2.2.1)
@@ -77,12 +81,14 @@ PODS:
     - CwlCatchException
     - Flutter
     - FlutterMacOS
+  - SVGKit (3.0.0):
+    - CocoaLumberjack (~> 3.0)
   - url_launcher_ios (0.0.1):
     - Flutter
 
 DEPENDENCIES:
   - connectivity_plus (from `.symlinks/plugins/connectivity_plus/ios`)
-  - cupertino_native (from `.symlinks/plugins/cupertino_native/ios`)
+  - cupertino_native_better (from `.symlinks/plugins/cupertino_native_better/ios`)
   - device_info_plus (from `.symlinks/plugins/device_info_plus/ios`)
   - Flutter (from `Flutter`)
   - flutter_facebook_auth (from `.symlinks/plugins/flutter_facebook_auth/ios`)
@@ -99,6 +105,7 @@ SPEC REPOS:
   trunk:
     - AppAuth
     - AppCheckCore
+    - CocoaLumberjack
     - CwlCatchException
     - CwlCatchExceptionSupport
     - FBAEMKit
@@ -110,12 +117,13 @@ SPEC REPOS:
     - GTMAppAuth
     - GTMSessionFetcher
     - PromisesObjC
+    - SVGKit
 
 EXTERNAL SOURCES:
   connectivity_plus:
     :path: ".symlinks/plugins/connectivity_plus/ios"
-  cupertino_native:
-    :path: ".symlinks/plugins/cupertino_native/ios"
+  cupertino_native_better:
+    :path: ".symlinks/plugins/cupertino_native_better/ios"
   device_info_plus:
     :path: ".symlinks/plugins/device_info_plus/ios"
   Flutter:
@@ -142,8 +150,9 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   AppAuth: d4f13a8fe0baf391b2108511793e4b479691fb73
   AppCheckCore: cc8fd0a3a230ddd401f326489c99990b013f0c4f
+  CocoaLumberjack: 12545b2899dcaeec69b82c27b174042259c1ec27
   connectivity_plus: cb623214f4e1f6ef8fe7403d580fdad517d2f7dd
-  cupertino_native: 1db0611c94f9a9ea28433ed16a344dcb996370b5
+  cupertino_native_better: 48a6a9cd45efc9ea9e1eec30755b5a8ebe92f1f2
   CwlCatchException: 7acc161b299a6de7f0a46a6ed741eae2c8b4d75a
   CwlCatchExceptionSupport: 54ccab8d8c78907b57f99717fb19d4cc3bce02dc
   device_info_plus: 21fcca2080fbcd348be798aa36c3e5ed849eefbe
@@ -165,8 +174,9 @@ SPEC CHECKSUMS:
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
   speech_to_text: 3b313d98516d3d0406cea424782ec25470c59d19
+  SVGKit: 1ad7513f8c74d9652f94ed64ddecda1a23864dea
   url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
 
-PODFILE CHECKSUM: e30f02f9d1c72c47bb6344a0a748c9d268180865
+PODFILE CHECKSUM: 6a3e7f0189fd7a5e78fec5ccc3f9d3b82f9ef438
 
 COCOAPODS: 1.16.2
