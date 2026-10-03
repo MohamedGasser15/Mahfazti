@@ -1,4 +1,4 @@
-﻿// Application/Services/WalletService.cs
+// Application/Services/WalletService.cs
 using Microsoft.Extensions.Logging;
 using Mahfazti.Core.DTOs.Wallet;
 using Mahfazti.Core.Interfaces;
@@ -166,7 +166,7 @@ namespace Mahfazti.Core.Services
                 Amount = dto.Amount,
                 Type = dto.Type,
                 CategoryId = dto.CategoryId,
-                TransactionDate = DateTime.UtcNow,
+                TransactionDate = dto.TransactionDate ?? DateTime.UtcNow,
                 IsRecurring = false,
                 CreatedAt = DateTime.UtcNow
             };
@@ -203,6 +203,10 @@ namespace Mahfazti.Core.Services
             transaction.Amount = dto.Amount;
             transaction.Type = dto.Type;
             transaction.CategoryId = dto.CategoryId;
+            if (dto.TransactionDate.HasValue)
+            {
+                transaction.TransactionDate = dto.TransactionDate.Value;
+            }
             transaction.UpdatedAt = DateTime.UtcNow;
 
             await _transactionRepository.SaveAsync();

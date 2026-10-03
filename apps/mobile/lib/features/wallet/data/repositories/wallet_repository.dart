@@ -83,6 +83,7 @@ class WalletRepository {
     required double amount,
     required String type,
     required int categoryId,
+    DateTime? transactionDate,
   }) async {
     try {
       final body = <String, dynamic>{
@@ -92,6 +93,9 @@ class WalletRepository {
       };
       if (description != null && description.isNotEmpty) {
         body['description'] = description;
+      }
+      if (transactionDate != null) {
+        body['transactionDate'] = transactionDate.toUtc().toIso8601String();
       }
 
       final response = await _apiService.post(

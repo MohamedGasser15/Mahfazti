@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace Mahfazti.Core.DTOs.Wallet
 {
@@ -15,5 +16,7 @@ namespace Mahfazti.Core.DTOs.Wallet
 
         [Required]
         public int? CategoryId { get; set; }
+
+        public DateTime? TransactionDate { get; set; }
     }
 }
