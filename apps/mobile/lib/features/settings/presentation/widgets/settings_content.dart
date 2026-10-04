@@ -121,7 +121,7 @@ class _SettingsContentState extends State<SettingsContent> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
     final itemBorder = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
-    final selectedBg = const Color(0xFF3B82F6).withValues(alpha: isDarkMode ? 0.14 : 0.08);
+    final selectedBg = (isDarkMode ? Colors.white : Colors.black).withValues(alpha: isDarkMode ? 0.10 : 0.05);
 
     showModalBottomSheet(
       context: context,
@@ -212,7 +212,9 @@ class _SettingsContentState extends State<SettingsContent> {
                               : (isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF9F9FB)),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: isSelected ? const Color(0xFF3B82F6) : itemBorder,
+                            color: isSelected
+                                ? (isDarkMode ? Colors.white : const Color(0xFF09090B))
+                                : itemBorder,
                             width: isSelected ? 1.5 : 1,
                           ),
                         ),
@@ -266,14 +268,14 @@ class _SettingsContentState extends State<SettingsContent> {
                                       key: const ValueKey('check'),
                                       width: 24,
                                       height: 24,
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFF3B82F6),
+                                      decoration: BoxDecoration(
+                                        color: isDarkMode ? Colors.white : const Color(0xFF09090B),
                                         shape: BoxShape.circle,
                                       ),
-                                      child: const Icon(
+                                      child: Icon(
                                         Icons.check_rounded,
                                         size: 15,
-                                        color: Colors.white,
+                                        color: isDarkMode ? const Color(0xFF09090B) : Colors.white,
                                       ),
                                     )
                                   : const SizedBox(key: ValueKey('empty'), width: 24),
@@ -470,7 +472,10 @@ class _SettingsContentState extends State<SettingsContent> {
     final isDark = _currentTheme == ThemeService.dark || (_currentTheme == ThemeService.system && isDarkMode);
     return CupertinoSwitch(
       value: isDark,
-      activeTrackColor: const Color(0xFF3B82F6),
+      activeTrackColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
+      thumbColor: isDark
+          ? (isDarkMode ? const Color(0xFF09090B) : Colors.white)
+          : null,
       onChanged: (value) {
         HapticFeedback.selectionClick();
         final newTheme = value ? ThemeService.dark : ThemeService.light;
@@ -754,16 +759,24 @@ class _SettingsContentState extends State<SettingsContent> {
     bool isDanger = false,
     bool showDivider = true,
   }) {
+    final pureRed = isDarkMode ? const Color(0xFFEF4444) : const Color(0xFFDC2626);
     final titleColor = isDanger
-        ? const Color(0xFFEF4444)
+        ? pureRed
         : (isDarkMode ? Colors.white : const Color(0xFF09090B));
     final subColor = isDanger
-        ? const Color(0xFFEF4444).withValues(alpha: 0.75)
+        ? pureRed.withValues(alpha: 0.75)
         : (isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A));
     final dividerColor = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF1F1F5);
     final chevronColor = isDanger
-        ? const Color(0xFFEF4444)
+        ? pureRed
         : (isDarkMode ? const Color(0xFF71717A) : const Color(0xFFA1A1AA));
+
+    final effectiveIconColor = isDanger
+        ? pureRed
+        : (isDarkMode ? Colors.white : const Color(0xFF09090B));
+    final effectiveIconBg = isDanger
+        ? pureRed.withValues(alpha: isDarkMode ? 0.15 : 0.10)
+        : (isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5));
 
     return Column(
       children: [
@@ -771,8 +784,8 @@ class _SettingsContentState extends State<SettingsContent> {
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            splashColor: iconColor.withValues(alpha: 0.08),
-            highlightColor: iconColor.withValues(alpha: 0.04),
+            splashColor: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.05),
+            highlightColor: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.03),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
               child: Row(
@@ -781,14 +794,18 @@ class _SettingsContentState extends State<SettingsContent> {
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                      color: iconColor.withValues(alpha: isDarkMode ? 0.16 : 0.10),
+                      color: effectiveIconBg,
                       borderRadius: BorderRadius.circular(11),
+                      border: Border.all(
+                        color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+                        width: 0.8,
+                      ),
                     ),
                     child: Center(
                       child: Icon(
                         icon,
                         size: 19,
-                        color: iconColor,
+                        color: effectiveIconColor,
                       ),
                     ),
                   ),
@@ -878,20 +895,12 @@ class _SettingsContentState extends State<SettingsContent> {
       ),
       child: Row(
         children: [
-          // Avatar with gradient ring
+          // Avatar with monochrome ring
           Container(
             padding: const EdgeInsets.all(2.5),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  Color(0xFF3B82F6),
-                  Color(0xFF8B5CF6),
-                  Color(0xFFEC4899),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
             ),
             child: Container(
               width: 68,
@@ -1129,7 +1138,10 @@ class _SettingsContentState extends State<SettingsContent> {
           subtitle: context.l10n.hideYourBalancesForPrivacy,
           trailing: CupertinoSwitch(
             value: hideService.isHidden,
-            activeTrackColor: const Color(0xFF3B82F6),
+            activeTrackColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
+            thumbColor: hideService.isHidden
+                ? (isDarkMode ? const Color(0xFF09090B) : Colors.white)
+                : null,
             onChanged: (value) => hideService.setHidden(value),
           ),
           showDivider: true,
@@ -1142,7 +1154,10 @@ class _SettingsContentState extends State<SettingsContent> {
           subtitle: context.l10n.appLockSubtitle,
           trailing: CupertinoSwitch(
             value: appLockService.isEnabled,
-            activeTrackColor: const Color(0xFF3B82F6),
+            activeTrackColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
+            thumbColor: appLockService.isEnabled
+                ? (isDarkMode ? const Color(0xFF09090B) : Colors.white)
+                : null,
             onChanged: (value) async {
               final success = await appLockService.setAppLock(
                 value,
@@ -1244,6 +1259,7 @@ class _SettingsContentState extends State<SettingsContent> {
   }
 
   void _showCloseAccountDialog(bool isDarkMode) {
+    final pureRed = isDarkMode ? const Color(0xFFEF4444) : const Color(0xFFDC2626);
     final dialogBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
 
     showDialog(
@@ -1287,8 +1303,8 @@ class _SettingsContentState extends State<SettingsContent> {
             },
             child: Text(
               context.l10n.closeAccount,
-              style: const TextStyle(
-                color: Color(0xFFEF4444),
+              style: TextStyle(
+                color: pureRed,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -1300,6 +1316,7 @@ class _SettingsContentState extends State<SettingsContent> {
 
   // Logout Button
   Widget _buildLogoutButton(bool isDarkMode) {
+    final pureRed = isDarkMode ? const Color(0xFFEF4444) : const Color(0xFFDC2626);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -1308,26 +1325,26 @@ class _SettingsContentState extends State<SettingsContent> {
         child: Container(
           height: 52,
           decoration: BoxDecoration(
-            color: const Color(0xFFEF4444).withValues(alpha: isDarkMode ? 0.12 : 0.08),
+            color: pureRed.withValues(alpha: isDarkMode ? 0.12 : 0.08),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: const Color(0xFFEF4444).withValues(alpha: isDarkMode ? 0.25 : 0.20),
+              color: pureRed.withValues(alpha: isDarkMode ? 0.25 : 0.20),
               width: 1,
             ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.logout_rounded,
-                color: Color(0xFFEF4444),
+                color: pureRed,
                 size: 18,
               ),
               const SizedBox(width: 8),
               Text(
                 context.l10n.logout,
-                style: const TextStyle(
-                  color: Color(0xFFEF4444),
+                style: TextStyle(
+                  color: pureRed,
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   letterSpacing: -0.2,
@@ -1341,6 +1358,7 @@ class _SettingsContentState extends State<SettingsContent> {
   }
 
   void _showLogoutDialog(bool isDarkMode) {
+    final pureRed = isDarkMode ? const Color(0xFFEF4444) : const Color(0xFFDC2626);
     final sheetBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
 
     showModalBottomSheet(
@@ -1383,13 +1401,13 @@ class _SettingsContentState extends State<SettingsContent> {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                color: pureRed.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.logout_rounded,
                 size: 30,
-                color: Color(0xFFEF4444),
+                color: pureRed,
               ),
             ),
             const SizedBox(height: 18),
@@ -1425,7 +1443,7 @@ class _SettingsContentState extends State<SettingsContent> {
                   _logout();
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFEF4444),
+                  backgroundColor: pureRed,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(

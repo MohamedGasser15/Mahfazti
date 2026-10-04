@@ -169,27 +169,31 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     bool enabled = true,
     String? Function(String?)? validator,
   }) {
-    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
     final textColor = isDarkMode ? Colors.white : const Color(0xFF09090B);
     final labelColor = isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
-    final iconBg = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5);
-    final iconColor = isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
+    final iconBg = isDarkMode ? const Color(0xFF1E1E24) : const Color(0xFFF4F4F6);
+    final iconColor = isDarkMode ? Colors.white : const Color(0xFF09090B);
+    final clearBtnColor = isDarkMode ? const Color(0xFF71717A) : const Color(0xFFA1A1AA);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 38,
-            height: 38,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: iconBg,
-              borderRadius: BorderRadius.circular(11),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDarkMode ? const Color(0xFF2E2E36) : const Color(0xFFE4E4E7),
+                width: 0.8,
+              ),
             ),
             child: Icon(
               icon,
-              size: 19,
+              size: 20,
               color: iconColor,
             ),
           ),
@@ -202,13 +206,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.w600,
                     color: labelColor,
                     letterSpacing: 0.2,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 TextFormField(
                   controller: controller,
                   enabled: enabled,
@@ -248,45 +252,28 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           ),
           if (enabled && controller.text.isNotEmpty)
             GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: () {
                 HapticFeedback.selectionClick();
                 controller.clear();
                 setState(() {});
               },
               child: Padding(
-                padding: const EdgeInsets.all(4),
+                padding: const EdgeInsets.only(left: 6, right: 4, top: 12),
                 child: Icon(
                   Icons.cancel_rounded,
                   size: 18,
-                  color: isDarkMode ? const Color(0xFF52525B) : const Color(0xFFA1A1AA),
+                  color: clearBtnColor,
                 ),
               ),
             ),
           if (!enabled)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-              decoration: BoxDecoration(
-                color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.lock_outline_rounded,
-                    size: 11,
-                    color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    isArabic ? 'ثابت' : 'Fixed',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
-                    ),
-                  ),
-                ],
+            Padding(
+              padding: const EdgeInsets.only(left: 6, right: 4, top: 12),
+              child: Icon(
+                Icons.lock_outline_rounded,
+                size: 18,
+                color: isDarkMode ? const Color(0xFF71717A) : const Color(0xFFA1A1AA),
               ),
             ),
         ],
@@ -312,6 +299,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   }) {
     final cardBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
     final borderColor = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
+    final headerColor = isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -319,12 +307,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         Padding(
           padding: const EdgeInsets.only(left: 6, right: 6, bottom: 8),
           child: Text(
-            title,
+            title.toUpperCase(),
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 11,
               fontWeight: FontWeight.w700,
-              letterSpacing: -0.2,
-              color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+              letterSpacing: 0.8,
+              color: headerColor,
             ),
           ),
         ),
@@ -419,21 +407,42 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         actions: [
           if (_hasChanges)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Center(
-                child: TextButton(
-                  onPressed: _resetForm,
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: Text(
-                    isArabic ? 'إلغاء' : 'Reset',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _resetForm,
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F6),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+                          width: 0.8,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.undo_rounded,
+                            size: 13,
+                            color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            isArabic ? 'تراجع' : 'Reset',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -467,21 +476,16 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                 padding: const EdgeInsets.all(3),
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFF3B82F6),
-                                      Color(0xFF6366F1),
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFF3B82F6).withValues(alpha: 0.22),
-                                      blurRadius: 16,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
+                                  color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                                  boxShadow: isDarkMode
+                                      ? null
+                                      : [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.04),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 3),
+                                          ),
+                                        ],
                                 ),
                                 child: Container(
                                   width: 88,
@@ -538,44 +542,49 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
                         // Error Banner
                         if (_errorMessage != null) ...[
-                          Container(
-                            margin: const EdgeInsets.only(bottom: 20),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEF4444).withValues(alpha: 0.10),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: const Color(0xFFEF4444).withValues(alpha: 0.25),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.error_outline_rounded,
-                                  color: Color(0xFFEF4444),
-                                  size: 18,
+                          Builder(
+                            builder: (context) {
+                              final pureRed = isDarkMode ? const Color(0xFFEF4444) : const Color(0xFFDC2626);
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 20),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: pureRed.withValues(alpha: 0.10),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: pureRed.withValues(alpha: 0.25),
+                                  ),
                                 ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    _errorMessage!,
-                                    style: const TextStyle(
-                                      color: Color(0xFFEF4444),
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.error_outline_rounded,
+                                      color: pureRed,
+                                      size: 18,
                                     ),
-                                  ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        _errorMessage!,
+                                        style: TextStyle(
+                                          color: pureRed,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: () => setState(() => _errorMessage = null),
+                                      child: Icon(
+                                        Icons.close_rounded,
+                                        color: pureRed,
+                                        size: 16,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                GestureDetector(
-                                  onTap: () => setState(() => _errorMessage = null),
-                                  child: const Icon(
-                                    Icons.close_rounded,
-                                    color: Color(0xFFEF4444),
-                                    size: 16,
-                                  ),
-                                ),
-                              ],
-                            ),
+                              );
+                            },
                           ),
                         ],
 
@@ -665,74 +674,60 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                           ),
                         ),
 
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 90),
                       ],
                     ),
                   ),
                 ),
               ),
             ),
-      bottomNavigationBar: Container(
-        padding: EdgeInsets.fromLTRB(
-          20,
-          12,
-          20,
-          12 + MediaQuery.of(context).padding.bottom,
-        ),
-        decoration: BoxDecoration(
-          color: bgColor,
-          border: Border(
-            top: BorderSide(
-              color: isDarkMode ? const Color(0xFF1F1F24) : const Color(0xFFE4E4E7),
-              width: 1,
-            ),
-          ),
-        ),
-        child: SafeArea(
-          top: false,
-          child: SizedBox(
-            height: 52,
-            child: ElevatedButton(
-              onPressed: (_isSaving || !_hasChanges) ? null : _saveProfile,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
-                foregroundColor: isDarkMode ? const Color(0xFF09090B) : Colors.white,
-                disabledBackgroundColor: isDarkMode
-                    ? const Color(0xFF27272A).withValues(alpha: 0.6)
-                    : const Color(0xFFE4E4E7),
-                disabledForegroundColor: isDarkMode
-                    ? const Color(0xFF71717A)
-                    : const Color(0xFFA1A1AA),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 0,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: SizedBox(
+          height: 52,
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: (_isSaving || !_hasChanges) ? null : _saveProfile,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
+              foregroundColor: isDarkMode ? const Color(0xFF09090B) : Colors.white,
+              disabledBackgroundColor: isDarkMode
+                  ? const Color(0xFF27272A).withValues(alpha: 0.6)
+                  : const Color(0xFFE4E4E7),
+              disabledForegroundColor: isDarkMode
+                  ? const Color(0xFF71717A)
+                  : const Color(0xFFA1A1AA),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: _isSaving
-                  ? SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: isDarkMode ? const Color(0xFF09090B) : Colors.white,
-                      ),
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.check_rounded, size: 18),
-                        const SizedBox(width: 8),
-                        Text(
-                          l10n.save,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                      ],
-                    ),
+              elevation: (_hasChanges && !_isSaving) ? 6 : 0,
+              shadowColor: Colors.black.withValues(alpha: isDarkMode ? 0.35 : 0.15),
             ),
+            child: _isSaving
+                ? SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: isDarkMode ? const Color(0xFF09090B) : Colors.white,
+                    ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.check_rounded, size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        l10n.save,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         ),
       ),

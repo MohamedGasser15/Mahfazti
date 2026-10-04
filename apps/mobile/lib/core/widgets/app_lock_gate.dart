@@ -94,20 +94,21 @@ class _AppLockScreenState extends State<AppLockScreen> {
               children: [
                 const Spacer(flex: 2),
 
-                // Glowing Lock Icon
+                // Minimalist Monochrome Lock Icon
                 Container(
                   padding: const EdgeInsets.all(3.5),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [
-                        Color(0xFF3B82F6),
-                        Color(0xFF8B5CF6),
-                        Color(0xFFEC4899),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                    boxShadow: isDarkMode
+                        ? null
+                        : [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                   ),
                   child: Container(
                     width: 86,
@@ -117,11 +118,11 @@ class _AppLockScreenState extends State<AppLockScreen> {
                       color: cardBg,
                       border: Border.all(color: borderColor, width: 1),
                     ),
-                    child: const Center(
+                    child: Center(
                       child: Icon(
                         Icons.lock_rounded,
                         size: 38,
-                        color: Color(0xFF3B82F6),
+                        color: titleColor,
                       ),
                     ),
                   ),
