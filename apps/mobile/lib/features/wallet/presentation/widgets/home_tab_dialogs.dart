@@ -1821,8 +1821,26 @@ mixin _HomeTabDialogs on _HomeTabState {
                                         }
 
                                         setState(() => isSubmitting = true);
-                                        await Future.delayed(const Duration(milliseconds: 500));
+                                        await Future.delayed(const Duration(milliseconds: 300));
                                         if (!context.mounted) return;
+                                        final newId = 'custom_${DateTime.now().millisecondsSinceEpoch}';
+                                        final newBal = double.tryParse(balanceController.text.trim()) ?? 0.0;
+                                        IconData iconData = Icons.account_balance_rounded;
+                                        if (selectedType == 'cash') iconData = Icons.payments_rounded;
+                                        if (selectedType == 'ewallet') iconData = Icons.phone_iphone_rounded;
+                                        if (selectedType == 'savings') iconData = Icons.savings_rounded;
+
+                                        this.setState(() {
+                                          _customAccounts.add(
+                                            AccountItem(
+                                              id: newId,
+                                              name: nameController.text.trim(),
+                                              type: selectedType,
+                                              balance: newBal,
+                                              icon: iconData,
+                                            ),
+                                          );
+                                        });
                                         Navigator.pop(context);
                                         MessageService.showSuccess(
                                           context: context,
@@ -1962,7 +1980,6 @@ mixin _HomeTabDialogs on _HomeTabState {
       builder: (context) {
         final isDarkMode = Theme.of(context).brightness == Brightness.dark;
         final isAr = Localizations.localeOf(context).languageCode == 'ar';
-        final currencySymbol = currencySymbols[_currencyCode ?? 'USD'] ?? '\$';
 
         return Container(
           decoration: BoxDecoration(
@@ -2068,7 +2085,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                                     ),
                                   ),
                                   Text(
-                                    '${NumberFormat('#,##0.00').format(acc.balance)} $currencySymbol',
+                                    _formatAmount(acc.balance, currencyCode: acc.currency),
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
@@ -2115,7 +2132,6 @@ mixin _HomeTabDialogs on _HomeTabState {
       builder: (context) {
         final isDarkMode = Theme.of(context).brightness == Brightness.dark;
         final isAr = Localizations.localeOf(context).languageCode == 'ar';
-        final currencySymbol = currencySymbols[_currencyCode ?? 'USD'] ?? '\$';
 
         return Container(
           height: MediaQuery.of(context).size.height * 0.75,
@@ -2234,12 +2250,41 @@ mixin _HomeTabDialogs on _HomeTabState {
                                           color: isDarkMode ? Colors.white : Colors.black,
                                         ),
                                       ),
+                                      if (acc.isMain) ...[
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(
+                                              color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                                              width: 0.8,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.star_rounded, size: 11, color: Color(0xFF10B981)),
+                                              const SizedBox(width: 2),
+                                              Text(
+                                                isAr ? 'الرئيسي' : 'Main Acc',
+                                                style: const TextStyle(
+                                                  fontSize: 9.5,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: Color(0xFF10B981),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                       if (isSelected) ...[
                                         const SizedBox(width: 8),
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                                            color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
                                             borderRadius: BorderRadius.circular(6),
                                           ),
                                           child: Text(
@@ -2247,7 +2292,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                                             style: const TextStyle(
                                               fontSize: 9,
                                               fontWeight: FontWeight.w800,
-                                              color: Color(0xFF10B981),
+                                              color: Color(0xFF3B82F6),
                                             ),
                                           ),
                                         ),
@@ -2256,7 +2301,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '${NumberFormat('#,##0.00').format(acc.balance)} $currencySymbol',
+                                    _formatAmount(acc.balance, currencyCode: acc.currency),
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w800,
@@ -2266,11 +2311,51 @@ mixin _HomeTabDialogs on _HomeTabState {
                                 ],
                               ),
                             ),
+                            if (!acc.isAll && !acc.isMain)
+                              InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    _mainAccountId = acc.id;
+                                  });
+                                  Navigator.pop(context);
+                                  MessageService.showSuccess(
+                                    context: context,
+                                    message: isAr
+                                        ? 'تم تعيين ${acc.name} كحساب رئيسي ⭐'
+                                        : '${acc.name} set as main account ⭐',
+                                  );
+                                },
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                  margin: const EdgeInsetsDirectional.only(end: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.star_outline_rounded, size: 14, color: Color(0xFF10B981)),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        isAr ? 'تعيين كرئيسي' : 'Set as Main',
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF10B981),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             InkWell(
                               onTap: () {
                                 setState(() {
                                   _selectedAccountId = acc.id;
                                 });
+                                _syncWalletsCarouselToSelected();
                                 Navigator.pop(context);
                               },
                               borderRadius: BorderRadius.circular(10),

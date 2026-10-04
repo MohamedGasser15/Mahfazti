@@ -159,7 +159,7 @@ mixin _HomeTabWidgets on _HomeTabState {
           _buildSayTopBar(isDarkMode, hideService),
           const SizedBox(height: 6),
           _buildSayHeroHeader(isDarkMode, hideService),
-          const SizedBox(height: 16),
+          const SizedBox(height: 30),
           _buildSayActionRow(isDarkMode),
         ],
       ),
@@ -243,6 +243,10 @@ mixin _HomeTabWidgets on _HomeTabState {
                         ),
                         const CNPopupMenuDivider(),
                         CNPopupMenuItem(
+                          label: isAr ? 'بالشهر...' : 'By Month...',
+                          icon: const CNSymbol('calendar.day.timeline.left', size: 18.0),
+                        ),
+                        CNPopupMenuItem(
                           label: isAr ? 'فترة مخصصة...' : 'Custom Range...',
                           icon: const CNSymbol('calendar.badge.clock', size: 18.0),
                         ),
@@ -259,7 +263,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                             _startDate = DateTime(now.year, now.month - 1, 1);
                             _endDate = DateTime(now.year, now.month, 0);
                           });
-                        } else if (index == 3) { // index 2 is divider
+                        } else if (index == 3) { // By Month (index 2 is divider)
+                          await _pickMonthPicker(context);
+                        } else if (index == 4) { // Custom Range
                           await _pickCustomDateRange(context);
                         }
                       },
@@ -311,6 +317,8 @@ mixin _HomeTabWidgets on _HomeTabState {
                           _endDate = DateTime(now.year, now.month, 0);
                         });
                       } else if (index == 2) {
+                        await _pickMonthPicker(context);
+                      } else if (index == 3) {
                         await _pickCustomDateRange(context);
                       }
                     },
@@ -344,9 +352,16 @@ mixin _HomeTabWidgets on _HomeTabState {
                         const PopupMenuDivider(height: 8),
                         _buildMenuOptionItem(
                           value: 2,
+                          title: isAr ? 'بالشهر...' : 'By Month...',
+                          icon: Icons.calendar_month_rounded,
+                          isSelected: !isThisMonth && !isLastMonth && _startDate.day == 1 && _endDate.day == DateTime(_startDate.year, _startDate.month + 1, 0).day,
+                          isDarkMode: isDarkMode,
+                        ),
+                        _buildMenuOptionItem(
+                          value: 3,
                           title: isAr ? 'فترة مخصصة...' : 'Custom Range...',
                           icon: Icons.date_range_rounded,
-                          isSelected: !isThisMonth && !isLastMonth,
+                          isSelected: !isThisMonth && !isLastMonth && !(_startDate.day == 1 && _endDate.day == DateTime(_startDate.year, _startDate.month + 1, 0).day),
                           isDarkMode: isDarkMode,
                         ),
                       ];
@@ -460,9 +475,9 @@ mixin _HomeTabWidgets on _HomeTabState {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // "Spent" Label
+            // "Wallet Balance" Label
             Text(
-              isAr ? 'المصروفات' : 'Spent',
+              isAr ? 'الرصيد' : 'Balance',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -471,7 +486,7 @@ mixin _HomeTabWidgets on _HomeTabState {
             ),
             const SizedBox(height: 2),
 
-            // Big Amount: e.g. $ 0.00 (Animated on swipe/switch)
+            // Big Balance Amount: e.g. $ 12,450.00 (Animated on swipe/switch)
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 220),
               transitionBuilder: (child, animation) {
@@ -490,13 +505,13 @@ mixin _HomeTabWidgets on _HomeTabState {
                 );
               },
               child: Row(
-                key: ValueKey('spent_$_selectedAccountId'),
+                key: ValueKey('balance_hero_$_selectedAccountId'),
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.baseline,
                 textBaseline: TextBaseline.alphabetic,
                 children: [
                   _buildBlurrableNumber(
-                    _totalSpentAmount,
+                    _selectedAccount.balance,
                     const TextStyle(
                       fontSize: 44,
                       fontWeight: FontWeight.w900,
@@ -530,8 +545,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                         items: [
                           ..._accounts.map((acc) {
                             final isSelected = acc.id == _selectedAccountId;
+                            final label = acc.isMain ? '${acc.name} ⭐' : acc.name;
                             return CNPopupMenuItem(
-                              label: acc.name,
+                              label: label,
                               icon: CNSymbol(
                                 isSelected ? 'checkmark.circle.fill' : 'circle',
                                 size: 16.0,
@@ -558,6 +574,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                               _heroSlideFromLeft = isRtl ? isMovingForward : !isMovingForward;
                               _selectedAccountId = targetAcc.id;
                             });
+                            _syncWalletsCarouselToSelected();
                           } else if (index == accountsCount + 1) { // after divider
                             _showAddAccountModal();
                           } else if (index == accountsCount + 2) {
@@ -607,6 +624,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                                 _heroSlideFromLeft = isRtl ? isMovingForward : !isMovingForward;
                                 _selectedAccountId = targetAcc.id;
                               });
+                              _syncWalletsCarouselToSelected();
                             } else if (index == accountsCount + 1) { // after divider
                               _showAddAccountModal();
                             } else if (index == accountsCount + 2) {
@@ -698,51 +716,6 @@ mixin _HomeTabWidgets on _HomeTabState {
                   ),
                 );
               }).toList(),
-            ),
-
-            const SizedBox(height: 8),
-
-            // Balance Subtitle Line (Animated on swipe/switch)
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
-              transitionBuilder: (child, animation) {
-                final offsetTween = Tween<Offset>(
-                  begin: Offset(_heroSlideFromLeft ? -0.25 : 0.25, 0.0),
-                  end: Offset.zero,
-                );
-                return FadeTransition(
-                  opacity: animation,
-                  child: SlideTransition(
-                    position: offsetTween.animate(
-                      CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-                    ),
-                    child: child,
-                  ),
-                );
-              },
-              child: Row(
-                key: ValueKey('balance_$_selectedAccountId'),
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    isAr ? 'الرصيد ' : 'Balance ',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white.withValues(alpha: 0.75),
-                    ),
-                  ),
-                  _buildBlurrableNumber(
-                    _selectedAccount.balance,
-                    const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                    hideService.isHidden,
-                  ),
-                ],
-              ),
             ),
           ],
         ),
@@ -995,40 +968,1338 @@ mixin _HomeTabWidgets on _HomeTabState {
   }
 
   Future<void> _pickCustomDateRange(BuildContext context) async {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final picked = await showDateRangePicker(
+    final isIOS = Platform.isIOS || Theme.of(context).platform == TargetPlatform.iOS;
+    if (isIOS) {
+      return _pickCustomDateRangeIOS(context);
+    } else {
+      return _pickCustomDateRangeAndroid(context);
+    }
+  }
+
+  Future<void> _pickMonthPicker(BuildContext context) async {
+    final isIOS = Platform.isIOS || Theme.of(context).platform == TargetPlatform.iOS;
+    if (isIOS) {
+      return _pickMonthPickerIOS(context);
+    } else {
+      return _pickMonthPickerAndroid(context);
+    }
+  }
+
+  //#region iOS Pickers (Concept 1: Cupertino Wheels & cupertino_calendar_picker)
+  Future<void> _pickCustomDateRangeIOS(BuildContext context) async {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    final sheetBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
+    final borderColor = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
+    final textPrimary = isDarkMode ? Colors.white : const Color(0xFF09090B);
+    final textSecondary = isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    DateTime tempStart = _startDate.isAfter(today) ? today : _startDate;
+    DateTime tempEnd = _endDate.isAfter(today) ? today : _endDate;
+
+    final GlobalKey fromCardKey = GlobalKey();
+    final GlobalKey toCardKey = GlobalKey();
+
+    String formatDatePill(DateTime d) {
+      return DateFormat('d MMM yyyy', isAr ? 'ar' : 'en').format(d);
+    }
+
+    await showModalBottomSheet<void>(
       context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-      initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
-      builder: (ctx, child) {
-        return Theme(
-          data: isDark
-              ? ThemeData.dark().copyWith(
-                  colorScheme: const ColorScheme.dark(
-                    primary: Colors.white,
-                    onPrimary: Colors.black,
-                    surface: Color(0xFF18181B),
-                    onSurface: Colors.white,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            final dayCount = tempEnd.difference(tempStart).inDays + 1;
+
+            void applyDaysPreset(int days) {
+              HapticFeedback.selectionClick();
+              setSheetState(() {
+                tempEnd = today;
+                tempStart = today.subtract(Duration(days: days - 1));
+              });
+            }
+
+            void applyThisMonthPreset() {
+              HapticFeedback.selectionClick();
+              setSheetState(() {
+                tempStart = DateTime(today.year, today.month, 1);
+                tempEnd = today;
+              });
+            }
+
+            Future<void> openCupertinoCalendar(bool isFrom) async {
+              HapticFeedback.selectionClick();
+              final key = isFrom ? fromCardKey : toCardKey;
+              final renderBox = key.currentContext?.findRenderObject() as RenderBox?;
+
+              final picked = await showCupertinoCalendarPicker(
+                ctx,
+                widgetRenderBox: renderBox,
+                minimumDate: isFrom ? DateTime(2020) : tempStart,
+                maximumDate: today,
+                initialDate: isFrom
+                    ? tempStart
+                    : (tempEnd.isBefore(tempStart) ? tempStart : tempEnd),
+                currentDate: today,
+                mainColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
+              );
+
+              if (picked != null) {
+                // Ensure picked date is never in the future
+                final clampedPicked = picked.isAfter(today) ? today : picked;
+                setSheetState(() {
+                  if (isFrom) {
+                    tempStart = clampedPicked;
+                    if (tempEnd.isBefore(tempStart)) {
+                      tempEnd = tempStart;
+                    }
+                  } else {
+                    tempEnd = clampedPicked;
+                  }
+                });
+              }
+            }
+
+            return Container(
+              decoration: BoxDecoration(
+                color: sheetBg,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                border: Border(top: BorderSide(color: borderColor, width: 1)),
+              ),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                14,
+                20,
+                MediaQuery.of(ctx).padding.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Handle
+                  Container(
+                    width: 38,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                )
-              : ThemeData.light().copyWith(
-                  colorScheme: const ColorScheme.light(
-                    primary: Colors.black,
-                    onPrimary: Colors.white,
+                  const SizedBox(height: 16),
+
+                  // Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        isAr ? 'فترة مخصصة' : 'Custom Range',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
+                          color: textPrimary,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F6),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: borderColor, width: 0.8),
+                        ),
+                        child: Text(
+                          '$dayCount ${isAr ? 'يوم' : 'days'}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: textPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-          child: child!,
+                  const SizedBox(height: 14),
+
+                  // Quick Presets Chips
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildPresetChip(
+                          label: isAr ? 'آخر 7 أيام' : 'Last 7 days',
+                          isDarkMode: isDarkMode,
+                          borderColor: borderColor,
+                          textPrimary: textPrimary,
+                          textSecondary: textSecondary,
+                          onTap: () => applyDaysPreset(7),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildPresetChip(
+                          label: isAr ? 'آخر 30 يوم' : 'Last 30 days',
+                          isDarkMode: isDarkMode,
+                          borderColor: borderColor,
+                          textPrimary: textPrimary,
+                          textSecondary: textSecondary,
+                          onTap: () => applyDaysPreset(30),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildPresetChip(
+                          label: isAr ? 'هذا الشهر' : 'This month',
+                          isDarkMode: isDarkMode,
+                          borderColor: borderColor,
+                          textPrimary: textPrimary,
+                          textSecondary: textSecondary,
+                          onTap: applyThisMonthPreset,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Dual From & To Cards
+                  Row(
+                    children: [
+                      // "From" Card
+                      Expanded(
+                        child: Material(
+                          key: fromCardKey,
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => openCupertinoCalendar(true),
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: isDarkMode ? const Color(0xFF1E1E24) : const Color(0xFFF4F4F6),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: borderColor, width: 0.9),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        isAr ? 'من' : 'From',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: textSecondary,
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.calendar_month_rounded,
+                                        size: 15,
+                                        color: textPrimary,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    formatDatePill(tempStart),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: -0.2,
+                                      color: textPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // "To" Card
+                      Expanded(
+                        child: Material(
+                          key: toCardKey,
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => openCupertinoCalendar(false),
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: isDarkMode ? const Color(0xFF1E1E24) : const Color(0xFFF4F4F6),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: borderColor, width: 0.9),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        isAr ? 'إلى' : 'To',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: textSecondary,
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.calendar_month_rounded,
+                                        size: 15,
+                                        color: textPrimary,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    formatDatePill(tempEnd),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: -0.2,
+                                      color: textPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Confirm Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        HapticFeedback.mediumImpact();
+                        setState(() {
+                          _startDate = tempStart;
+                          _endDate = DateTime(tempEnd.year, tempEnd.month, tempEnd.day, 23, 59, 59);
+                        });
+                        Navigator.pop(ctx);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                        foregroundColor: isDarkMode ? const Color(0xFF09090B) : Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        isAr ? 'تأكيد' : 'Confirm',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
-    if (picked != null) {
-      setState(() {
-        _startDate = picked.start;
-        _endDate = picked.end;
-      });
-    }
   }
+
+  Future<void> _pickMonthPickerIOS(BuildContext context) async {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    final sheetBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
+    final borderColor = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
+    final textPrimary = isDarkMode ? Colors.white : const Color(0xFF09090B);
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    int selectedYear = _startDate.year > now.year ? now.year : _startDate.year;
+    int selectedMonth = (selectedYear == now.year && _startDate.month > now.month)
+        ? now.month
+        : _startDate.month;
+
+    final monthNamesAr = [
+      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+    ];
+    final monthNamesEn = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    final monthNames = isAr ? monthNamesAr : monthNamesEn;
+
+    // Years only up to current year (cannot pick future year)
+    final years = List.generate(now.year - 2020 + 1, (index) => 2020 + index);
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Container(
+              decoration: BoxDecoration(
+                color: sheetBg,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                border: Border(top: BorderSide(color: borderColor, width: 1)),
+              ),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                14,
+                20,
+                MediaQuery.of(ctx).padding.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Handle
+                  Container(
+                    width: 38,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Header with selection pill
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        isAr ? 'اختر الشهر' : 'Select Month',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
+                          color: textPrimary,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F6),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: borderColor, width: 0.8),
+                        ),
+                        child: Text(
+                          '${monthNames[selectedMonth - 1]} $selectedYear',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: textPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Dual CupertinoPicker Wheels for Month & Year
+                  Container(
+                    height: 180,
+                    decoration: BoxDecoration(
+                      color: isDarkMode ? const Color(0xFF1B1B20) : const Color(0xFFF4F4F6),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: borderColor, width: 0.8),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Row(
+                      children: [
+                        // Month Wheel
+                        Expanded(
+                          flex: 3,
+                          child: Builder(
+                            builder: (context) {
+                              final availableMonthsCount = selectedYear == now.year ? now.month : 12;
+                              final clampedIndex = (selectedMonth - 1).clamp(0, availableMonthsCount - 1);
+                              return CupertinoPicker(
+                                key: ValueKey('month-picker-$selectedYear-$availableMonthsCount'),
+                                scrollController: FixedExtentScrollController(
+                                  initialItem: clampedIndex,
+                                ),
+                                itemExtent: 42.0,
+                                diameterRatio: 1.2,
+                                selectionOverlay: Container(
+                                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                                  decoration: BoxDecoration(
+                                    color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                onSelectedItemChanged: (index) {
+                                  HapticFeedback.selectionClick();
+                                  setSheetState(() => selectedMonth = index + 1);
+                                },
+                                children: List.generate(availableMonthsCount, (index) {
+                                  return Center(
+                                    child: Text(
+                                      monthNames[index],
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        color: textPrimary,
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              );
+                            },
+                          ),
+                        ),
+                        // Divider
+                        Container(
+                          width: 1,
+                          height: 120,
+                          color: borderColor,
+                        ),
+                        // Year Wheel
+                        Expanded(
+                          flex: 2,
+                          child: CupertinoPicker(
+                            scrollController: FixedExtentScrollController(
+                              initialItem: years.contains(selectedYear)
+                                  ? years.indexOf(selectedYear)
+                                  : 0,
+                            ),
+                            itemExtent: 42.0,
+                            diameterRatio: 1.2,
+                            selectionOverlay: Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 8),
+                              decoration: BoxDecoration(
+                                color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            onSelectedItemChanged: (index) {
+                              HapticFeedback.selectionClick();
+                              final pickedYear = years[index];
+                              setSheetState(() {
+                                selectedYear = pickedYear;
+                                if (selectedYear == now.year && selectedMonth > now.month) {
+                                  selectedMonth = now.month;
+                                }
+                              });
+                            },
+                            children: years.map((y) {
+                              return Center(
+                                child: Text(
+                                  '$y',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: textPrimary,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Confirm Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        HapticFeedback.mediumImpact();
+                        setState(() {
+                          _startDate = DateTime(selectedYear, selectedMonth, 1);
+                          final endDay = DateTime(selectedYear, selectedMonth + 1, 0);
+                          _endDate = endDay.isAfter(today)
+                              ? DateTime(today.year, today.month, today.day, 23, 59, 59)
+                              : DateTime(endDay.year, endDay.month, endDay.day, 23, 59, 59);
+                        });
+                        Navigator.pop(ctx);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                        foregroundColor: isDarkMode ? const Color(0xFF09090B) : Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        isAr ? 'تأكيد' : 'Confirm',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildPresetChip({
+    required String label,
+    required bool isDarkMode,
+    required Color borderColor,
+    required Color textPrimary,
+    required Color textSecondary,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: isDarkMode ? const Color(0xFF1E1E24) : const Color(0xFFF4F4F6),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: borderColor, width: 0.8),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: textPrimary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  //#endregion
+
+  //#region Android Pickers (Concept 2: Bento Squircle & Connected Ribbon)
+  Future<void> _pickCustomDateRangeAndroid(BuildContext context) async {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    final sheetBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
+    final borderColor = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
+    final textPrimary = isDarkMode ? Colors.white : const Color(0xFF09090B);
+    final textSecondary = isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    DateTime tempStart = _startDate.isAfter(today) ? today : _startDate;
+    DateTime tempEnd = _endDate.isAfter(today) ? today : _endDate;
+    DateTime viewingMonth = DateTime(tempStart.year, tempStart.month, 1);
+
+    final monthNamesAr = [
+      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+    ];
+    final monthNamesEn = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    final weekDayNamesAr = ['ح', 'ن', 'ث', 'ر', 'خ', 'ج', 'س'];
+    final weekDayNamesEn = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            final monthTitle = isAr
+                ? '${monthNamesAr[viewingMonth.month - 1]} ${viewingMonth.year}'
+                : '${monthNamesEn[viewingMonth.month - 1]} ${viewingMonth.year}';
+            final weekDays = isAr ? weekDayNamesAr : weekDayNamesEn;
+
+            final firstDayOfMonth = DateTime(viewingMonth.year, viewingMonth.month, 1);
+            final daysInMonth = DateTime(viewingMonth.year, viewingMonth.month + 1, 0).day;
+            final leadingEmptyDays = firstDayOfMonth.weekday % 7; // Sunday = 0
+
+            String formatDatePill(DateTime d) {
+              return DateFormat('d MMM yyyy', isAr ? 'ar' : 'en').format(d);
+            }
+
+            final dayCount = tempEnd.difference(tempStart).inDays + 1;
+            final canGoNextMonth = viewingMonth.year < now.year ||
+                (viewingMonth.year == now.year && viewingMonth.month < now.month);
+
+            void applyDaysPreset(int days) {
+              HapticFeedback.selectionClick();
+              setSheetState(() {
+                tempEnd = today;
+                tempStart = today.subtract(Duration(days: days - 1));
+                viewingMonth = DateTime(tempStart.year, tempStart.month, 1);
+              });
+            }
+
+            void applyThisMonthPreset() {
+              HapticFeedback.selectionClick();
+              setSheetState(() {
+                tempStart = DateTime(today.year, today.month, 1);
+                tempEnd = today;
+                viewingMonth = DateTime(today.year, today.month, 1);
+              });
+            }
+
+            return Container(
+              decoration: BoxDecoration(
+                color: sheetBg,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                border: Border(top: BorderSide(color: borderColor, width: 1)),
+              ),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                14,
+                20,
+                MediaQuery.of(ctx).padding.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Handle
+                  Container(
+                    width: 38,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Header with Month Switcher
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        isAr ? 'فترة مخصصة' : 'Custom Range',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
+                          color: textPrimary,
+                        ),
+                      ),
+                      // Month Stepper Pill
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F6),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: borderColor, width: 0.8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                              icon: Icon(Icons.chevron_left_rounded, size: 20, color: textPrimary),
+                              onPressed: () {
+                                setSheetState(() {
+                                  viewingMonth = DateTime(viewingMonth.year, viewingMonth.month - 1, 1);
+                                });
+                              },
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 6),
+                              child: Text(
+                                monthTitle,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: textPrimary,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                              icon: Icon(
+                                Icons.chevron_right_rounded,
+                                size: 20,
+                                color: canGoNextMonth
+                                    ? textPrimary
+                                    : textSecondary.withValues(alpha: 0.3),
+                              ),
+                              onPressed: canGoNextMonth
+                                  ? () {
+                                      setSheetState(() {
+                                        viewingMonth = DateTime(viewingMonth.year, viewingMonth.month + 1, 1);
+                                      });
+                                    }
+                                  : null,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Quick Presets Chips Row
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildPresetChip(
+                          label: isAr ? 'آخر 7 أيام' : 'Last 7 days',
+                          isDarkMode: isDarkMode,
+                          borderColor: borderColor,
+                          textPrimary: textPrimary,
+                          textSecondary: textSecondary,
+                          onTap: () => applyDaysPreset(7),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildPresetChip(
+                          label: isAr ? 'آخر 30 يوم' : 'Last 30 days',
+                          isDarkMode: isDarkMode,
+                          borderColor: borderColor,
+                          textPrimary: textPrimary,
+                          textSecondary: textSecondary,
+                          onTap: () => applyDaysPreset(30),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildPresetChip(
+                          label: isAr ? 'هذا الشهر' : 'This month',
+                          isDarkMode: isDarkMode,
+                          borderColor: borderColor,
+                          textPrimary: textPrimary,
+                          textSecondary: textSecondary,
+                          onTap: applyThisMonthPreset,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Selected Range Badge
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isDarkMode ? const Color(0xFF1E1E24) : const Color(0xFFF4F4F6),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: borderColor, width: 0.8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.calendar_today_rounded, size: 14, color: textSecondary),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${formatDatePill(tempStart)}  ←  ${formatDatePill(tempEnd)}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.2,
+                            color: textPrimary,
+                          ),
+                        ),
+                        if (dayCount > 1) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            '($dayCount ${isAr ? 'يوم' : 'days'})',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: textSecondary,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Weekday Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      for (final w in weekDays)
+                        SizedBox(
+                          width: 38,
+                          child: Center(
+                            child: Text(
+                              w,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: textSecondary,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+
+                  // Calendar Days Grid with Connected Ribbon
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: leadingEmptyDays + daysInMonth,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 7,
+                      mainAxisSpacing: 3,
+                      crossAxisSpacing: 0,
+                      childAspectRatio: 1.15,
+                    ),
+                    itemBuilder: (context, index) {
+                      if (index < leadingEmptyDays) {
+                        return const SizedBox.shrink();
+                      }
+                      final dayNum = index - leadingEmptyDays + 1;
+                      final dayDate = DateTime(viewingMonth.year, viewingMonth.month, dayNum);
+                      final isFuture = dayDate.isAfter(today);
+
+                      final isStart = dayDate.year == tempStart.year &&
+                          dayDate.month == tempStart.month &&
+                          dayDate.day == tempStart.day;
+                      final isEnd = dayDate.year == tempEnd.year &&
+                          dayDate.month == tempEnd.month &&
+                          dayDate.day == tempEnd.day;
+                      final isSameDay = tempStart.year == tempEnd.year &&
+                          tempStart.month == tempEnd.month &&
+                          tempStart.day == tempEnd.day;
+                      final isInBetween = dayDate.isAfter(tempStart) && dayDate.isBefore(tempEnd);
+
+                      final ribbonBg = isDarkMode
+                          ? Colors.white.withValues(alpha: 0.14)
+                          : const Color(0xFFE4E4E7);
+                      final endpointBg = isDarkMode ? Colors.white : const Color(0xFF09090B);
+                      final endpointFg = isDarkMode ? const Color(0xFF09090B) : Colors.white;
+
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: isFuture
+                              ? null
+                              : () {
+                                  HapticFeedback.selectionClick();
+                                  setSheetState(() {
+                                    if (dayDate.isBefore(tempStart)) {
+                                      tempStart = dayDate;
+                                    } else if (isStart && !isEnd) {
+                                      tempStart = dayDate;
+                                    } else if (isSameDay) {
+                                      tempEnd = dayDate;
+                                    } else {
+                                      tempStart = dayDate;
+                                      tempEnd = dayDate;
+                                    }
+                                  });
+                                },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            alignment: Alignment.center,
+                            children: [
+                              // Ribbon connector background
+                              if (!isFuture) ...[
+                                if (isInBetween)
+                                  Positioned.fill(
+                                    top: 3,
+                                    bottom: 3,
+                                    child: Container(color: ribbonBg),
+                                  )
+                                else if (isStart && !isEnd)
+                                  Positioned.fill(
+                                    top: 3,
+                                    bottom: 3,
+                                    child: Row(
+                                      children: [
+                                        const Expanded(child: SizedBox.shrink()),
+                                        Expanded(child: Container(color: ribbonBg)),
+                                      ],
+                                    ),
+                                  )
+                                else if (isEnd && !isStart)
+                                  Positioned.fill(
+                                    top: 3,
+                                    bottom: 3,
+                                    child: Row(
+                                      children: [
+                                        Expanded(child: Container(color: ribbonBg)),
+                                        const Expanded(child: SizedBox.shrink()),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+
+                              // Day circle & text
+                              Center(
+                                child: Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: (!isFuture && (isStart || isEnd))
+                                        ? endpointBg
+                                        : Colors.transparent,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '$dayNum',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: (!isFuture && (isStart || isEnd))
+                                            ? FontWeight.w800
+                                            : ((!isFuture && isInBetween)
+                                                ? FontWeight.w700
+                                                : FontWeight.w500),
+                                        color: isFuture
+                                            ? textSecondary.withValues(alpha: 0.25)
+                                            : ((isStart || isEnd)
+                                                ? endpointFg
+                                                : (isInBetween ? textPrimary : textSecondary)),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Confirm Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        HapticFeedback.mediumImpact();
+                        setState(() {
+                          _startDate = tempStart;
+                          _endDate = DateTime(tempEnd.year, tempEnd.month, tempEnd.day, 23, 59, 59);
+                        });
+                        Navigator.pop(ctx);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                        foregroundColor: isDarkMode ? const Color(0xFF09090B) : Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        isAr ? 'تأكيد' : 'Confirm',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _pickMonthPickerAndroid(BuildContext context) async {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    final sheetBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
+    final borderColor = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
+    final textPrimary = isDarkMode ? Colors.white : const Color(0xFF09090B);
+    final textSecondary = isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    int selectedYear = _startDate.year > now.year ? now.year : _startDate.year;
+    int selectedMonth = (selectedYear == now.year && _startDate.month > now.month)
+        ? now.month
+        : _startDate.month;
+
+    final monthNamesAr = [
+      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+    ];
+    final monthNamesEn = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            final monthNames = isAr ? monthNamesAr : monthNamesEn;
+            final canGoNextYear = selectedYear < now.year;
+
+            return Container(
+              decoration: BoxDecoration(
+                color: sheetBg,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                border: Border(top: BorderSide(color: borderColor, width: 1)),
+              ),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                14,
+                20,
+                MediaQuery.of(ctx).padding.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Handle
+                  Container(
+                    width: 38,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Header with Year Switcher
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        isAr ? 'اختر الشهر' : 'Select Month',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
+                          color: textPrimary,
+                        ),
+                      ),
+                      // Year stepper pill
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F6),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: borderColor, width: 0.8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                              icon: Icon(Icons.chevron_left_rounded, size: 20, color: textPrimary),
+                              onPressed: selectedYear > 2020
+                                  ? () => setSheetState(() => selectedYear--)
+                                  : null,
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 6),
+                              child: Text(
+                                '$selectedYear',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: textPrimary,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                              icon: Icon(
+                                Icons.chevron_right_rounded,
+                                size: 20,
+                                color: canGoNextYear
+                                    ? textPrimary
+                                    : textSecondary.withValues(alpha: 0.3),
+                              ),
+                              onPressed: canGoNextYear
+                                  ? () {
+                                      setSheetState(() {
+                                        selectedYear++;
+                                        if (selectedYear == now.year && selectedMonth > now.month) {
+                                          selectedMonth = now.month;
+                                        }
+                                      });
+                                    }
+                                  : null,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Months Bento Squircle Cards Grid (Only shows months up to current month in current year)
+                  Builder(
+                    builder: (context) {
+                      final displayedMonthsCount = selectedYear == now.year ? now.month : 12;
+                      return GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          mainAxisSpacing: 10,
+                          crossAxisSpacing: 10,
+                          childAspectRatio: 1.55,
+                        ),
+                        itemCount: displayedMonthsCount,
+                        itemBuilder: (context, idx) {
+                          final monthNum = idx + 1;
+                          final isSelected = selectedMonth == monthNum;
+                          final numStr = monthNum < 10 ? '0$monthNum' : '$monthNum';
+
+                          return Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                setSheetState(() => selectedMonth = monthNum);
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 160),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? (isDarkMode ? Colors.white : const Color(0xFF09090B))
+                                      : (isDarkMode ? const Color(0xFF1B1B20) : const Color(0xFFF4F4F6)),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? (isDarkMode ? Colors.white : const Color(0xFF09090B))
+                                        : borderColor,
+                                    width: isSelected ? 1.4 : 0.8,
+                                  ),
+                                  boxShadow: isSelected
+                                      ? [
+                                          BoxShadow(
+                                            color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.12),
+                                            blurRadius: 10,
+                                            offset: const Offset(0, 3),
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          numStr,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 0.5,
+                                            fontFamily: 'monospace',
+                                            color: isSelected
+                                                ? (isDarkMode ? const Color(0xFF09090B).withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.7))
+                                                : textSecondary,
+                                          ),
+                                        ),
+                                        if (isSelected)
+                                          Container(
+                                            width: 5,
+                                            height: 5,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: isDarkMode ? const Color(0xFF09090B) : Colors.white,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    Text(
+                                      monthNames[idx],
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                        letterSpacing: -0.2,
+                                        color: isSelected
+                                            ? (isDarkMode ? const Color(0xFF09090B) : Colors.white)
+                                            : textPrimary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 22),
+
+                  // Confirm Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        HapticFeedback.mediumImpact();
+                        setState(() {
+                          _startDate = DateTime(selectedYear, selectedMonth, 1);
+                          final endDay = DateTime(selectedYear, selectedMonth + 1, 0);
+                          _endDate = endDay.isAfter(today)
+                              ? DateTime(today.year, today.month, today.day, 23, 59, 59)
+                              : DateTime(endDay.year, endDay.month, endDay.day, 23, 59, 59);
+                        });
+                        Navigator.pop(ctx);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                        foregroundColor: isDarkMode ? const Color(0xFF09090B) : Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        isAr ? 'تأكيد' : 'Confirm',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+  //#endregion
 
   PopupMenuItem<int> _buildMenuOptionItem({
     required int value,
@@ -1097,13 +2368,38 @@ mixin _HomeTabWidgets on _HomeTabState {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              account.name,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isDarkMode ? Colors.white : const Color(0xFF0F172A),
-              ),
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    account.name,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isDarkMode ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+                if (account.isMain) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      Localizations.localeOf(context).languageCode == 'ar' ? 'الرئيسي' : 'Main',
+                      style: const TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF10B981),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
           if (isSelected) ...[
@@ -1252,6 +2548,254 @@ mixin _HomeTabWidgets on _HomeTabState {
     }
   }
 
+  //#region Compact Wallets Bar
+  Widget _buildWalletsCarousel(bool isDarkMode, HideBalanceService hideService) {
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    final wallets = _walletsCarouselList;
+
+    if (wallets.isEmpty) return const SizedBox.shrink();
+
+
+
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section Header: Matches Recent Transactions with "View all" / "عرض الكل"
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                isAr ? 'محافظي' : 'My Wallets',
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white : Colors.black,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _showManageAccountsModal,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    child: Row(
+                      children: [
+                        Text(
+                          isAr ? 'عرض الكل' : 'View all',
+                          style: TextStyle(
+                            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 3),
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 11,
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        // Compact Clean Cards with Shadow on Active (no border on active, no clipping!)
+        SizedBox(
+          height: 104,
+          child: ListView.separated(
+            controller: _walletsScrollController,
+            clipBehavior: Clip.none,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            itemCount: wallets.length + 1,
+            separatorBuilder: (context, index) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              if (index == wallets.length) {
+                // Sleek "+ Add" Card
+                return Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _showAddAccountModal,
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      width: 60,
+                      decoration: BoxDecoration(
+                        color: isDarkMode ? const Color(0xFF131317) : const Color(0xFFF8F9FB),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDarkMode ? const Color(0xFF222228) : const Color(0xFFE5E7EB),
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.add_rounded,
+                              size: 16,
+                              color: isDarkMode ? Colors.white : Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            isAr ? 'إضافة' : 'Add',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              final acc = wallets[index];
+              final isSelected = acc.id == _selectedAccountId;
+
+              return Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() {
+                      _heroSlideFromLeft = false;
+                      _selectedAccountId = acc.id;
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(16),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    width: 156,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? (isDarkMode ? const Color(0xFF1C1C24) : Colors.white)
+                          : (isDarkMode ? const Color(0xFF131317) : const Color(0xFFF9FAFC)),
+                      borderRadius: BorderRadius.circular(16),
+                      // NO border when active, shadow only!
+                      border: isSelected
+                          ? null
+                          : Border.all(
+                              color: isDarkMode ? const Color(0xFF222228) : const Color(0xFFEBECEF),
+                              width: 1,
+                            ),
+                      boxShadow: isSelected
+                          ? [
+                              // Ambient 360-degree soft black shadow: clearly defines all 4 edges against bg
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: isDarkMode ? 0.45 : 0.09),
+                                blurRadius: 12,
+                                spreadRadius: 1,
+                                offset: Offset.zero,
+                              ),
+                              // Directional depth shadow
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: isDarkMode ? 0.60 : 0.12),
+                                blurRadius: 16,
+                                offset: const Offset(0, 5),
+                              ),
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: isDarkMode ? 0.30 : 0.05),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              ),
+                            ]
+                          : [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: isDarkMode ? 0.15 : 0.03),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Top Row: Icon + Title next to it
+                        Row(
+                          children: [
+                            Container(
+                              width: 26,
+                              height: 26,
+                              decoration: BoxDecoration(
+                                color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: isSelected ? 0.12 : 0.06),
+                                borderRadius: BorderRadius.circular(7),
+                              ),
+                              child: Icon(
+                                acc.icon,
+                                color: isDarkMode ? Colors.white : Colors.black,
+                                size: 14,
+                              ),
+                            ),
+                            const SizedBox(width: 7),
+                            Expanded(
+                              child: Text(
+                                acc.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                                  color: isDarkMode
+                                      ? (isSelected ? Colors.white : Colors.grey[300])
+                                      : (isSelected ? Colors.black : Colors.grey[800]),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        // Bottom: Balance & Currency under the icon
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
+                          child: _buildBlurrableNumber(
+                            acc.balance,
+                            TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w900,
+                              color: isDarkMode ? Colors.white : Colors.black,
+                              letterSpacing: -0.3,
+                            ),
+                            hideService.isHidden,
+                            currencyCode: acc.currency,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+  //#endregion
+
   Widget _buildAutoTrackingBanner(bool isDarkMode) {
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
 
@@ -1259,12 +2803,11 @@ mixin _HomeTabWidgets on _HomeTabState {
       (
         id: 'auto_track',
         icon: Icons.bolt_rounded,
-        iconColor: const Color(0xFF10B981),
         title: isAr ? 'تتبع المصاريف تلقائياً' : 'Track spending automatically',
         subtitle: isAr
-            ? 'من رسائل البنك وإشعارات التطبيقات، محفظتي تسجل كل حركة شراء تلقائياً.'
-            : "From your bank's texts or app notifications. Mahfazti logs every purchase for you.",
-        actionText: isAr ? 'تفعيل التتبع التلقائي' : 'Set Up Auto-Tracking',
+            ? 'سجّل مشترياتك ومعاملاتك من إشعارات ورسائل البنوك تلقائياً وبدقة دون الحاجة لإدخالها يدوياً كل مرة'
+            : 'Automatically sync and log your transactions from bank SMS and alerts with zero manual entry required',
+        actionText: isAr ? 'تفعيل الآن' : 'Set Up',
         onTap: () {
           MessageService.showSuccess(
             context: context,
@@ -1277,34 +2820,31 @@ mixin _HomeTabWidgets on _HomeTabState {
       (
         id: 'salary',
         icon: Icons.payments_rounded,
-        iconColor: const Color(0xFF3B82F6),
         title: isAr ? 'أضف راتبك ومصادر دخلك' : 'Add your salary & income',
         subtitle: isAr
-            ? 'سجّل راتبك ومواعيد نزوله لتوقع رصيدك بدقة والتخطيط لمصاريف الشهر.'
-            : 'Record your monthly salary to predict cash flow and plan your savings ahead.',
-        actionText: isAr ? 'إضافة راتب / دخل' : 'Add Salary',
+            ? 'حدّد موعد نزول دخلك الشهري والمصادر الإضافية لتوقع صافي التدفق المالي والتخطيط لمدخراتك مبكراً'
+            : 'Schedule your monthly salary and additional income streams to forecast cash flow and plan your savings',
+        actionText: isAr ? 'إضافة دخل' : 'Add Salary',
         onTap: () => _showUnifiedAddModal(),
       ),
       (
         id: 'accounts',
         icon: Icons.account_balance_wallet_rounded,
-        iconColor: const Color(0xFF8B5CF6),
         title: isAr ? 'نظّم محافظك وبطاقاتك' : 'Organize your accounts',
         subtitle: isAr
-            ? 'أضف بطاقاتك البنكية ومحفظة الكاش لترى صافي ثروتك مجمعة في مكان واحد.'
-            : 'Add your bank cards and cash wallets to see your total net worth at a glance.',
-        actionText: isAr ? 'إضافة محفظة أو بطاقة' : 'Add Account',
+            ? 'اجمع بطاقاتك البنكية، محافظك الإلكترونية ونقد الكاش في مكان واحد لمتابعة إجمالي ثروتك لحظة بلحظة'
+            : 'Consolidate bank cards, e-wallets, and cash accounts in one unified space to see your total net worth',
+        actionText: isAr ? 'إضافة محفظة' : 'Add Account',
         onTap: () => _showAddAccountModal(),
       ),
       (
         id: 'budget',
         icon: Icons.pie_chart_rounded,
-        iconColor: const Color(0xFFF59E0B),
         title: isAr ? 'حدد ميزانية لمصاريفك' : 'Set a monthly budget',
         subtitle: isAr
-            ? 'حدد سقف مصاريفك لكل فئة وتجنب الإنفاق الزائد مع تنبيهات ذكية.'
-            : 'Set monthly spending caps for categories and get notified before overspending.',
-        actionText: isAr ? 'تحديد الميزانية' : 'Create Budget',
+            ? 'ضع سقفاً ذكياً للإنفاق على المطاعم والتسوق والفواتير لتصلك تنبيهات مبكرة قبل تجاوز الميزانية المحددة'
+            : 'Set smart spending limits for dining, shopping, and bills to receive early warnings before overspending',
+        actionText: isAr ? 'تحديد ميزانية' : 'Create Budget',
         onTap: () {
           MessageService.showSuccess(
             context: context,
@@ -1375,7 +2915,7 @@ mixin _HomeTabWidgets on _HomeTabState {
         const SizedBox(height: 12),
         // Horizontal Swipeable Cards
         SizedBox(
-          height: 178,
+          height: 138,
           child: PageView.builder(
             key: ValueKey('get_started_${_dismissedGetStartedCards.length}'),
             controller: _getStartedPageController,
@@ -1400,108 +2940,153 @@ mixin _HomeTabWidgets on _HomeTabState {
                     padding: const EdgeInsets.symmetric(horizontal: 5),
                     child: Container(
                       key: ValueKey(card.id),
-                      padding: const EdgeInsets.all(16),
+                      clipBehavior: Clip.antiAlias,
                       decoration: BoxDecoration(
-                        color: isDarkMode ? const Color(0xFF18181B) : Colors.white,
-                        borderRadius: BorderRadius.circular(20),
+                        color: isDarkMode ? const Color(0xFF16161B) : Colors.white,
+                        borderRadius: BorderRadius.circular(18),
                         border: Border.all(
-                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                          color: isDarkMode ? const Color(0xFF26262E) : const Color(0xFFE8EAEE),
                           width: 1,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
+                            color: Colors.black.withValues(alpha: isDarkMode ? 0.40 : 0.06),
+                            blurRadius: 12,
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Stack(
                         children: [
-                          // Top Row: Icon + Title + Individual Dismiss 'x'
-                          Row(
-                            children: [
-                              Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: card.iconColor.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
+                          // Subtle background watermark icon at the trailing bottom edge
+                          PositionedDirectional(
+                            end: -10,
+                            bottom: -12,
+                            child: IgnorePointer(
+                              child: Opacity(
+                                opacity: isDarkMode ? 0.05 : 0.035,
                                 child: Icon(
                                   card.icon,
-                                  color: card.iconColor,
-                                  size: 19,
+                                  size: 100,
+                                  color: isDarkMode ? Colors.white : Colors.black,
                                 ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  card.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 14.5,
-                                    fontWeight: FontWeight.w800,
-                                    color: isDarkMode ? Colors.white : Colors.black,
-                                    letterSpacing: -0.2,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              InkWell(
-                                onTap: () => _dismissGetStartedCard(card.id, index, cards.length),
-                                borderRadius: BorderRadius.circular(12),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(4),
-                                  child: Icon(
-                                    Icons.close_rounded,
-                                    size: 17,
-                                    color: isDarkMode ? Colors.grey[500] : Colors.grey[400],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          // Subtitle
-                          Expanded(
-                            child: Text(
-                              card.subtitle,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                height: 1.4,
-                                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                               ),
                             ),
                           ),
-                          const SizedBox(height: 12),
-                          // Action Button
-                          Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: card.onTap,
-                              borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                height: 38,
-                                decoration: BoxDecoration(
-                                  color: isDarkMode ? Colors.white : Colors.black,
-                                  borderRadius: BorderRadius.circular(12),
+
+                          // Main Card Content
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                // Top area: Header + Subtitle
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Top Row: Icon badge + Title + Close button
+                                    Row(
+                                      children: [
+                                        Container(
+                                          width: 30,
+                                          height: 30,
+                                          decoration: BoxDecoration(
+                                            color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.07),
+                                            borderRadius: BorderRadius.circular(9),
+                                            border: Border.all(
+                                              color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.07),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            card.icon,
+                                            color: isDarkMode ? Colors.white : Colors.black,
+                                            size: 16,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 9),
+                                        Expanded(
+                                          child: Text(
+                                            card.title,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w800,
+                                              color: isDarkMode ? Colors.white : Colors.black,
+                                              letterSpacing: -0.2,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        InkWell(
+                                          onTap: () => _dismissGetStartedCard(card.id, index, cards.length),
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(4),
+                                            child: Icon(
+                                              Icons.close_rounded,
+                                              size: 16,
+                                              color: isDarkMode ? Colors.grey[500] : Colors.grey[400],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 5),
+                                    // Subtitle
+                                    Text(
+                                      card.subtitle,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        height: 1.3,
+                                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                child: Center(
-                                  child: Text(
-                                    card.actionText,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w800,
-                                      color: isDarkMode ? Colors.black : Colors.white,
+
+                                // Bottom: Slightly larger Action Pill near the border
+                                Align(
+                                  alignment: AlignmentDirectional.centerStart,
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: card.onTap,
+                                      borderRadius: BorderRadius.circular(9),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                                        decoration: BoxDecoration(
+                                          color: isDarkMode ? Colors.white : Colors.black,
+                                          borderRadius: BorderRadius.circular(9),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              card.actionText,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w800,
+                                                color: isDarkMode ? Colors.black : Colors.white,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 5),
+                                            Icon(
+                                              isAr ? Icons.arrow_back_rounded : Icons.arrow_forward_rounded,
+                                              size: 13,
+                                              color: isDarkMode ? Colors.black : Colors.white,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
+                              ],
                             ),
                           ),
                         ],
@@ -1576,10 +3161,21 @@ mixin _HomeTabWidgets on _HomeTabState {
             ],
           ),
           const SizedBox(height: 12),
-          if (transactions.isEmpty)
-            _buildEmptyState(isDarkMode)
-          else
-            ...transactions.take(4).map((t) => _buildTransactionCard(t, isDarkMode)),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            child: KeyedSubtree(
+              key: ValueKey('tx_list_$_selectedAccountId'),
+              child: transactions.isEmpty
+                  ? _buildEmptyState(isDarkMode)
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: transactions
+                          .take(4)
+                          .map((t) => _buildTransactionCard(t, isDarkMode))
+                          .toList(),
+                    ),
+            ),
+          ),
         ],
       ),
     );
@@ -2048,7 +3644,9 @@ mixin _HomeTabWidgets on _HomeTabState {
             _buildBlurrableNumber(
               transaction.amount,
               TextStyle(
-                color: isIncome ? const Color(0xFF34D399) : (isDarkMode ? Colors.white : Colors.black),
+                color: isIncome
+                    ? (isDarkMode ? const Color(0xFF10B981) : const Color(0xFF059669))
+                    : (isDarkMode ? const Color(0xFFEF4444) : const Color(0xFFDC2626)),
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.3,
@@ -2175,8 +3773,8 @@ mixin _HomeTabWidgets on _HomeTabState {
   //#endregion
 
   //#region Blur Number Helper
-  Widget _buildBlurrableNumber(double amount, TextStyle style, bool blurred, {String prefix = ''}) {
-    final formatted = '$prefix${_formatAmount(amount)}';
+  Widget _buildBlurrableNumber(double amount, TextStyle style, bool blurred, {String prefix = '', String? currencyCode}) {
+    final formatted = '$prefix${_formatAmount(amount, currencyCode: currencyCode)}';
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: blurred ? 0 : 8, end: blurred ? 8 : 0),
       duration: const Duration(milliseconds: 250),

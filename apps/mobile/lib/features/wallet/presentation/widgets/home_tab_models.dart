@@ -21,6 +21,9 @@ class AccountItem {
   final double expense;
   final IconData icon;
   final bool isAll;
+  final bool isMain;
+  final String? accountNumber;
+  final String currency;
 
   const AccountItem({
     required this.id,
@@ -31,5 +34,8 @@ class AccountItem {
     this.expense = 0.0,
     required this.icon,
     this.isAll = false,
+    this.isMain = false,
+    this.accountNumber,
+    this.currency = 'EGP',
   });
 }

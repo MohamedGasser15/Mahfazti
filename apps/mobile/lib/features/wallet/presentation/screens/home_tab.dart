@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:cupertino_calendar_picker/cupertino_calendar_picker.dart';
 import 'package:cupertino_native_better/cupertino_native_better.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -47,7 +48,9 @@ abstract class _HomeTabState extends State<HomeTab> {
   List<Category> _categories = [];
   String? _currencyCode;
 
-  String _selectedAccountId = 'all';
+  String _selectedAccountId = 'bank';
+  String _mainAccountId = 'bank';
+  final List<AccountItem> _customAccounts = [];
   DateTime _startDate = DateTime(DateTime.now().year, DateTime.now().month, 1);
   DateTime _endDate = DateTime(DateTime.now().year, DateTime.now().month + 1, 0);
   bool _showAutoTrackingBanner = true;
@@ -56,6 +59,7 @@ abstract class _HomeTabState extends State<HomeTab> {
   String? _animatingDismissCardId;
   bool _isDismissingCard = false;
   PageController _getStartedPageController = PageController(viewportFraction: 0.90);
+  final ScrollController _walletsScrollController = ScrollController();
   //#endregion
 
   //#region Lifecycle
@@ -71,6 +75,7 @@ abstract class _HomeTabState extends State<HomeTab> {
   @override
   void dispose() {
     _getStartedPageController.dispose();
+    _walletsScrollController.dispose();
     super.dispose();
   }
   //#endregion
@@ -92,15 +97,8 @@ abstract class _HomeTabState extends State<HomeTab> {
         expense: expense,
         icon: Icons.account_balance_wallet_rounded,
         isAll: true,
-      ),
-      AccountItem(
-        id: 'cash',
-        name: isAr ? 'كاش (الجيب)' : 'Cash Wallet',
-        type: 'cash',
-        balance: balance * 0.18,
-        income: income * 0.1,
-        expense: expense * 0.35,
-        icon: Icons.payments_rounded,
+        isMain: _mainAccountId == 'all',
+        currency: _currencyCode ?? 'EGP',
       ),
       AccountItem(
         id: 'bank',
@@ -110,6 +108,21 @@ abstract class _HomeTabState extends State<HomeTab> {
         income: income * 0.8,
         expense: expense * 0.45,
         icon: Icons.account_balance_rounded,
+        isMain: _mainAccountId == 'bank',
+        accountNumber: '•••• 8920',
+        currency: 'EGP',
+      ),
+      AccountItem(
+        id: 'cash',
+        name: isAr ? 'كاش (الجيب)' : 'Cash Wallet',
+        type: 'cash',
+        balance: balance * 0.18,
+        income: income * 0.1,
+        expense: expense * 0.35,
+        icon: Icons.payments_rounded,
+        isMain: _mainAccountId == 'cash',
+        accountNumber: isAr ? 'نقدية' : 'Cash',
+        currency: 'USD',
       ),
       AccountItem(
         id: 'ewallet',
@@ -119,8 +132,39 @@ abstract class _HomeTabState extends State<HomeTab> {
         income: income * 0.1,
         expense: expense * 0.2,
         icon: Icons.phone_iphone_rounded,
+        isMain: _mainAccountId == 'ewallet',
+        accountNumber: '010 •••• 567',
+        currency: 'EGP',
       ),
+      ..._customAccounts,
     ];
+  }
+
+  List<AccountItem> get _walletsCarouselList {
+    final list = _accounts.where((a) => !a.isAll).toList();
+    list.sort((a, b) {
+      if (a.isMain && !b.isMain) return -1;
+      if (!a.isMain && b.isMain) return 1;
+      return 0;
+    });
+    return list;
+  }
+
+  void _syncWalletsCarouselToSelected() {
+    if (!_walletsScrollController.hasClients) return;
+    final wallets = _walletsCarouselList;
+    final targetIndex = wallets.indexWhere((a) => a.id == _selectedAccountId);
+    if (targetIndex != -1) {
+      final targetOffset = (targetIndex * (168.0 + 10.0)).clamp(
+        0.0,
+        _walletsScrollController.position.maxScrollExtent,
+      );
+      _walletsScrollController.animateTo(
+        targetOffset,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    }
   }
 
   AccountItem get _selectedAccount {
@@ -145,6 +189,7 @@ abstract class _HomeTabState extends State<HomeTab> {
       _heroSlideFromLeft = isRtl;
       _selectedAccountId = accounts[nextIndex].id;
     });
+    _syncWalletsCarouselToSelected();
   }
 
   void _switchToPreviousAccount({bool isRtl = false}) {
@@ -158,6 +203,7 @@ abstract class _HomeTabState extends State<HomeTab> {
       _heroSlideFromLeft = !isRtl;
       _selectedAccountId = accounts[prevIndex].id;
     });
+    _syncWalletsCarouselToSelected();
   }
   //#endregion
 
@@ -270,8 +316,18 @@ abstract class _HomeTabState extends State<HomeTab> {
   //#endregion
 
   //#region Filter Helpers
-  List<WalletTransaction> get _filteredTransactions =>
-      _homeData?.recentTransactions ?? [];
+  List<WalletTransaction> get _filteredTransactions {
+    final all = _homeData?.recentTransactions ?? [];
+    if (_selectedAccountId == 'all') return all;
+
+    final accountsList = _accounts.where((a) => !a.isAll).map((a) => a.id).toList();
+    final index = accountsList.indexOf(_selectedAccountId);
+    if (index == -1) return all;
+
+    final total = accountsList.length;
+    final filtered = all.where((t) => (t.id % total) == index).toList();
+    return filtered;
+  }
 
 
   String get _formattedDateRange {
@@ -281,10 +337,6 @@ abstract class _HomeTabState extends State<HomeTab> {
     return '$startStr - $endStr';
   }
 
-  double get _totalSpentAmount {
-    final account = _selectedAccount;
-    return account.expense;
-  }
   //#endregion
 
   //#region Transaction Actions
@@ -318,6 +370,7 @@ abstract class _HomeTabState extends State<HomeTab> {
 
   //#region Cross-Mixin Abstract Declarations
   Widget _buildSayHeroSection(bool isDarkMode, HideBalanceService hideService);
+  Widget _buildWalletsCarousel(bool isDarkMode, HideBalanceService hideService);
   Widget _buildAutoTrackingBanner(bool isDarkMode);
   Widget _buildRecentTransactionsSection(bool isDarkMode);
   Widget _buildInsightsGridSection(bool isDarkMode, HideBalanceService hideService);
@@ -399,6 +452,12 @@ abstract class _HomeTabState extends State<HomeTab> {
                               : const SizedBox.shrink(),
                         ),
 
+                        // Wallets Carousel (Displayed if user has multiple accounts/wallets)
+                        if (_accounts.where((a) => !a.isAll).length > 1) ...[
+                          _buildWalletsCarousel(isDarkMode, hideService),
+                          const SizedBox(height: 20),
+                        ],
+
                         // Recent Transactions Section
                         _buildRecentTransactionsSection(isDarkMode),
 
@@ -421,7 +480,16 @@ abstract class _HomeTabState extends State<HomeTab> {
   }
 
   //#region Formatting Helpers
-  String _formatAmount(double amount) {
+  String _formatAmount(double amount, {String? currencyCode}) {
+    if (currencyCode != null) {
+      final code = currencyCode.toUpperCase();
+      final formatter = NumberFormat('#,##0.00', 'en_US');
+      final formattedNum = formatter.format(amount.abs());
+      final isNegative = amount < 0;
+      final sign = isNegative ? '-' : '';
+      return '$sign$formattedNum $code';
+    }
+
     final symbol = currencySymbols[_currencyCode ?? 'USD'] ?? '\$';
     final formatter = NumberFormat('#,##0.00', 'en_US');
     return '$symbol ${formatter.format(amount)}';
