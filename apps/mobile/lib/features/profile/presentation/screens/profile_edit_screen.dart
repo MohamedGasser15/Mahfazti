@@ -2,6 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:my_wallet/core/widgets/app_back_button.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/utils/app_responsive.dart';
@@ -352,8 +354,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
     final l10n = context.l10n;
     final bgColor = isDarkMode ? const Color(0xFF09090B) : const Color(0xFFF8F8FA);
-    final borderColor = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
-    final iconBgColor = isDarkMode ? const Color(0xFF141418) : Colors.white;
 
     final initials = _getInitials(_fullNameController.text);
 
@@ -364,8 +364,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           l10n.personalDetails,
           style: TextStyle(
             fontSize: 17,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.2,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.3,
             color: isDarkMode ? Colors.white : const Color(0xFF09090B),
           ),
         ),
@@ -373,76 +373,44 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: true,
-        leading: Center(
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () {
-                HapticFeedback.selectionClick();
-                Navigator.pop(context);
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: iconBgColor,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: borderColor, width: 1),
-                ),
-                child: Center(
-                  child: Transform.scale(
-                    scaleX: isArabic ? -1 : 1,
-                    child: Icon(
-                      Icons.arrow_back_ios_new_rounded,
-                      size: 15,
-                      color: isDarkMode ? Colors.white : const Color(0xFF09090B),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
+        leading: const AppGlassBackButton(),
         actions: [
           if (_hasChanges)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Center(
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: _resetForm,
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F6),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
-                          width: 0.8,
+                child: GlassButton.custom(
+                  onTap: _resetForm,
+                  height: 32,
+                  shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+                  useOwnLayer: true,
+                  settings: LiquidGlassSettings(
+                    thickness: 14,
+                    blur: 10,
+                    glassColor: isDarkMode
+                        ? Colors.white.withValues(alpha: 0.12)
+                        : Colors.white.withValues(alpha: 0.85),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.undo_rounded,
+                          size: 13,
+                          color: isDarkMode ? Colors.white : const Color(0xFF09090B),
                         ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.undo_rounded,
-                            size: 13,
+                        const SizedBox(width: 4),
+                        Text(
+                          isArabic ? 'تراجع' : 'Reset',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
                             color: isDarkMode ? Colors.white : const Color(0xFF09090B),
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            isArabic ? 'تراجع' : 'Reset',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: isDarkMode ? Colors.white : const Color(0xFF09090B),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

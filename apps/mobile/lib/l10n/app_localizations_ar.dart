@@ -1240,4 +1240,10 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get appLockLockedMessage =>
       'قم بتأكيد هويتك للوصول إلى بياناتك المالية';
+
+  @override
+  String get budgets => 'الميزانيات';
+
+  @override
+  String get subscriptions => 'الاشتراكات';
 }

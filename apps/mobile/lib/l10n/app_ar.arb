@@ -385,5 +385,7 @@
   "appLockPrompt": "قم بالمصادقة للوصول إلى محفظتي",
   "appLockUnlock": "فتح القفل",
   "appLockLockedTitle": "محفظتي مقفل",
-  "appLockLockedMessage": "قم بتأكيد هويتك للوصول إلى بياناتك المالية"
+  "appLockLockedMessage": "قم بتأكيد هويتك للوصول إلى بياناتك المالية",
+  "budgets": "الميزانيات",
+  "subscriptions": "الاشتراكات"
 }

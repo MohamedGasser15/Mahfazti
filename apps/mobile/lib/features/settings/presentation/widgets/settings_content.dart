@@ -1,8 +1,9 @@
 import 'dart:io';
-import 'package:cupertino_native_better/cupertino_native_better.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ios_adaptive_context_menu/ios_adaptive_context_menu.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:my_wallet/core/constants/app_routes.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/app_lock_service.dart';
@@ -467,21 +468,127 @@ class _SettingsContentState extends State<SettingsContent> {
     MessageService.showInfo(context: context, message: context.l10n.featureComingSoon);
   }
 
-  // Theme Toggle (Native CupertinoSwitch)
-  Widget _buildThemeToggle(bool isDarkMode) {
-    final isDark = _currentTheme == ThemeService.dark || (_currentTheme == ThemeService.system && isDarkMode);
-    return CupertinoSwitch(
-      value: isDark,
-      activeTrackColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
-      thumbColor: isDark
-          ? (isDarkMode ? const Color(0xFF09090B) : Colors.white)
-          : null,
-      onChanged: (value) {
-        HapticFeedback.selectionClick();
-        final newTheme = value ? ThemeService.dark : ThemeService.light;
-        setState(() => _currentTheme = newTheme);
-        _setTheme(newTheme);
-      },
+  // Adaptive Glass Switch with RTL/LTR normalization
+  Widget _buildAdaptiveGlassSwitch({
+    required bool value,
+    required ValueChanged<bool> onChanged,
+    required bool isDarkMode,
+    Color? activeColor,
+  }) {
+    if (!Platform.isIOS) {
+      return CupertinoSwitch(
+        value: value,
+        activeTrackColor: activeColor ??
+            (isDarkMode ? Colors.white : const Color(0xFF09090B)),
+        thumbColor: value
+            ? (isDarkMode ? const Color(0xFF09090B) : Colors.white)
+            : null,
+        onChanged: onChanged,
+      );
+    }
+
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Transform.flip(
+        flipX: isRtl,
+        child: GlassSwitch(
+          value: value,
+          useOwnLayer: true,
+          width: 68.0,
+          height: 32.0,
+          activeColor: activeColor ??
+              (isDarkMode
+                  ? const Color(0xFF6366F1).withValues(alpha: 0.75)
+                  : const Color(0xFF10B981).withValues(alpha: 0.85)),
+          inactiveColor: isDarkMode
+              ? Colors.white.withValues(alpha: 0.18)
+              : Colors.black.withValues(alpha: 0.10),
+          thumbColor: Colors.white,
+          settings: LiquidGlassSettings(
+            thickness: 24,
+            blur: 16,
+            glassColor: isDarkMode
+                ? Colors.white.withValues(alpha: 0.25)
+                : Colors.white.withValues(alpha: 0.38),
+          ),
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+
+  // Theme Dropdown (Native iOS UIMenu on iOS / Material PopupMenuButton on Android)
+  Widget _buildThemeDropdown(bool isDarkMode) {
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    String themeLabel;
+    if (_currentTheme == ThemeService.dark) {
+      themeLabel = isAr ? 'داكن' : 'Dark';
+    } else if (_currentTheme == ThemeService.light) {
+      themeLabel = isAr ? 'فاتح' : 'Light';
+    } else {
+      themeLabel = isAr ? 'تلقائي (النظام)' : 'System';
+    }
+
+    return Container(
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+          width: 1,
+        ),
+      ),
+      child: IosSingleTapContextMenu(
+        actions: [
+          IosContextMenuAction(
+            id: ThemeService.light,
+            title: isAr ? 'فاتح' : 'Light',
+            iconSystemName: 'sun.max',
+            showTrailingCheckmark: _currentTheme == ThemeService.light,
+          ),
+          IosContextMenuAction(
+            id: ThemeService.dark,
+            title: isAr ? 'داكن' : 'Dark',
+            iconSystemName: 'moon',
+            showTrailingCheckmark: _currentTheme == ThemeService.dark,
+          ),
+          const IosContextMenuDivider(),
+          IosContextMenuAction(
+            id: ThemeService.system,
+            title: isAr ? 'تلقائي (النظام)' : 'System',
+            iconSystemName: 'circle.lefthalf.filled',
+            showTrailingCheckmark: _currentTheme == ThemeService.system,
+          ),
+        ],
+        onSelected: (id) {
+          HapticFeedback.selectionClick();
+          setState(() => _currentTheme = id);
+          _setTheme(id);
+        },
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              themeLabel,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 16,
+              color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -503,45 +610,48 @@ class _SettingsContentState extends State<SettingsContent> {
             width: 1,
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CNPopupMenuButton(
-              buttonLabel: currentLanguageLabel,
-              height: 28,
-              tint: isDarkMode ? Colors.white : const Color(0xFF09090B),
-              shrinkWrap: true,
-              buttonStyle: CNButtonStyle.plain,
-              items: [
-                CNPopupMenuItem(
-                  label: 'العربية',
-                  icon: const CNSymbol('globe', size: 16.0),
-                  checked: !_isEnglish,
-                ),
-                CNPopupMenuItem(
-                  label: 'English',
-                  icon: const CNSymbol('globe', size: 16.0),
-                  checked: _isEnglish,
-                ),
-              ],
-              onSelected: (index) {
-                HapticFeedback.selectionClick();
-                if (index == 0) {
-                  _switchToArabic();
-                } else if (index == 1) {
-                  _switchToEnglish();
-                }
-              },
+        child: IosSingleTapContextMenu(
+          actions: [
+            IosContextMenuAction(
+              id: 'ar',
+              title: 'العربية',
+              iconSystemName: 'globe',
+              showTrailingCheckmark: !_isEnglish,
             ),
-            const SizedBox(width: 2),
-            IgnorePointer(
-              child: Icon(
+            IosContextMenuAction(
+              id: 'en',
+              title: 'English',
+              iconSystemName: 'globe',
+              showTrailingCheckmark: _isEnglish,
+            ),
+          ],
+          onSelected: (id) {
+            HapticFeedback.selectionClick();
+            if (id == 'ar') {
+              _switchToArabic();
+            } else if (id == 'en') {
+              _switchToEnglish();
+            }
+          },
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                currentLanguageLabel,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
                 Icons.keyboard_arrow_down_rounded,
                 size: 16,
                 color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }
@@ -1034,13 +1144,7 @@ class _SettingsContentState extends State<SettingsContent> {
           iconColor: isDarkMode ? const Color(0xFF8B5CF6) : const Color(0xFFF59E0B),
           title: context.l10n.darkMode,
           subtitle: isDarkMode ? context.l10n.dark : context.l10n.light,
-          trailing: _buildThemeToggle(isDarkMode),
-          onTap: () {
-            HapticFeedback.selectionClick();
-            final newTheme = isDarkMode ? ThemeService.light : ThemeService.dark;
-            setState(() => _currentTheme = newTheme);
-            _setTheme(newTheme);
-          },
+          trailing: _buildThemeDropdown(isDarkMode),
         ),
         _buildSettingTile(
           isDarkMode: isDarkMode,
@@ -1136,12 +1240,9 @@ class _SettingsContentState extends State<SettingsContent> {
           iconColor: const Color(0xFFF59E0B),
           title: context.l10n.hideBalances,
           subtitle: context.l10n.hideYourBalancesForPrivacy,
-          trailing: CupertinoSwitch(
+          trailing: _buildAdaptiveGlassSwitch(
             value: hideService.isHidden,
-            activeTrackColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
-            thumbColor: hideService.isHidden
-                ? (isDarkMode ? const Color(0xFF09090B) : Colors.white)
-                : null,
+            isDarkMode: isDarkMode,
             onChanged: (value) => hideService.setHidden(value),
           ),
           showDivider: true,
@@ -1152,12 +1253,9 @@ class _SettingsContentState extends State<SettingsContent> {
           iconColor: const Color(0xFF6366F1),
           title: context.l10n.appLock,
           subtitle: context.l10n.appLockSubtitle,
-          trailing: CupertinoSwitch(
+          trailing: _buildAdaptiveGlassSwitch(
             value: appLockService.isEnabled,
-            activeTrackColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
-            thumbColor: appLockService.isEnabled
-                ? (isDarkMode ? const Color(0xFF09090B) : Colors.white)
-                : null,
+            isDarkMode: isDarkMode,
             onChanged: (value) async {
               final success = await appLockService.setAppLock(
                 value,

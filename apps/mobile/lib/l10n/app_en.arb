@@ -385,5 +385,7 @@
   "appLockPrompt": "Authenticate to access Mahfazti",
   "appLockUnlock": "Unlock",
   "appLockLockedTitle": "Mahfazti is Locked",
-  "appLockLockedMessage": "Authenticate to access your wallet and transactions"
+  "appLockLockedMessage": "Authenticate to access your wallet and transactions",
+  "budgets": "Budgets",
+  "subscriptions": "Subscriptions"
 }

@@ -1247,4 +1247,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get appLockLockedMessage =>
       'Authenticate to access your wallet and transactions';
+
+  @override
+  String get budgets => 'Budgets';
+
+  @override
+  String get subscriptions => 'Subscriptions';
 }

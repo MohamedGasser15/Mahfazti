@@ -5,6 +5,7 @@ import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
+import 'package:my_wallet/core/widgets/app_back_button.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 
 class CurrencySelectionScreen extends StatefulWidget {
@@ -197,7 +198,6 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isRTL = Directionality.of(context) == TextDirection.rtl;
     final isDark = theme.brightness == Brightness.dark;
 
     return PopScope(
@@ -211,12 +211,7 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          leading: IconButton(
-            icon: Icon(
-              isRTL ? Icons.arrow_forward_ios : Icons.arrow_back_ios,
-              size: 20,
-              color: theme.colorScheme.onSurface,
-            ),
+          leading: AppGlassBackButton(
             onPressed: _handleBack,
           ),
           actions: [

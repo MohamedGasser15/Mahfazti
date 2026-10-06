@@ -8,6 +8,7 @@ import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/services/social_auth_service.dart';
 import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
+import 'package:my_wallet/core/widgets/app_back_button.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 import 'package:my_wallet/features/auth/presentation/widgets/auth_header.dart';
 import 'package:my_wallet/features/auth/presentation/widgets/forgot_password_sheet.dart';
@@ -351,43 +352,24 @@ class _EmailScreenState extends State<EmailScreen>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final isRTL = Directionality.of(context) == TextDirection.rtl;
 
     return Scaffold(
       backgroundColor: isDark ? Colors.black : const Color(0xFFF9FAFB),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: Padding(
-          padding: const EdgeInsetsDirectional.only(start: 12),
-          child: IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isDark ? Colors.white12 : Colors.grey.shade200,
-                ),
-              ),
-              child: Icon(
-                isRTL ? Icons.arrow_forward_ios_rounded : Icons.arrow_back_ios_rounded,
-                size: 16,
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-            onPressed: () {
-              if (_registerStep > 0 && !_isLoginTab) {
-                setState(() => _registerStep--);
-              } else {
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  AppRoutes.onboarding,
-                  (route) => false,
-                );
-              }
-            },
-          ),
+        leading: AppGlassBackButton(
+          onPressed: () {
+            if (_registerStep > 0 && !_isLoginTab) {
+              setState(() => _registerStep--);
+            } else {
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                AppRoutes.onboarding,
+                (route) => false,
+              );
+            }
+          },
         ),
       ),
       body: SafeArea(
