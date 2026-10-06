@@ -1,12 +1,13 @@
 import 'dart:io';
-import 'package:cupertino_native_better/cupertino_native_better.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:real_liquid_glass/real_liquid_glass.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/analytics_screen.dart';
+import 'package:my_wallet/features/wallet/presentation/screens/budgets_tab.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/home_tab.dart';
-import 'package:my_wallet/features/wallet/presentation/screens/insights_tab.dart';
-import 'package:my_wallet/features/wallet/presentation/screens/transactions_page.dart';
+import 'package:my_wallet/features/wallet/presentation/screens/subscriptions_tab.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,11 +26,55 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  void _navigateToTab(int index) {
+    setState(() => _currentIndex = index);
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeInOutCubic,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final isIOS = Platform.isIOS;
     final l10n = context.l10n;
+
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+
+    final baseTabItems = [
+      LiquidGlassBarItem(
+        icon: CupertinoIcons.creditcard,
+        selectedIcon: CupertinoIcons.creditcard_fill,
+        sfSymbol: 'wallet.pass',
+        selectedSfSymbol: 'wallet.pass.fill',
+        label: l10n.wallet,
+      ),
+      LiquidGlassBarItem(
+        icon: CupertinoIcons.chart_pie,
+        selectedIcon: CupertinoIcons.chart_pie_fill,
+        sfSymbol: 'chart.pie',
+        selectedSfSymbol: 'chart.pie.fill',
+        label: l10n.analytics,
+      ),
+      LiquidGlassBarItem(
+        icon: CupertinoIcons.chart_bar_alt_fill,
+        selectedIcon: CupertinoIcons.chart_bar_fill,
+        sfSymbol: 'chart.bar.xaxis',
+        selectedSfSymbol: 'chart.bar.xaxis',
+        label: l10n.budgets,
+      ),
+      LiquidGlassBarItem(
+        icon: CupertinoIcons.arrow_2_squarepath,
+        selectedIcon: CupertinoIcons.arrow_2_squarepath,
+        sfSymbol: 'arrow.2.squarepath',
+        selectedSfSymbol: 'arrow.2.squarepath',
+        label: l10n.subscriptions,
+      ),
+    ];
+    final displayItems = isRtl ? baseTabItems.reversed.toList() : baseTabItems;
+    final activeIndex = isRtl ? (baseTabItems.length - 1 - _currentIndex) : _currentIndex;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -40,47 +85,29 @@ class _HomeScreenState extends State<HomeScreen> {
           PageView(
             controller: _pageController,
             physics: const NeverScrollableScrollPhysics(),
-            children: const [
-              RepaintBoundary(child: HomeTab()),
-              RepaintBoundary(child: InsightsPage()),
-              RepaintBoundary(child: AnalyticsScreen()),
-              RepaintBoundary(child: TransactionsTab()),
+            children: [
+              RepaintBoundary(child: HomeTab(onNavigateToTab: _navigateToTab)),
+              const RepaintBoundary(child: AnalyticsScreen()),
+              const RepaintBoundary(child: BudgetsTab()),
+              const RepaintBoundary(child: SubscriptionsTab()),
             ],
           ),
           if (isIOS)
             Positioned(
               left: 20,
               right: 20,
-              bottom: 1,
-              child: CNTabBar(
-                iconSize: 20.0,
-                autoHideOnPageTransition: false,
-                items: [
-                  CNTabBarItem(
-                    label: l10n.wallet,
-                    icon: const CNSymbol('wallet.pass', size: 20.0),
-                  ),
-                  CNTabBarItem(
-                    label: l10n.insights,
-                    icon: const CNSymbol('sparkles', size: 20.0),
-                  ),
-                  CNTabBarItem(
-                    label: l10n.analytics,
-                    icon: const CNSymbol('chart.pie', size: 20.0),
-                  ),
-                  CNTabBarItem(
-                    label: l10n.transactions,
-                    icon: const CNSymbol('arrow.left.arrow.right', size: 20.0),
-                  ),
-                ],
-                currentIndex: _currentIndex,
+              bottom: 16,
+              child: LiquidGlassBottomBar(
+                key: ValueKey('tab_bar_${isRtl}_$isDarkMode'),
+                height: 85,
+                tint: isDarkMode ? Colors.white : Theme.of(context).primaryColor,
+                style: LiquidGlassStyle.regular,
+                items: displayItems,
+                currentIndex: activeIndex,
                 onTap: (index) {
-                  setState(() => _currentIndex = index);
-                  _pageController.animateToPage(
-                    index,
-                    duration: const Duration(milliseconds: 350),
-                    curve: Curves.easeInOut,
-                  );
+                  HapticFeedback.selectionClick();
+                  final targetIndex = isRtl ? (displayItems.length - 1 - index) : index;
+                  _navigateToTab(targetIndex);
                 },
               ),
             ),
@@ -147,12 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
           selectedIndex: _currentIndex,
           onDestinationSelected: (index) {
             HapticFeedback.selectionClick();
-            setState(() => _currentIndex = index);
-            _pageController.animateToPage(
-              index,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-            );
+            _navigateToTab(index);
           },
           destinations: [
             NavigationDestination(
@@ -161,19 +183,19 @@ class _HomeScreenState extends State<HomeScreen> {
               label: l10n.wallet,
             ),
             NavigationDestination(
-              icon: const Icon(Icons.auto_awesome_outlined),
-              selectedIcon: const Icon(Icons.auto_awesome_rounded),
-              label: l10n.insights,
-            ),
-            NavigationDestination(
               icon: const Icon(Icons.pie_chart_outline_rounded),
               selectedIcon: const Icon(Icons.pie_chart_rounded),
               label: l10n.analytics,
             ),
             NavigationDestination(
-              icon: const Icon(Icons.swap_horiz_rounded),
-              selectedIcon: const Icon(Icons.swap_horiz_rounded),
-              label: l10n.transactions,
+              icon: const Icon(Icons.savings_outlined),
+              selectedIcon: const Icon(Icons.savings_rounded),
+              label: l10n.budgets,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.autorenew_outlined),
+              selectedIcon: const Icon(Icons.autorenew_rounded),
+              label: l10n.subscriptions,
             ),
           ],
         ),

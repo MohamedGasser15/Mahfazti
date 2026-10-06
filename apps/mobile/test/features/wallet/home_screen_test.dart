@@ -70,4 +70,30 @@ void main() {
 
     expect(find.byType(PageView), findsOneWidget);
   });
+
+  testWidgets('Android NavigationBar places wallet on right in RTL', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('ar'),
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: ChangeNotifierProvider<HideBalanceService>(
+        create: (_) => HideBalanceService(),
+        child: const Scaffold(body: HomeScreen()),
+      ),
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump();
+    await tester.pump();
+
+    final walletPos = tester.getCenter(find.text('المحفظة'));
+    final subsPos = tester.getCenter(find.text('الاشتراكات'));
+    // In RTL, Wallet (index 0) is on the right, Subscriptions (index 3) is on the left
+    expect(walletPos.dx, greaterThan(subsPos.dx));
+  });
 }

@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:my_wallet/features/wallet/data/models/voice_expense_model.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
@@ -39,12 +39,13 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
   late String _selectedLocale;
   late AnimationController _pulseController;
 
+  bool _localeInitialized = false;
+
   @override
   void initState() {
     super.initState();
-    final deviceLocale = Platform.localeName;
-    _isArabic = deviceLocale.startsWith('ar');
-    _selectedLocale = _isArabic ? 'ar_EG' : 'en_US';
+    _isArabic = true;
+    _selectedLocale = 'ar_EG';
 
     _pulseController = AnimationController(
       vsync: this,
@@ -52,6 +53,17 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
     )..repeat(reverse: true);
 
     _initSpeech();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_localeInitialized) {
+      final appLocale = Localizations.localeOf(context);
+      _isArabic = appLocale.languageCode == 'ar';
+      _selectedLocale = _isArabic ? 'ar_EG' : 'en_US';
+      _localeInitialized = true;
+    }
   }
 
   Future<void> _initSpeech() async {
@@ -152,6 +164,7 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
   @override
   Widget build(BuildContext context) {
     final isDark = widget.isDarkMode;
+    final appIsAr = Localizations.localeOf(context).languageCode == 'ar';
 
     return AnimatedBuilder(
       animation: _pulseController,
@@ -160,75 +173,100 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _isListening ? _stopAndProcess : _startListening,
-                  onLongPress: _toggleLanguage,
-                  borderRadius: BorderRadius.circular(28),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: _isListening
-                          ? const Color(0xFFF43F5E).withValues(alpha: 0.22)
-                          : (widget.isInHero
-                              ? Colors.white.withValues(alpha: 0.18)
-                              : (isDark ? const Color(0xFF18181B) : const Color(0xFFF4F4F5))),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: _isListening
-                            ? const Color(0xFFF43F5E)
-                            : (widget.isInHero
-                                ? Colors.white.withValues(alpha: 0.32)
-                                : (isDark ? const Color(0xFF27272A) : const Color(0xFFE4E4E7))),
-                        width: _isListening ? 1.5 : (widget.isInHero ? 1.2 : 1.0),
-                      ),
-                      boxShadow: _isListening
-                          ? [
-                              BoxShadow(
-                                color: const Color(0xFFF43F5E).withValues(alpha: 0.25 * _pulseController.value),
-                                blurRadius: 10,
-                                spreadRadius: 2,
-                              ),
-                            ]
-                          : (widget.isInHero && !isDark
-                              ? [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.10),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
+              widget.isInHero
+                  ? GestureDetector(
+                      onLongPress: _toggleLanguage,
+                      child: GlassButton.custom(
+                        onTap: _isListening ? _stopAndProcess : _startListening,
+                        width: 52,
+                        height: 52,
+                        shape: const LiquidOval(),
+                        useOwnLayer: true,
+                        settings: LiquidGlassSettings(
+                          thickness: 16,
+                          blur: 10,
+                          glassColor: _isListening
+                              ? const Color(0xFFF43F5E).withValues(alpha: 0.28)
+                              : (isDark
+                                  ? Colors.white.withValues(alpha: 0.18)
+                                  : Colors.white.withValues(alpha: 0.22)),
+                        ),
+                        glowColor: _isListening ? const Color(0xFFF43F5E) : null,
+                        child: Center(
+                          child: _isProcessing
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
                                   ),
-                                ]
-                              : null),
-                    ),
-                    child: Center(
-                      child: _isProcessing
-                          ? SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: widget.isInHero ? Colors.white : (isDark ? Colors.white : Colors.black),
-                              ),
-                            )
-                          : Icon(
-                              _isListening ? Icons.stop_rounded : Icons.mic_rounded,
+                                )
+                              : Icon(
+                                  _isListening ? Icons.stop_rounded : Icons.mic_rounded,
+                                  color: _isListening ? const Color(0xFFF43F5E) : Colors.white,
+                                  size: 22,
+                                ),
+                        ),
+                      ),
+                    )
+                  : Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _isListening ? _stopAndProcess : _startListening,
+                        onLongPress: _toggleLanguage,
+                        borderRadius: BorderRadius.circular(28),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: _isListening
+                                ? const Color(0xFFF43F5E).withValues(alpha: 0.22)
+                                : (isDark ? const Color(0xFF18181B) : const Color(0xFFF4F4F5)),
+                            shape: BoxShape.circle,
+                            border: Border.all(
                               color: _isListening
                                   ? const Color(0xFFF43F5E)
-                                  : (widget.isInHero ? Colors.white : (isDark ? Colors.white : Colors.black)),
-                              size: 22,
+                                  : (isDark ? const Color(0xFF27272A) : const Color(0xFFE4E4E7)),
+                              width: _isListening ? 1.5 : 1.0,
                             ),
+                            boxShadow: _isListening
+                                ? [
+                                    BoxShadow(
+                                      color: const Color(0xFFF43F5E).withValues(alpha: 0.25 * _pulseController.value),
+                                      blurRadius: 10,
+                                      spreadRadius: 2,
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: Center(
+                            child: _isProcessing
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: isDark ? Colors.white : Colors.black,
+                                    ),
+                                  )
+                                : Icon(
+                                    _isListening ? Icons.stop_rounded : Icons.mic_rounded,
+                                    color: _isListening
+                                        ? const Color(0xFFF43F5E)
+                                        : (isDark ? Colors.white : Colors.black),
+                                    size: 22,
+                                  ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ),
               const SizedBox(height: 6),
               Text(
                 _isListening
-                    ? (_isArabic ? 'أستمع...' : 'Listening...')
-                    : (_isArabic ? 'صوتي' : 'Voice'),
+                    ? (appIsAr ? 'أستمع...' : 'Listening...')
+                    : (appIsAr ? 'صوت' : 'Voice'),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: widget.isInHero ? FontWeight.w700 : FontWeight.w600,
@@ -306,8 +344,8 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
                   Flexible(
                     child: Text(
                       _isListening
-                          ? (_isArabic ? 'أستمع...' : 'Listening...')
-                          : (_isArabic ? 'صوتي' : 'Voice'),
+                          ? (appIsAr ? 'أستمع...' : 'Listening...')
+                          : (appIsAr ? 'صوت' : 'Voice'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

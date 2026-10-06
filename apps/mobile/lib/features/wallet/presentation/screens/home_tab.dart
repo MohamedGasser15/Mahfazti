@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:cupertino_calendar_picker/cupertino_calendar_picker.dart';
-import 'package:cupertino_native_better/cupertino_native_better.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ios_adaptive_context_menu/ios_adaptive_context_menu.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 import 'package:my_wallet/core/constants/currency_constants.dart';
@@ -16,13 +18,17 @@ import 'package:my_wallet/core/services/wallet_cache_service.dart';
 import 'package:my_wallet/core/utils/api_error_handler.dart';
 import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import 'package:my_wallet/features/settings/presentation/screens/settings_screen.dart';
+import 'package:my_wallet/features/wallet/data/models/budget_models.dart';
 import 'package:my_wallet/features/wallet/data/models/category_model.dart';
 import 'package:my_wallet/features/wallet/data/models/voice_expense_model.dart';
 import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
 import 'package:my_wallet/features/wallet/data/repositories/category_repository.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/analytics_screen.dart';
+import 'package:my_wallet/features/wallet/presentation/screens/subscriptions_tab.dart';
 import 'package:my_wallet/features/wallet/presentation/widgets/home_tab_models.dart';
 import 'package:my_wallet/features/wallet/presentation/widgets/voice_expense_button.dart';
 import 'package:provider/provider.dart';
@@ -32,7 +38,12 @@ part '../widgets/home_tab_dialogs.dart';
 part '../widgets/home_tab_widgets.dart';
 
 class HomeTab extends StatefulWidget {
-  const HomeTab({super.key});
+  final ValueChanged<int>? onNavigateToTab;
+
+  const HomeTab({
+    super.key,
+    this.onNavigateToTab,
+  });
 
   @override
   State<HomeTab> createState() => _HomeTabConcrete();
@@ -43,6 +54,9 @@ abstract class _HomeTabState extends State<HomeTab> {
   final WalletRepository _walletRepository = WalletRepository();
   bool _isLoading = true;
   WalletHomeData? _homeData;
+  BudgetDto? _budgetData;
+  SubscriptionItem? _upcomingSubscription;
+  List<SubscriptionItem> _subscriptions = [];
   String? _errorMessage;
 
   List<Category> _categories = [];
@@ -248,11 +262,17 @@ abstract class _HomeTabState extends State<HomeTab> {
   Future<void> _loadHomeData({bool forceRefresh = false}) async {
     if (!forceRefresh) {
       final cached = await WalletCacheService.getHome();
+      final cachedBudget = await WalletCacheService.getBudget();
+      await _loadUpcomingSubscription();
       if (cached != null) {
         try {
           final cachedData = WalletHomeData.fromJson(cached);
+          final parsedBudget = cachedBudget != null
+              ? BudgetDto.fromJson(cachedBudget)
+              : null;
           setState(() {
             _homeData = cachedData;
+            _budgetData = (parsedBudget != null && parsedBudget.monthlyBudget > 0) ? parsedBudget : null;
             _isLoading = false;
             _errorMessage = null;
           });
@@ -271,20 +291,58 @@ abstract class _HomeTabState extends State<HomeTab> {
     await _fetchHomeFromApi();
   }
 
+  Future<void> _loadUpcomingSubscription() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('user_subscriptions_list');
+      List<SubscriptionItem> list = [];
+      if (raw != null) {
+        final decoded = jsonDecode(raw) as List;
+        list = decoded.map((e) => SubscriptionItem.fromJson(e)).toList();
+      }
+      if (list.isEmpty) {
+        list = List.from(SubscriptionItem.defaultSeed());
+        await prefs.setString(
+          'user_subscriptions_list',
+          jsonEncode(list.map((e) => e.toJson()).toList()),
+        );
+      }
+      final now = DateTime.now();
+      list.sort((a, b) {
+        int daysA = a.renewalDay - now.day;
+        if (daysA < 0) daysA += 30;
+        int daysB = b.renewalDay - now.day;
+        if (daysB < 0) daysB += 30;
+        return daysA.compareTo(daysB);
+      });
+      if (mounted) {
+        setState(() {
+          _subscriptions = list;
+          _upcomingSubscription = list.isNotEmpty ? list.first : null;
+        });
+      }
+    } catch (_) {}
+  }
+
   Future<void> _fetchHomeFromApi({bool silent = false}) async {
     try {
       final data = await _walletRepository.getHomeData();
       final cacheMap = data.toJson();
       await WalletCacheService.saveHome(cacheMap);
 
-      if (mounted && !silent) {
+      BudgetDto? fetchedBudget;
+      try {
+        fetchedBudget = await _walletRepository.getBudget();
+      } catch (_) {}
+      await _loadUpcomingSubscription();
+
+      if (mounted) {
         setState(() {
           _homeData = data;
-          _isLoading = false;
-        });
-      } else if (mounted && silent) {
-        setState(() {
-          _homeData = data;
+          _budgetData = (fetchedBudget != null && fetchedBudget.monthlyBudget > 0)
+              ? fetchedBudget
+              : null;
+          if (!silent) _isLoading = false;
         });
       }
     } catch (e) {
@@ -498,15 +556,34 @@ abstract class _HomeTabState extends State<HomeTab> {
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
 
-    if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}${context.l10n.minutesAgo}';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}${context.l10n.hoursAgo}';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays}${context.l10n.daysAgo}';
+    if (difference.isNegative || difference.inMinutes < 1) {
+      return isAr ? 'الآن' : 'Just now';
+    } else if (difference.inMinutes < 60) {
+      return isAr ? 'منذ ${difference.inMinutes} دقيقة' : '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24 && date.day == now.day) {
+      if (difference.inHours == 1) {
+        return isAr ? 'منذ ساعة' : '1h ago';
+      } else if (difference.inHours == 2) {
+        return isAr ? 'منذ ساعتين' : '2h ago';
+      } else if (difference.inHours >= 3 && difference.inHours <= 10) {
+        return isAr ? 'منذ ${difference.inHours} ساعات' : '${difference.inHours}h ago';
+      } else {
+        return isAr ? 'منذ ${difference.inHours} ساعة' : '${difference.inHours}h ago';
+      }
+    } else if (difference.inDays <= 1 || (now.day - date.day == 1 && difference.inHours < 48)) {
+      return isAr ? 'أمس' : 'Yesterday';
+    } else if (difference.inDays == 2) {
+      return isAr ? 'منذ يومين' : '2d ago';
+    } else if (difference.inDays >= 3 && difference.inDays <= 10) {
+      return isAr ? 'منذ ${difference.inDays} أيام' : '${difference.inDays}d ago';
+    } else if (difference.inDays < 30) {
+      return isAr ? 'منذ ${difference.inDays} يوماً' : '${difference.inDays}d ago';
+    } else if (difference.inDays < 60) {
+      return isAr ? 'منذ شهر' : '1mo ago';
     } else {
-      return '${date.day}/${date.month}/${date.year}';
+      return DateFormat('d MMM', isAr ? 'ar' : 'en').format(date);
     }
   }
   //#endregion

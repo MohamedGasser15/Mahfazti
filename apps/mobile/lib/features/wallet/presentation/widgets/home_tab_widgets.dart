@@ -216,7 +216,7 @@ mixin _HomeTabWidgets on _HomeTabState {
           isIOS
               ? Container(
                   height: 28,
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(16),
@@ -226,49 +226,56 @@ mixin _HomeTabWidgets on _HomeTabState {
                     ),
                   ),
                   child: Center(
-                    child: CNPopupMenuButton(
-                      buttonLabel: '$_formattedDateRange ⌵',
-                      height: 26,
-                      tint: Colors.white,
-                      shrinkWrap: true,
-                      buttonStyle: CNButtonStyle.plain,
-                      items: [
-                        CNPopupMenuItem(
-                          label: isAr ? 'هذا الشهر' : 'This Month',
-                          icon: const CNSymbol('calendar', size: 18.0),
+                    child: IosSingleTapContextMenu(
+                      actions: [
+                        IosContextMenuAction(
+                          id: 'this_month',
+                          title: isAr ? 'هذا الشهر' : 'This Month',
+                          iconSystemName: 'calendar',
                         ),
-                        CNPopupMenuItem(
-                          label: isAr ? 'الشهر السابق' : 'Last Month',
-                          icon: const CNSymbol('clock.arrow.circlepath', size: 18.0),
+                        IosContextMenuAction(
+                          id: 'last_month',
+                          title: isAr ? 'الشهر السابق' : 'Last Month',
+                          iconSystemName: 'clock.arrow.circlepath',
                         ),
-                        const CNPopupMenuDivider(),
-                        CNPopupMenuItem(
-                          label: isAr ? 'بالشهر...' : 'By Month...',
-                          icon: const CNSymbol('calendar.day.timeline.left', size: 18.0),
+                        const IosContextMenuDivider(),
+                        IosContextMenuAction(
+                          id: 'by_month',
+                          title: isAr ? 'بالشهر...' : 'By Month...',
+                          iconSystemName: 'calendar.day.timeline.left',
                         ),
-                        CNPopupMenuItem(
-                          label: isAr ? 'فترة مخصصة...' : 'Custom Range...',
-                          icon: const CNSymbol('calendar.badge.clock', size: 18.0),
+                        IosContextMenuAction(
+                          id: 'custom_range',
+                          title: isAr ? 'فترة مخصصة...' : 'Custom Range...',
+                          iconSystemName: 'calendar.badge.clock',
                         ),
                       ],
-                      onSelected: (index) async {
+                      onSelected: (id) async {
                         final now = DateTime.now();
-                        if (index == 0) {
+                        if (id == 'this_month') {
                           setState(() {
                             _startDate = DateTime(now.year, now.month, 1);
                             _endDate = DateTime(now.year, now.month + 1, 0);
                           });
-                        } else if (index == 1) {
+                        } else if (id == 'last_month') {
                           setState(() {
                             _startDate = DateTime(now.year, now.month - 1, 1);
                             _endDate = DateTime(now.year, now.month, 0);
                           });
-                        } else if (index == 3) { // By Month (index 2 is divider)
+                        } else if (id == 'by_month') {
                           await _pickMonthPicker(context);
-                        } else if (index == 4) { // Custom Range
+                        } else if (id == 'custom_range') {
                           await _pickCustomDateRange(context);
                         }
                       },
+                      child: Text(
+                        '$_formattedDateRange ⌵',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
                   ),
                 )
@@ -536,51 +543,63 @@ mixin _HomeTabWidgets on _HomeTabState {
               child: KeyedSubtree(
                 key: ValueKey('account_switcher_$_selectedAccountId'),
                 child: isIOS
-                    ? CNPopupMenuButton(
-                        buttonLabel: '${_selectedAccount.name} ⌵',
-                        height: 22,
-                        tint: Colors.white.withValues(alpha: 0.90),
-                        shrinkWrap: true,
-                        buttonStyle: CNButtonStyle.plain,
-                        items: [
+                    ? IosSingleTapContextMenu(
+                        actions: [
                           ..._accounts.map((acc) {
                             final isSelected = acc.id == _selectedAccountId;
                             final label = acc.isMain ? '${acc.name} ⭐' : acc.name;
-                            return CNPopupMenuItem(
-                              label: label,
-                              icon: CNSymbol(
-                                isSelected ? 'checkmark.circle.fill' : 'circle',
-                                size: 16.0,
-                              ),
+                            return IosContextMenuAction(
+                              id: 'acc_${acc.id}',
+                              title: label,
+                              iconSystemName: isSelected ? 'checkmark.circle.fill' : 'circle',
+                              showTrailingCheckmark: isSelected,
                             );
                           }),
-                          const CNPopupMenuDivider(),
-                          CNPopupMenuItem(
-                            label: isAr ? 'إضافة حساب جديد' : 'Add account',
-                            icon: const CNSymbol('plus', size: 16.0),
+                          const IosContextMenuDivider(),
+                          IosContextMenuAction(
+                            id: 'add_account',
+                            title: isAr ? 'إضافة حساب جديد' : 'Add account',
+                            iconSystemName: 'plus',
                           ),
-                          CNPopupMenuItem(
-                            label: isAr ? 'إدارة المحافظ والحسابات' : 'Manage accounts',
-                            icon: const CNSymbol('slider.horizontal.3', size: 16.0),
+                          IosContextMenuAction(
+                            id: 'manage_accounts',
+                            title: isAr ? 'إدارة المحافظ والحسابات' : 'Manage accounts',
+                            iconSystemName: 'slider.horizontal.3',
                           ),
                         ],
-                        onSelected: (index) {
-                          final accountsCount = _accounts.length;
-                          if (index < accountsCount) {
-                            final targetAcc = _accounts[index];
+                        onSelected: (id) {
+                          if (id.startsWith('acc_')) {
+                            final accId = id.substring(4);
+                            final targetAcc = _accounts.firstWhere((a) => a.id == accId, orElse: () => _accounts.first);
                             final curIdx = _accounts.indexWhere((a) => a.id == _selectedAccountId);
-                            final isMovingForward = index > curIdx;
+                            final targetIdx = _accounts.indexWhere((a) => a.id == accId);
+                            final isMovingForward = targetIdx > curIdx;
                             setState(() {
                               _heroSlideFromLeft = isRtl ? isMovingForward : !isMovingForward;
                               _selectedAccountId = targetAcc.id;
                             });
                             _syncWalletsCarouselToSelected();
-                          } else if (index == accountsCount + 1) { // after divider
+                          } else if (id == 'add_account') {
                             _showAddAccountModal();
-                          } else if (index == accountsCount + 2) {
+                          } else if (id == 'manage_accounts') {
                             _showManageAccountsModal();
                           }
                         },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${_selectedAccount.name} ⌵',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white.withValues(alpha: 0.90),
+                            ),
+                          ),
+                        ),
                       )
                     : Theme(
                         data: Theme.of(context).copyWith(
@@ -724,7 +743,7 @@ mixin _HomeTabWidgets on _HomeTabState {
   }
   //#endregion
 
-  //#region 3 Circular Action Buttons (Say Style: Add, Voice, More)
+  //#region 4 Circular Action Buttons (Say Style: Add, Voice, Receipt, More)
   Widget _buildSayActionRow(bool isDarkMode) {
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
 
@@ -758,10 +777,155 @@ mixin _HomeTabWidgets on _HomeTabState {
             },
           ),
 
-          // 3. More (••• with Native iOS Popover Menu via CNPopupMenuButton)
+          // 3. Receipt Scanner (🧾)
+          _buildCircularActionItem(
+            icon: Icons.document_scanner_rounded,
+            label: isAr ? 'فاتورة' : 'Receipt',
+            isDarkMode: isDarkMode,
+            onTap: () => _showReceiptScannerModal(isDarkMode, isAr),
+          ),
+
+          // 4. More (••• with Native iOS Popover Menu via CNPopupMenuButton)
           _buildMoreActionButton(isDarkMode),
         ],
       ),
+    );
+  }
+
+  void _showReceiptScannerModal(bool isDarkMode, bool isAr) {
+    HapticFeedback.selectionClick();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
+          decoration: BoxDecoration(
+            color: isDarkMode ? const Color(0xFF15151A) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border.all(
+              color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+              width: 1.2,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4.5,
+                decoration: BoxDecoration(
+                  color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              const SizedBox(height: 22),
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.25),
+                    width: 1.5,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.document_scanner_rounded,
+                  size: 32,
+                  color: Color(0xFF10B981),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                isAr ? 'مسح الفواتير بالذكاء الاصطناعي' : 'AI Receipt Scanner',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: isDarkMode ? Colors.white : Colors.black,
+                  letterSpacing: -0.4,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isAr
+                    ? 'صور أو ارفع أي فاتورة ورقية، والذكاء الاصطناعي هيقرأ المبلغ والتاريخ والتصنيف ويسجلها تلقائياً!'
+                    : 'Scan or upload any paper receipt, and AI will automatically extract amount, date, and category!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _showUnifiedAddModal();
+                      },
+                      icon: const Icon(Icons.edit_note_rounded, size: 18),
+                      label: Text(
+                        isAr ? 'إدخال يدوي' : 'Manual',
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        foregroundColor: isDarkMode ? Colors.white : Colors.black,
+                        side: BorderSide(
+                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        MessageService.showSuccess(
+                          context: context,
+                          message: isAr
+                              ? 'جاري ربط الـ AI OCR والكاميرا قريباً!'
+                              : 'AI Camera OCR will be available soon!',
+                        );
+                      },
+                      icon: Icon(
+                        Icons.camera_alt_rounded,
+                        size: 18,
+                        color: isDarkMode ? Colors.black : Colors.white,
+                      ),
+                      label: Text(
+                        isAr ? 'فتح الكاميرا' : 'Camera',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          color: isDarkMode ? Colors.black : Colors.white,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        backgroundColor: isDarkMode ? Colors.white : Colors.black,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -773,59 +937,61 @@ mixin _HomeTabWidgets on _HomeTabState {
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
+          GlassContainer(
             width: 52,
             height: 52,
-            decoration: BoxDecoration(
-              color: isDarkMode
+            shape: const LiquidOval(),
+            useOwnLayer: true,
+            platformViewBackdrop: true,
+            settings: LiquidGlassSettings(
+              thickness: 16,
+              blur: 10,
+              glassColor: isDarkMode
                   ? Colors.white.withValues(alpha: 0.18)
                   : Colors.white.withValues(alpha: 0.22),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isDarkMode
-                    ? Colors.white.withValues(alpha: 0.32)
-                    : Colors.white.withValues(alpha: 0.35),
-                width: 1.2,
-              ),
             ),
-            child: Center(
-              child: CNPopupMenuButton.icon(
-                size: 52.0,
-                tint: Colors.white,
-                buttonStyle: CNButtonStyle.plain,
-                buttonIcon: const CNSymbol(
-                  'ellipsis',
-                  size: 20.0,
-                  color: Colors.white,
+            child: IosSingleTapContextMenu(
+              actions: [
+                IosContextMenuAction(
+                  id: 'add_account',
+                  title: isAr ? 'إضافة حساب جديد' : 'Add account',
+                  iconSystemName: 'plus',
                 ),
-                items: [
-                  CNPopupMenuItem(
-                    label: isAr ? 'إضافة حساب جديد' : 'Add account',
-                    icon: const CNSymbol('plus', size: 18.0),
+                IosContextMenuAction(
+                  id: 'manage_accounts',
+                  title: isAr ? 'إدارة المحافظ والحسابات' : 'Manage accounts',
+                  iconSystemName: 'slider.horizontal.3',
+                ),
+                const IosContextMenuDivider(),
+                IosContextMenuAction(
+                  id: 'switch_account',
+                  title: isAr ? 'تبديل المحفظة' : 'Switch account',
+                  iconSystemName: 'arrow.left.arrow.right',
+                ),
+              ],
+              onSelected: (id) {
+                switch (id) {
+                  case 'add_account':
+                    _showAddAccountModal();
+                    break;
+                  case 'manage_accounts':
+                    _showManageAccountsModal();
+                    break;
+                  case 'switch_account':
+                    _showAccountSwitcherModal();
+                    break;
+                }
+              },
+              child: const SizedBox(
+                width: 52,
+                height: 52,
+                child: Center(
+                  child: Icon(
+                    CupertinoIcons.ellipsis,
+                    color: Colors.white,
+                    size: 22,
                   ),
-                  CNPopupMenuItem(
-                    label: isAr ? 'إدارة المحافظ والحسابات' : 'Manage accounts',
-                    icon: const CNSymbol('slider.horizontal.3', size: 18.0),
-                  ),
-                  const CNPopupMenuDivider(),
-                  CNPopupMenuItem(
-                    label: isAr ? 'تبديل المحفظة' : 'Switch account',
-                    icon: const CNSymbol('arrow.left.arrow.right', size: 18.0),
-                  ),
-                ],
-                onSelected: (index) {
-                  switch (index) {
-                    case 0:
-                      _showAddAccountModal();
-                      break;
-                    case 1:
-                      _showManageAccountsModal();
-                      break;
-                    case 3: // index 2 is CNPopupMenuDivider
-                      _showAccountSwitcherModal();
-                      break;
-                  }
-                },
+                ),
               ),
             ),
           ),
@@ -854,87 +1020,76 @@ mixin _HomeTabWidgets on _HomeTabState {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Theme(
-          data: Theme.of(context).copyWith(
-            popupMenuTheme: PopupMenuThemeData(
-              color: isDarkMode ? const Color(0xFF1E1E24) : Colors.white,
-              surfaceTintColor: Colors.transparent,
-              elevation: 8,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: BorderSide(
-                  color: isDarkMode ? const Color(0xFF2E2E36) : const Color(0xFFE4E4E7),
-                  width: 1,
-                ),
-              ),
-              shadowColor: Colors.black.withValues(alpha: 0.25),
-            ),
+        GlassContainer(
+          width: 52,
+          height: 52,
+          shape: const LiquidOval(),
+          useOwnLayer: true,
+          settings: LiquidGlassSettings(
+            thickness: 16,
+            blur: 10,
+            glassColor: isDarkMode
+                ? Colors.white.withValues(alpha: 0.18)
+                : Colors.white.withValues(alpha: 0.22),
           ),
-          child: PopupMenuButton<int>(
-            tooltip: isAr ? 'المزيد' : 'More',
-            offset: const Offset(0, 10),
-            position: PopupMenuPosition.under,
-            elevation: 8,
-            color: isDarkMode ? const Color(0xFF1E1E24) : Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: BorderSide(
-                color: isDarkMode ? const Color(0xFF2E2E36) : const Color(0xFFE4E4E7),
-                width: 1,
+          child: Theme(
+            data: Theme.of(context).copyWith(
+              popupMenuTheme: PopupMenuThemeData(
+                color: isDarkMode ? const Color(0xFF1E1E24) : Colors.white,
+                surfaceTintColor: Colors.transparent,
+                elevation: 8,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(
+                    color: isDarkMode ? const Color(0xFF2E2E36) : const Color(0xFFE4E4E7),
+                    width: 1,
+                  ),
+                ),
+                shadowColor: Colors.black.withValues(alpha: 0.25),
               ),
             ),
-            splashRadius: 28,
-            padding: EdgeInsets.zero,
-            onSelected: (value) {
-              HapticFeedback.selectionClick();
-              switch (value) {
-                case 0:
-                  _showAddAccountModal();
-                  break;
-                case 1:
-                  _showManageAccountsModal();
-                  break;
-                case 2:
-                  _showAccountSwitcherModal();
-                  break;
-              }
-            },
-            itemBuilder: (context) => [
-              _buildMenuOptionItem(
-                value: 0,
-                icon: Icons.add_card_rounded,
-                title: isAr ? 'إضافة حساب جديد' : 'Add account',
-                isDarkMode: isDarkMode,
-              ),
-              _buildMenuOptionItem(
-                value: 1,
-                icon: Icons.tune_rounded,
-                title: isAr ? 'إدارة المحافظ والحسابات' : 'Manage accounts',
-                isDarkMode: isDarkMode,
-              ),
-              const PopupMenuDivider(height: 8),
-              _buildMenuOptionItem(
-                value: 2,
-                icon: Icons.swap_horiz_rounded,
-                title: isAr ? 'تبديل المحفظة' : 'Switch account',
-                isDarkMode: isDarkMode,
-              ),
-            ],
-            child: Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: isDarkMode
-                    ? Colors.white.withValues(alpha: 0.18)
-                    : Colors.white.withValues(alpha: 0.22),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isDarkMode
-                      ? Colors.white.withValues(alpha: 0.32)
-                      : Colors.white.withValues(alpha: 0.35),
-                  width: 1.2,
+            child: PopupMenuButton<int>(
+              tooltip: isAr ? 'المزيد' : 'More',
+              offset: const Offset(0, 10),
+              position: PopupMenuPosition.under,
+              elevation: 8,
+              splashRadius: 28,
+              padding: EdgeInsets.zero,
+              onSelected: (value) {
+                HapticFeedback.selectionClick();
+                switch (value) {
+                  case 0:
+                    _showAddAccountModal();
+                    break;
+                  case 1:
+                    _showManageAccountsModal();
+                    break;
+                  case 2:
+                    _showAccountSwitcherModal();
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                _buildMenuOptionItem(
+                  value: 0,
+                  icon: Icons.add_card_rounded,
+                  title: isAr ? 'إضافة حساب جديد' : 'Add account',
+                  isDarkMode: isDarkMode,
                 ),
-              ),
+                _buildMenuOptionItem(
+                  value: 1,
+                  icon: Icons.tune_rounded,
+                  title: isAr ? 'إدارة المحافظ والحسابات' : 'Manage accounts',
+                  isDarkMode: isDarkMode,
+                ),
+                const PopupMenuDivider(height: 8),
+                _buildMenuOptionItem(
+                  value: 2,
+                  icon: Icons.swap_horiz_rounded,
+                  title: isAr ? 'تبديل المحفظة' : 'Switch account',
+                  isDarkMode: isDarkMode,
+                ),
+              ],
               child: const Center(
                 child: Icon(
                   Icons.more_horiz_rounded,
@@ -2424,34 +2579,23 @@ mixin _HomeTabWidgets on _HomeTabState {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(28),
-            child: Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: isDarkMode
-                    ? Colors.white.withValues(alpha: 0.18)
-                    : Colors.white.withValues(alpha: 0.22),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isDarkMode
-                      ? Colors.white.withValues(alpha: 0.32)
-                      : Colors.white.withValues(alpha: 0.35),
-                  width: 1.2,
-                ),
-              ),
-              child: Center(
-                child: Icon(
-                  icon,
-                  size: 22,
-                  color: Colors.white,
-                ),
-              ),
-            ),
+        GlassButton(
+          onTap: onTap,
+          width: 52,
+          height: 52,
+          shape: const LiquidOval(),
+          useOwnLayer: true,
+          settings: LiquidGlassSettings(
+            thickness: 16,
+            blur: 10,
+            glassColor: isDarkMode
+                ? Colors.white.withValues(alpha: 0.18)
+                : Colors.white.withValues(alpha: 0.22),
+          ),
+          icon: Icon(
+            icon,
+            size: 22,
+            color: Colors.white,
           ),
         ),
         const SizedBox(height: 6),
@@ -2595,7 +2739,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                         ),
                         const SizedBox(width: 3),
                         Icon(
-                          Icons.arrow_forward_ios_rounded,
+                          isAr ? Icons.arrow_back_ios_new_rounded : Icons.arrow_forward_ios_rounded,
                           size: 11,
                           color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                         ),
@@ -3182,48 +3326,1224 @@ mixin _HomeTabWidgets on _HomeTabState {
   }
   //#endregion
 
-  //#region Insights Grid Section (Say Style)
+
+  //#region Financial Insights 2x2 Bento Grid (Realistic Data & App Theme)
   Widget _buildInsightsGridSection(bool isDarkMode, HideBalanceService hideService) {
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final balance = _homeData?.balance;
-    final totalBalance = balance?.totalBalance ?? 0.0;
+    final totalSpent = _budgetData?.currentSpending ?? (balance?.totalWithdrawals ?? 0.0);
+    final monthlyBudget = _budgetData?.monthlyBudget ?? 0.0;
+    final remaining = (monthlyBudget - totalSpent).clamp(0.0, double.infinity);
+    final ratio = monthlyBudget > 0 ? (totalSpent / monthlyBudget).clamp(0.0, 1.0) : 0.0;
+    final percentage = (ratio * 100).toInt();
+    final isOverBudget = monthlyBudget > 0 && totalSpent > monthlyBudget;
+    final hasBudget = monthlyBudget > 0;
+
+    // Upcoming Bill
+    final upcoming = _upcomingSubscription;
+    final now = DateTime.now();
+    int? daysUntil;
+    if (upcoming != null) {
+      int diff = upcoming.renewalDay - now.day;
+      if (diff < 0) diff += 30;
+      daysUntil = diff;
+    }
+
+    // Daily safe spend calculation
+    final lastDayOfMonth = DateTime(now.year, now.month + 1, 0).day;
+    final daysLeft = (lastDayOfMonth - now.day + 1).clamp(1, 31);
+    final dailySafeSpend = remaining / daysLeft;
+
+    // Real Money Flow & Savings Rate
     final totalIncome = balance?.totalDeposits ?? 0.0;
+    final totalExpense = balance?.totalWithdrawals ?? 0.0;
+    final netCashFlow = totalIncome - totalExpense;
+    final isPositiveFlow = netCashFlow >= 0;
+    final savingsRate = totalIncome > 0
+        ? ((netCashFlow / totalIncome) * 100).toInt().clamp(0, 100)
+        : 0;
+
+    // Real Top Spending Category calculation
+    final expenseCats = (_budgetData?.categoryBudgets ?? [])
+        .where((c) => c.spent > 0)
+        .toList();
+    expenseCats.sort((a, b) => b.spent.compareTo(a.spent));
+    final topCat = expenseCats.isNotEmpty ? expenseCats.first : null;
+    final topCatName = topCat != null
+        ? (isAr ? topCat.categoryNameAr : topCat.categoryNameEn)
+        : '';
+
+    IconData getCatIcon(int catId, String name) {
+      final lower = name.toLowerCase();
+      if (catId == 1 || lower.contains('food') || lower.contains('طعام') || lower.contains('مطاعم')) {
+        return Icons.restaurant_rounded;
+      }
+      if (catId == 2 || lower.contains('shop') || lower.contains('تسوق') || lower.contains('مستلزمات')) {
+        return Icons.shopping_bag_rounded;
+      }
+      if (catId == 3 || lower.contains('bill') || lower.contains('فواتير') || lower.contains('خدمات')) {
+        return Icons.receipt_long_rounded;
+      }
+      if (lower.contains('trans') || lower.contains('مواصلات') || lower.contains('سيارة')) {
+        return Icons.directions_car_rounded;
+      }
+      if (lower.contains('health') || lower.contains('صحة') || lower.contains('طبي')) {
+        return Icons.medical_services_rounded;
+      }
+      return Icons.category_rounded;
+    }
+
+    final topCatIcon = topCat != null
+        ? getCatIcon(topCat.categoryId, topCatName)
+        : Icons.pie_chart_outline_rounded;
+
+    // Standard Cohesive Bento Card Decoration (Matches App Theme)
+    final cardDecoration = BoxDecoration(
+      color: isDarkMode ? const Color(0xFF141418) : Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(
+        color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+        width: 1,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: isDarkMode ? 0.25 : 0.03),
+          blurRadius: 14,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    );
+
+    // 1. Monthly Budget Card
+    Widget buildBudgetCard() {
+      return Expanded(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              if (widget.onNavigateToTab != null) {
+                widget.onNavigateToTab!(2); // Budgets Tab
+              }
+            },
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              height: 156,
+              padding: const EdgeInsets.all(13),
+              decoration: cardDecoration,
+              child: hasBudget
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              isAr ? 'الميزانية' : 'Budget',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: isOverBudget
+                                    ? const Color(0xFFEF4444).withValues(alpha: 0.12)
+                                    : (isDarkMode ? const Color(0xFF222228) : const Color(0xFFF4F4F5)),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '$percentage%',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: isOverBudget
+                                      ? const Color(0xFFEF4444)
+                                      : (isDarkMode ? Colors.white : Colors.black),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
+                              child: Text(
+                                hideService.isHidden ? '••••••' : _formatAmount(remaining),
+                                style: TextStyle(
+                                  fontSize: 16.5,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.4,
+                                  color: isOverBudget
+                                      ? const Color(0xFFEF4444)
+                                      : (isDarkMode ? Colors.white : Colors.black),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              isOverBudget
+                                  ? (isAr ? 'تجاوزت الميزانية' : 'Over limit')
+                                  : (isAr ? 'المتبقي للشهر' : 'Remaining'),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: isDarkMode ? Colors.grey[500] : Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(3),
+                              child: SizedBox(
+                                height: 4.5,
+                                child: LinearProgressIndicator(
+                                  value: ratio,
+                                  backgroundColor:
+                                      isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    isOverBudget
+                                        ? const Color(0xFFEF4444)
+                                        : ratio > 0.85
+                                            ? const Color(0xFFF59E0B)
+                                            : const Color(0xFF10B981),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              '~${hideService.isHidden ? '••••' : _formatAmount(dailySafeSpend)} / ${isAr ? 'يوم' : 'day'}',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w600,
+                                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              isAr ? 'الميزانية' : 'Budget',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: isDarkMode ? const Color(0xFF222228) : const Color(0xFFF4F4F5),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                isAr ? 'غير محددة' : 'Not set',
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.tune_rounded,
+                                size: 16,
+                                color: isDarkMode ? Colors.white : Colors.black,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                isAr ? 'اضغط لتعيين الميزانية الشهرية' : 'Tap to set monthly budget',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDarkMode ? Colors.white : Colors.black,
+                                  height: 1.25,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.add_circle_outline_rounded,
+                              size: 12,
+                              color: isDarkMode ? Colors.white : Colors.black,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              isAr ? 'تعيين الميزانية' : 'Set Budget',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: isDarkMode ? Colors.white : Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 2. Accounts Distribution Card (with Mini Donut / Pie Chart)
+    Widget buildAccountsCard() {
+      final accountsList = _accounts.where((a) => !a.isAll).toList();
+      accountsList.sort((a, b) => b.balance.compareTo(a.balance));
+      final activeCount = accountsList.length;
+      final totalAccBalance = accountsList.fold<double>(0.0, (s, a) => s + (a.balance > 0 ? a.balance : 0.0));
+      final topAcc = accountsList.isNotEmpty ? accountsList.first : null;
+
+      final accColors = [
+        const Color(0xFF10B981), // Emerald
+        const Color(0xFF3B82F6), // Blue
+        const Color(0xFFF59E0B), // Amber
+        const Color(0xFF8B5CF6), // Purple
+      ];
+
+      final chartValues = accountsList.map((a) => a.balance > 0 ? a.balance : 0.0).toList();
+
+      return Expanded(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              _showManageAccountsModal();
+            },
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              height: 156,
+              padding: const EdgeInsets.all(13),
+              decoration: cardDecoration,
+              child: accountsList.isNotEmpty
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              isAr ? 'توزيع المحافظ' : 'Accounts',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: isDarkMode ? const Color(0xFF222228) : const Color(0xFFF4F4F5),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                isAr ? '$activeCount محافظ' : '$activeCount wallets',
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: isDarkMode ? Colors.white : Colors.black,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            _MiniDonutChart(
+                              values: chartValues,
+                              colors: accColors,
+                              size: 46,
+                              strokeWidth: 5.5,
+                              centerChild: Icon(
+                                topAcc?.icon ?? Icons.account_balance_wallet_rounded,
+                                size: 13,
+                                color: isDarkMode ? Colors.white : Colors.black,
+                              ),
+                            ),
+                            const SizedBox(width: 9),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    topAcc?.name ?? '',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: isDarkMode ? Colors.white : Colors.black,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 1),
+                                  Text(
+                                    hideService.isHidden ? '••••••' : _formatAmount(topAcc?.balance ?? 0.0),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.3,
+                                      color: isDarkMode ? Colors.white : Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            ...List.generate(
+                              math.min(3, accountsList.length),
+                              (i) {
+                                final acc = accountsList[i];
+                                final pct = totalAccBalance > 0
+                                    ? ((acc.balance / totalAccBalance) * 100).toInt()
+                                    : 0;
+                                final color = accColors[i % accColors.length];
+                                return Padding(
+                                  padding: const EdgeInsetsDirectional.only(end: 7),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 5,
+                                        height: 5,
+                                        decoration: BoxDecoration(
+                                          color: color,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        '$pct%',
+                                        style: TextStyle(
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                            const Spacer(),
+                            Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 12,
+                              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              isAr ? 'توزيع المحافظ' : 'Accounts',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: isDarkMode ? const Color(0xFF222228) : const Color(0xFFF4F4F5),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                isAr ? '0 محافظ' : '0 wallets',
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: isDarkMode ? Colors.white : Colors.black,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.account_balance_wallet_rounded,
+                                size: 16,
+                                color: isDarkMode ? Colors.white : Colors.black,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                isAr ? 'اضغط لإدارة أو إضافة محفظة' : 'Tap to manage wallets',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDarkMode ? Colors.white : Colors.black,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            Icon(Icons.add_circle_outline_rounded, size: 12, color: isDarkMode ? Colors.white : Colors.black),
+                            const SizedBox(width: 4),
+                            Text(
+                              isAr ? 'إدارة المحافظ' : 'Manage wallets',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: isDarkMode ? Colors.white : Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 3. Top Spending Category Card (with Mini Donut / Pie Chart)
+    Widget buildTopCategoryCard() {
+      final expenseCats = (_budgetData?.categoryBudgets ?? [])
+          .where((c) => c.spent > 0)
+          .toList();
+      expenseCats.sort((a, b) => b.spent.compareTo(a.spent));
+      final hasTopCat = expenseCats.isNotEmpty;
+      final topCat = hasTopCat ? expenseCats.first : null;
+      final topCatName = topCat != null
+          ? (isAr ? topCat.categoryNameAr : topCat.categoryNameEn)
+          : '';
+      final topCatSpent = topCat?.spent ?? 0.0;
+      final effectiveTotalSpent = totalSpent > 0 ? totalSpent : 1.0;
+      final topCatRatio = (topCatSpent / effectiveTotalSpent).clamp(0.0, 1.0);
+      final topCatPct = (topCatRatio * 100).toInt();
+
+      final catColors = [
+        isDarkMode ? Colors.white : const Color(0xFF18181B), // Top category high contrast
+        const Color(0xFF10B981), // Emerald
+        const Color(0xFF3B82F6), // Blue
+        const Color(0xFFF59E0B), // Amber
+        const Color(0xFF8B5CF6), // Purple
+      ];
+
+      final catChartValues = <double>[];
+      for (int i = 0; i < expenseCats.length && i < 3; i++) {
+        catChartValues.add(expenseCats[i].spent);
+      }
+      final topCatsSum = catChartValues.fold<double>(0.0, (s, v) => s + v);
+      if (totalSpent > topCatsSum) {
+        catChartValues.add(totalSpent - topCatsSum);
+      }
+
+      return Expanded(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              if (widget.onNavigateToTab != null) {
+                widget.onNavigateToTab!(2); // Budgets Tab
+              }
+            },
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              height: 156,
+              padding: const EdgeInsets.all(13),
+              decoration: cardDecoration,
+              child: hasTopCat
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              isAr ? 'أعلى فئات الصرف' : 'Top Categories',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: isDarkMode ? const Color(0xFF222228) : const Color(0xFFF4F4F5),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '$topCatPct%',
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: isDarkMode ? Colors.white : Colors.black,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            _MiniDonutChart(
+                              values: catChartValues,
+                              colors: catColors,
+                              size: 46,
+                              strokeWidth: 5.5,
+                              centerChild: Icon(
+                                topCatIcon,
+                                size: 13,
+                                color: isDarkMode ? Colors.white : Colors.black,
+                              ),
+                            ),
+                            const SizedBox(width: 9),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    topCatName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: isDarkMode ? Colors.white : Colors.black,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 1),
+                                  Text(
+                                    hideService.isHidden ? '••••••' : _formatAmount(topCatSpent),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.3,
+                                      color: isDarkMode ? Colors.white : Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            ...List.generate(
+                              math.min(2, expenseCats.length),
+                              (i) {
+                                final cat = expenseCats[i];
+                                final pct = effectiveTotalSpent > 0
+                                    ? ((cat.spent / effectiveTotalSpent) * 100).toInt()
+                                    : 0;
+                                final color = catColors[i % catColors.length];
+                                return Padding(
+                                  padding: const EdgeInsetsDirectional.only(end: 7),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 5,
+                                        height: 5,
+                                        decoration: BoxDecoration(
+                                          color: color,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        '$pct%',
+                                        style: TextStyle(
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                            const Spacer(),
+                            Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 12,
+                              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              isAr ? 'أعلى فئات الصرف' : 'Top Categories',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                isAr ? 'متوازن' : 'Balanced',
+                                style: const TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF10B981),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.10),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.pie_chart_outline_rounded,
+                                size: 16,
+                                color: Color(0xFF10B981),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                isAr ? 'المصاريف متوازنة' : 'Balanced spending',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDarkMode ? Colors.white : Colors.black,
+                                  height: 1.25,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 12,
+                              color: Color(0xFF10B981),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              isAr ? 'تصفح كل الفئات' : 'View categories',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF10B981),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 4. Cash Flow & Net Card
+    Widget buildCashFlowCard() {
+      return Expanded(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              if (widget.onNavigateToTab != null) {
+                widget.onNavigateToTab!(1); // Analytics Tab
+              }
+            },
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              height: 156,
+              padding: const EdgeInsets.all(13),
+              decoration: cardDecoration,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        isAr ? 'صافي التدفق' : 'Cash Flow',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: (isPositiveFlow ? const Color(0xFF10B981) : const Color(0xFFEF4444))
+                              .withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          isPositiveFlow
+                              ? (isAr ? '+فائض $savingsRate%' : '+$savingsRate% saved')
+                              : (isAr ? '-عجز' : '-Deficit'),
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                            color: isPositiveFlow ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
+                        child: Text(
+                          hideService.isHidden
+                              ? '••••••'
+                              : '${isPositiveFlow ? '+' : '-'}${_formatAmount(netCashFlow.abs())}',
+                          style: TextStyle(
+                            fontSize: 16.5,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.4,
+                            color: isPositiveFlow
+                                ? const Color(0xFF10B981)
+                                : const Color(0xFFEF4444),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isAr
+                            ? (isPositiveFlow ? 'فائض السيولة هذا الشهر' : 'عجز في حركة الشهر')
+                            : (isPositiveFlow ? 'Net surplus this month' : 'Net deficit this month'),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: isDarkMode ? Colors.grey[500] : Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 5,
+                                height: 5,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF10B981),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                isAr ? 'وارد' : 'In',
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            hideService.isHidden ? '••••' : _formatAmount(totalIncome),
+                            style: const TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF10B981),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 5,
+                                height: 5,
+                                decoration: BoxDecoration(
+                                  color: isDarkMode ? Colors.grey[500] : Colors.grey[700],
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                isAr ? 'صادر' : 'Out',
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            hideService.isHidden ? '••••' : _formatAmount(totalExpense),
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                              color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 5. Upcoming Bill & Subscriptions Wide Card (Bento Row 3)
+    Widget buildSubscriptionWideCard() {
+      final hasUpcoming = upcoming != null;
+
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            if (widget.onNavigateToTab != null) {
+              widget.onNavigateToTab!(3); // Subscriptions Tab
+            }
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: cardDecoration,
+            child: hasUpcoming
+                ? Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          upcoming.icon,
+                          size: 18,
+                          color: isDarkMode ? Colors.white : Colors.black,
+                        ),
+                      ),
+                      const SizedBox(width: 11),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    upcoming.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: isDarkMode ? Colors.white : Colors.black,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 7),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: (daysUntil == 0)
+                                        ? const Color(0xFFEF4444).withValues(alpha: 0.12)
+                                        : (daysUntil == 1)
+                                            ? const Color(0xFFF59E0B).withValues(alpha: 0.14)
+                                            : (isDarkMode ? const Color(0xFF222228) : const Color(0xFFF4F4F5)),
+                                    borderRadius: BorderRadius.circular(5),
+                                  ),
+                                  child: Text(
+                                    isAr
+                                        ? (daysUntil == 0
+                                            ? 'اليوم!'
+                                            : daysUntil == 1
+                                                ? 'غداً'
+                                                : 'بعد $daysUntil يوم')
+                                        : (daysUntil == 0
+                                            ? 'Today!'
+                                            : daysUntil == 1
+                                                ? 'Tomorrow'
+                                                : 'In ${daysUntil}d'),
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w800,
+                                      color: (daysUntil == 0)
+                                          ? const Color(0xFFEF4444)
+                                          : (daysUntil == 1)
+                                              ? const Color(0xFFF59E0B)
+                                              : (isDarkMode ? Colors.white : Colors.black),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              isAr
+                                  ? 'استحقاق يوم ${upcoming.renewalDay} • من ${_subscriptions.length} اشتراكات'
+                                  : 'Due day ${upcoming.renewalDay} • ${_subscriptions.length} bills',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            hideService.isHidden ? '••••••' : _formatAmount(upcoming.amount),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.3,
+                              color: isDarkMode ? Colors.white : Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 1),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                isAr ? 'الاشتراكات' : 'View all',
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                ),
+                              ),
+                              const SizedBox(width: 2),
+                              Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                size: 8.5,
+                                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  )
+                : Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.event_available_rounded,
+                          size: 18,
+                          color: Color(0xFF10B981),
+                        ),
+                      ),
+                      const SizedBox(width: 11),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              isAr ? 'الالتزامات والفواتير' : 'Bills & Subscriptions',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w800,
+                                color: isDarkMode ? Colors.white : Colors.black,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              isAr ? 'لا توجد فواتير مستحقة قريباً' : 'No upcoming bills due',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.add_rounded, size: 12, color: Color(0xFF10B981)),
+                            const SizedBox(width: 2),
+                            Text(
+                              isAr ? 'إضافة' : 'Add',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF10B981),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Row
+          // Section Title Row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                isAr ? 'التحليلات والمحفظة' : 'Insights',
+                isAr ? 'الرؤى والتحليلات المالية' : 'Financial Insights',
                 style: TextStyle(
-                  color: isDarkMode ? Colors.white : Colors.black,
-                  fontSize: 17,
+                  fontSize: 16.5,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.3,
+                  color: isDarkMode ? Colors.white : Colors.black,
                 ),
               ),
               Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const AnalyticsScreen()),
-                  ),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    if (widget.onNavigateToTab != null) {
+                      widget.onNavigateToTab!(1); // Analytics / Insights Tab
+                    }
+                  },
                   borderRadius: BorderRadius.circular(8),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          isAr ? 'التحليلات' : 'Analytics',
+                          isAr ? 'التحليلات الكاملة' : 'Full analytics',
                           style: TextStyle(
                             color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                            fontSize: 13,
+                            fontSize: 12.5,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -3240,291 +4560,35 @@ mixin _HomeTabWidgets on _HomeTabState {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
-          // Row 1: Top Spending & Subscriptions
+          // Bento Row 1: Budget & Cash Flow
           Row(
             children: [
-              Expanded(
-                child: _buildInsightCard(
-                  icon: Icons.pie_chart_outline_rounded,
-                  iconColor: const Color(0xFF8B5CF6),
-                  title: isAr ? 'أعلى المصروفات' : 'Top Spending',
-                  mainText: isAr ? 'لا يوجد بعد' : 'Nothing yet',
-                  subText: isAr ? 'سيظهر تصنيفك الأكثر إنفاقاً هنا' : 'Your top category shows up here',
-                  isDarkMode: isDarkMode,
-                  visualWidget: Container(
-                    height: 28,
-                    width: 28,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-                        width: 3,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+              buildBudgetCard(),
               const SizedBox(width: 12),
-              Expanded(
-                child: _buildInsightCard(
-                  icon: Icons.autorenew_rounded,
-                  iconColor: const Color(0xFF3B82F6),
-                  title: isAr ? 'الاشتراكات' : 'Subscriptions',
-                  mainText: isAr ? 'لا مستحقات' : 'Nothing due',
-                  subText: isAr ? 'لا توجد اشتراكات مضافة' : 'No subscriptions yet',
-                  isDarkMode: isDarkMode,
-                  visualWidget: Column(
-                    children: [
-                      Container(height: 3, width: 34, decoration: BoxDecoration(color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7), borderRadius: BorderRadius.circular(2))),
-                      const SizedBox(height: 4),
-                      Container(height: 3, width: 24, decoration: BoxDecoration(color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7), borderRadius: BorderRadius.circular(2))),
-                    ],
-                  ),
-                ),
-              ),
+              buildCashFlowCard(),
             ],
           ),
           const SizedBox(height: 12),
 
-          // Row 2: Budget & Money Flow
+          // Bento Row 2: Accounts & Spending Categories (Both with Mini Donut Charts!)
           Row(
             children: [
-              Expanded(
-                child: _buildInsightCard(
-                  icon: Icons.savings_outlined,
-                  iconColor: const Color(0xFFF97316),
-                  title: isAr ? 'الميزانية' : 'Budget',
-                  mainText: isAr ? 'تحديد ميزانية' : 'Set Budget',
-                  subText: isAr ? 'اضغط لتحديد ميزانية الشهر' : 'Tap to set monthly budget',
-                  isDarkMode: isDarkMode,
-                  onTap: () {
-                    MessageService.showSuccess(
-                      context: context,
-                      message: isAr ? 'خاصية الميزانية قادمة في التحديث القادم' : 'Budgeting coming in next update',
-                    );
-                  },
-                ),
-              ),
+              buildAccountsCard(),
               const SizedBox(width: 12),
-              Expanded(
-                child: _buildInsightCard(
-                  icon: Icons.compare_arrows_rounded,
-                  iconColor: const Color(0xFF06B6D4),
-                  title: isAr ? 'حركة الأموال' : 'Money Flow',
-                  mainText: isAr ? 'حركة الشهر' : 'Money Flow',
-                  subText: isAr ? 'حركة الدخول والخروج' : 'Money in and out shows here',
-                  isDarkMode: isDarkMode,
-                  visualWidget: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Container(height: 18, width: 6, decoration: BoxDecoration(color: const Color(0xFF10B981).withValues(alpha: 0.6), borderRadius: BorderRadius.circular(3))),
-                      const SizedBox(width: 4),
-                      Container(height: 26, width: 6, decoration: BoxDecoration(color: const Color(0xFFF43F5E).withValues(alpha: 0.6), borderRadius: BorderRadius.circular(3))),
-                      const SizedBox(width: 4),
-                      Container(height: 14, width: 6, decoration: BoxDecoration(color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7), borderRadius: BorderRadius.circular(3))),
-                    ],
-                  ),
-                ),
-              ),
+              buildTopCategoryCard(),
             ],
           ),
           const SizedBox(height: 12),
 
-          // Row 3: Income breakdown & Accounts
-          Row(
-            children: [
-              Expanded(
-                child: _buildInsightCard(
-                  icon: Icons.trending_up_rounded,
-                  iconColor: const Color(0xFF10B981),
-                  title: isAr ? 'ملخص الدخل' : 'Income breakdown',
-                  mainText: totalIncome > 0
-                      ? _formatAmount(totalIncome)
-                      : (isAr ? 'لا يوجد دخل' : 'No activity'),
-                  subText: isAr ? 'الدخل المسجل في هذه الفترة' : 'No income recorded in this period',
-                  isDarkMode: isDarkMode,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildInsightCard(
-                  icon: Icons.credit_card_rounded,
-                  iconColor: const Color(0xFF14B8A6),
-                  title: isAr ? 'الحسابات' : 'Accounts',
-                  mainText: _formatAmount(totalBalance),
-                  subText: isAr
-                      ? 'عبر ${_accounts.where((a) => !a.isAll).length} حسابات'
-                      : 'across ${_accounts.where((a) => !a.isAll).length} accounts',
-                  isDarkMode: isDarkMode,
-                  onTap: _showAccountSwitcherModal,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Row 4: Add Widget
-          _buildAddWidgetCard(isDarkMode),
+          // Bento Row 3: Upcoming Bills & Subscriptions
+          buildSubscriptionWideCard(),
         ],
       ),
     );
   }
-
-  Widget _buildInsightCard({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String mainText,
-    required String subText,
-    required bool isDarkMode,
-    Widget? visualWidget,
-    VoidCallback? onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          height: 135,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFFAFAFA),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-              width: 1,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Card Header: Icon & Title
-              Row(
-                children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: iconColor.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(icon, size: 16, color: iconColor),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              // Main text & visual if any
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Text(
-                      mainText,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.3,
-                        color: isDarkMode ? Colors.white : Colors.black,
-                      ),
-                    ),
-                  ),
-                  if (visualWidget != null) visualWidget,
-                ],
-              ),
-              const SizedBox(height: 6),
-              // Subtitle
-              Text(
-                subText,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                  color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAddWidgetCard(bool isDarkMode) {
-    final isAr = Localizations.localeOf(context).languageCode == 'ar';
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          MessageService.showSuccess(
-            context: context,
-            message: isAr ? 'تخصيص وإضافة ويدجتس قادمة قريباً 🚀' : 'Custom widgets coming soon 🚀',
-          );
-        },
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          width: 140,
-          height: 120,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFFAFAFA),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-              width: 1,
-            ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.add_rounded,
-                  size: 20,
-                  color: isDarkMode ? Colors.white : Colors.black,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                isAr ? 'إضافة ويدجت' : 'Add widget',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  //#endregion
   //#endregion
 
   //#region Say-Style Transaction Item Card
@@ -3791,3 +4855,111 @@ mixin _HomeTabWidgets on _HomeTabState {
   }
   //#endregion
 }
+
+//#region Mini Donut / Pie Chart Component
+class _MiniDonutChart extends StatelessWidget {
+  final List<double> values;
+  final List<Color> colors;
+  final Widget? centerChild;
+  final double size;
+  final double strokeWidth;
+
+  const _MiniDonutChart({
+    required this.values,
+    required this.colors,
+    this.centerChild,
+    this.size = 46,
+    this.strokeWidth = 5.5,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          CustomPaint(
+            size: Size(size, size),
+            painter: _MiniDonutChartPainter(
+              values: values,
+              colors: colors,
+              strokeWidth: strokeWidth,
+            ),
+          ),
+          if (centerChild != null) centerChild!,
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniDonutChartPainter extends CustomPainter {
+  final List<double> values;
+  final List<Color> colors;
+  final double strokeWidth;
+
+  _MiniDonutChartPainter({
+    required this.values,
+    required this.colors,
+    required this.strokeWidth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width - strokeWidth) / 2;
+    final total = values.fold<double>(0.0, (s, v) => s + (v > 0 ? v : 0.0));
+
+    // Base subtle track ring
+    final trackPaint = Paint()
+      ..color = (colors.isNotEmpty ? colors.first : Colors.grey).withValues(alpha: 0.10)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+    canvas.drawCircle(center, radius, trackPaint);
+
+    if (total <= 0 || values.isEmpty) {
+      return;
+    }
+
+    const startAngleBase = -math.pi / 2;
+    double currentAngle = startAngleBase;
+    final nonZeroCount = values.where((v) => v > 0).length;
+    final hasMultiple = nonZeroCount > 1;
+    // 0.08 radians (~4.6 degrees) clean gap between slices
+    final gapAngle = hasMultiple ? 0.08 : 0.0;
+
+    for (int i = 0; i < values.length; i++) {
+      final val = values[i];
+      if (val <= 0) continue;
+      final sweepAngle = (val / total) * 2 * math.pi;
+      final actualSweep = hasMultiple ? math.max(0.04, sweepAngle - gapAngle) : sweepAngle;
+      final actualStart = hasMultiple ? currentAngle + (gapAngle / 2) : currentAngle;
+
+      final paint = Paint()
+        ..color = colors[i % colors.length]
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..strokeCap = StrokeCap.butt;
+
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        actualStart,
+        actualSweep,
+        false,
+        paint,
+      );
+
+      currentAngle += sweepAngle;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _MiniDonutChartPainter oldDelegate) {
+    return oldDelegate.values != values ||
+        oldDelegate.colors != colors ||
+        oldDelegate.strokeWidth != strokeWidth;
+  }
+}
+//#endregion

@@ -314,11 +314,24 @@ Future<void> _fetchFromApi({bool silent = false, BuildContext? context}) async {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDarkMode ? const Color(0xFF09090B) : const Color(0xFFF8F8FA);
 
     return Scaffold(
+      backgroundColor: bgColor,
       appBar: AppBar(
-        title: Text(context.l10n.analytics),
+        title: Text(
+          context.l10n.analytics,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.3,
+            color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+          ),
+        ),
         centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
       ),
       body: _isLoading
           ? _buildShimmerLoading(isDarkMode)
