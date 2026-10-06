@@ -11,6 +11,7 @@ import 'package:my_wallet/core/utils/language_service.dart';
 import 'package:my_wallet/core/utils/navigation_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/core/widgets/app_lock_gate.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:my_wallet/features/splash/presentation/screens/splash_screen.dart';
 import 'package:my_wallet/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
@@ -34,8 +35,9 @@ void main() async {
   await SharedPrefs.init();
   await ThemeService.init();
   await LanguageService.init();
+  await LiquidGlassWidgets.initialize();
 
-  runApp(const MyWalletApp());
+  runApp(LiquidGlassWidgets.wrap(child: const MyWalletApp()));
 }
 
 class MyWalletApp extends StatefulWidget {
