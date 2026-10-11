@@ -1246,4 +1246,678 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get subscriptions => 'الاشتراكات';
+
+  @override
+  String get userProfile => 'الملف الشخصي';
+
+  @override
+  String get nameTooShort => 'الاسم قصير جداً';
+
+  @override
+  String get accountDetails => 'بيانات الحساب';
+
+  @override
+  String get emailCannotBeChanged =>
+      'البريد الإلكتروني مرتبط بحسابك للأمان ولا يمكن تغييره.';
+
+  @override
+  String get sessionExpired => 'انتهت صلاحية الجلسة، يرجى تسجيل الدخول مجدداً';
+
+  @override
+  String get listening => 'أستمع...';
+
+  @override
+  String get voice => 'صوت';
+
+  @override
+  String get serverConnectionFailed => 'فشل الاتصال بالسيرفر';
+
+  @override
+  String get allAccounts => 'إجمالي الحسابات';
+
+  @override
+  String get banqueMisr => 'بنك مصر';
+
+  @override
+  String get cashWallet => 'كاش (الجيب)';
+
+  @override
+  String get cash => 'نقدية';
+
+  @override
+  String get vodafoneCash => 'فودافون كاش';
+
+  @override
+  String get justNow => 'الآن';
+
+  @override
+  String get oneHourAgo => 'منذ ساعة';
+
+  @override
+  String get twoHoursAgo => 'منذ ساعتين';
+
+  @override
+  String get twoDaysAgo => 'منذ يومين';
+
+  @override
+  String get oneMonthAgo => 'منذ شهر';
+
+  @override
+  String get balance => 'الرصيد';
+
+  @override
+  String get lastMonth => 'الشهر السابق';
+
+  @override
+  String get byMonth => 'بالشهر...';
+
+  @override
+  String get selectDateRange => 'تحديد الفترة';
+
+  @override
+  String get switchWallet => 'تبديل المحفظة';
+
+  @override
+  String get switchAccount => 'تبديل الحساب';
+
+  @override
+  String get receipt => 'فاتورة';
+
+  @override
+  String get aiReceiptScanner => 'مسح الفواتير بالذكاء الاصطناعي';
+
+  @override
+  String get aiReceiptScannerDesc =>
+      'صور أو ارفع أي فاتورة ورقية، والذكاء الاصطناعي هيقرأ المبلغ والتاريخ والتصنيف ويسجلها تلقائياً!';
+
+  @override
+  String get manual => 'إدخال يدوي';
+
+  @override
+  String get camera => 'فتح الكاميرا';
+
+  @override
+  String get aiCameraComingSoon => 'جاري ربط الـ AI OCR والكاميرا قريباً!';
+
+  @override
+  String get more => 'المزيد';
+
+  @override
+  String daysCount(Object count) {
+    return '$count يوم';
+  }
+
+  @override
+  String get selectMonth => 'اختر الشهر';
+
+  @override
+  String get myWallets => 'محافظي';
+
+  @override
+  String get main => 'الرئيسي';
+
+  @override
+  String get tapToManageWallets => 'اضغط لإدارة أو إضافة محفظة';
+
+  @override
+  String get manageWallets => 'إدارة المحافظ';
+
+  @override
+  String get autoTrackSpendingTitle => 'تتبع المصاريف تلقائياً';
+
+  @override
+  String get autoTrackSpendingSubtitle =>
+      'سجّل مشترياتك ومعاملاتك من إشعارات ورسائل البنوك تلقائياً وبدقة دون الحاجة لإدخالها يدوياً كل مرة';
+
+  @override
+  String get setUpNow => 'تفعيل الآن';
+
+  @override
+  String get autoSyncComingSoon => 'سيتم تفعيل المزامنة التلقائية قريباً 🚀';
+
+  @override
+  String get addSalaryIncomeTitle => 'أضف راتبك ومصادر دخلك';
+
+  @override
+  String get addSalaryIncomeSubtitle =>
+      'حدّد موعد نزول دخلك الشهري والمصادر الإضافية لتوقع صافي التدفق المالي والتخطيط لمدخراتك مبكراً';
+
+  @override
+  String get addSalary => 'إضافة دخل';
+
+  @override
+  String get organizeAccountsTitle => 'نظّم محافظك وبطاقاتك';
+
+  @override
+  String get organizeAccountsSubtitle =>
+      'اجمع بطاقاتك البنكية، محافظك الإلكترونية ونقد الكاش في مكان واحد لمتابعة إجمالي ثروتك لحظة بلحظة';
+
+  @override
+  String get addAccount => 'إضافة محفظة';
+
+  @override
+  String get setMonthlyBudgetPromptTitle => 'حدد ميزانية لمصاريفك';
+
+  @override
+  String get setMonthlyBudgetPromptSubtitle =>
+      'ضع سقفاً ذكياً للإنفاق على المطاعم والتسوق والفواتير لتصلك تنبيهات مبكرة قبل تجاوز الميزانية المحددة';
+
+  @override
+  String get createBudget => 'تحديد ميزانية';
+
+  @override
+  String get budgetAlertsComingSoon =>
+      'قريباً: تحديد الميزانيات والتنبيهات الذكية 🎯';
+
+  @override
+  String get tapToSetMonthlyBudget => 'اضغط لتعيين الميزانية الشهرية';
+
+  @override
+  String get setBudget => 'تعيين الميزانية';
+
+  @override
+  String get notSet => 'غير محددة';
+
+  @override
+  String get overLimit => 'تجاوزت الميزانية';
+
+  @override
+  String walletsCount(Object count) {
+    return '$count محافظ';
+  }
+
+  @override
+  String get accounts => 'توزيع المحافظ';
+
+  @override
+  String get balanced => 'متوازن';
+
+  @override
+  String get balancedSpending => 'المصاريف متوازنة';
+
+  @override
+  String get viewCategories => 'تصفح كل الفئات';
+
+  @override
+  String get cashFlow => 'صافي التدفق';
+
+  @override
+  String savedPercent(Object percent) {
+    return '+فائض $percent%';
+  }
+
+  @override
+  String get deficit => '-عجز';
+
+  @override
+  String get positiveFlowMonth => 'فائض السيولة هذا الشهر';
+
+  @override
+  String get negativeFlowMonth => 'عجز في حركة الشهر';
+
+  @override
+  String get incoming => 'وارد';
+
+  @override
+  String get outgoing => 'صادر';
+
+  @override
+  String get dueToday => 'اليوم!';
+
+  @override
+  String get dueTomorrow => 'غداً';
+
+  @override
+  String dueInDays(Object days) {
+    return 'بعد $days يوم';
+  }
+
+  @override
+  String renewalDayNotice(Object count, Object day) {
+    return 'استحقاق يوم $day • من $count اشتراكات';
+  }
+
+  @override
+  String get billsAndSubscriptions => 'الالتزامات والفواتير';
+
+  @override
+  String get noUpcomingBills => 'لا توجد فواتير مستحقة قريباً';
+
+  @override
+  String get financialInsights => 'الرؤى والتحليلات المالية';
+
+  @override
+  String get fullAnalytics => 'التحليلات الكاملة';
+
+  @override
+  String get tapToAddFirstExpense => 'اضغط + أو استخدم الصوت لإضافة أول حركة';
+
+  @override
+  String get cannotTransferSameAccount => 'لا يمكن التحويل لنفس الحساب';
+
+  @override
+  String get transferSuccess => 'تم التحويل بنجاح 🚀';
+
+  @override
+  String get newTransaction => 'معاملة جديدة';
+
+  @override
+  String get transferFrom => 'تحويل من محفظة';
+
+  @override
+  String get fromWallet => 'من محفظة';
+
+  @override
+  String get transferTo => 'تحويل إلى محفظة';
+
+  @override
+  String get toWallet => 'إلى محفظة';
+
+  @override
+  String get selectWalletAccount => 'اختر المحفظة أو الحساب';
+
+  @override
+  String get walletAccount => 'المحفظة / الحساب';
+
+  @override
+  String get noteDescriptionOptional => 'ملاحظة أو وصف (اختياري)...';
+
+  @override
+  String get confirmTransfer => 'تأكيد التحويل';
+
+  @override
+  String get bankAccount => 'حساب بنكي';
+
+  @override
+  String get cashWalletType => 'كاش (نقدية)';
+
+  @override
+  String get eWalletType => 'محفظة إلكترونية';
+
+  @override
+  String get savingsVaultType => 'صندوق ادخار';
+
+  @override
+  String get addNewAccount => 'إضافة حساب جديد';
+
+  @override
+  String get accountNameHint => 'اسم الحساب (مثال: بنك مصر، CIB)';
+
+  @override
+  String get initialBalance => 'الرصيد الافتتاحي الحالي';
+
+  @override
+  String get accountType => 'نوع الحساب';
+
+  @override
+  String get pleaseEnterAccountName => 'يرجى إدخال اسم الحساب';
+
+  @override
+  String get accountAddedSuccess => 'تمت إضافة الحساب بنجاح 💳';
+
+  @override
+  String get saveAccount => 'حفظ الحساب';
+
+  @override
+  String get selectActiveWallet => 'اختر المحفظة المعروضة';
+
+  @override
+  String get manageAccounts => 'إدارة المحافظ والحسابات';
+
+  @override
+  String get manageAccountsSubtitle =>
+      'تحكم في محافظك، حساباتك البنكية، والمحافظ الإلكترونية';
+
+  @override
+  String get mainAcc => 'الرئيسي';
+
+  @override
+  String get active => 'النشط';
+
+  @override
+  String setAsMainSuccess(Object name) {
+    return 'تم تعيين $name كحساب رئيسي ⭐';
+  }
+
+  @override
+  String get setAsMain => 'تعيين كرئيسي';
+
+  @override
+  String get selected => 'محدد';
+
+  @override
+  String get selectAction => 'تحديد';
+
+  @override
+  String get setMonthlyBudgetSpending =>
+      'حدد الحد الأقصى للمصاريف المتوقعة لهذا الشهر';
+
+  @override
+  String get pleaseEnterValidAmount => 'يرجى إدخال مبلغ صحيح';
+
+  @override
+  String get saveBudget => 'حفظ الميزانية';
+
+  @override
+  String get monthlyBudgetRemoved => 'تم إلغاء الميزانية الشهرية';
+
+  @override
+  String get removeMonthlyBudget => 'إلغاء الميزانية الشهرية';
+
+  @override
+  String budgetForCategory(Object name) {
+    return 'ميزانية $name';
+  }
+
+  @override
+  String get setCategorySpendingLimit =>
+      'حدد الحد الأقصى للمصاريف في هذا التصنيف';
+
+  @override
+  String get categoryBudgetUpdated => 'تم تحديث ميزانية التصنيف';
+
+  @override
+  String get newCategory => 'فئة جديدة';
+
+  @override
+  String get addNewCategorySubtitle => 'إضافة فئة جديدة وتحديد سقف مصاريفها';
+
+  @override
+  String get setOrEditOverallMonthlyLimit =>
+      'تحديد أو تعديل الحد الإجمالي للشهر';
+
+  @override
+  String get addCategoryToTrackSubtitle =>
+      'أضف فئة جديدة لتتبع مصاريفها وميزانيتها';
+
+  @override
+  String get categoryName => 'اسم الفئة';
+
+  @override
+  String get categoryNameHint => 'مثال: اشتراكات، مواصلات...';
+
+  @override
+  String get budgetLimitOptional => 'حد الميزانية (اختياري)';
+
+  @override
+  String get pleaseEnterCategoryName => 'يرجى إدخال اسم الفئة';
+
+  @override
+  String get categoryAddedSuccess => 'تمت إضافة الفئة بنجاح';
+
+  @override
+  String get addCategory => 'إضافة الفئة';
+
+  @override
+  String get deleteCategory => 'حذف الفئة';
+
+  @override
+  String confirmDeleteCategory(Object name) {
+    return 'هل أنت متأكد من حذف فئة \"$name\" من الميزانية؟';
+  }
+
+  @override
+  String get categoryDeletedSuccess => 'تم حذف الفئة بنجاح';
+
+  @override
+  String currentLimitAmount(Object amount) {
+    return 'الحد الحالي: $amount';
+  }
+
+  @override
+  String get noLimitSet => 'بدون حد ميزانية';
+
+  @override
+  String get editBudget => 'تعديل الميزانية';
+
+  @override
+  String get monthlySpendingBudget => 'ميزانية الشهر الإجمالية';
+
+  @override
+  String ofMonthlyBudget(Object amount) {
+    return 'من $amount';
+  }
+
+  @override
+  String get overBudgetExclamation => 'تجاوزت الميزانية!';
+
+  @override
+  String get dailySafeSpend => 'متاح يومياً (آمن)';
+
+  @override
+  String get day => 'يوم';
+
+  @override
+  String get totalSpentThisMonth => 'إجمالي المصاريف حتى الآن';
+
+  @override
+  String get setLimitToTrackSafeSpend =>
+      'حدد سقفاً لمتابعة المتبقي والمصروف الآمن';
+
+  @override
+  String get categoryBudgets => 'ميزانيات التصنيفات';
+
+  @override
+  String get tapToEdit => 'اضغط للتعديل';
+
+  @override
+  String spentAmount(Object amount) {
+    return 'صرفت $amount';
+  }
+
+  @override
+  String limitAmount(Object amount) {
+    return 'الحد: $amount';
+  }
+
+  @override
+  String get limitNotSet => 'الحد: غير محدد';
+
+  @override
+  String get subscriptionsAndBills => 'الاشتراكات والفواتير';
+
+  @override
+  String get newSubscription => 'إضافة اشتراك جديد';
+
+  @override
+  String get trackRecurringBillsSubtitle =>
+      'تتبع فواتيرك واشتراكاتك الدورية بسهولة';
+
+  @override
+  String get subscriptionTitleHint => 'اسم الاشتراك (مثال: نتفلكس)';
+
+  @override
+  String get subscriptionDayHint => 'يوم';
+
+  @override
+  String get ofMonthSuffix => 'بالشهر';
+
+  @override
+  String get monthly => 'شهرياً';
+
+  @override
+  String get yearly => 'سنوياً';
+
+  @override
+  String get pleaseEnterSubscriptionTitleAndAmount =>
+      'يرجى إدخال اسم ومبلغ الاشتراك';
+
+  @override
+  String get subscriptionAddedSuccess => 'تمت إضافة الاشتراك بنجاح';
+
+  @override
+  String get saveSubscription => 'حفظ الاشتراك';
+
+  @override
+  String get deleteSubscription => 'حذف هذا الاشتراك';
+
+  @override
+  String get subscriptionDeletedSuccess => 'تم حذف الاشتراك';
+
+  @override
+  String get monthlyRecurringCosts => 'الالتزامات الدورية الشهرية';
+
+  @override
+  String activeSubscriptionsCount(Object count) {
+    return '$count نشطة';
+  }
+
+  @override
+  String get perMonth => '/ شهر';
+
+  @override
+  String nextDueBill(Object title) {
+    return 'الفاتورة القادمة: $title';
+  }
+
+  @override
+  String get dueTodayExclamation => 'مستحقة اليوم!';
+
+  @override
+  String dueInDaysWithDay(Object day, Object days) {
+    return 'بعد $days يوم (يوم $day بالشهر)';
+  }
+
+  @override
+  String get activeSubscriptions => 'الاشتراكات المثبتة';
+
+  @override
+  String get addNewSubscriptionAction => '+ إضافة جديد';
+
+  @override
+  String dayOfMonthFormatted(Object day) {
+    return 'يوم $day بالشهر';
+  }
+
+  @override
+  String get weInternet => 'إنترنت WE';
+
+  @override
+  String get gym => 'جيم';
+
+  @override
+  String get budgetUpdatedSuccessfully => 'تم تحديث الميزانية بنجاح';
+
+  @override
+  String get confirm => 'تأكيد';
+
+  @override
+  String get customRangeDots => 'فترة مخصصة...';
+
+  @override
+  String get setAction => 'تحديد';
+
+  @override
+  String inDaysFormatted(Object days) {
+    return 'بعد $days يوم';
+  }
+
+  @override
+  String get yrUnit => 'سنوياً';
+
+  @override
+  String get moUnit => 'شهرياً';
+
+  @override
+  String get selectWalletOrAccount => 'اختر المحفظة أو الحساب';
+
+  @override
+  String get walletOrAccount => 'المحفظة / الحساب';
+
+  @override
+  String get noteOrDescriptionOptional => 'ملاحظة أو وصف (اختياري)...';
+
+  @override
+  String get selectActionKey => 'تحديد';
+
+  @override
+  String get addNewAccountOrWallet => 'إضافة محفظة / حساب جديد';
+
+  @override
+  String get viewAll => 'عرض الكل';
+
+  @override
+  String get remainingMonth => 'المتبقي للشهر';
+
+  @override
+  String get perDay => '/ يوم';
+
+  @override
+  String daysCountInParens(Object count) {
+    return '($count يوم)';
+  }
+
+  @override
+  String dueDayWithBillsCount(Object count, Object day) {
+    return 'استحقاق يوم $day • من $count اشتراكات';
+  }
+
+  @override
+  String minutesAgoPlural(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'منذ $count دقيقة',
+      many: 'منذ $count دقيقة',
+      few: 'منذ $count دقائق',
+      two: 'منذ دقيقتين',
+      one: 'منذ دقيقة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String hoursAgoPlural(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'منذ $count ساعة',
+      many: 'منذ $count ساعة',
+      few: 'منذ $count ساعات',
+      two: 'منذ ساعتين',
+      one: 'منذ ساعة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String daysAgoPlural(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'منذ $count يوم',
+      many: 'منذ $count يوماً',
+      few: 'منذ $count أيام',
+      two: 'منذ يومين',
+      one: 'منذ يوم',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get manageCategories => 'إدارة الفئات';
+
+  @override
+  String get manageCategoriesSubtitle => 'عرض وتعديل وتصنيف المصروفات';
+
+  @override
+  String categoryExpensesCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count مصروف',
+      many: '$count مصروفاً',
+      few: '$count مصروفات',
+      two: '2 مصروفات',
+      one: 'مصروف واحد',
+      zero: '0 مصروفات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get searchCategories => 'بحث في الفئات...';
+
+  @override
+  String get noCategoriesFound => 'لم يتم العثور على فئات';
 }

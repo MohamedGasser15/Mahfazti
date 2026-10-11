@@ -159,12 +159,9 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
 
         await _authRepository.logout();
         if (mounted) {
-          final isAr = Directionality.of(context) == TextDirection.rtl;
           MessageService.showError(
             context: context,
-            message: isAr
-                ? 'انتهت صلاحية الجلسة، يرجى تسجيل الدخول مجدداً'
-                : 'Session expired. Please log in again.',
+            message: context.l10n.sessionExpired,
           );
           Navigator.pushNamedAndRemoveUntil(
             context,

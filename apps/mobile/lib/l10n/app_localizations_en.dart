@@ -1253,4 +1253,667 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get subscriptions => 'Subscriptions';
+
+  @override
+  String get userProfile => 'User Profile';
+
+  @override
+  String get nameTooShort => 'Name is too short';
+
+  @override
+  String get accountDetails => 'Account Details';
+
+  @override
+  String get emailCannotBeChanged =>
+      'Email is linked to your account for security and cannot be changed.';
+
+  @override
+  String get sessionExpired => 'Session expired. Please log in again.';
+
+  @override
+  String get listening => 'Listening...';
+
+  @override
+  String get voice => 'Voice';
+
+  @override
+  String get serverConnectionFailed => 'Failed to connect to server';
+
+  @override
+  String get allAccounts => 'All Accounts';
+
+  @override
+  String get banqueMisr => 'Banque Misr';
+
+  @override
+  String get cashWallet => 'Cash Wallet';
+
+  @override
+  String get cash => 'Cash';
+
+  @override
+  String get vodafoneCash => 'Vodafone Cash';
+
+  @override
+  String get justNow => 'Just now';
+
+  @override
+  String get oneHourAgo => '1h ago';
+
+  @override
+  String get twoHoursAgo => '2h ago';
+
+  @override
+  String get twoDaysAgo => '2d ago';
+
+  @override
+  String get oneMonthAgo => '1mo ago';
+
+  @override
+  String get balance => 'Balance';
+
+  @override
+  String get lastMonth => 'Last Month';
+
+  @override
+  String get byMonth => 'By Month...';
+
+  @override
+  String get selectDateRange => 'Select date range';
+
+  @override
+  String get switchWallet => 'Switch wallet';
+
+  @override
+  String get switchAccount => 'Switch account';
+
+  @override
+  String get receipt => 'Receipt';
+
+  @override
+  String get aiReceiptScanner => 'AI Receipt Scanner';
+
+  @override
+  String get aiReceiptScannerDesc =>
+      'Scan or upload any paper receipt, and AI will automatically extract amount, date, and category!';
+
+  @override
+  String get manual => 'Manual';
+
+  @override
+  String get camera => 'Camera';
+
+  @override
+  String get aiCameraComingSoon => 'AI Camera OCR will be available soon!';
+
+  @override
+  String get more => 'More';
+
+  @override
+  String daysCount(Object count) {
+    return '$count days';
+  }
+
+  @override
+  String get selectMonth => 'Select Month';
+
+  @override
+  String get myWallets => 'My Wallets';
+
+  @override
+  String get main => 'Main';
+
+  @override
+  String get tapToManageWallets => 'Tap to manage wallets';
+
+  @override
+  String get manageWallets => 'Manage wallets';
+
+  @override
+  String get autoTrackSpendingTitle => 'Track spending automatically';
+
+  @override
+  String get autoTrackSpendingSubtitle =>
+      'Log your purchases and transactions automatically from bank SMS and notifications accurately.';
+
+  @override
+  String get setUpNow => 'Set Up';
+
+  @override
+  String get autoSyncComingSoon => 'Automatic sync will be available soon! 🚀';
+
+  @override
+  String get addSalaryIncomeTitle => 'Add your salary & income';
+
+  @override
+  String get addSalaryIncomeSubtitle =>
+      'Set the date of your monthly income to forecast cash flow and plan your savings early.';
+
+  @override
+  String get addSalary => 'Add Salary';
+
+  @override
+  String get organizeAccountsTitle => 'Organize your accounts';
+
+  @override
+  String get organizeAccountsSubtitle =>
+      'Combine your bank cards, e-wallets, and cash in one place to monitor your total wealth in real time.';
+
+  @override
+  String get addAccount => 'Add Account';
+
+  @override
+  String get setMonthlyBudgetPromptTitle => 'Set a monthly budget';
+
+  @override
+  String get setMonthlyBudgetPromptSubtitle =>
+      'Set a smart spending ceiling for dining, shopping, and bills to get early alerts before exceeding budget.';
+
+  @override
+  String get createBudget => 'Create Budget';
+
+  @override
+  String get budgetAlertsComingSoon => 'Coming soon: Smart budgets & alerts 🎯';
+
+  @override
+  String get tapToSetMonthlyBudget => 'Tap to set monthly budget';
+
+  @override
+  String get setBudget => 'Set Budget';
+
+  @override
+  String get notSet => 'Not set';
+
+  @override
+  String get overLimit => 'Over limit';
+
+  @override
+  String walletsCount(Object count) {
+    return '$count wallets';
+  }
+
+  @override
+  String get accounts => 'Accounts';
+
+  @override
+  String get balanced => 'Balanced';
+
+  @override
+  String get balancedSpending => 'Balanced spending';
+
+  @override
+  String get viewCategories => 'View categories';
+
+  @override
+  String get cashFlow => 'Cash Flow';
+
+  @override
+  String savedPercent(Object percent) {
+    return '+$percent% saved';
+  }
+
+  @override
+  String get deficit => '-Deficit';
+
+  @override
+  String get positiveFlowMonth => 'Liquidity surplus this month';
+
+  @override
+  String get negativeFlowMonth => 'Deficit in monthly cash flow';
+
+  @override
+  String get incoming => 'In';
+
+  @override
+  String get outgoing => 'Out';
+
+  @override
+  String get dueToday => 'Today!';
+
+  @override
+  String get dueTomorrow => 'Tomorrow';
+
+  @override
+  String dueInDays(Object days) {
+    return 'In $days days';
+  }
+
+  @override
+  String renewalDayNotice(Object count, Object day) {
+    return 'Due on day $day • out of $count subscriptions';
+  }
+
+  @override
+  String get billsAndSubscriptions => 'Bills & Subscriptions';
+
+  @override
+  String get noUpcomingBills => 'No upcoming bills due';
+
+  @override
+  String get financialInsights => 'Financial Insights';
+
+  @override
+  String get fullAnalytics => 'Full analytics';
+
+  @override
+  String get tapToAddFirstExpense =>
+      'Tap + or use voice to add your first expense';
+
+  @override
+  String get cannotTransferSameAccount => 'Cannot transfer to the same account';
+
+  @override
+  String get transferSuccess => 'Transfer completed successfully 🚀';
+
+  @override
+  String get newTransaction => 'New Transaction';
+
+  @override
+  String get transferFrom => 'Transfer From';
+
+  @override
+  String get fromWallet => 'From';
+
+  @override
+  String get transferTo => 'Transfer To';
+
+  @override
+  String get toWallet => 'To';
+
+  @override
+  String get selectWalletAccount => 'Select Wallet / Account';
+
+  @override
+  String get walletAccount => 'Wallet / Account';
+
+  @override
+  String get noteDescriptionOptional => 'Note / Description (optional)...';
+
+  @override
+  String get confirmTransfer => 'Confirm Transfer';
+
+  @override
+  String get bankAccount => 'Bank Account';
+
+  @override
+  String get cashWalletType => 'Cash Wallet';
+
+  @override
+  String get eWalletType => 'E-Wallet';
+
+  @override
+  String get savingsVaultType => 'Savings Vault';
+
+  @override
+  String get addNewAccount => 'Add New Account';
+
+  @override
+  String get accountNameHint => 'Account Name (e.g. Banque Misr)';
+
+  @override
+  String get initialBalance => 'Initial Balance';
+
+  @override
+  String get accountType => 'Account Type';
+
+  @override
+  String get pleaseEnterAccountName => 'Please enter account name';
+
+  @override
+  String get accountAddedSuccess => 'Account added successfully 💳';
+
+  @override
+  String get saveAccount => 'Save Account';
+
+  @override
+  String get selectActiveWallet => 'Select Active Wallet';
+
+  @override
+  String get manageAccounts => 'Manage Accounts';
+
+  @override
+  String get manageAccountsSubtitle =>
+      'Manage your cash, bank, and digital wallets';
+
+  @override
+  String get mainAcc => 'Main Acc';
+
+  @override
+  String get active => 'Active';
+
+  @override
+  String setAsMainSuccess(Object name) {
+    return '$name set as main account ⭐';
+  }
+
+  @override
+  String get setAsMain => 'Set as Main';
+
+  @override
+  String get selected => 'Selected';
+
+  @override
+  String get selectAction => 'Select';
+
+  @override
+  String get setMonthlyBudgetSpending =>
+      'Set your spending target for this month';
+
+  @override
+  String get pleaseEnterValidAmount => 'Please enter a valid amount';
+
+  @override
+  String get saveBudget => 'Save Budget';
+
+  @override
+  String get monthlyBudgetRemoved => 'Monthly budget removed';
+
+  @override
+  String get removeMonthlyBudget => 'Remove Monthly Budget';
+
+  @override
+  String budgetForCategory(Object name) {
+    return 'Budget for $name';
+  }
+
+  @override
+  String get setCategorySpendingLimit => 'Set spending limit for this category';
+
+  @override
+  String get categoryBudgetUpdated => 'Category budget updated';
+
+  @override
+  String get newCategory => 'New Category';
+
+  @override
+  String get addNewCategorySubtitle => 'Add a new category with a budget limit';
+
+  @override
+  String get setOrEditOverallMonthlyLimit =>
+      'Set or edit overall monthly limit';
+
+  @override
+  String get addCategoryToTrackSubtitle =>
+      'Add a new category to track its spending & budget';
+
+  @override
+  String get categoryName => 'Category Name';
+
+  @override
+  String get categoryNameHint => 'e.g. Subscriptions, Transport';
+
+  @override
+  String get budgetLimitOptional => 'Budget Limit (optional)';
+
+  @override
+  String get pleaseEnterCategoryName => 'Please enter category name';
+
+  @override
+  String get categoryAddedSuccess => 'Category added successfully';
+
+  @override
+  String get addCategory => 'Add Category';
+
+  @override
+  String get deleteCategory => 'Delete Category';
+
+  @override
+  String confirmDeleteCategory(Object name) {
+    return 'Are you sure you want to delete category \"$name\" from budget?';
+  }
+
+  @override
+  String get categoryDeletedSuccess => 'Category deleted successfully';
+
+  @override
+  String currentLimitAmount(Object amount) {
+    return 'Current limit: $amount';
+  }
+
+  @override
+  String get noLimitSet => 'No limit set';
+
+  @override
+  String get editBudget => 'Edit Budget';
+
+  @override
+  String get monthlySpendingBudget => 'Monthly Spending Budget';
+
+  @override
+  String ofMonthlyBudget(Object amount) {
+    return 'of $amount';
+  }
+
+  @override
+  String get overBudgetExclamation => 'Over budget!';
+
+  @override
+  String get dailySafeSpend => 'Daily Safe Spend';
+
+  @override
+  String get day => 'day';
+
+  @override
+  String get totalSpentThisMonth => 'total spent this month';
+
+  @override
+  String get setLimitToTrackSafeSpend =>
+      'Set a limit to track remaining & safe spend';
+
+  @override
+  String get categoryBudgets => 'Category Budgets';
+
+  @override
+  String get tapToEdit => 'Tap to edit';
+
+  @override
+  String spentAmount(Object amount) {
+    return 'Spent $amount';
+  }
+
+  @override
+  String limitAmount(Object amount) {
+    return 'Limit: $amount';
+  }
+
+  @override
+  String get limitNotSet => 'Limit: Not set';
+
+  @override
+  String get subscriptionsAndBills => 'Subscriptions & Bills';
+
+  @override
+  String get newSubscription => 'New Subscription';
+
+  @override
+  String get trackRecurringBillsSubtitle =>
+      'Easily track your recurring bills & subs';
+
+  @override
+  String get subscriptionTitleHint => 'Title (e.g. Netflix)';
+
+  @override
+  String get subscriptionDayHint => 'Day';
+
+  @override
+  String get ofMonthSuffix => 'of mo';
+
+  @override
+  String get monthly => 'Monthly';
+
+  @override
+  String get yearly => 'Yearly';
+
+  @override
+  String get pleaseEnterSubscriptionTitleAndAmount =>
+      'Please enter title and amount';
+
+  @override
+  String get subscriptionAddedSuccess => 'Subscription added successfully';
+
+  @override
+  String get saveSubscription => 'Save Subscription';
+
+  @override
+  String get deleteSubscription => 'Delete Subscription';
+
+  @override
+  String get subscriptionDeletedSuccess => 'Subscription deleted';
+
+  @override
+  String get monthlyRecurringCosts => 'Monthly Recurring Costs';
+
+  @override
+  String activeSubscriptionsCount(Object count) {
+    return '$count active';
+  }
+
+  @override
+  String get perMonth => '/ month';
+
+  @override
+  String nextDueBill(Object title) {
+    return 'Next due: $title';
+  }
+
+  @override
+  String get dueTodayExclamation => 'Due today!';
+
+  @override
+  String dueInDaysWithDay(Object day, Object days) {
+    return 'In $days days (day $day of mo)';
+  }
+
+  @override
+  String get activeSubscriptions => 'Active Subscriptions';
+
+  @override
+  String get addNewSubscriptionAction => '+ Add new';
+
+  @override
+  String dayOfMonthFormatted(Object day) {
+    return 'Day $day of month';
+  }
+
+  @override
+  String get weInternet => 'WE Internet';
+
+  @override
+  String get gym => 'Gym';
+
+  @override
+  String get budgetUpdatedSuccessfully => 'Budget updated successfully';
+
+  @override
+  String get confirm => 'Confirm';
+
+  @override
+  String get customRangeDots => 'Custom Range...';
+
+  @override
+  String get setAction => 'Set';
+
+  @override
+  String inDaysFormatted(Object days) {
+    return 'In $days days';
+  }
+
+  @override
+  String get yrUnit => 'yr';
+
+  @override
+  String get moUnit => 'mo';
+
+  @override
+  String get selectWalletOrAccount => 'Select Wallet / Account';
+
+  @override
+  String get walletOrAccount => 'Wallet / Account';
+
+  @override
+  String get noteOrDescriptionOptional => 'Note / Description (optional)...';
+
+  @override
+  String get selectActionKey => 'Select';
+
+  @override
+  String get addNewAccountOrWallet => 'Add New Account';
+
+  @override
+  String get viewAll => 'View all';
+
+  @override
+  String get remainingMonth => 'Remaining';
+
+  @override
+  String get perDay => '/ day';
+
+  @override
+  String daysCountInParens(Object count) {
+    return '($count days)';
+  }
+
+  @override
+  String dueDayWithBillsCount(Object count, Object day) {
+    return 'Due day $day • $count bills';
+  }
+
+  @override
+  String minutesAgoPlural(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '${count}m ago',
+      one: '1m ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String hoursAgoPlural(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '${count}h ago',
+      two: '2h ago',
+      one: '1h ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String daysAgoPlural(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '${count}d ago',
+      two: '2d ago',
+      one: '1d ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get manageCategories => 'Manage Categories';
+
+  @override
+  String get manageCategoriesSubtitle => 'View and manage expense categories';
+
+  @override
+  String categoryExpensesCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count expenses',
+      one: '1 expense',
+      zero: '0 expenses',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get searchCategories => 'Search categories...';
+
+  @override
+  String get noCategoriesFound => 'No categories found';
 }

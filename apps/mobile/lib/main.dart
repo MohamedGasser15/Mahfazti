@@ -101,6 +101,7 @@ class _MyWalletAppState extends State<MyWalletApp> {
             title: 'Mahfazti',
             debugShowCheckedModeBanner: false,
             navigatorKey: NavigationService.navigatorKey,
+            navigatorObservers: [NavigationService.modalObserver],
             locale: _currentLocale,
             localizationsDelegates: const [
               AppLocalizations.delegate,

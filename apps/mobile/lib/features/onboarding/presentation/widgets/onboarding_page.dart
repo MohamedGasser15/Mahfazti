@@ -33,7 +33,7 @@ class OnboardingPageWidget extends StatelessWidget {
             ),
           ),
           
-          const SizedBox(height: 48),
+  const SizedBox(height: 48),
           
           // Title with animation
           AnimatedTextWidget(

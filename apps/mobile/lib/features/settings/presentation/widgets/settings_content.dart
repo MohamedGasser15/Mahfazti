@@ -18,6 +18,7 @@ import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 import 'package:my_wallet/features/profile/data/models/user_profile.dart';
 import 'package:my_wallet/features/profile/data/repositories/profile_repository.dart';
 import 'package:my_wallet/features/profile/presentation/screens/profile_edit_screen.dart';
+import 'package:my_wallet/features/settings/presentation/screens/categories_management_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -521,14 +522,14 @@ class _SettingsContentState extends State<SettingsContent> {
 
   // Theme Dropdown (Native iOS UIMenu on iOS / Material PopupMenuButton on Android)
   Widget _buildThemeDropdown(bool isDarkMode) {
-    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    final l10n = context.l10n;
     String themeLabel;
     if (_currentTheme == ThemeService.dark) {
-      themeLabel = isAr ? 'داكن' : 'Dark';
+      themeLabel = l10n.dark;
     } else if (_currentTheme == ThemeService.light) {
-      themeLabel = isAr ? 'فاتح' : 'Light';
+      themeLabel = l10n.light;
     } else {
-      themeLabel = isAr ? 'تلقائي (النظام)' : 'System';
+      themeLabel = l10n.system;
     }
 
     return Container(
@@ -546,20 +547,20 @@ class _SettingsContentState extends State<SettingsContent> {
         actions: [
           IosContextMenuAction(
             id: ThemeService.light,
-            title: isAr ? 'فاتح' : 'Light',
+            title: l10n.light,
             iconSystemName: 'sun.max',
             showTrailingCheckmark: _currentTheme == ThemeService.light,
           ),
           IosContextMenuAction(
             id: ThemeService.dark,
-            title: isAr ? 'داكن' : 'Dark',
+            title: l10n.dark,
             iconSystemName: 'moon',
             showTrailingCheckmark: _currentTheme == ThemeService.dark,
           ),
           const IosContextMenuDivider(),
           IosContextMenuAction(
             id: ThemeService.system,
-            title: isAr ? 'تلقائي (النظام)' : 'System',
+            title: l10n.system,
             iconSystemName: 'circle.lefthalf.filled',
             showTrailingCheckmark: _currentTheme == ThemeService.system,
           ),
@@ -1183,6 +1184,22 @@ class _SettingsContentState extends State<SettingsContent> {
             ),
           ),
           onTap: _openCurrencySelection,
+          showDivider: true,
+        ),
+        _buildSettingTile(
+          isDarkMode: isDarkMode,
+          icon: Icons.category_outlined,
+          iconColor: const Color(0xFF06B6D4),
+          title: context.l10n.manageCategories,
+          subtitle: context.l10n.manageCategoriesSubtitle,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const CategoriesManagementScreen(),
+              ),
+            );
+          },
           showDivider: false,
         ),
       ],

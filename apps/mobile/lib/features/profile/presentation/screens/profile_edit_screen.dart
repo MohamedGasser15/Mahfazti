@@ -351,7 +351,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
     final l10n = context.l10n;
     final bgColor = isDarkMode ? const Color(0xFF09090B) : const Color(0xFFF8F8FA);
 
@@ -403,7 +402,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          isArabic ? 'تراجع' : 'Reset',
+                          l10n.reset,
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -494,7 +493,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                               Text(
                                 _fullNameController.text.trim().isNotEmpty
                                     ? _fullNameController.text.trim()
-                                    : (isArabic ? 'الملف الشخصي' : 'User Profile'),
+                                    : l10n.userProfile,
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 18,
@@ -559,7 +558,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                         // Section 1: Personal Details
                         _buildSectionCard(
                           isDarkMode: isDarkMode,
-                          title: isArabic ? 'المعلومات الشخصية' : 'Personal Information',
+                          title: l10n.personalDetails,
                           children: [
                             _buildCardField(
                               context: context,
@@ -573,7 +572,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                   return l10n.pleaseEnterFullName;
                                 }
                                 if (value.trim().length < 2) {
-                                  return isArabic ? 'الاسم قصير جداً' : 'Name is too short';
+                                  return l10n.nameTooShort;
                                 }
                                 return null;
                               },
@@ -602,7 +601,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                         // Section 2: Account Details
                         _buildSectionCard(
                           isDarkMode: isDarkMode,
-                          title: isArabic ? 'بيانات الحساب' : 'Account Details',
+                          title: l10n.accountDetails,
                           children: [
                             _buildCardField(
                               context: context,
@@ -626,9 +625,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
-                                  isArabic
-                                      ? 'البريد الإلكتروني مرتبط بحسابك للأمان ولا يمكن تغييره.'
-                                      : 'Email is linked to your account for security and cannot be changed.',
+                                  l10n.emailCannotBeChanged,
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: isDarkMode
