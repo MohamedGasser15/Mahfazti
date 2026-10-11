@@ -25,15 +25,65 @@ mixin _HomeTabDialogs on _HomeTabState {
     final descriptionController = TextEditingController(
       text: prefillFromVoice?.title ?? prefillFromVoice?.note ?? '',
     );
+    final categorySearchController = TextEditingController();
+    String categorySearchQuery = '';
+    String secondaryPageType = 'category'; // 'category' or 'wallet'
+    String walletPickTarget = 'single'; // 'single', 'from', 'to'
 
+    final pageController = PageController();
+    int currentPage = 0;
+    DateTime selectedDate = DateTime.now();
     int? selectedCategoryId = prefillFromVoice?.categoryId;
     bool isSubmitting = false;
 
-    showModalBottomSheet(
-      context: context,
+    IconData getCategoryIcon(String? nameEn) {
+      final cat = (nameEn ?? '').toLowerCase();
+      switch (cat) {
+        case 'food':
+          return Icons.restaurant_rounded;
+        case 'salary':
+          return Icons.account_balance_wallet_rounded;
+        case 'bonus':
+          return Icons.card_giftcard_rounded;
+        case 'income':
+          return Icons.trending_up_rounded;
+        case 'shopping':
+          return Icons.shopping_bag_rounded;
+        case 'transport':
+        case 'transportation':
+          return Icons.directions_car_rounded;
+        case 'entertainment':
+          return Icons.movie_rounded;
+        case 'bill':
+        case 'bills':
+          return Icons.receipt_rounded;
+        case 'health':
+          return Icons.medical_services_rounded;
+        case 'education':
+          return Icons.school_rounded;
+        default:
+          return Icons.category_rounded;
+      }
+    }
+
+    final amountFocusNode = FocusNode();
+    final descriptionFocusNode = FocusNode();
+
+    _showAdaptiveBottomSheet(
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
+      showDragHandle: false,
+      dismissible: false,
+      enableDrag: false,
+      initialState: GlassSheetState.full,
+      detents: const {GlassSheetDetent.large},
+      fullSize: 0.93,
+      topBorderRadius: 44,
+      fullTopBorderRadius: 40,
+      bottomBorderRadius: 0,
+      fullBottomBorderRadius: 0,
+      horizontalMargin: 0,
+      bottomMargin: 0,
+      builder: (context, isGlass, controller) {
         return StatefulBuilder(
           builder: (context, setState) {
             final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -44,13 +94,62 @@ mixin _HomeTabDialogs on _HomeTabState {
             final isExpense = activeType == TransactionType.expense;
             final isTransfer = activeType == TransactionType.transfer;
 
-            final filteredCategories = _categories.where((c) => isIncome
-                ? ['Salary', 'Bonus', 'Income'].contains(c.nameEn)
-                : !['Salary', 'Bonus', 'Income'].contains(c.nameEn)).toList();
+            final filteredCategories = _categories.where((c) {
+              if (selectedCategoryId != null && c.id == selectedCategoryId) return true;
+              return isIncome
+                  ? ['Salary', 'Bonus', 'Income'].contains(c.nameEn)
+                  : !['Salary', 'Bonus', 'Income'].contains(c.nameEn);
+            }).toList();
 
-            if (selectedCategoryId == null && filteredCategories.isNotEmpty && !isTransfer) {
-              selectedCategoryId = filteredCategories.first.id;
+
+            // Calculate Most Used Categories based on transaction frequency
+            final recent = _homeData?.recentTransactions ?? [];
+            final Map<int, int> categoryUsageCounts = {};
+            for (final t in recent) {
+              if (t.categoryId != null) {
+                categoryUsageCounts[t.categoryId!] = (categoryUsageCounts[t.categoryId!] ?? 0) + 1;
+              }
             }
+            final sortedByUsage = filteredCategories.where((c) => (categoryUsageCounts[c.id] ?? 0) > 0).toList()
+              ..sort((a, b) => (categoryUsageCounts[b.id] ?? 0).compareTo(categoryUsageCounts[a.id] ?? 0));
+
+            final List<Category> mostUsedCategories;
+            if (sortedByUsage.length >= 2) {
+              mostUsedCategories = sortedByUsage.take(4).toList();
+            } else {
+              final popularKeywords = ['food', 'طعام', 'مطاعم', 'shop', 'تسوق', 'trans', 'مواصلات', 'grocer', 'بقالة', 'bill', 'فواتير', 'cafe', 'قهوة', 'salary', 'راتب'];
+              final popular = filteredCategories.where((c) {
+                final lowerEn = c.nameEn.toLowerCase();
+                final lowerAr = c.nameAr.toLowerCase();
+                return popularKeywords.any((k) => lowerEn.contains(k) || lowerAr.contains(k));
+              }).toList();
+              final combined = [...sortedByUsage];
+              for (final p in popular) {
+                if (combined.length >= 4) break;
+                if (!combined.any((c) => c.id == p.id)) {
+                  combined.add(p);
+                }
+              }
+              for (final f in filteredCategories) {
+                if (combined.length >= 4) break;
+                if (!combined.any((c) => c.id == f.id)) {
+                  combined.add(f);
+                }
+              }
+              mostUsedCategories = combined;
+            }
+
+            final displayedCategories = categorySearchQuery.trim().isEmpty
+                ? filteredCategories
+                : filteredCategories.where((c) {
+                    final q = categorySearchQuery.trim().toLowerCase();
+                    return c.nameAr.toLowerCase().contains(q) ||
+                        c.nameEn.toLowerCase().contains(q);
+                  }).toList();
+
+            final otherCategories = displayedCategories
+                .where((c) => !mostUsedCategories.any((m) => m.id == c.id))
+                .toList();
 
             final Color themeColor = isIncome
                 ? const Color(0xFF10B981)
@@ -107,6 +206,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                   amount: amount,
                   type: isIncome ? 'Deposit' : 'Withdrawal',
                   categoryId: selectedCategoryId!,
+                  transactionDate: selectedDate,
                 );
                 shouldPop = true;
                 await _loadHomeData();
@@ -132,6 +232,70 @@ mixin _HomeTabDialogs on _HomeTabState {
               }
             }
 
+            Future<void> showAddCategoryDialog() async {
+              await CategoriesManagementScreen.showAddCategoryModal(
+                context: context,
+                isDarkMode: isDarkMode,
+                onSave: (name, iconIndex, sheetContext) async {
+                  final trimmedName = name.trim();
+                  if (trimmedName.isEmpty) {
+                    MessageService.showWarning(
+                      context: context,
+                      message: context.l10n.pleaseEnterCategoryName,
+                    );
+                    return;
+                  }
+
+                  Category newCat;
+                  try {
+                    final repo = CategoryRepository();
+                    newCat = await repo.createCategory(trimmedName, trimmedName);
+                  } catch (_) {
+                    final maxId = _categories.fold<int>(0, (m, c) => c.id > m ? c.id : m);
+                    newCat = Category(
+                      id: maxId + 1,
+                      nameAr: trimmedName,
+                      nameEn: trimmedName,
+                      createdAt: DateTime.now(),
+                    );
+                  }
+
+                  if (iconIndex >= 0 &&
+                      iconIndex < CategoriesManagementScreen.availableCategoryIcons.length) {
+                    CategoryIconHelper.setCustomIcon(
+                      newCat.id,
+                      CategoriesManagementScreen.availableCategoryIcons[iconIndex],
+                    );
+                  }
+
+                  if (sheetContext.mounted) {
+                    Navigator.pop(sheetContext);
+                  }
+                  if (!context.mounted) return;
+
+                  setState(() {
+                    if (!_categories.any((c) => c.id == newCat.id)) {
+                      _categories = [newCat, ..._categories];
+                    }
+                    selectedCategoryId = newCat.id;
+                    categorySearchQuery = '';
+                    categorySearchController.clear();
+                  });
+
+                  pageController.animateToPage(
+                    0,
+                    duration: const Duration(milliseconds: 320),
+                    curve: Curves.easeInOutCubic,
+                  );
+
+                  MessageService.showSuccess(
+                    context: context,
+                    message: context.l10n.categoryAddedSuccess,
+                  );
+                },
+              );
+            }
+
             final screenHeight = MediaQuery.of(context).size.height;
 
             final selectedAccount = availableAccounts.firstWhere(
@@ -149,11 +313,8 @@ mixin _HomeTabDialogs on _HomeTabState {
                     ),
             );
 
-            final selectedCategory = filteredCategories.isNotEmpty
-                ? filteredCategories.firstWhere(
-                    (c) => c.id == selectedCategoryId,
-                    orElse: () => filteredCategories.first,
-                  )
+            final selectedCategory = selectedCategoryId != null
+                ? filteredCategories.where((c) => c.id == selectedCategoryId).firstOrNull
                 : null;
             final catName = selectedCategory != null
                 ? (isAr ? selectedCategory.nameAr : selectedCategory.nameEn)
@@ -171,483 +332,523 @@ mixin _HomeTabDialogs on _HomeTabState {
                   : selectedAccount,
             );
 
-            void pickAccount({
-              required String currentId,
-              required String title,
-              required void Function(String newId) onSelect,
-            }) {
-              showModalBottomSheet(
-                context: context,
-                backgroundColor: Colors.transparent,
-                isScrollControlled: true,
-                builder: (pickerCtx) {
-                  final pickerDarkMode = Theme.of(pickerCtx).brightness == Brightness.dark;
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: pickerDarkMode ? const Color(0xFF18181B) : Colors.white,
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                      border: Border.all(
-                        color: pickerDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-                      ),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                    child: SafeArea(
-                      top: false,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Center(
-                            child: Container(
-                              height: 4,
-                              width: 36,
-                              decoration: BoxDecoration(
-                                color: pickerDarkMode ? Colors.grey[700] : Colors.grey[300],
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            title,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: pickerDarkMode ? Colors.white : Colors.black,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          ...availableAccounts.map((acc) {
-                            final isSelected = acc.id == currentId;
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: InkWell(
-                                onTap: () {
-                                  onSelect(acc.id);
-                                  Navigator.pop(pickerCtx);
-                                },
-                                borderRadius: BorderRadius.circular(14),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? (pickerDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5))
-                                        : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(
-                                      color: isSelected
-                                          ? (pickerDarkMode ? Colors.white24 : Colors.black12)
-                                          : Colors.transparent,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: pickerDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-                                          borderRadius: BorderRadius.circular(10),
-                                        ),
-                                        child: Icon(
-                                          acc.icon,
-                                          size: 18,
-                                          color: pickerDarkMode ? Colors.white : Colors.black,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              acc.name,
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                                color: pickerDarkMode ? Colors.white : Colors.black,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              '${acc.balance.toStringAsFixed(2)} $currencySymbol',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: pickerDarkMode ? Colors.grey[400] : Colors.grey[600],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      if (isSelected)
-                                        Icon(
-                                          Icons.check_circle_rounded,
-                                          size: 20,
-                                          color: pickerDarkMode ? Colors.white : Colors.black,
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          }),
-                          const SizedBox(height: 12),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+            void openWalletPicker(String target) {
+              FocusScope.of(context).unfocus();
+              HapticFeedback.selectionClick();
+              setState(() {
+                secondaryPageType = 'wallet';
+                walletPickTarget = target;
+              });
+              pageController.animateToPage(
+                1,
+                duration: const Duration(milliseconds: 320),
+                curve: Curves.easeInOutCubic,
               );
             }
 
-            void pickCategory() {
-              showModalBottomSheet(
-                context: context,
-                backgroundColor: Colors.transparent,
-                isScrollControlled: true,
-                builder: (pickerCtx) {
-                  final pickerDarkMode = Theme.of(pickerCtx).brightness == Brightness.dark;
-                  return Container(
-                    constraints: BoxConstraints(
-                      maxHeight: screenHeight * 0.65,
-                    ),
-                    decoration: BoxDecoration(
-                      color: pickerDarkMode ? const Color(0xFF18181B) : Colors.white,
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                      border: Border.all(
-                        color: pickerDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-                      ),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                    child: SafeArea(
-                      top: false,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+            Widget buildCategoryGroup(List<Category> categories) {
+              if (categories.isEmpty) return const SizedBox.shrink();
+              const double cardRadius = 18.0;
+              return Container(
+                decoration: BoxDecoration(
+                  color: isDarkMode ? const Color(0xFF141418) : Colors.white,
+                  borderRadius: BorderRadius.circular(cardRadius),
+                  border: Border.all(
+                    color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                    width: 1,
+                  ),
+                  boxShadow: isDarkMode
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.02),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(cardRadius - 0.5),
+                  child: Column(
+                    children: List.generate(categories.length, (index) {
+                      final cat = categories[index];
+                      final isLast = index == categories.length - 1;
+                      final catName = isAr ? cat.nameAr : cat.nameEn;
+                      final meta = CategoryIconHelper.getMeta(cat.id, catName);
+                      final isSelected = cat.id == selectedCategoryId;
+
+                      final BorderRadius itemRadius;
+                      if (categories.length == 1) {
+                        itemRadius = BorderRadius.circular(cardRadius - 0.5);
+                      } else if (index == 0) {
+                        itemRadius = const BorderRadius.vertical(top: Radius.circular(cardRadius - 0.5));
+                      } else if (isLast) {
+                        itemRadius = const BorderRadius.vertical(bottom: Radius.circular(cardRadius - 0.5));
+                      } else {
+                        itemRadius = BorderRadius.zero;
+                      }
+
+                      return Column(
                         children: [
-                          Center(
-                            child: Container(
-                              height: 4,
-                              width: 36,
-                              decoration: BoxDecoration(
-                                color: pickerDarkMode ? Colors.grey[700] : Colors.grey[300],
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            isAr ? 'اختر التصنيف' : 'Select Category',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: pickerDarkMode ? Colors.white : Colors.black,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          if (filteredCategories.isEmpty)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 24),
-                              child: Center(
-                                child: Text(
-                                  isAr ? 'لا توجد تصنيفات متاحة' : 'No categories available',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: pickerDarkMode ? Colors.grey[400] : Colors.grey[600],
-                                  ),
+                          Material(
+                            color: isDarkMode ? const Color(0xFF141418) : Colors.white,
+                            borderRadius: itemRadius,
+                            child: InkWell(
+                              borderRadius: itemRadius,
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                FocusScope.of(context).unfocus();
+                                setState(() {
+                                  selectedCategoryId = cat.id;
+                                  categorySearchQuery = '';
+                                  categorySearchController.clear();
+                                });
+                                pageController.animateToPage(
+                                  0,
+                                  duration: const Duration(milliseconds: 320),
+                                  curve: Curves.easeInOutCubic,
+                                );
+                              },
+                              splashColor: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.04),
+                              highlightColor: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.02),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                child: Row(
+                                  children: [
+                                    // Colored Category Icon Box
+                                    Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        color: meta.color.withValues(alpha: isDarkMode ? 0.18 : 0.12),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: meta.color.withValues(alpha: isDarkMode ? 0.30 : 0.20),
+                                          width: 0.8,
+                                        ),
+                                      ),
+                                      child: Icon(
+                                        meta.icon,
+                                        size: 20,
+                                        color: meta.color,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+
+                                    // Category Name
+                                    Expanded(
+                                      child: Text(
+                                        catName,
+                                        style: TextStyle(
+                                          color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF09090B),
+                                          fontSize: 15.5,
+                                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                                          letterSpacing: -0.1,
+                                        ),
+                                      ),
+                                    ),
+
+                                    // Selection Checkmark
+                                    if (isSelected)
+                                      Icon(
+                                        Icons.check_rounded,
+                                        size: 21,
+                                        color: themeColor,
+                                      ),
+                                  ],
                                 ),
                               ),
-                            )
-                          else
-                            Expanded(
-                              child: ListView.builder(
-                                physics: const BouncingScrollPhysics(),
-                                itemCount: filteredCategories.length,
-                                itemBuilder: (context, idx) {
-                                  final cat = filteredCategories[idx];
-                                  final isSelected = cat.id == selectedCategoryId;
-                                  final itemCatName = isAr ? cat.nameAr : cat.nameEn;
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 8),
-                                    child: InkWell(
-                                      onTap: () {
-                                        setState(() => selectedCategoryId = cat.id);
-                                        Navigator.pop(pickerCtx);
-                                      },
-                                      borderRadius: BorderRadius.circular(14),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                        decoration: BoxDecoration(
-                                          color: isSelected
-                                              ? (pickerDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5))
-                                              : Colors.transparent,
-                                          borderRadius: BorderRadius.circular(14),
-                                          border: Border.all(
-                                            color: isSelected
-                                                ? (pickerDarkMode ? Colors.white24 : Colors.black12)
-                                                : Colors.transparent,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Container(
-                                              width: 34,
-                                              height: 34,
-                                              decoration: BoxDecoration(
-                                                color: themeColor.withValues(alpha: 0.15),
-                                                borderRadius: BorderRadius.circular(10),
-                                              ),
-                                              child: Center(
-                                                child: Text(
-                                                  itemCatName.isNotEmpty ? itemCatName.characters.first : '★',
-                                                  style: TextStyle(
-                                                    fontSize: 15,
-                                                    fontWeight: FontWeight.w800,
-                                                    color: themeColor,
+                            ),
+                          ),
+                          if (!isLast)
+                            Padding(
+                              padding: const EdgeInsetsDirectional.only(start: 70, end: 16),
+                              child: Divider(
+                                height: 1,
+                                thickness: 1,
+                                color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF1F1F5),
+                              ),
+                            ),
+                        ],
+                      );
+                    }),
+                  ),
+                ),
+              );
+            }
+
+            return PopScope(
+              canPop: currentPage == 0,
+              onPopInvokedWithResult: (didPop, result) {
+                if (didPop) return;
+                if (currentPage != 0) {
+                  pageController.animateToPage(
+                    0,
+                    duration: const Duration(milliseconds: 320),
+                    curve: Curves.easeInOutCubic,
+                  );
+                }
+              },
+              child: Directionality(
+                textDirection: isAr ? ui.TextDirection.rtl : ui.TextDirection.ltr,
+                child: Container(
+                  height: (screenHeight * 0.93).clamp(640.0, screenHeight - 28),
+                decoration: isGlass
+                    ? const BoxDecoration(color: Colors.transparent)
+                    : BoxDecoration(
+                        color: isDarkMode ? const Color(0xFF121214) : Colors.white,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                        border: Border.all(
+                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                          width: 1,
+                        ),
+                      ),
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 8,
+                  top: 0,
+                  left: 16,
+                  right: 16,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Handle Bar (Android only, on iOS GlassModalSheet provides drag indicator)
+                      if (!isGlass)
+                        Center(
+                          child: Container(
+                            height: 4,
+                            width: 38,
+                            margin: const EdgeInsets.only(top: 10, bottom: 8),
+                            decoration: BoxDecoration(
+                              color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+
+                      // Horizontal Sliding PageView
+                      Expanded(
+                        child: PageView(
+                          controller: pageController,
+                          physics: const NeverScrollableScrollPhysics(),
+                          onPageChanged: (idx) {
+                            setState(() => currentPage = idx);
+                          },
+                          children: [
+                            // ─── PAGE 0: MAIN TRANSACTION FORM ───
+                            // ─── PAGE 0: MAIN TRANSACTION FORM ───
+                            GestureDetector(
+                              behavior: HitTestBehavior.translucent,
+                              onTap: () => FocusScope.of(context).unfocus(),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  // Top Bar (Page 0) - Fixed
+                                  Padding(
+                                    padding: EdgeInsets.only(
+                                      top: isGlass
+                                          ? (MediaQuery.of(context).padding.top > 0 ? MediaQuery.of(context).padding.top * 0.10 + 6 : 8.0)
+                                          : 8.0,
+                                      bottom: 22.0,
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        // Close Button (X)
+                                        if (isGlass)
+                                          GlassButton.custom(
+                                            width: 42,
+                                            height: 42,
+                                            shape: const LiquidOval(),
+                                            useOwnLayer: true,
+                                            quality: GlassQuality.premium,
+                                            stretch: 0.2,
+                                            interactionScale: 1.06,
+                                            settings: isDarkMode
+                                                ? const LiquidGlassSettings(
+                                                    thickness: 28,
+                                                    blur: 16,
+                                                    refractiveIndex: 1.25,
+                                                    lightIntensity: 1.8,
+                                                    glassColor: Color(0x25FFFFFF),
+                                                  )
+                                                : const LiquidGlassSettings(
+                                                    thickness: 28,
+                                                    blur: 16,
+                                                    refractiveIndex: 1.25,
+                                                    lightIntensity: 1.8,
+                                                    glassColor: Color(0x45FFFFFF),
+                                                  ),
+                                            onTap: () {
+                                              HapticFeedback.selectionClick();
+                                              Navigator.pop(context);
+                                            },
+                                            child: Icon(
+                                              Icons.close_rounded,
+                                              size: 21,
+                                              color: isDarkMode ? Colors.white : Colors.black87,
+                                            ),
+                                          )
+                                        else
+                                          Material(
+                                            color: Colors.transparent,
+                                            child: InkWell(
+                                              onTap: () => Navigator.pop(context),
+                                              borderRadius: BorderRadius.circular(21),
+                                              child: Container(
+                                                height: 42,
+                                                width: 42,
+                                                decoration: BoxDecoration(
+                                                  color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                    color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
                                                   ),
                                                 ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              child: Text(
-                                                itemCatName,
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                                  color: pickerDarkMode ? Colors.white : Colors.black,
+                                                child: Icon(
+                                                  Icons.close_rounded,
+                                                  size: 21,
+                                                  color: isDarkMode ? Colors.white70 : Colors.black87,
                                                 ),
                                               ),
                                             ),
-                                            if (isSelected)
-                                              Icon(
-                                                Icons.check_circle_rounded,
-                                                size: 20,
-                                                color: themeColor,
-                                              ),
-                                          ],
+                                          ),
+
+                                        // Title: New Transaction
+                                        Text(
+                                          isAr ? 'معاملة جديدة' : 'New Transaction',
+                                          style: TextStyle(
+                                            fontSize: 17.5,
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: -0.3,
+                                            color: isDarkMode ? Colors.white : Colors.black,
+                                          ),
                                         ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              );
-            }
 
-            return Container(
-              constraints: BoxConstraints(
-                maxHeight: screenHeight * 0.9,
-              ),
-              decoration: BoxDecoration(
-                color: isDarkMode ? const Color(0xFF121214) : Colors.white,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-                border: Border.all(
-                  color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-                  width: 1,
-                ),
-              ),
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-                top: 12,
-                left: 20,
-                right: 20,
-              ),
-              child: SafeArea(
-                top: false,
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                  // Handle Bar
-                  Center(
-                    child: Container(
-                      height: 4,
-                      width: 38,
-                      margin: const EdgeInsets.only(bottom: 12),
+                                        // Confirm Button (✓)
+                                        if (isGlass)
+                                          GlassButton.custom(
+                                            width: 42,
+                                            height: 42,
+                                            shape: const LiquidOval(),
+                                            useOwnLayer: true,
+                                            quality: GlassQuality.premium,
+                                            style: GlassButtonStyle.prominent,
+                                            stretch: 0.2,
+                                            interactionScale: 1.06,
+                                            settings: isDarkMode
+                                                ? const LiquidGlassSettings(
+                                                    thickness: 34,
+                                                    blur: 18,
+                                                    refractiveIndex: 1.28,
+                                                    lightIntensity: 2.0,
+                                                    glassColor: Color(0x35FFFFFF),
+                                                  )
+                                                : const LiquidGlassSettings(
+                                                    thickness: 34,
+                                                    blur: 18,
+                                                    refractiveIndex: 1.28,
+                                                    lightIntensity: 2.0,
+                                                    glassColor: Color(0x55FFFFFF),
+                                                  ),
+                                            onTap: () {
+                                              if (isSubmitting) return;
+                                              HapticFeedback.selectionClick();
+                                              submitTransaction();
+                                            },
+                                            child: Center(
+                                              child: isSubmitting
+                                                  ? SizedBox(
+                                                      width: 18,
+                                                      height: 18,
+                                                      child: CircularProgressIndicator(
+                                                        strokeWidth: 2.2,
+                                                        color: isDarkMode ? Colors.white : Colors.black,
+                                                      ),
+                                                    )
+                                                  : Icon(
+                                                      Icons.check_rounded,
+                                                      size: 22,
+                                                      color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                                                    ),
+                                            ),
+                                          )
+                                        else
+                                          Material(
+                                            color: Colors.transparent,
+                                            child: InkWell(
+                                              onTap: isSubmitting ? null : submitTransaction,
+                                              borderRadius: BorderRadius.circular(21),
+                                              child: Container(
+                                                height: 42,
+                                                width: 42,
+                                                decoration: BoxDecoration(
+                                                  color: isDarkMode ? Colors.white : Colors.black,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: Center(
+                                                  child: isSubmitting
+                                                      ? SizedBox(
+                                                          width: 18,
+                                                          height: 18,
+                                                          child: CircularProgressIndicator(
+                                                            strokeWidth: 2.2,
+                                                            color: isDarkMode ? Colors.black : Colors.white,
+                                                          ),
+                                                        )
+                                                      : Icon(
+                                                          Icons.check_rounded,
+                                                          size: 22,
+                                                          color: isDarkMode ? Colors.black : Colors.white,
+                                                        ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  // Scrollable Form Content
+                                  Expanded(
+                                    child: SingleChildScrollView(
+                                      physics: const BouncingScrollPhysics(),
+                                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        children: [
+
+                  // 3 Tabs Switcher (Expense, Income, Transfer)
+                  if (isGlass)
+                    GlassSegmentedControl(
+                      selectedIndex: isExpense ? 0 : (isIncome ? 1 : 2),
+                      onSegmentSelected: (idx) {
+                        HapticFeedback.selectionClick();
+                        setState(() {
+                          if (idx == 0) {
+                            activeType = TransactionType.expense;
+                            selectedCategoryId = null;
+                          } else if (idx == 1) {
+                            activeType = TransactionType.income;
+                            selectedCategoryId = null;
+                          } else {
+                            activeType = TransactionType.transfer;
+                          }
+                        });
+                      },
+                      segments: [
+                        GlassSegment(label: isAr ? 'صرف' : 'Expense'),
+                        GlassSegment(label: isAr ? 'دخل' : 'Income'),
+                        GlassSegment(label: isAr ? 'تحويل' : 'Transfer'),
+                      ],
+                      height: 42,
+                      useOwnLayer: true,
+                      backgroundColor: isDarkMode
+                          ? Colors.white.withValues(alpha: 0.08)
+                          : Colors.black.withValues(alpha: 0.06),
+                      indicatorColor: isDarkMode
+                          ? const Color(0xFF27272A)
+                          : Colors.white,
+                      selectedTextStyle: TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w700,
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      ),
+                      unselectedTextStyle: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: isDarkMode
+                            ? Colors.white.withValues(alpha: 0.6)
+                            : Colors.black.withValues(alpha: 0.55),
+                      ),
+                    )
+                  else
+                    Container(
+                      height: 48,
+                      padding: const EdgeInsets.all(3.5),
                       decoration: BoxDecoration(
-                        color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-
-                  // Top Bar (Say Style from video):
-                  // Close (X) on left, "New Transaction" in center, Confirm (✓) on right
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Close Button (X)
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => Navigator.pop(context),
-                          borderRadius: BorderRadius.circular(18),
-                          child: Container(
-                            height: 38,
-                            width: 38,
-                            decoration: BoxDecoration(
-                              color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-                              ),
-                            ),
-                            child: Icon(
-                              Icons.close_rounded,
-                              size: 19,
-                              color: isDarkMode ? Colors.white70 : Colors.black87,
-                            ),
-                          ),
+                        color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
                         ),
                       ),
-
-                      // Title: New Transaction
-                      Text(
-                        isAr ? 'معاملة جديدة' : 'New Transaction',
-                        style: TextStyle(
-                          fontSize: 16.5,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.3,
-                          color: isDarkMode ? Colors.white : Colors.black,
-                        ),
-                      ),
-
-                      // Confirm Button (✓)
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: isSubmitting ? null : submitTransaction,
-                          borderRadius: BorderRadius.circular(18),
-                          child: Container(
-                            height: 38,
-                            width: 38,
-                            decoration: BoxDecoration(
-                              color: isDarkMode ? Colors.white : Colors.black,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: isSubmitting
-                                  ? SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: isDarkMode ? Colors.black : Colors.white,
-                                      ),
-                                    )
-                                  : Icon(
-                                      Icons.check_rounded,
-                                      size: 20,
-                                      color: isDarkMode ? Colors.black : Colors.white,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final totalWidth = constraints.maxWidth;
+                          final tabWidth = totalWidth / 3;
+                          final selectedIndex = isExpense ? 0 : (isIncome ? 1 : 2);
+                          return Stack(
+                            children: [
+                              // Sliding Pill Indicator (Directionality-aware for LTR & RTL)
+                              AnimatedPositionedDirectional(
+                                duration: const Duration(milliseconds: 250),
+                                curve: Curves.fastOutSlowIn,
+                                start: selectedIndex * tabWidth,
+                                top: 0,
+                                bottom: 0,
+                                width: tabWidth,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: isDarkMode ? const Color(0xFF27272A) : Colors.white,
+                                    borderRadius: BorderRadius.circular(11),
+                                    border: Border.all(
+                                      color: isDarkMode
+                                          ? Colors.white.withValues(alpha: 0.08)
+                                          : Colors.black.withValues(alpha: 0.06),
                                     ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // 3 Tabs Switcher with Sliding Pill Indicator (Expense, Income, Transfer)
-                  Container(
-                    height: 44,
-                    padding: const EdgeInsets.all(3.5),
-                    decoration: BoxDecoration(
-                      color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-                      ),
-                    ),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final totalWidth = constraints.maxWidth;
-                        final tabWidth = totalWidth / 3;
-                        final isRtl = isAr;
-                        final selectedIndex = isExpense ? 0 : (isIncome ? 1 : 2);
-                        final leftOffset = isRtl
-                            ? (2 - selectedIndex) * tabWidth
-                            : selectedIndex * tabWidth;
-
-                        return Stack(
-                          children: [
-                            // Sliding Pill Indicator (Clean flat border - no shadow)
-                            AnimatedPositioned(
-                              duration: const Duration(milliseconds: 250),
-                              curve: Curves.fastOutSlowIn,
-                              left: leftOffset,
-                              top: 0,
-                              bottom: 0,
-                              width: tabWidth,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: isDarkMode ? const Color(0xFF27272A) : Colors.white,
-                                  borderRadius: BorderRadius.circular(11),
-                                  border: Border.all(
-                                    color: isDarkMode
-                                        ? Colors.white.withValues(alpha: 0.08)
-                                        : Colors.black.withValues(alpha: 0.06),
                                   ),
                                 ),
                               ),
-                            ),
-                            // 3 Tabs
-                            Row(
-                              children: [
-                                _buildSegmentTab(
-                                  label: isAr ? 'صرف' : 'Expense',
-                                  isSelected: isExpense,
-                                  activeColor: const Color(0xFFF43F5E),
-                                  isDarkMode: isDarkMode,
-                                  onTap: () {
-                                    HapticFeedback.selectionClick();
-                                    setState(() {
-                                      activeType = TransactionType.expense;
-                                      selectedCategoryId = null;
-                                    });
-                                  },
-                                ),
-                                _buildSegmentTab(
-                                  label: isAr ? 'دخل' : 'Income',
-                                  isSelected: isIncome,
-                                  activeColor: const Color(0xFF10B981),
-                                  isDarkMode: isDarkMode,
-                                  onTap: () {
-                                    HapticFeedback.selectionClick();
-                                    setState(() {
-                                      activeType = TransactionType.income;
-                                      selectedCategoryId = null;
-                                    });
-                                  },
-                                ),
-                                _buildSegmentTab(
-                                  label: isAr ? 'تحويل' : 'Transfer',
-                                  isSelected: isTransfer,
-                                  activeColor: const Color(0xFF3B82F6),
-                                  isDarkMode: isDarkMode,
-                                  onTap: () {
-                                    HapticFeedback.selectionClick();
-                                    setState(() {
-                                      activeType = TransactionType.transfer;
-                                    });
-                                  },
-                                ),
-                              ],
-                            ),
-                          ],
-                        );
-                      },
+                              // 3 Tabs
+                              Row(
+                                children: [
+                                  _buildSegmentTab(
+                                    label: isAr ? 'صرف' : 'Expense',
+                                    isSelected: isExpense,
+                                    activeColor: const Color(0xFFF43F5E),
+                                    isDarkMode: isDarkMode,
+                                    onTap: () {
+                                      HapticFeedback.selectionClick();
+                                      setState(() {
+                                        activeType = TransactionType.expense;
+                                        selectedCategoryId = null;
+                                      });
+                                    },
+                                  ),
+                                  _buildSegmentTab(
+                                    label: isAr ? 'دخل' : 'Income',
+                                    isSelected: isIncome,
+                                    activeColor: const Color(0xFF10B981),
+                                    isDarkMode: isDarkMode,
+                                    onTap: () {
+                                      HapticFeedback.selectionClick();
+                                      setState(() {
+                                        activeType = TransactionType.income;
+                                        selectedCategoryId = null;
+                                      });
+                                    },
+                                  ),
+                                  _buildSegmentTab(
+                                    label: isAr ? 'تحويل' : 'Transfer',
+                                    isSelected: isTransfer,
+                                    activeColor: const Color(0xFF3B82F6),
+                                    isDarkMode: isDarkMode,
+                                    onTap: () {
+                                      HapticFeedback.selectionClick();
+                                      setState(() {
+                                        activeType = TransactionType.transfer;
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
+                      ),
                     ),
-                  ),
 
                   const SizedBox(height: 18),
 
@@ -666,20 +867,20 @@ mixin _HomeTabDialogs on _HomeTabState {
                             final double letterSpacing;
 
                             if (length <= 6) {
-                              amountFontSize = 44;
-                              symbolFontSize = 24;
+                              amountFontSize = 48;
+                              symbolFontSize = 26;
                               letterSpacing = -0.5;
                             } else if (length <= 9) {
-                              amountFontSize = 38;
-                              symbolFontSize = 21;
+                              amountFontSize = 42;
+                              symbolFontSize = 23;
                               letterSpacing = -0.4;
                             } else if (length <= 12) {
-                              amountFontSize = 32;
-                              symbolFontSize = 18;
+                              amountFontSize = 35;
+                              symbolFontSize = 20;
                               letterSpacing = -0.3;
                             } else {
-                              amountFontSize = 28;
-                              symbolFontSize = 16;
+                              amountFontSize = 30;
+                              symbolFontSize = 17;
                               letterSpacing = -0.2;
                             }
 
@@ -705,6 +906,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                                   child: IntrinsicWidth(
                                     child: TextFormField(
                                       controller: amountController,
+                                      focusNode: amountFocusNode,
                                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                       autofocus: prefillFromVoice == null,
                                       textAlign: TextAlign.center,
@@ -745,66 +947,60 @@ mixin _HomeTabDialogs on _HomeTabState {
                             );
                           },
                         ),
-                        AnimatedSize(
-                          duration: const Duration(milliseconds: 250),
-                          curve: Curves.fastOutSlowIn,
-                          child: !isTransfer
-                              ? Padding(
-                                  padding: const EdgeInsets.only(top: 14),
-                                  child: SingleChildScrollView(
-                                    scrollDirection: Axis.horizontal,
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [50, 100, 200, 500, 1000].map((val) {
-                                        return Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                                          child: InkWell(
-                                            onTap: () {
-                                              setState(() {
-                                                final normalized = _cleanNumberString(amountController.text);
-                                                final cur = double.tryParse(normalized) ?? 0.0;
-                                                final nextVal = (cur + val).toStringAsFixed(0);
-                                                if (nextVal.length <= 12) {
-                                                  final formatted = _formatThousands(nextVal);
-                                                  amountController.value = TextEditingValue(
-                                                    text: formatted,
-                                                    selection: TextSelection.collapsed(offset: formatted.length),
-                                                  );
-                                                }
-                                              });
-                                            },
-                                            borderRadius: BorderRadius.circular(20),
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                              decoration: BoxDecoration(
-                                                color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
-                                                borderRadius: BorderRadius.circular(20),
-                                                border: Border.all(
-                                                  color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-                                                ),
-                                              ),
-                                              child: Text(
-                                                '+$val',
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      }).toList(),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 14),
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [50, 100, 200, 500, 1000].map((val) {
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  child: InkWell(
+                                    onTap: () {
+                                      setState(() {
+                                        final normalized = _cleanNumberString(amountController.text);
+                                        final cur = double.tryParse(normalized) ?? 0.0;
+                                        final nextVal = (cur + val).toStringAsFixed(0);
+                                        if (nextVal.length <= 12) {
+                                          final formatted = _formatThousands(nextVal);
+                                          amountController.value = TextEditingValue(
+                                            text: formatted,
+                                            selection: TextSelection.collapsed(offset: formatted.length),
+                                          );
+                                        }
+                                      });
+                                    },
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                                      decoration: BoxDecoration(
+                                        color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '+$val',
+                                        style: TextStyle(
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                )
-                              : const SizedBox.shrink(),
+                                );
+                              }).toList(),
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
 
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 14),
 
                     // Account & Category Selectors (or Transfer Row) with smooth fluid transition
                     AnimatedSize(
@@ -822,144 +1018,32 @@ mixin _HomeTabDialogs on _HomeTabState {
                           );
                         },
                         child: isTransfer
-                            ? Container(
+                            ? Column(
                                 key: const ValueKey('transfer_mode_content'),
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    // From
-                                    Expanded(
-                                      child: InkWell(
-                                        onTap: () => pickAccount(
-                                          currentId: fromAccountId,
-                                          title: isAr ? 'تحويل من محفظة' : 'Transfer From',
-                                          onSelect: (id) => setState(() => fromAccountId = id),
-                                        ),
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                isAr ? 'من محفظة' : 'From',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Row(
-                                                children: [
-                                                  Expanded(
-                                                    child: Text(
-                                                      fromAccount.name,
-                                                      overflow: TextOverflow.ellipsis,
-                                                      style: TextStyle(
-                                                        fontSize: 13,
-                                                        fontWeight: FontWeight.w700,
-                                                        color: isDarkMode ? Colors.white : Colors.black,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  Icon(
-                                                    Icons.keyboard_arrow_down_rounded,
-                                                    size: 16,
-                                                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(
-                                        Icons.arrow_forward_rounded,
-                                        size: 16,
-                                        color: Color(0xFF3B82F6),
-                                      ),
-                                    ),
-                                    // To
-                                    Expanded(
-                                      child: InkWell(
-                                        onTap: () => pickAccount(
-                                          currentId: toAccountId,
-                                          title: isAr ? 'تحويل إلى محفظة' : 'Transfer To',
-                                          onSelect: (id) => setState(() => toAccountId = id),
-                                        ),
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                isAr ? 'إلى محفظة' : 'To',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Row(
-                                                children: [
-                                                  Expanded(
-                                                    child: Text(
-                                                      toAccount.name,
-                                                      overflow: TextOverflow.ellipsis,
-                                                      style: TextStyle(
-                                                        fontSize: 13,
-                                                        fontWeight: FontWeight.w700,
-                                                        color: isDarkMode ? Colors.white : Colors.black,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  Icon(
-                                                    Icons.keyboard_arrow_down_rounded,
-                                                    size: 16,
-                                                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : Column(
-                                key: const ValueKey('expense_income_content'),
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  // Wallet Account Selector Card (Tap opens picker bottom sheet)
-                                  InkWell(
-                                    onTap: () => pickAccount(
-                                      currentId: selectedAccountId,
-                                      title: isAr ? 'اختر المحفظة أو الحساب' : 'Select Wallet / Account',
-                                      onSelect: (id) => setState(() => selectedAccountId = id),
+                                  // Label: From Account
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 4, right: 4, bottom: 7),
+                                    child: Text(
+                                      isAr ? 'من حساب' : 'From account',
+                                      style: TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                      ),
                                     ),
-                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  // Top Button: From Account
+                                  InkWell(
+                                    onTap: () => openWalletPicker('from'),
+                                    borderRadius: BorderRadius.circular(18),
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                                       decoration: BoxDecoration(
                                         color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
-                                        borderRadius: BorderRadius.circular(16),
+                                        borderRadius: BorderRadius.circular(18),
                                         border: Border.all(
                                           color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
                                         ),
@@ -967,14 +1051,266 @@ mixin _HomeTabDialogs on _HomeTabState {
                                       child: Row(
                                         children: [
                                           Container(
-                                            padding: const EdgeInsets.all(8),
+                                            width: 40,
+                                            height: 40,
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFF43F5E).withValues(alpha: 0.12),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Icon(
+                                              fromAccount.icon,
+                                              size: 20,
+                                              color: const Color(0xFFF43F5E),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Text(
+                                              fromAccount.name,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 15.5,
+                                                fontWeight: FontWeight.w700,
+                                                color: isDarkMode ? Colors.white : Colors.black,
+                                              ),
+                                            ),
+                                          ),
+                                          Icon(
+                                            Icons.chevron_right_rounded,
+                                            size: 22,
+                                            color: isDarkMode ? Colors.grey[400] : Colors.grey[500],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+
+                                  // Middle: Down Arrow / Swap Button
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 6),
+                                    child: Center(
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          onTap: () {
+                                            HapticFeedback.selectionClick();
+                                            setState(() {
+                                              final temp = fromAccountId;
+                                              fromAccountId = toAccountId;
+                                              toAccountId = temp;
+                                            });
+                                          },
+                                          borderRadius: BorderRadius.circular(20),
+                                          child: Container(
+                                            width: 40,
+                                            height: 40,
+                                            decoration: BoxDecoration(
+                                              color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                                                width: 1.5,
+                                              ),
+                                            ),
+                                            child: Icon(
+                                              Icons.arrow_downward_rounded,
+                                              size: 20,
+                                              color: themeColor,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                  // Label: To Account
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 4, right: 4, bottom: 7),
+                                    child: Text(
+                                      isAr ? 'إلى حساب' : 'To account',
+                                      style: TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                      ),
+                                    ),
+                                  ),
+                                  // Bottom Button: To Account
+                                  InkWell(
+                                    onTap: () => openWalletPicker('to'),
+                                    borderRadius: BorderRadius.circular(18),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                      decoration: BoxDecoration(
+                                        color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
+                                        borderRadius: BorderRadius.circular(18),
+                                        border: Border.all(
+                                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 40,
+                                            height: 40,
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Icon(
+                                              toAccount.icon,
+                                              size: 20,
+                                              color: const Color(0xFF10B981),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Text(
+                                              toAccount.name,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 15.5,
+                                                fontWeight: FontWeight.w700,
+                                                color: isDarkMode ? Colors.white : Colors.black,
+                                              ),
+                                            ),
+                                          ),
+                                          Icon(
+                                            Icons.chevron_right_rounded,
+                                            size: 22,
+                                            color: isDarkMode ? Colors.grey[400] : Colors.grey[500],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Column(
+                                key: const ValueKey('expense_income_content'),
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Category Selector Card (Tap opens in-sheet category tab)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 4, right: 4, bottom: 7),
+                                    child: Text(
+                                      isAr ? 'التصنيف' : 'Category',
+                                      style: TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                      ),
+                                    ),
+                                  ),
+                                  InkWell(
+                                    onTap: () {
+                                      FocusScope.of(context).unfocus();
+                                      HapticFeedback.selectionClick();
+                                      setState(() => secondaryPageType = 'category');
+                                      pageController.animateToPage(
+                                        1,
+                                        duration: const Duration(milliseconds: 320),
+                                        curve: Curves.easeInOutCubic,
+                                      );
+                                    },
+                                    borderRadius: BorderRadius.circular(18),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                      decoration: BoxDecoration(
+                                        color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
+                                        borderRadius: BorderRadius.circular(18),
+                                        border: Border.all(
+                                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 40,
+                                            height: 40,
+                                            decoration: BoxDecoration(
+                                              color: selectedCategory != null
+                                                  ? themeColor.withValues(alpha: 0.15)
+                                                  : (isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7)),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Icon(
+                                              selectedCategory != null
+                                                  ? getCategoryIcon(selectedCategory.nameEn)
+                                                  : Icons.category_outlined,
+                                              size: 21,
+                                              color: selectedCategory != null
+                                                  ? themeColor
+                                                  : (isDarkMode ? Colors.grey[400] : Colors.grey[500]),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  catName,
+                                                  style: TextStyle(
+                                                    fontSize: 15.5,
+                                                    fontWeight: selectedCategory != null ? FontWeight.w700 : FontWeight.w500,
+                                                    color: selectedCategory != null
+                                                        ? (isDarkMode ? Colors.white : Colors.black)
+                                                        : (isDarkMode ? Colors.grey[400] : Colors.grey[500]),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          Icon(
+                                            Icons.chevron_right_rounded,
+                                            size: 24,
+                                            color: isDarkMode ? Colors.grey[400] : Colors.grey[500],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 14),
+
+                                  // Wallet Account Selector Card (Tap opens picker bottom sheet)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 4, right: 4, bottom: 7),
+                                    child: Text(
+                                      isAr ? 'الحساب' : 'Account',
+                                      style: TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                      ),
+                                    ),
+                                  ),
+                                  InkWell(
+                                    onTap: () => openWalletPicker('single'),
+                                    borderRadius: BorderRadius.circular(18),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                      decoration: BoxDecoration(
+                                        color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
+                                        borderRadius: BorderRadius.circular(18),
+                                        border: Border.all(
+                                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 40,
+                                            height: 40,
                                             decoration: BoxDecoration(
                                               color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-                                              borderRadius: BorderRadius.circular(10),
+                                              borderRadius: BorderRadius.circular(12),
                                             ),
                                             child: Icon(
                                               selectedAccount.icon,
-                                              size: 18,
+                                              size: 21,
                                               color: isDarkMode ? Colors.white : Colors.black,
                                             ),
                                           ),
@@ -984,98 +1320,9 @@ mixin _HomeTabDialogs on _HomeTabState {
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                  isAr ? 'المحفظة / الحساب' : 'Wallet / Account',
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.w500,
-                                                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 2),
-                                                Text(
                                                   selectedAccount.name,
                                                   style: TextStyle(
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: isDarkMode ? Colors.white : Colors.black,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          Text(
-                                            '${selectedAccount.balance.toStringAsFixed(2)} $currencySymbol',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                                            ),
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Icon(
-                                            Icons.keyboard_arrow_down_rounded,
-                                            size: 20,
-                                            color: isDarkMode ? Colors.grey[400] : Colors.grey[500],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 10),
-
-                                  // Category Selector Card (Tap opens picker bottom sheet)
-                                  InkWell(
-                                    onTap: pickCategory,
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                      decoration: BoxDecoration(
-                                        color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(
-                                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-                                        ),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          AnimatedContainer(
-                                            duration: const Duration(milliseconds: 250),
-                                            width: 34,
-                                            height: 34,
-                                            decoration: BoxDecoration(
-                                              color: themeColor.withValues(alpha: 0.15),
-                                              borderRadius: BorderRadius.circular(10),
-                                            ),
-                                            child: Center(
-                                              child: Text(
-                                                catName.isNotEmpty ? catName.characters.first : '★',
-                                                style: TextStyle(
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.w800,
-                                                  color: themeColor,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  context.l10n.category,
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.w500,
-                                                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  catName,
-                                                  style: TextStyle(
-                                                    fontSize: 14,
+                                                    fontSize: 15.5,
                                                     fontWeight: FontWeight.w700,
                                                     color: isDarkMode ? Colors.white : Colors.black,
                                                   ),
@@ -1084,8 +1331,8 @@ mixin _HomeTabDialogs on _HomeTabState {
                                             ),
                                           ),
                                           Icon(
-                                            Icons.keyboard_arrow_down_rounded,
-                                            size: 20,
+                                            Icons.chevron_right_rounded,
+                                            size: 24,
                                             color: isDarkMode ? Colors.grey[400] : Colors.grey[500],
                                           ),
                                         ],
@@ -1100,11 +1347,22 @@ mixin _HomeTabDialogs on _HomeTabState {
                     const SizedBox(height: 14),
 
                     // Note / Description Input Field
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4, right: 4, bottom: 7),
+                      child: Text(
+                        isAr ? 'الوصف أو الملاحظة' : 'Note / Description',
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                    ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
                         color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(18),
                         border: Border.all(
                           color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
                         ),
@@ -1112,15 +1370,15 @@ mixin _HomeTabDialogs on _HomeTabState {
                       child: Row(
                         children: [
                           Container(
-                            width: 34,
-                            height: 34,
+                            width: 40,
+                            height: 40,
                             decoration: BoxDecoration(
                               color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
                               Icons.edit_note_rounded,
-                              size: 19,
+                              size: 21,
                               color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
                             ),
                           ),
@@ -1128,8 +1386,9 @@ mixin _HomeTabDialogs on _HomeTabState {
                           Expanded(
                             child: TextField(
                               controller: descriptionController,
+                              focusNode: descriptionFocusNode,
                               style: TextStyle(
-                                fontSize: 13.5,
+                                fontSize: 15,
                                 fontWeight: FontWeight.w600,
                                 color: isDarkMode ? Colors.white : Colors.black,
                               ),
@@ -1138,7 +1397,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                                 fillColor: Colors.transparent,
                                 hintText: isAr ? 'ملاحظة أو وصف (اختياري)...' : 'Note / Description (optional)...',
                                 hintStyle: TextStyle(
-                                  fontSize: 13,
+                                  fontSize: 14.5,
                                   fontWeight: FontWeight.w500,
                                   color: isDarkMode ? Colors.grey[500] : Colors.grey[400],
                                 ),
@@ -1162,7 +1421,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                                   padding: const EdgeInsets.only(left: 6, right: 2),
                                   child: Icon(
                                     Icons.cancel_rounded,
-                                    size: 18,
+                                    size: 20,
                                     color: isDarkMode ? Colors.grey[500] : Colors.grey[400],
                                   ),
                                 ),
@@ -1173,80 +1432,760 @@ mixin _HomeTabDialogs on _HomeTabState {
                       ),
                     ),
 
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 14),
 
-                    // Full-Width Hero Confirm Button
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: isSubmitting ? null : submitTransaction,
-                        borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          height: 52,
-                          decoration: BoxDecoration(
-                            color: isDarkMode ? Colors.white : Colors.black,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: isDarkMode ? 0.30 : 0.12),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
+                    // Date Selector Field (Replaces bottom button, defaults to 'النهارده' / Today)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4, right: 4, bottom: 7),
+                      child: Text(
+                        isAr ? 'التاريخ' : 'Date',
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                    ),
+                    Builder(
+                      builder: (btnContext) {
+                        return Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () async {
+                              FocusScope.of(context).unfocus();
+                              HapticFeedback.selectionClick();
+                              final picked = await _showFloatingDatePicker(
+                                context: btnContext,
+                                initialDate: selectedDate,
+                                isDarkMode: isDarkMode,
+                                isAr: isAr,
+                                themeColor: themeColor,
+                              );
+                              if (picked != null) {
+                                setState(() {
+                                  selectedDate = picked;
+                                });
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(18),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              decoration: BoxDecoration(
+                                color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                                ),
                               ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.calendar_month_outlined,
+                                    size: 24,
+                                    color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      isAr ? 'اختر التاريخ' : 'Pick date',
+                                      style: TextStyle(
+                                        fontSize: 15.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDarkMode ? Colors.white : Colors.black87,
+                                        letterSpacing: -0.2,
+                                      ),
+                                    ),
+                                  ),
+                                  Builder(
+                                    builder: (pillContext) {
+                                      return InkWell(
+                                        onTap: () async {
+                                          FocusScope.of(context).unfocus();
+                                          HapticFeedback.selectionClick();
+                                          final picked = await _showFloatingDatePicker(
+                                            context: pillContext,
+                                            initialDate: selectedDate,
+                                            isDarkMode: isDarkMode,
+                                            isAr: isAr,
+                                            themeColor: themeColor,
+                                          );
+                                          if (picked != null) {
+                                            setState(() {
+                                              selectedDate = picked;
+                                            });
+                                          }
+                                        },
+                                        borderRadius: BorderRadius.circular(20),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Text(
+                                            DateFormat('d MMM yyyy', isAr ? 'ar' : 'en').format(selectedDate),
+                                            style: TextStyle(
+                                              fontSize: 14.5,
+                                              fontWeight: FontWeight.w600,
+                                              color: isDarkMode ? Colors.white : Colors.black,
+                                              letterSpacing: -0.2,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                const SizedBox(height: 16),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                  // ─── PAGE 1: SECONDARY SUB-PAGE (CATEGORY OR WALLET) ───
+                  if (secondaryPageType == 'category')
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Top Bar (Category) - Fixed
+                        Padding(
+                          padding: EdgeInsets.only(
+                            top: isGlass
+                                ? (MediaQuery.of(context).padding.top > 0 ? MediaQuery.of(context).padding.top * 0.10 + 6 : 8.0)
+                                : 8.0,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              // Back Button (←)
+                              if (isGlass)
+                                GlassButton.custom(
+                                  width: 42,
+                                  height: 42,
+                                  shape: const LiquidOval(),
+                                  useOwnLayer: true,
+                                  quality: GlassQuality.premium,
+                                  stretch: 0.2,
+                                  interactionScale: 1.06,
+                                  settings: isDarkMode
+                                      ? const LiquidGlassSettings(
+                                          thickness: 28,
+                                          blur: 16,
+                                          refractiveIndex: 1.25,
+                                          lightIntensity: 1.8,
+                                          glassColor: Color(0x25FFFFFF),
+                                        )
+                                      : const LiquidGlassSettings(
+                                          thickness: 28,
+                                          blur: 16,
+                                          refractiveIndex: 1.25,
+                                          lightIntensity: 1.8,
+                                          glassColor: Color(0x45FFFFFF),
+                                        ),
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    FocusScope.of(context).unfocus();
+                                    pageController.animateToPage(
+                                      0,
+                                      duration: const Duration(milliseconds: 320),
+                                      curve: Curves.easeInOutCubic,
+                                    );
+                                  },
+                                  child: Icon(
+                                    isAr ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded,
+                                    size: 21,
+                                    color: isDarkMode ? Colors.white : Colors.black87,
+                                  ),
+                                )
+                              else
+                                Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: () {
+                                      HapticFeedback.selectionClick();
+                                      FocusScope.of(context).unfocus();
+                                      pageController.animateToPage(
+                                        0,
+                                        duration: const Duration(milliseconds: 320),
+                                        curve: Curves.easeInOutCubic,
+                                      );
+                                    },
+                                    borderRadius: BorderRadius.circular(21),
+                                    child: Container(
+                                      height: 42,
+                                      width: 42,
+                                      decoration: BoxDecoration(
+                                        color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                                        ),
+                                      ),
+                                      child: Icon(
+                                        isAr ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded,
+                                        size: 21,
+                                        color: isDarkMode ? Colors.white70 : Colors.black87,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                              // Title: Select Category
+                              Text(
+                                isAr ? 'اختر التصنيف' : 'Select Category',
+                                style: TextStyle(
+                                  fontSize: 17.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.3,
+                                  color: isDarkMode ? Colors.white : Colors.black,
+                                ),
+                              ),
+
+                              // Balanced spacer
+                              const SizedBox(width: 42),
                             ],
                           ),
-                          child: Center(
-                            child: isSubmitting
-                                ? SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.2,
-                                      color: isDarkMode ? Colors.black : Colors.white,
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // Scrollable Content & Floating Add Button
+                        Expanded(
+                          child: Stack(
+                            alignment: Alignment.bottomCenter,
+                            children: [
+                              Positioned.fill(
+                                child: SingleChildScrollView(
+                                  physics: const BouncingScrollPhysics(),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                // Search Bar
+                                Container(
+                                  height: 46,
+                                  decoration: BoxDecoration(
+                                    color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
                                     ),
-                                  )
-                                : AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 220),
-                                    transitionBuilder: (child, animation) =>
-                                        FadeTransition(opacity: animation, child: child),
-                                    child: Row(
-                                      key: ValueKey(activeType),
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.search_rounded,
+                                        size: 21,
+                                        color: isDarkMode ? Colors.grey[500] : Colors.grey[400],
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: TextField(
+                                          controller: categorySearchController,
+                                          onChanged: (val) {
+                                            setState(() {
+                                              categorySearchQuery = val;
+                                            });
+                                          },
+                                          style: TextStyle(
+                                            fontSize: 14.5,
+                                            color: isDarkMode ? Colors.white : Colors.black,
+                                          ),
+                                          decoration: InputDecoration(
+                                            filled: false,
+                                            fillColor: Colors.transparent,
+                                            hintText: isAr ? 'ابحث عن تصنيف...' : 'Search categories...',
+                                            hintStyle: TextStyle(
+                                              fontSize: 14,
+                                              color: isDarkMode ? Colors.grey[500] : Colors.grey[400],
+                                            ),
+                                            border: InputBorder.none,
+                                            focusedBorder: InputBorder.none,
+                                            enabledBorder: InputBorder.none,
+                                            disabledBorder: InputBorder.none,
+                                            errorBorder: InputBorder.none,
+                                            isDense: true,
+                                            contentPadding: EdgeInsets.zero,
+                                          ),
+                                        ),
+                                      ),
+                                      if (categorySearchQuery.isNotEmpty)
+                                        GestureDetector(
+                                          behavior: HitTestBehavior.opaque,
+                                          onTap: () {
+                                            categorySearchController.clear();
+                                            setState(() {
+                                              categorySearchQuery = '';
+                                            });
+                                          },
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(4),
+                                            child: Icon(
+                                              Icons.cancel_rounded,
+                                              size: 17,
+                                              color: isDarkMode ? Colors.grey[400] : Colors.grey[500],
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+
+                                // Grouped Categories Cards (Matching Categories Management screen)
+                                const SizedBox(height: 14),
+                                if (displayedCategories.isEmpty)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 40),
+                                    alignment: Alignment.center,
+                                    child: Column(
                                       children: [
                                         Icon(
-                                          isTransfer ? Icons.swap_horiz_rounded : Icons.check_rounded,
-                                          color: isDarkMode ? Colors.black : Colors.white,
-                                          size: 19,
+                                          Icons.category_outlined,
+                                          size: 44,
+                                          color: isDarkMode
+                                              ? const Color(0xFF3F3F46)
+                                              : const Color(0xFFE4E4E7),
                                         ),
-                                        const SizedBox(width: 8),
+                                        const SizedBox(height: 12),
                                         Text(
-                                          isTransfer
-                                              ? (isAr ? 'تأكيد التحويل' : 'Confirm Transfer')
-                                              : (isIncome ? context.l10n.addDeposit : context.l10n.addWithdrawal),
+                                          categorySearchQuery.trim().isNotEmpty
+                                              ? (isAr ? 'لا توجد نتائج مطابقة' : 'No matching categories found')
+                                              : (isAr ? 'لا توجد تصنيفات متاحة' : 'No categories available'),
                                           style: TextStyle(
-                                            color: isDarkMode ? Colors.black : Colors.white,
-                                            fontWeight: FontWeight.w800,
-                                            fontSize: 15,
-                                            letterSpacing: -0.2,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: isDarkMode
+                                                ? const Color(0xFFA1A1AA)
+                                                : const Color(0xFF71717A),
                                           ),
                                         ),
                                       ],
                                     ),
-                                  ),
+                                  )
+                                else if (categorySearchQuery.trim().isNotEmpty) ...[
+                                  buildCategoryGroup(displayedCategories),
+                                ] else ...[
+                                  // Most Used Section
+                                  if (mostUsedCategories.isNotEmpty) ...[
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 4, right: 4, bottom: 8),
+                                      child: Text(
+                                        isAr ? 'الأكثر استخداماً' : 'Most Used',
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                          letterSpacing: -0.2,
+                                        ),
+                                      ),
+                                    ),
+                                    buildCategoryGroup(mostUsedCategories),
+                                    const SizedBox(height: 16),
+                                  ],
+
+                                  // Others Section (excluding most used categories)
+                                  if (otherCategories.isNotEmpty) ...[
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 4, right: 4, bottom: 8),
+                                      child: Text(
+                                        isAr ? 'أخرى' : 'Others',
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                          letterSpacing: -0.2,
+                                        ),
+                                      ),
+                                    ),
+                                    buildCategoryGroup(otherCategories),
+                                  ],
+                                ],
+                                const SizedBox(height: 130),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
+
+                        // Floating "Add Category" Button
+                        Positioned(
+                          bottom: 44,
+                          child: isGlass
+                              ? Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(24),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: isDarkMode ? 0.35 : 0.12),
+                                        blurRadius: 16,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: GlassButton.custom(
+                                    height: 46,
+                                    shape: const LiquidRoundedRectangle(borderRadius: 23),
+                                    useOwnLayer: true,
+                                    quality: GlassQuality.premium,
+                                    stretch: 0.15,
+                                    interactionScale: 1.04,
+                                    settings: isDarkMode
+                                        ? const LiquidGlassSettings(
+                                            thickness: 28,
+                                            blur: 16,
+                                            refractiveIndex: 1.25,
+                                            lightIntensity: 1.8,
+                                            glassColor: Color(0x35FFFFFF),
+                                          )
+                                        : const LiquidGlassSettings(
+                                            thickness: 28,
+                                            blur: 16,
+                                            refractiveIndex: 1.25,
+                                            lightIntensity: 1.8,
+                                            glassColor: Color(0x75FFFFFF),
+                                          ),
+                                    onTap: () {
+                                      HapticFeedback.selectionClick();
+                                      showAddCategoryDialog();
+                                    },
+                                    child: Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          crossAxisAlignment: CrossAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.add_rounded,
+                                              size: 21,
+                                              color: themeColor,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              isAr ? 'إضافة تصنيف' : 'Add Category',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 14.5,
+                                                fontWeight: FontWeight.w700,
+                                                height: 1.2,
+                                                color: isDarkMode ? Colors.white : Colors.black87,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: () {
+                                      HapticFeedback.selectionClick();
+                                      showAddCategoryDialog();
+                                    },
+                                    borderRadius: BorderRadius.circular(23),
+                                    child: Container(
+                                      height: 46,
+                                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                                      decoration: BoxDecoration(
+                                        color: themeColor,
+                                        borderRadius: BorderRadius.circular(23),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: themeColor.withValues(alpha: 0.35),
+                                            blurRadius: 14,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        children: [
+                                          const Icon(
+                                            Icons.add_rounded,
+                                            size: 21,
+                                            color: Colors.white,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            isAr ? 'إضافة تصنيف' : 'Add Category',
+                                            textAlign: TextAlign.center,
+                                            style: const TextStyle(
+                                              fontSize: 14.5,
+                                              fontWeight: FontWeight.w700,
+                                              height: 1.2,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                  ],
-                ),
+                  ),
+                ],
+              )
+                  else
+                    // ─── SECONDARY TAB: WALLET SELECTION (Clean: No Search, No Recently Used) ───
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Top Bar (Wallet) - Fixed
+                        Padding(
+                          padding: EdgeInsets.only(
+                            top: isGlass
+                                ? (MediaQuery.of(context).padding.top > 0 ? MediaQuery.of(context).padding.top * 0.10 + 6 : 8.0)
+                                : 8.0,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              // Back Button (←)
+                              if (isGlass)
+                                GlassButton.custom(
+                                  width: 42,
+                                  height: 42,
+                                  shape: const LiquidOval(),
+                                  useOwnLayer: true,
+                                  quality: GlassQuality.premium,
+                                  stretch: 0.2,
+                                  interactionScale: 1.06,
+                                  settings: isDarkMode
+                                      ? const LiquidGlassSettings(
+                                          thickness: 28,
+                                          blur: 16,
+                                          refractiveIndex: 1.25,
+                                          lightIntensity: 1.8,
+                                          glassColor: Color(0x25FFFFFF),
+                                        )
+                                      : const LiquidGlassSettings(
+                                          thickness: 28,
+                                          blur: 16,
+                                          refractiveIndex: 1.25,
+                                          lightIntensity: 1.8,
+                                          glassColor: Color(0x45FFFFFF),
+                                        ),
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    FocusScope.of(context).unfocus();
+                                    pageController.animateToPage(
+                                      0,
+                                      duration: const Duration(milliseconds: 320),
+                                      curve: Curves.easeInOutCubic,
+                                    );
+                                  },
+                                  child: Icon(
+                                    isAr ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded,
+                                    size: 21,
+                                    color: isDarkMode ? Colors.white : Colors.black87,
+                                  ),
+                                )
+                              else
+                                Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: () {
+                                      HapticFeedback.selectionClick();
+                                      FocusScope.of(context).unfocus();
+                                      pageController.animateToPage(
+                                        0,
+                                        duration: const Duration(milliseconds: 320),
+                                        curve: Curves.easeInOutCubic,
+                                      );
+                                    },
+                                    borderRadius: BorderRadius.circular(21),
+                                    child: Container(
+                                      height: 42,
+                                      width: 42,
+                                      decoration: BoxDecoration(
+                                        color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                                        ),
+                                      ),
+                                      child: Icon(
+                                        isAr ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded,
+                                        size: 21,
+                                        color: isDarkMode ? Colors.white70 : Colors.black87,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                              // Title
+                              Text(
+                                walletPickTarget == 'from'
+                                    ? (isAr ? 'من حساب' : 'From Account')
+                                    : (walletPickTarget == 'to'
+                                        ? (isAr ? 'إلى حساب' : 'To Account')
+                                        : (isAr ? 'اختر الحساب' : 'Select Account')),
+                                style: TextStyle(
+                                  fontSize: 17.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.3,
+                                  color: isDarkMode ? Colors.white : Colors.black,
+                                ),
+                              ),
+
+                              // Balanced spacer
+                              const SizedBox(width: 42),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 14),
+
+                        // Direct Wallets List (Clean, No Search, No Recently Used)
+                        Expanded(
+                          child: availableAccounts.isEmpty
+                              ? Center(
+                                  child: Text(
+                                    isAr ? 'لا توجد حسابات متاحة' : 'No accounts available',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                    ),
+                                  ),
+                                )
+                              : ListView.separated(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  physics: const BouncingScrollPhysics(),
+                                  itemCount: availableAccounts.length,
+                                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                                  itemBuilder: (context, index) {
+                                    final acc = availableAccounts[index];
+                                    final isSelected = walletPickTarget == 'from'
+                                        ? acc.id == fromAccountId
+                                        : (walletPickTarget == 'to'
+                                            ? acc.id == toAccountId
+                                            : acc.id == selectedAccountId);
+                                    return Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: () {
+                                          HapticFeedback.selectionClick();
+                                          FocusScope.of(context).unfocus();
+                                          setState(() {
+                                            if (walletPickTarget == 'from') {
+                                              fromAccountId = acc.id;
+                                            } else if (walletPickTarget == 'to') {
+                                              toAccountId = acc.id;
+                                            } else {
+                                              selectedAccountId = acc.id;
+                                            }
+                                          });
+                                          pageController.animateToPage(
+                                            0,
+                                            duration: const Duration(milliseconds: 320),
+                                            curve: Curves.easeInOutCubic,
+                                          );
+                                        },
+                                        borderRadius: BorderRadius.circular(18),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                          decoration: BoxDecoration(
+                                            color: isSelected
+                                                ? themeColor.withValues(alpha: 0.12)
+                                                : (isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5)),
+                                            borderRadius: BorderRadius.circular(18),
+                                            border: Border.all(
+                                              color: isSelected
+                                                  ? themeColor.withValues(alpha: 0.5)
+                                                  : (isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7)),
+                                              width: isSelected ? 1.5 : 1.0,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                width: 40,
+                                                height: 40,
+                                                decoration: BoxDecoration(
+                                                  color: isSelected
+                                                      ? themeColor.withValues(alpha: 0.2)
+                                                      : (isDarkMode
+                                                          ? const Color(0xFF27272A)
+                                                          : const Color(0xFFE4E4E7)),
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
+                                                child: Icon(
+                                                  acc.icon,
+                                                  size: 21,
+                                                  color: isSelected
+                                                      ? themeColor
+                                                      : (isDarkMode ? Colors.white70 : Colors.black87),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 14),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      acc.name,
+                                                      style: TextStyle(
+                                                        fontSize: 15.5,
+                                                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                                        color: isDarkMode ? Colors.white : Colors.black,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 3),
+                                                    Text(
+                                                      '${acc.balance.toStringAsFixed(2)} $currencySymbol',
+                                                      style: TextStyle(
+                                                        fontSize: 13,
+                                                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              if (isSelected)
+                                                Icon(
+                                                  Icons.check_circle_rounded,
+                                                  size: 22,
+                                                  color: themeColor,
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                        ),
+                      ],
+                    ),
+                ],
               ),
             ),
-          );
-          },
-        );
-      },
-    );
-  }
+          ],
+        ),
+      ),
+    ),
+  );
+  },
+);
+},
+);
+}
 
   Widget _buildSegmentTab({
     required String label,
@@ -1266,9 +2205,9 @@ mixin _HomeTabDialogs on _HomeTabState {
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 curve: Curves.fastOutSlowIn,
-                width: isSelected ? 5.5 : 0,
-                height: isSelected ? 5.5 : 0,
-                margin: EdgeInsets.only(right: isSelected ? 5 : 0),
+                width: isSelected ? 6.5 : 0,
+                height: isSelected ? 6.5 : 0,
+                margin: EdgeInsetsDirectional.only(end: isSelected ? 6 : 0),
                 decoration: BoxDecoration(
                   color: activeColor,
                   shape: BoxShape.circle,
@@ -1278,7 +2217,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                 duration: const Duration(milliseconds: 200),
                 curve: Curves.easeOut,
                 style: TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 14,
                   fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                   color: isSelected
                       ? (isDarkMode ? Colors.white : Colors.black)
@@ -1288,6 +2227,99 @@ mixin _HomeTabDialogs on _HomeTabState {
                 child: Text(label),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<DateTime?> _showFloatingDatePicker({
+    required BuildContext context,
+    required DateTime initialDate,
+    required bool isDarkMode,
+    required bool isAr,
+    required Color themeColor,
+  }) {
+    final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+    final now = DateTime.now();
+
+    return showCupertinoCalendarPicker(
+      context,
+      widgetRenderBox: renderBox,
+      initialDate: initialDate,
+      minimumDate: DateTime(2020, 1, 1),
+      maximumDate: DateTime(2035, 12, 31),
+      currentDate: now,
+      mainColor: themeColor,
+      barrierColor: Colors.transparent,
+      dismissBehaviour: CalendarDismissBehavior.onOusideTapOrDateSelect,
+      containerDecoration: CalendarContainerDecoration(
+        backgroundColor: isDarkMode ? const Color(0xFF242428) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        backgroundType: CalendarBackgroundType.plainColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDarkMode ? 0.35 : 0.08),
+            blurRadius: 24,
+            spreadRadius: 2,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      headerDecoration: CalendarHeaderDecoration(
+        mainColor: themeColor,
+        monthDateStyle: TextStyle(
+          fontSize: 16.5,
+          fontWeight: FontWeight.w700,
+          color: isDarkMode ? Colors.white : Colors.black,
+          letterSpacing: -0.4,
+        ),
+        monthDateArrowColor: isDarkMode ? Colors.white : Colors.black,
+        forwardButtonColor: isDarkMode ? Colors.white : Colors.black,
+        backwardButtonColor: isDarkMode ? Colors.white : Colors.black,
+      ),
+      weekdayDecoration: CalendarWeekdayDecoration(
+        textStyle: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: isDarkMode ? Colors.grey[400] : Colors.grey[500],
+        ),
+      ),
+      monthPickerDecoration: CalendarMonthPickerDecoration(
+        defaultDayStyle: CalendarMonthPickerDefaultDayStyle(
+          textStyle: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w500,
+            color: isDarkMode ? Colors.white : Colors.black87,
+          ),
+        ),
+        selectedDayStyle: CalendarMonthPickerSelectedDayStyle(
+          backgroundCircleColor: themeColor,
+          textStyle: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+        currentDayStyle: CalendarMonthPickerCurrentDayStyle(
+          textStyle: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: themeColor,
+          ),
+        ),
+        selectedCurrentDayStyle: CalendarMonthPickerSelectedCurrentDayStyle(
+          backgroundCircleColor: themeColor,
+          textStyle: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+        disabledDayStyle: CalendarMonthPickerDisabledDayStyle(
+          textStyle: TextStyle(
+            fontSize: 18,
+            color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
           ),
         ),
       ),
@@ -1309,32 +2341,78 @@ mixin _HomeTabDialogs on _HomeTabState {
 
     final amountController = TextEditingController(text: transaction.amount.toString());
     final descriptionController = TextEditingController(text: transaction.description ?? '');
+    final amountFocusNode = FocusNode();
+    final descriptionFocusNode = FocusNode();
     bool isSubmitting = false;
     final currencySymbol = currencySymbols[_currencyCode ?? 'USD'] ?? '\$';
 
-    showModalBottomSheet(
-      context: context,
+    _showAdaptiveBottomSheet(
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return StatefulBuilder(
+      showDragHandle: true,
+      focusNodes: [amountFocusNode, descriptionFocusNode],
+      builder: (context, isGlass, controller) {
+        return AdaptiveSheetFocusScope(
+          controller: controller,
+          focusNodes: [amountFocusNode, descriptionFocusNode],
+          child: StatefulBuilder(
           builder: (context, setState) {
             final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
+            Future<void> submitEditTransaction() async {
+              final amount = double.tryParse(amountController.text);
+              if (amount == null || amount <= 0) {
+                MessageService.showError(
+                  context: context,
+                  message: context.l10n.enterValidAmount,
+                );
+                return;
+              }
+
+              setState(() => isSubmitting = true);
+              try {
+                await _walletRepository.updateTransaction(
+                  transaction.id,
+                  title: transaction.title,
+                  description: descriptionController.text,
+                  amount: amount,
+                  type: isIncome ? 'Deposit' : 'Withdrawal',
+                  categoryId: selectedCategoryId ?? (filteredCategories.isNotEmpty ? filteredCategories.first.id : 1),
+                  transactionDate: transaction.transactionDate,
+                );
+                await _loadHomeData();
+                if (!context.mounted) return;
+                Navigator.pop(context);
+                MessageService.showSuccess(
+                  context: context,
+                  message: context.l10n.transactionUpdatedSuccess,
+                );
+              } catch (e) {
+                if (!context.mounted) return;
+                MessageService.showError(
+                  context: context,
+                  message: context.l10n.failedToUpdateTransaction(e.toString()),
+                );
+              } finally {
+                if (mounted) setState(() => isSubmitting = false);
+              }
+            }
+
             return Container(
-              decoration: BoxDecoration(
-                color: isDarkMode ? const Color(0xFF121214) : Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(28),
-                  topRight: Radius.circular(28),
-                ),
-                border: Border(
-                  top: BorderSide(
-                    color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-                    width: 1,
-                  ),
-                ),
-              ),
+              decoration: isGlass
+                  ? const BoxDecoration(color: Colors.transparent)
+                  : BoxDecoration(
+                      color: isDarkMode ? const Color(0xFF121214) : Colors.white,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(28),
+                        topRight: Radius.circular(28),
+                      ),
+                      border: Border(
+                        top: BorderSide(
+                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                          width: 1,
+                        ),
+                      ),
+                    ),
               child: Padding(
                 padding: EdgeInsets.only(
                   bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -1343,41 +2421,120 @@ mixin _HomeTabDialogs on _HomeTabState {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        height: 4,
-                        width: 40,
-                        margin: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
-                          borderRadius: BorderRadius.circular(2),
+                      if (!isGlass)
+                        Container(
+                          height: 4,
+                          width: 40,
+                          margin: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
-                      ),
+                      if (isGlass) const SizedBox(height: 12),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Row(
+                          mainAxisAlignment: isGlass ? MainAxisAlignment.spaceBetween : MainAxisAlignment.start,
                           children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: (isIncome ? Colors.green : Colors.red).withValues(alpha: 0.15),
-                                shape: BoxShape.circle,
+                            if (isGlass)
+                              GlassButton.custom(
+                                height: 38,
+                                shape: const LiquidRoundedRectangle(borderRadius: 19),
+                                useOwnLayer: true,
+                                settings: isDarkMode
+                                    ? const LiquidGlassSettings(
+                                        thickness: 12,
+                                        blur: 10,
+                                        glassColor: Color(0x22FFFFFF),
+                                      )
+                                    : const LiquidGlassSettings(
+                                        thickness: 12,
+                                        blur: 10,
+                                        glassColor: Color(0x66FFFFFF),
+                                      ),
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  Navigator.pop(context);
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                                  child: Center(
+                                    child: Text(
+                                      context.l10n.cancel,
+                                      style: TextStyle(
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDarkMode
+                                            ? const Color(0xFFE4E4E7)
+                                            : const Color(0xFF71717A),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: (isIncome ? Colors.green : Colors.red).withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  isIncome ? Icons.arrow_downward : Icons.arrow_upward,
+                                  color: isIncome ? Colors.green[800] : Colors.red[800],
+                                ),
                               ),
-                              child: Icon(
-                                isIncome ? Icons.arrow_downward : Icons.arrow_upward,
-                                color: isIncome ? Colors.green[800] : Colors.red[800],
-                              ),
-                            ),
-                            const SizedBox(width: 14),
+                            if (!isGlass) const SizedBox(width: 14),
                             Text(
                               isIncome ? context.l10n.editDeposit : context.l10n.editWithdrawal,
                               style: TextStyle(
-                                fontSize: 18,
+                                fontSize: isGlass ? 16.5 : 18,
                                 fontWeight: FontWeight.w800,
                                 color: isDarkMode ? Colors.white : Colors.black,
                                 letterSpacing: -0.3,
                               ),
                             ),
+                            if (isGlass)
+                              GlassButton.custom(
+                                width: 38,
+                                height: 38,
+                                shape: const LiquidOval(),
+                                useOwnLayer: true,
+                                settings: isDarkMode
+                                    ? const LiquidGlassSettings(
+                                        thickness: 12,
+                                        blur: 10,
+                                        glassColor: Color(0x30FFFFFF),
+                                      )
+                                    : const LiquidGlassSettings(
+                                        thickness: 12,
+                                        blur: 10,
+                                        glassColor: Color(0x18000000),
+                                      ),
+                                onTap: () {
+                                  if (isSubmitting) return;
+                                  HapticFeedback.selectionClick();
+                                  submitEditTransaction();
+                                },
+                                child: Center(
+                                  child: isSubmitting
+                                      ? SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: isDarkMode ? Colors.white : Colors.black,
+                                          ),
+                                        )
+                                      : Icon(
+                                          CupertinoIcons.checkmark,
+                                          size: 20,
+                                          color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                                        ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -1387,6 +2544,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                         padding: const EdgeInsets.symmetric(horizontal: 24),
                         child: TextFormField(
                           controller: amountController,
+                          focusNode: amountFocusNode,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           style: TextStyle(
                             fontSize: 24,
@@ -1412,6 +2570,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                         padding: const EdgeInsets.symmetric(horizontal: 24),
                         child: TextFormField(
                           controller: descriptionController,
+                          focusNode: descriptionFocusNode,
                           decoration: InputDecoration(
                             labelText: context.l10n.descriptionOptional,
                             filled: true,
@@ -1425,102 +2584,64 @@ mixin _HomeTabDialogs on _HomeTabState {
                       ),
                       const SizedBox(height: 24),
 
-                      // Actions
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: isSubmitting ? null : () => Navigator.pop(context),
-                                style: OutlinedButton.styleFrom(
-                                  side: BorderSide(
-                                    color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                      // Actions (Android only; iOS uses top Cancel & Checkmark)
+                      if (!isGlass)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: isSubmitting ? null : () => Navigator.pop(context),
+                                  style: OutlinedButton.styleFrom(
+                                    side: BorderSide(
+                                      color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
                                   ),
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                                child: Text(
-                                  context.l10n.cancel,
-                                  style: TextStyle(
-                                    color: isDarkMode ? Colors.white : Colors.black,
-                                    fontWeight: FontWeight.w700,
+                                  child: Text(
+                                    context.l10n.cancel,
+                                    style: TextStyle(
+                                      color: isDarkMode ? Colors.white : Colors.black,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: isSubmitting
-                                    ? null
-                                    : () async {
-                                        final amount = double.tryParse(amountController.text);
-                                        if (amount == null || amount <= 0) {
-                                          MessageService.showError(
-                                            context: context,
-                                            message: context.l10n.enterValidAmount,
-                                          );
-                                          return;
-                                        }
-
-                                        setState(() => isSubmitting = true);
-                                        try {
-                                          await _walletRepository.updateTransaction(
-                                            transaction.id,
-                                            title: transaction.title,
-                                            description: descriptionController.text,
-                                            amount: amount,
-                                            type: isIncome ? 'Deposit' : 'Withdrawal',
-                                            categoryId: selectedCategoryId ?? (filteredCategories.isNotEmpty ? filteredCategories.first.id : 1),
-                                            transactionDate: transaction.transactionDate,
-                                          );
-                                          await _loadHomeData();
-                                          if (!context.mounted) return;
-                                          Navigator.pop(context);
-                                          MessageService.showSuccess(
-                                            context: context,
-                                            message: context.l10n.transactionUpdatedSuccess,
-                                          );
-                                        } catch (e) {
-                                          if (!context.mounted) return;
-                                          MessageService.showError(
-                                            context: context,
-                                            message: context.l10n.failedToUpdateTransaction(e.toString()),
-                                          );
-                                        } finally {
-                                          if (mounted) setState(() => isSubmitting = false);
-                                        }
-                                      },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: isDarkMode ? Colors.white : Colors.black,
-                                  foregroundColor: isDarkMode ? Colors.black : Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: isSubmitting ? null : submitEditTransaction,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: isDarkMode ? Colors.white : Colors.black,
+                                    foregroundColor: isDarkMode ? Colors.black : Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    elevation: 0,
                                   ),
-                                  elevation: 0,
-                                ),
-                                child: isSubmitting
-                                    ? SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          color: isDarkMode ? Colors.black : Colors.white,
-                                          strokeWidth: 2,
+                                  child: isSubmitting
+                                      ? SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            color: isDarkMode ? Colors.black : Colors.white,
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : Text(
+                                          context.l10n.update,
+                                          style: const TextStyle(fontWeight: FontWeight.w700),
                                         ),
-                                      )
-                                    : Text(
-                                        context.l10n.update,
-                                        style: const TextStyle(fontWeight: FontWeight.w700),
-                                      ),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
                       const SizedBox(height: 24),
                     ],
                   ),
@@ -1528,10 +2649,11 @@ mixin _HomeTabDialogs on _HomeTabState {
               ),
             );
           },
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
   //#endregion
 
   //#region Delete Confirmation Dialog
@@ -1589,40 +2711,83 @@ mixin _HomeTabDialogs on _HomeTabState {
   void _showAddAccountModal() {
     final nameController = TextEditingController();
     final balanceController = TextEditingController();
+    final nameFocusNode = FocusNode();
+    final balanceFocusNode = FocusNode();
     String selectedType = 'bank';
     bool isSubmitting = false;
 
-    showModalBottomSheet(
-      context: context,
+    _showAdaptiveBottomSheet(
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return StatefulBuilder(
+      showDragHandle: true,
+      focusNodes: [nameFocusNode, balanceFocusNode],
+      builder: (context, isGlass, controller) {
+        return AdaptiveSheetFocusScope(
+          controller: controller,
+          focusNodes: [nameFocusNode, balanceFocusNode],
+          child: StatefulBuilder(
           builder: (context, setState) {
             final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-            final isAr = Localizations.localeOf(context).languageCode == 'ar';
 
             final accountTypes = [
-              {'id': 'bank', 'label': isAr ? 'حساب بنكي' : 'Bank Account', 'icon': Icons.account_balance_rounded},
-              {'id': 'cash', 'label': isAr ? 'كاش (نقدية)' : 'Cash Wallet', 'icon': Icons.payments_rounded},
-              {'id': 'ewallet', 'label': isAr ? 'محفظة إلكترونية' : 'E-Wallet', 'icon': Icons.phone_iphone_rounded},
-              {'id': 'savings', 'label': isAr ? 'صندوق ادخار' : 'Savings Vault', 'icon': Icons.savings_rounded},
+              {'id': 'bank', 'label': context.l10n.bankAccount, 'icon': Icons.account_balance_rounded},
+              {'id': 'cash', 'label': context.l10n.cashWallet, 'icon': Icons.payments_rounded},
+              {'id': 'ewallet', 'label': context.l10n.eWalletType, 'icon': Icons.phone_iphone_rounded},
+              {'id': 'savings', 'label': context.l10n.savingsVaultType, 'icon': Icons.savings_rounded},
             ];
 
-            return Container(
-              decoration: BoxDecoration(
-                color: isDarkMode ? const Color(0xFF121214) : Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(28),
-                  topRight: Radius.circular(28),
-                ),
-                border: Border(
-                  top: BorderSide(
-                    color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-                    width: 1,
+            Future<void> submitNewAccount() async {
+              if (nameController.text.trim().isEmpty) {
+                MessageService.showError(
+                  context: context,
+                  message: context.l10n.pleaseEnterAccountName,
+                );
+                return;
+              }
+
+              setState(() => isSubmitting = true);
+              await Future.delayed(const Duration(milliseconds: 300));
+              if (!context.mounted) return;
+              final newId = 'custom_${DateTime.now().millisecondsSinceEpoch}';
+              final newBal = double.tryParse(balanceController.text.trim()) ?? 0.0;
+              IconData iconData = Icons.account_balance_rounded;
+              if (selectedType == 'cash') iconData = Icons.payments_rounded;
+              if (selectedType == 'ewallet') iconData = Icons.phone_iphone_rounded;
+              if (selectedType == 'savings') iconData = Icons.savings_rounded;
+
+              this.setState(() {
+                _customAccounts.add(
+                  AccountItem(
+                    id: newId,
+                    name: nameController.text.trim(),
+                    type: selectedType,
+                    balance: newBal,
+                    icon: iconData,
                   ),
-                ),
-              ),
+                );
+              });
+              Navigator.pop(context);
+              MessageService.showSuccess(
+                context: context,
+                message: context.l10n.accountAddedSuccess,
+              );
+            }
+
+            return Container(
+              decoration: isGlass
+                  ? const BoxDecoration(color: Colors.transparent)
+                  : BoxDecoration(
+                      color: isDarkMode ? const Color(0xFF121214) : Colors.white,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(28),
+                        topRight: Radius.circular(28),
+                      ),
+                      border: Border(
+                        top: BorderSide(
+                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                          width: 1,
+                        ),
+                      ),
+                    ),
               child: Padding(
                 padding: EdgeInsets.only(
                   bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -1631,42 +2796,121 @@ mixin _HomeTabDialogs on _HomeTabState {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        height: 4,
-                        width: 40,
-                        margin: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
-                          borderRadius: BorderRadius.circular(2),
+                      if (!isGlass)
+                        Container(
+                          height: 4,
+                          width: 40,
+                          margin: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
-                      ),
+                      if (isGlass) const SizedBox(height: 12),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Row(
+                          mainAxisAlignment: isGlass ? MainAxisAlignment.spaceBetween : MainAxisAlignment.start,
                           children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-                                shape: BoxShape.circle,
+                            if (isGlass)
+                              GlassButton.custom(
+                                height: 38,
+                                shape: const LiquidRoundedRectangle(borderRadius: 19),
+                                useOwnLayer: true,
+                                settings: isDarkMode
+                                    ? const LiquidGlassSettings(
+                                        thickness: 12,
+                                        blur: 10,
+                                        glassColor: Color(0x22FFFFFF),
+                                      )
+                                    : const LiquidGlassSettings(
+                                        thickness: 12,
+                                        blur: 10,
+                                        glassColor: Color(0x66FFFFFF),
+                                      ),
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  Navigator.pop(context);
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                                  child: Center(
+                                    child: Text(
+                                      context.l10n.cancel,
+                                      style: TextStyle(
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDarkMode
+                                            ? const Color(0xFFE4E4E7)
+                                            : const Color(0xFF71717A),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.add_card_rounded,
+                                  color: isDarkMode ? Colors.white : Colors.black,
+                                  size: 22,
+                                ),
                               ),
-                              child: Icon(
-                                Icons.add_card_rounded,
-                                color: isDarkMode ? Colors.white : Colors.black,
-                                size: 22,
-                              ),
-                            ),
-                            const SizedBox(width: 14),
+                            if (!isGlass) const SizedBox(width: 14),
                             Text(
-                              isAr ? 'إضافة حساب جديد' : 'Add New Account',
+                              context.l10n.addNewAccount,
                               style: TextStyle(
-                                fontSize: 18,
+                                fontSize: isGlass ? 16.5 : 18,
                                 fontWeight: FontWeight.w800,
                                 color: isDarkMode ? Colors.white : Colors.black,
                                 letterSpacing: -0.3,
                               ),
                             ),
+                            if (isGlass)
+                              GlassButton.custom(
+                                width: 38,
+                                height: 38,
+                                shape: const LiquidOval(),
+                                useOwnLayer: true,
+                                settings: isDarkMode
+                                    ? const LiquidGlassSettings(
+                                        thickness: 12,
+                                        blur: 10,
+                                        glassColor: Color(0x30FFFFFF),
+                                      )
+                                    : const LiquidGlassSettings(
+                                        thickness: 12,
+                                        blur: 10,
+                                        glassColor: Color(0x18000000),
+                                      ),
+                                onTap: () {
+                                  if (isSubmitting) return;
+                                  HapticFeedback.selectionClick();
+                                  submitNewAccount();
+                                },
+                                child: Center(
+                                  child: isSubmitting
+                                      ? SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: isDarkMode ? Colors.white : Colors.black,
+                                          ),
+                                        )
+                                      : Icon(
+                                          CupertinoIcons.checkmark,
+                                          size: 20,
+                                          color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                                        ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -1677,8 +2921,9 @@ mixin _HomeTabDialogs on _HomeTabState {
                         padding: const EdgeInsets.symmetric(horizontal: 24),
                         child: TextFormField(
                           controller: nameController,
+                          focusNode: nameFocusNode,
                           decoration: InputDecoration(
-                            labelText: isAr ? 'اسم الحساب (مثال: بنك مصر، CIB)' : 'Account Name (e.g. Banque Misr)',
+                            labelText: context.l10n.accountNameHint,
                             filled: true,
                             fillColor: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
                             border: OutlineInputBorder(
@@ -1695,12 +2940,13 @@ mixin _HomeTabDialogs on _HomeTabState {
                         padding: const EdgeInsets.symmetric(horizontal: 24),
                         child: TextFormField(
                           controller: balanceController,
+                          focusNode: balanceFocusNode,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           inputFormatters: [
                             FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
                           ],
                           decoration: InputDecoration(
-                            labelText: isAr ? 'الرصيد الافتتاحي الحالي' : 'Initial Balance',
+                            labelText: context.l10n.initialBalance,
                             filled: true,
                             fillColor: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
                             border: OutlineInputBorder(
@@ -1718,7 +2964,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                         child: Align(
                           alignment: AlignmentDirectional.centerStart,
                           child: Text(
-                            isAr ? 'نوع الحساب' : 'Account Type',
+                            context.l10n.accountType,
                             style: TextStyle(
                               color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                               fontSize: 12,
@@ -1780,102 +3026,64 @@ mixin _HomeTabDialogs on _HomeTabState {
                       ),
                       const SizedBox(height: 28),
 
-                      // Buttons
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: isSubmitting ? null : () => Navigator.pop(context),
-                                style: OutlinedButton.styleFrom(
-                                  side: BorderSide(
-                                    color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                      // Buttons (Android only; iOS uses top Cancel & Checkmark)
+                      if (!isGlass)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: isSubmitting ? null : () => Navigator.pop(context),
+                                  style: OutlinedButton.styleFrom(
+                                    side: BorderSide(
+                                      color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
                                   ),
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                ),
-                                child: Text(
-                                  context.l10n.cancel,
-                                  style: TextStyle(
-                                    color: isDarkMode ? Colors.white : Colors.black,
-                                    fontWeight: FontWeight.w700,
+                                  child: Text(
+                                    context.l10n.cancel,
+                                    style: TextStyle(
+                                      color: isDarkMode ? Colors.white : Colors.black,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: isSubmitting
-                                    ? null
-                                    : () async {
-                                        if (nameController.text.trim().isEmpty) {
-                                          MessageService.showError(
-                                            context: context,
-                                            message: isAr ? 'يرجى إدخال اسم الحساب' : 'Please enter account name',
-                                          );
-                                          return;
-                                        }
-
-                                        setState(() => isSubmitting = true);
-                                        await Future.delayed(const Duration(milliseconds: 300));
-                                        if (!context.mounted) return;
-                                        final newId = 'custom_${DateTime.now().millisecondsSinceEpoch}';
-                                        final newBal = double.tryParse(balanceController.text.trim()) ?? 0.0;
-                                        IconData iconData = Icons.account_balance_rounded;
-                                        if (selectedType == 'cash') iconData = Icons.payments_rounded;
-                                        if (selectedType == 'ewallet') iconData = Icons.phone_iphone_rounded;
-                                        if (selectedType == 'savings') iconData = Icons.savings_rounded;
-
-                                        this.setState(() {
-                                          _customAccounts.add(
-                                            AccountItem(
-                                              id: newId,
-                                              name: nameController.text.trim(),
-                                              type: selectedType,
-                                              balance: newBal,
-                                              icon: iconData,
-                                            ),
-                                          );
-                                        });
-                                        Navigator.pop(context);
-                                        MessageService.showSuccess(
-                                          context: context,
-                                          message: isAr
-                                              ? 'تمت إضافة الحساب بنجاح 💳'
-                                              : 'Account added successfully 💳',
-                                        );
-                                      },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: isDarkMode ? Colors.white : Colors.black,
-                                  foregroundColor: isDarkMode ? Colors.black : Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: isSubmitting ? null : submitNewAccount,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: isDarkMode ? Colors.white : Colors.black,
+                                    foregroundColor: isDarkMode ? Colors.black : Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    elevation: 0,
                                   ),
-                                  elevation: 0,
-                                ),
-                                child: isSubmitting
-                                    ? SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          color: isDarkMode ? Colors.black : Colors.white,
-                                          strokeWidth: 2,
+                                  child: isSubmitting
+                                      ? SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            color: isDarkMode ? Colors.black : Colors.white,
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : Text(
+                                          context.l10n.saveAccount,
+                                          style: const TextStyle(fontWeight: FontWeight.w700),
                                         ),
-                                      )
-                                    : Text(
-                                        isAr ? 'حفظ الحساب' : 'Save Account',
-                                        style: const TextStyle(fontWeight: FontWeight.w700),
-                                      ),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
                       const SizedBox(height: 24),
                     ],
                   ),
@@ -1883,48 +3091,52 @@ mixin _HomeTabDialogs on _HomeTabState {
               ),
             );
           },
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
   //#endregion
 
   //#region All Transactions Modal
   void _showAllTransactionsModal(List<WalletTransaction> transactions) {
-    showModalBottomSheet(
-      context: context,
+    _showAdaptiveBottomSheet(
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
+      showDragHandle: true,
+      builder: (context, isGlass, _) {
         return StatefulBuilder(
           builder: (context, setState) {
             final isDarkMode = Theme.of(context).brightness == Brightness.dark;
             return Container(
               height: MediaQuery.of(context).size.height * 0.8,
-              decoration: BoxDecoration(
-                color: isDarkMode ? const Color(0xFF121214) : Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(28),
-                  topRight: Radius.circular(28),
-                ),
-                border: Border(
-                  top: BorderSide(
-                    color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-                    width: 1,
-                  ),
-                ),
-              ),
+              decoration: isGlass
+                  ? const BoxDecoration(color: Colors.transparent)
+                  : BoxDecoration(
+                      color: isDarkMode ? const Color(0xFF121214) : Colors.white,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(28),
+                        topRight: Radius.circular(28),
+                      ),
+                      border: Border(
+                        top: BorderSide(
+                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                          width: 1,
+                        ),
+                      ),
+                    ),
               child: Column(
                 children: [
-                  Container(
-                    height: 4,
-                    width: 40,
-                    margin: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
+                  if (!isGlass)
+                    Container(
+                      height: 4,
+                      width: 40,
+                      margin: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                  ),
+                  if (isGlass) const SizedBox(height: 12),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                     child: Row(
@@ -1953,13 +3165,17 @@ mixin _HomeTabDialogs on _HomeTabState {
                   Expanded(
                     child: transactions.isEmpty
                         ? _buildEmptyState(isDarkMode)
-                        : ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            itemCount: transactions.length,
-                            itemBuilder: (context, index) {
-                              final transaction = transactions[index];
-                              return _buildTransactionCard(transaction, isDarkMode);
-                            },
+                        : SlidableAutoCloseBehavior(
+                            closeWhenOpened: true,
+                            closeWhenTapped: true,
+                            child: ListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              itemCount: transactions.length,
+                              itemBuilder: (context, index) {
+                                final transaction = transactions[index];
+                                return _buildTransactionCard(transaction, isDarkMode);
+                              },
+                            ),
                           ),
                   ),
                 ],
@@ -1974,43 +3190,45 @@ mixin _HomeTabDialogs on _HomeTabState {
 
   //#region Account Switcher Modal (Quickly switch active wallet)
   void _showAccountSwitcherModal() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
+    _showAdaptiveBottomSheet(
+      showDragHandle: true,
+      builder: (context, isGlass, _) {
         final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-        final isAr = Localizations.localeOf(context).languageCode == 'ar';
 
         return Container(
-          decoration: BoxDecoration(
-            color: isDarkMode ? const Color(0xFF18181B) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            border: Border.all(
-              color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-              width: 1,
-            ),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+          decoration: isGlass
+              ? const BoxDecoration(color: Colors.transparent)
+              : BoxDecoration(
+                  color: isDarkMode ? const Color(0xFF18181B) : Colors.white,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                  border: Border.all(
+                    color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                    width: 1,
+                  ),
+                ),
+          padding: EdgeInsets.fromLTRB(20, isGlass ? 4 : 12, 20, 32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: Container(
-                  height: 4,
-                  width: 36,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
+              if (!isGlass)
+                Center(
+                  child: Container(
+                    height: 4,
+                    width: 36,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
+              if (isGlass) const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    isAr ? 'اختر المحفظة المعروضة' : 'Select Active Wallet',
+                    context.l10n.selectActiveWallet,
                     style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
@@ -2086,6 +3304,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                                   ),
                                   Text(
                                     _formatAmount(acc.balance, currencyCode: acc.currency),
+                                    textDirection: ui.TextDirection.ltr,
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
@@ -2125,36 +3344,38 @@ mixin _HomeTabDialogs on _HomeTabState {
 
   //#region Manage Accounts Sheet (Full list, balances, Add Account)
   void _showManageAccountsModal() {
-    showModalBottomSheet(
-      context: context,
+    _showAdaptiveBottomSheet(
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
+      showDragHandle: true,
+      builder: (context, isGlass, _) {
         final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-        final isAr = Localizations.localeOf(context).languageCode == 'ar';
 
         return Container(
           height: MediaQuery.of(context).size.height * 0.75,
-          decoration: BoxDecoration(
-            color: isDarkMode ? const Color(0xFF18181B) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            border: Border.all(
-              color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-              width: 1,
-            ),
-          ),
+          decoration: isGlass
+              ? const BoxDecoration(color: Colors.transparent)
+              : BoxDecoration(
+                  color: isDarkMode ? const Color(0xFF18181B) : Colors.white,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                  border: Border.all(
+                    color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                    width: 1,
+                  ),
+                ),
           child: Column(
             children: [
-              // Handle
-              Container(
-                height: 4,
-                width: 36,
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
+              // Handle (only on standard Material sheet; GlassSheet provides its own)
+              if (!isGlass)
+                Container(
+                  height: 4,
+                  width: 36,
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
+              if (isGlass) const SizedBox(height: 12),
 
               // Top Title
               Padding(
@@ -2166,7 +3387,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isAr ? 'إدارة المحافظ والحسابات' : 'Manage Accounts',
+                          context.l10n.manageAccounts,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
@@ -2176,7 +3397,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          isAr ? 'تحكم في محافظك، حساباتك البنكية، والمحافظ الإلكترونية' : 'Manage your cash, bank, and digital wallets',
+                          context.l10n.manageAccountsSubtitle,
                           style: TextStyle(
                             fontSize: 11,
                             color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
@@ -2208,12 +3429,20 @@ mixin _HomeTabDialogs on _HomeTabState {
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: isDarkMode ? const Color(0xFF09090B) : const Color(0xFFF9FAFB),
+                          color: isGlass
+                              ? (isDarkMode
+                                  ? Colors.white.withValues(alpha: 0.08)
+                                  : Colors.white.withValues(alpha: 0.7))
+                              : (isDarkMode ? const Color(0xFF09090B) : const Color(0xFFF9FAFB)),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: isSelected
                                 ? (isDarkMode ? Colors.white : Colors.black)
-                                : (isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7)),
+                                : (isGlass
+                                    ? (isDarkMode
+                                        ? Colors.white.withValues(alpha: 0.12)
+                                        : Colors.black.withValues(alpha: 0.08))
+                                    : (isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7))),
                             width: isSelected ? 1.5 : 1,
                           ),
                         ),
@@ -2222,7 +3451,9 @@ mixin _HomeTabDialogs on _HomeTabState {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: isDarkMode ? const Color(0xFF18181B) : Colors.white,
+                                color: isGlass
+                                    ? (isDarkMode ? Colors.white.withValues(alpha: 0.12) : Colors.white)
+                                    : (isDarkMode ? const Color(0xFF18181B) : Colors.white),
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
                                   color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
@@ -2268,7 +3499,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                                               const Icon(Icons.star_rounded, size: 11, color: Color(0xFF10B981)),
                                               const SizedBox(width: 2),
                                               Text(
-                                                isAr ? 'الرئيسي' : 'Main Acc',
+                                                context.l10n.mainAcc,
                                                 style: const TextStyle(
                                                   fontSize: 9.5,
                                                   fontWeight: FontWeight.w800,
@@ -2288,7 +3519,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                                             borderRadius: BorderRadius.circular(6),
                                           ),
                                           child: Text(
-                                            isAr ? 'النشط' : 'Active',
+                                            context.l10n.active,
                                             style: const TextStyle(
                                               fontSize: 9,
                                               fontWeight: FontWeight.w800,
@@ -2302,6 +3533,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                                   const SizedBox(height: 4),
                                   Text(
                                     _formatAmount(acc.balance, currencyCode: acc.currency),
+                                    textDirection: ui.TextDirection.ltr,
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w800,
@@ -2320,9 +3552,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                                   Navigator.pop(context);
                                   MessageService.showSuccess(
                                     context: context,
-                                    message: isAr
-                                        ? 'تم تعيين ${acc.name} كحساب رئيسي ⭐'
-                                        : '${acc.name} set as main account ⭐',
+                                    message: context.l10n.setAsMainSuccess(acc.name),
                                   );
                                 },
                                 borderRadius: BorderRadius.circular(10),
@@ -2339,7 +3569,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                                       const Icon(Icons.star_outline_rounded, size: 14, color: Color(0xFF10B981)),
                                       const SizedBox(width: 4),
                                       Text(
-                                        isAr ? 'تعيين كرئيسي' : 'Set as Main',
+                                        context.l10n.setAsMain,
                                         style: const TextStyle(
                                           fontSize: 10,
                                           fontWeight: FontWeight.w700,
@@ -2368,7 +3598,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Text(
-                                  isSelected ? (isAr ? 'محدد' : 'Selected') : (isAr ? 'تحديد' : 'Select'),
+                                  isSelected ? context.l10n.selected : context.l10n.selectActionKey,
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700,
@@ -2414,7 +3644,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            isAr ? 'إضافة محفظة / حساب جديد' : 'Add New Account',
+                            context.l10n.addNewAccountOrWallet,
                             style: TextStyle(
                               color: isDarkMode ? Colors.black : Colors.white,
                               fontSize: 14,

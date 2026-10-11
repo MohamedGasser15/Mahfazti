@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:my_wallet/core/constants/currency_constants.dart';
+import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
@@ -44,11 +45,26 @@ class SubscriptionItem {
         billingCycle: json['billingCycle'] ?? 'monthly',
         renewalDay: json['renewalDay'] ?? 1,
         category: json['category'] ?? '',
-        icon: json['iconCode'] != null
-            // ignore: non_const_argument_for_const_parameter
-            ? IconData(json['iconCode'], fontFamily: 'MaterialIcons')
-            : Icons.subscriptions_rounded,
+        icon: _iconFromCode(json['iconCode'] as int?),
       );
+
+  static IconData _iconFromCode(int? code) {
+    if (code == null) return Icons.subscriptions_rounded;
+    const supportedIcons = <IconData>[
+      Icons.movie_filter_rounded,
+      Icons.wifi_rounded,
+      Icons.fitness_center_rounded,
+      Icons.music_note_rounded,
+      Icons.play_circle_fill_rounded,
+      Icons.cloud_rounded,
+      Icons.credit_card_rounded,
+      Icons.subscriptions_rounded,
+    ];
+    for (final icon in supportedIcons) {
+      if (icon.codePoint == code) return icon;
+    }
+    return Icons.subscriptions_rounded;
+  }
 
   static List<SubscriptionItem> defaultSeed() {
     return const [
@@ -178,7 +194,6 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
   }
 
   void _showAddSubscriptionModal(bool isDarkMode) {
-    final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final titleController = TextEditingController();
     final amountController = TextEditingController();
     final dayController = TextEditingController(text: '15');
@@ -189,8 +204,8 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
     final presets = [
       {'name': 'Netflix', 'amount': '250', 'icon': Icons.movie_filter_rounded},
       {'name': 'Spotify', 'amount': '80', 'icon': Icons.music_note_rounded},
-      {'name': isAr ? 'إنترنت WE' : 'WE Internet', 'amount': '380', 'icon': Icons.wifi_rounded},
-      {'name': isAr ? 'جيم' : 'Gym', 'amount': '600', 'icon': Icons.fitness_center_rounded},
+      {'name': context.l10n.weInternet, 'amount': '380', 'icon': Icons.wifi_rounded},
+      {'name': context.l10n.gym, 'amount': '600', 'icon': Icons.fitness_center_rounded},
       {'name': 'YouTube', 'amount': '90', 'icon': Icons.play_circle_fill_rounded},
       {'name': 'iCloud', 'amount': '45', 'icon': Icons.cloud_rounded},
     ];
@@ -234,7 +249,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    isAr ? 'إضافة اشتراك جديد' : 'New Subscription',
+                    context.l10n.newSubscription,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
@@ -244,9 +259,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    isAr
-                        ? 'تتبع فواتيرك واشتراكاتك الدورية بسهولة'
-                        : 'Track recurring bills and subscriptions',
+                    context.l10n.trackRecurringBillsSubtitle,
                     style: TextStyle(
                       fontSize: 13,
                       color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
@@ -325,7 +338,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                       ),
                       decoration: InputDecoration(
                         border: InputBorder.none,
-                        hintText: isAr ? 'اسم الاشتراك (مثال: نتفلكس)' : 'Title (e.g. Netflix)',
+                        hintText: context.l10n.subscriptionTitleHint,
                         hintStyle: TextStyle(
                           color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
                         ),
@@ -406,11 +419,11 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                             ),
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: isAr ? 'يوم' : 'Day',
+                              hintText: context.l10n.subscriptionDayHint,
                               hintStyle: TextStyle(
                                 color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
                               ),
-                              suffixText: isAr ? 'بالشهر' : 'of mo',
+                              suffixText: context.l10n.ofMonthSuffix,
                               suffixStyle: TextStyle(
                                 fontSize: 11,
                                 color: isDarkMode ? Colors.grey[500] : Colors.grey[600],
@@ -441,7 +454,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                             ),
                             child: Center(
                               child: Text(
-                                isAr ? 'شهرياً' : 'Monthly',
+                                context.l10n.monthly,
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
@@ -470,7 +483,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                             ),
                             child: Center(
                               child: Text(
-                                isAr ? 'سنوياً' : 'Yearly',
+                                context.l10n.yearly,
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
@@ -500,9 +513,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                         if (title.isEmpty || amount == null || amount <= 0) {
                           MessageService.showError(
                             context: context,
-                            message: isAr
-                                ? 'يرجى إدخال اسم ومبلغ الاشتراك'
-                                : 'Please enter subscription title and amount',
+                            message: context.l10n.pleaseEnterSubscriptionTitleAndAmount,
                           );
                           return;
                         }
@@ -528,9 +539,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                         if (context.mounted) {
                           MessageService.showSuccess(
                             context: context,
-                            message: isAr
-                                ? 'تمت إضافة الاشتراك بنجاح'
-                                : 'Subscription added successfully',
+                            message: context.l10n.subscriptionAddedSuccess,
                           );
                         }
                       },
@@ -541,7 +550,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                         elevation: 0,
                       ),
                       child: Text(
-                        isAr ? 'حفظ الاشتراك' : 'Save Subscription',
+                        context.l10n.saveSubscription,
                         style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                       ),
                     ),
@@ -556,7 +565,6 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
   }
 
   void _showSubscriptionOptions(SubscriptionItem sub, bool isDarkMode) {
-    final isAr = Localizations.localeOf(context).languageCode == 'ar';
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -608,7 +616,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${_formatAmount(sub.amount)} / ${sub.billingCycle == 'yearly' ? (isAr ? 'سنوياً' : 'yr') : (isAr ? 'شهرياً' : 'mo')}',
+                        '${_formatAmount(sub.amount)} / ${sub.billingCycle == 'yearly' ? context.l10n.yrUnit : context.l10n.moUnit}',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -629,7 +637,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
             ListTile(
               leading: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
               title: Text(
-                isAr ? 'حذف هذا الاشتراك' : 'Delete Subscription',
+                context.l10n.deleteSubscription,
                 style: const TextStyle(
                   color: Colors.redAccent,
                   fontWeight: FontWeight.w700,
@@ -647,7 +655,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                 if (mounted) {
                   MessageService.showSuccess(
                     context: context,
-                    message: isAr ? 'تم حذف الاشتراك' : 'Subscription deleted',
+                    message: context.l10n.subscriptionDeletedSuccess,
                   );
                 }
               },
@@ -661,7 +669,6 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final bgColor = isDarkMode ? const Color(0xFF09090B) : const Color(0xFFF8F8FA);
     final borderColor = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
 
@@ -672,7 +679,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
       backgroundColor: bgColor,
       appBar: AppBar(
         title: Text(
-          isAr ? 'الاشتراكات والفواتير' : 'Subscriptions',
+          context.l10n.subscriptionsAndBills,
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w800,
@@ -743,7 +750,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                isAr ? 'الالتزامات الدورية الشهرية' : 'Monthly Recurring Costs',
+                                context.l10n.monthlyRecurringCosts,
                                 style: TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w600,
@@ -758,9 +765,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                                   border: Border.all(color: borderColor, width: 0.8),
                                 ),
                                 child: Text(
-                                  isAr
-                                      ? '${_subscriptions.length} نشطة'
-                                      : '${_subscriptions.length} Active',
+                                  context.l10n.activeSubscriptionsCount(_subscriptions.length),
                                   style: TextStyle(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w800,
@@ -786,7 +791,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                isAr ? '/ شهر' : '/ month',
+                                context.l10n.perMonth,
                                 style: TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w600,
@@ -824,9 +829,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          isAr
-                                              ? 'الفاتورة القادمة: ${nextDue.title}'
-                                              : 'Next due: ${nextDue.title}',
+                                          context.l10n.nextDueBill(nextDue.title),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: TextStyle(
@@ -837,13 +840,9 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                                         ),
                                         const SizedBox(height: 1),
                                         Text(
-                                          isAr
-                                              ? (nextDays == 0
-                                                  ? 'مستحقة اليوم!'
-                                                  : 'بعد $nextDays يوم (يوم ${nextDue.renewalDay} بالشهر)')
-                                              : (nextDays == 0
-                                                  ? 'Due today!'
-                                                  : 'In $nextDays days (Day ${nextDue.renewalDay})'),
+                                          nextDays == 0
+                                              ? context.l10n.dueTodayExclamation
+                                              : context.l10n.dueInDaysWithDay(nextDays, nextDue.renewalDay),
                                           style: const TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w600,
@@ -879,7 +878,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                         Row(
                           children: [
                             Text(
-                              isAr ? 'الاشتراكات المثبتة' : 'Active Subscriptions',
+                              context.l10n.activeSubscriptions,
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w800,
@@ -911,7 +910,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                           child: Padding(
                             padding: const EdgeInsets.all(4.0),
                             child: Text(
-                              isAr ? '+ إضافة جديد' : '+ Add new',
+                              context.l10n.addNewSubscriptionAction,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
@@ -1000,9 +999,9 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                                           Row(
                                             children: [
                                               Text(
-                                                isAr
-                                                    ? (days == 0 ? 'مستحقة اليوم!' : 'بعد $days يوم')
-                                                    : (days == 0 ? 'Due today!' : 'In $days days'),
+                                                days == 0
+                                                    ? context.l10n.dueTodayExclamation
+                                                    : context.l10n.inDaysFormatted(days),
                                                 style: TextStyle(
                                                   fontSize: 11.5,
                                                   fontWeight: FontWeight.w600,
@@ -1021,9 +1020,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                                               ),
                                               const SizedBox(width: 6),
                                               Text(
-                                                isAr
-                                                    ? 'يوم ${sub.renewalDay} بالشهر'
-                                                    : 'Day ${sub.renewalDay}',
+                                                context.l10n.dayOfMonthFormatted(sub.renewalDay),
                                                 style: TextStyle(
                                                   fontSize: 11.5,
                                                   color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
@@ -1055,8 +1052,8 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                                           ),
                                           child: Text(
                                             sub.billingCycle == 'yearly'
-                                                ? (isAr ? 'سنوياً' : 'yearly')
-                                                : (isAr ? 'شهرياً' : 'monthly'),
+                                                ? context.l10n.yearly
+                                                : context.l10n.monthly,
                                             style: TextStyle(
                                               fontSize: 10,
                                               fontWeight: FontWeight.w700,

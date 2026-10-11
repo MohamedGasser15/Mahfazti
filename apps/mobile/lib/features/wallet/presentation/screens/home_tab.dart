@@ -17,9 +17,11 @@ import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/services/wallet_cache_service.dart';
 import 'package:my_wallet/core/utils/api_error_handler.dart';
 import 'package:my_wallet/core/utils/app_responsive.dart';
+import 'package:my_wallet/core/utils/navigation_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:my_wallet/features/settings/presentation/screens/categories_management_screen.dart';
 import 'package:my_wallet/features/settings/presentation/screens/settings_screen.dart';
 import 'package:my_wallet/features/wallet/data/models/budget_models.dart';
 import 'package:my_wallet/features/wallet/data/models/category_model.dart';
@@ -31,6 +33,7 @@ import 'package:my_wallet/features/wallet/presentation/screens/analytics_screen.
 import 'package:my_wallet/features/wallet/presentation/screens/subscriptions_tab.dart';
 import 'package:my_wallet/features/wallet/presentation/widgets/home_tab_models.dart';
 import 'package:my_wallet/features/wallet/presentation/widgets/voice_expense_button.dart';
+import 'package:my_wallet/features/wallet/presentation/utils/category_icon_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -99,12 +102,11 @@ abstract class _HomeTabState extends State<HomeTab> {
     final balance = _homeData?.balance.totalBalance ?? 0.0;
     final income = _homeData?.balance.totalDeposits ?? 0.0;
     final expense = _homeData?.balance.totalWithdrawals ?? 0.0;
-    final isAr = Localizations.localeOf(context).languageCode == 'ar';
 
     return [
       AccountItem(
         id: 'all',
-        name: isAr ? 'إجمالي الحسابات' : 'All Accounts',
+        name: context.l10n.allAccounts,
         type: 'all',
         balance: balance,
         income: income,
@@ -116,7 +118,7 @@ abstract class _HomeTabState extends State<HomeTab> {
       ),
       AccountItem(
         id: 'bank',
-        name: isAr ? 'بنك مصر' : 'Banque Misr',
+        name: context.l10n.banqueMisr,
         type: 'bank',
         balance: balance * 0.62,
         income: income * 0.8,
@@ -128,19 +130,19 @@ abstract class _HomeTabState extends State<HomeTab> {
       ),
       AccountItem(
         id: 'cash',
-        name: isAr ? 'كاش (الجيب)' : 'Cash Wallet',
+        name: context.l10n.cashWallet,
         type: 'cash',
         balance: balance * 0.18,
         income: income * 0.1,
         expense: expense * 0.35,
         icon: Icons.payments_rounded,
         isMain: _mainAccountId == 'cash',
-        accountNumber: isAr ? 'نقدية' : 'Cash',
+        accountNumber: context.l10n.cash,
         currency: 'USD',
       ),
       AccountItem(
         id: 'ewallet',
-        name: isAr ? 'فودافون كاش' : 'Vodafone Cash',
+        name: context.l10n.vodafoneCash,
         type: 'ewallet',
         balance: balance * 0.20,
         income: income * 0.1,
@@ -538,55 +540,239 @@ abstract class _HomeTabState extends State<HomeTab> {
   }
 
   //#region Formatting Helpers
-  String _formatAmount(double amount, {String? currencyCode}) {
-    if (currencyCode != null) {
-      final code = currencyCode.toUpperCase();
-      final formatter = NumberFormat('#,##0.00', 'en_US');
-      final formattedNum = formatter.format(amount.abs());
-      final isNegative = amount < 0;
-      final sign = isNegative ? '-' : '';
-      return '$sign$formattedNum $code';
+  String _formatAmount(
+    double amount, {
+    String? currencyCode,
+    String prefix = '',
+  }) {
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    final targetCode = currencyCode ?? _currencyCode ?? 'USD';
+    final symbol = getCurrencySymbol(targetCode, isAr: isAr);
+    final formatter = NumberFormat('#,##0.00', 'en_US');
+    final formattedNum = formatter.format(amount.abs());
+
+    String sign = prefix.trim();
+    if (sign.isEmpty && amount < 0) {
+      sign = '-';
     }
 
-    final symbol = currencySymbols[_currencyCode ?? 'USD'] ?? '\$';
-    final formatter = NumberFormat('#,##0.00', 'en_US');
-    return '$symbol ${formatter.format(amount)}';
+    final signPart = sign.isNotEmpty ? '$sign ' : '';
+
+    if (isAr) {
+      return '$signPart$formattedNum $symbol';
+    } else {
+      return '$signPart$symbol $formattedNum';
+    }
   }
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    final l10n = context.l10n;
 
     if (difference.isNegative || difference.inMinutes < 1) {
-      return isAr ? 'الآن' : 'Just now';
+      return l10n.justNow;
     } else if (difference.inMinutes < 60) {
-      return isAr ? 'منذ ${difference.inMinutes} دقيقة' : '${difference.inMinutes}m ago';
+      return l10n.minutesAgoPlural(difference.inMinutes);
     } else if (difference.inHours < 24 && date.day == now.day) {
-      if (difference.inHours == 1) {
-        return isAr ? 'منذ ساعة' : '1h ago';
-      } else if (difference.inHours == 2) {
-        return isAr ? 'منذ ساعتين' : '2h ago';
-      } else if (difference.inHours >= 3 && difference.inHours <= 10) {
-        return isAr ? 'منذ ${difference.inHours} ساعات' : '${difference.inHours}h ago';
-      } else {
-        return isAr ? 'منذ ${difference.inHours} ساعة' : '${difference.inHours}h ago';
-      }
+      return l10n.hoursAgoPlural(difference.inHours);
     } else if (difference.inDays <= 1 || (now.day - date.day == 1 && difference.inHours < 48)) {
-      return isAr ? 'أمس' : 'Yesterday';
-    } else if (difference.inDays == 2) {
-      return isAr ? 'منذ يومين' : '2d ago';
-    } else if (difference.inDays >= 3 && difference.inDays <= 10) {
-      return isAr ? 'منذ ${difference.inDays} أيام' : '${difference.inDays}d ago';
+      return l10n.yesterday;
     } else if (difference.inDays < 30) {
-      return isAr ? 'منذ ${difference.inDays} يوماً' : '${difference.inDays}d ago';
+      return l10n.daysAgoPlural(difference.inDays);
     } else if (difference.inDays < 60) {
-      return isAr ? 'منذ شهر' : '1mo ago';
+      return l10n.oneMonthAgo;
     } else {
       return DateFormat('d MMM', isAr ? 'ar' : 'en').format(date);
     }
   }
+
+  Future<T?> _showAdaptiveBottomSheet<T>({
+    required Widget Function(BuildContext context, bool isGlass, GlassModalSheetController? controller) builder,
+    bool isScrollControlled = true,
+    bool showDragHandle = true,
+    bool dismissible = true,
+    bool enableDrag = true,
+    double topBorderRadius = 38,
+    double bottomBorderRadius = 0,
+    double fullTopBorderRadius = 24,
+    double fullBottomBorderRadius = 0,
+    double horizontalMargin = 0.0,
+    double bottomMargin = 0.0,
+    double halfSize = 0.69,
+    double fullSize = 0.88,
+    GlassSheetState initialState = GlassSheetState.half,
+    Set<GlassSheetDetent> detents = const {GlassSheetDetent.medium, GlassSheetDetent.large},
+    GlassModalSheetController? controller,
+    List<FocusNode>? focusNodes,
+    ValueChanged<GlassSheetState>? onStateChanged,
+  }) async {
+    final isIOS = Platform.isIOS;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    NavigationService.isModalOpenNotifier.value = true;
+    try {
+      if (isIOS) {
+        final sheetController = controller ?? GlassModalSheetController();
+        final glassSettings = isDarkMode
+            ? const LiquidGlassSettings(
+                thickness: 20,
+                blur: 28,
+                glassColor: Color(0x661E1E26),
+                refractiveIndex: 1.18,
+                lightIntensity: 0.90,
+                whitenStrength: 0.08,
+              )
+            : const LiquidGlassSettings(
+                thickness: 18,
+                blur: 24,
+                glassColor: Color(0xCCFFFFFF),
+                refractiveIndex: 1.12,
+                whitenStrength: 0.15,
+              );
+
+        return await GlassModalSheet.show<T>(
+          context: context,
+          useRootNavigator: true,
+          platformViewBackdrop: true,
+          controller: sheetController,
+          initialState: initialState,
+          halfSize: halfSize,
+          fullSize: fullSize,
+          detents: detents,
+          dismissible: dismissible,
+          horizontalMargin: horizontalMargin,
+          bottomMargin: bottomMargin,
+          topBorderRadius: topBorderRadius,
+          bottomBorderRadius: bottomBorderRadius,
+          fullTopBorderRadius: fullTopBorderRadius,
+          fullBottomBorderRadius: fullBottomBorderRadius,
+          showDragIndicator: showDragHandle,
+          dragIndicatorColor: isDarkMode
+              ? Colors.white.withValues(alpha: 0.35)
+              : const Color(0x33000000),
+          barrierColor: isDarkMode
+              ? const Color(0x80000000)
+              : const Color(0x33000000),
+          enableInteractionGlow: false,
+          enableSaturationGlow: false,
+          fillThreshold: 1.0,
+          expandedColor: Colors.transparent,
+          expandedDarkColor: Colors.transparent,
+          settings: glassSettings,
+          halfSettings: glassSettings,
+          fullSettings: glassSettings,
+          onStateChanged: (state) {
+            if (state == GlassSheetState.half && focusNodes != null) {
+              for (final node in focusNodes) {
+                node.unfocus();
+              }
+            }
+            onStateChanged?.call(state);
+          },
+          builder: (ctx) => Material(
+            type: MaterialType.transparency,
+            child: builder(ctx, true, sheetController),
+          ),
+        );
+      } else {
+        return await showModalBottomSheet<T>(
+          context: context,
+          useRootNavigator: true,
+          isScrollControlled: isScrollControlled,
+          enableDrag: enableDrag,
+          backgroundColor: Colors.transparent,
+          builder: (ctx) => builder(ctx, false, null),
+        );
+      }
+    } finally {
+      NavigationService.isModalOpenNotifier.value = false;
+    }
+  }
   //#endregion
+}
+
+class AdaptiveSheetFocusScope extends StatefulWidget {
+  final Widget child;
+  final GlassModalSheetController? controller;
+  final List<FocusNode> focusNodes;
+
+  const AdaptiveSheetFocusScope({
+    super.key,
+    required this.child,
+    this.controller,
+    required this.focusNodes,
+  });
+
+  @override
+  State<AdaptiveSheetFocusScope> createState() => _AdaptiveSheetFocusScopeState();
+}
+
+class _AdaptiveSheetFocusScopeState extends State<AdaptiveSheetFocusScope>
+    with WidgetsBindingObserver {
+  bool _wasKeyboardOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    for (final node in widget.focusNodes) {
+      node.addListener(_handleFocusChange);
+    }
+  }
+
+  void _handleFocusChange() {
+    final anyHasFocus = widget.focusNodes.any((n) => n.hasFocus);
+    if (widget.controller == null) return;
+    if (anyHasFocus) {
+      if (widget.controller!.currentState != GlassSheetState.full) {
+        widget.controller!.snapToState(GlassSheetState.full);
+      }
+    } else {
+      if (widget.controller!.currentState == GlassSheetState.full) {
+        widget.controller!.snapToState(GlassSheetState.half);
+      }
+    }
+  }
+
+  @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    final bottomInset = View.of(context).viewInsets.bottom;
+    final isKeyboardOpen = bottomInset > 0;
+    if (_wasKeyboardOpen && !isKeyboardOpen) {
+      if (widget.controller?.currentState == GlassSheetState.full) {
+        widget.controller?.snapToState(GlassSheetState.half);
+      }
+      for (final node in widget.focusNodes) {
+        node.unfocus();
+      }
+    }
+    _wasKeyboardOpen = isKeyboardOpen;
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    for (final node in widget.focusNodes) {
+      node.removeListener(_handleFocusChange);
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        for (final node in widget.focusNodes) {
+          if (node.hasFocus) node.unfocus();
+        }
+      },
+      child: widget.child,
+    );
+  }
 }
 
 class _HomeTabConcrete extends _HomeTabState with _HomeTabDialogs, _HomeTabWidgets {}

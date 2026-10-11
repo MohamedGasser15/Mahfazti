@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:real_liquid_glass/real_liquid_glass.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
+import 'package:my_wallet/core/utils/navigation_service.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/analytics_screen.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/budgets_tab.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/home_tab.dart';
@@ -94,21 +95,30 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           if (isIOS)
             Positioned(
-              left: 20,
-              right: 20,
-              bottom: 16,
-              child: LiquidGlassBottomBar(
-                key: ValueKey('tab_bar_${isRtl}_$isDarkMode'),
-                height: 85,
-                tint: isDarkMode ? Colors.white : Theme.of(context).primaryColor,
-                style: LiquidGlassStyle.regular,
-                items: displayItems,
-                currentIndex: activeIndex,
-                onTap: (index) {
-                  HapticFeedback.selectionClick();
-                  final targetIndex = isRtl ? (displayItems.length - 1 - index) : index;
-                  _navigateToTab(targetIndex);
+              left: 2,
+              right: 2,
+              bottom: 0,
+              child: ValueListenableBuilder<bool>(
+                valueListenable: NavigationService.isModalOpenNotifier,
+                builder: (context, isModalOpen, child) {
+                  if (isModalOpen) {
+                    return const SizedBox.shrink();
+                  }
+                  return child!;
                 },
+                child: LiquidGlassBottomBar(
+                  key: ValueKey('tab_bar_${isRtl}_$isDarkMode'),
+                  height: 85,
+                  tint: isDarkMode ? Colors.white : Theme.of(context).primaryColor,
+                  style: LiquidGlassStyle.regular,
+                  items: displayItems,
+                  currentIndex: activeIndex,
+                  onTap: (index) {
+                    HapticFeedback.selectionClick();
+                    final targetIndex = isRtl ? (displayItems.length - 1 - index) : index;
+                    _navigateToTab(targetIndex);
+                  },
+                ),
               ),
             ),
         ],

@@ -169,7 +169,6 @@ mixin _HomeTabWidgets on _HomeTabState {
 
   //#region Top App Bar (Say Style)
   Widget _buildSayTopBar(bool isDarkMode, HideBalanceService hideService) {
-    final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final isIOS = Platform.isIOS;
 
     return Padding(
@@ -230,23 +229,23 @@ mixin _HomeTabWidgets on _HomeTabState {
                       actions: [
                         IosContextMenuAction(
                           id: 'this_month',
-                          title: isAr ? 'هذا الشهر' : 'This Month',
+                          title: context.l10n.thisMonth,
                           iconSystemName: 'calendar',
                         ),
                         IosContextMenuAction(
                           id: 'last_month',
-                          title: isAr ? 'الشهر السابق' : 'Last Month',
+                          title: context.l10n.lastMonth,
                           iconSystemName: 'clock.arrow.circlepath',
                         ),
                         const IosContextMenuDivider(),
                         IosContextMenuAction(
                           id: 'by_month',
-                          title: isAr ? 'بالشهر...' : 'By Month...',
+                          title: context.l10n.byMonth,
                           iconSystemName: 'calendar.day.timeline.left',
                         ),
                         IosContextMenuAction(
                           id: 'custom_range',
-                          title: isAr ? 'فترة مخصصة...' : 'Custom Range...',
+                          title: context.l10n.customRangeDots,
                           iconSystemName: 'calendar.badge.clock',
                         ),
                       ],
@@ -279,100 +278,11 @@ mixin _HomeTabWidgets on _HomeTabState {
                     ),
                   ),
                 )
-              : Theme(
-                  data: Theme.of(context).copyWith(
-                    popupMenuTheme: PopupMenuThemeData(
-                      color: isDarkMode ? const Color(0xFF1E1E24) : Colors.white,
-                      surfaceTintColor: Colors.transparent,
-                      elevation: 8,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        side: BorderSide(
-                          color: isDarkMode ? const Color(0xFF2E2E36) : const Color(0xFFE4E4E7),
-                          width: 1,
-                        ),
-                      ),
-                      shadowColor: Colors.black.withValues(alpha: 0.25),
-                    ),
-                  ),
-                  child: PopupMenuButton<int>(
-                    tooltip: isAr ? 'تحديد الفترة' : 'Select date range',
-                    offset: const Offset(0, 34),
-                    position: PopupMenuPosition.under,
-                    elevation: 8,
-                    color: isDarkMode ? const Color(0xFF1E1E24) : Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      side: BorderSide(
-                        color: isDarkMode ? const Color(0xFF2E2E36) : const Color(0xFFE4E4E7),
-                        width: 1,
-                      ),
-                    ),
-                    splashRadius: 20,
-                    padding: EdgeInsets.zero,
-                    onSelected: (index) async {
-                      HapticFeedback.selectionClick();
-                      final now = DateTime.now();
-                      if (index == 0) {
-                        setState(() {
-                          _startDate = DateTime(now.year, now.month, 1);
-                          _endDate = DateTime(now.year, now.month + 1, 0);
-                        });
-                      } else if (index == 1) {
-                        setState(() {
-                          _startDate = DateTime(now.year, now.month - 1, 1);
-                          _endDate = DateTime(now.year, now.month, 0);
-                        });
-                      } else if (index == 2) {
-                        await _pickMonthPicker(context);
-                      } else if (index == 3) {
-                        await _pickCustomDateRange(context);
-                      }
-                    },
-                    itemBuilder: (context) {
-                      final now = DateTime.now();
-                      final isThisMonth = _startDate.year == now.year &&
-                          _startDate.month == now.month &&
-                          _startDate.day == 1 &&
-                          _endDate.day == DateTime(now.year, now.month + 1, 0).day;
-                      final prevMonthDate = DateTime(now.year, now.month - 1, 1);
-                      final isLastMonth = _startDate.year == prevMonthDate.year &&
-                          _startDate.month == prevMonthDate.month &&
-                          _startDate.day == 1 &&
-                          _endDate.day == DateTime(now.year, now.month, 0).day;
-
-                      return [
-                        _buildMenuOptionItem(
-                          value: 0,
-                          title: isAr ? 'هذا الشهر' : 'This Month',
-                          icon: Icons.calendar_today_rounded,
-                          isSelected: isThisMonth,
-                          isDarkMode: isDarkMode,
-                        ),
-                        _buildMenuOptionItem(
-                          value: 1,
-                          title: isAr ? 'الشهر السابق' : 'Last Month',
-                          icon: Icons.history_rounded,
-                          isSelected: isLastMonth,
-                          isDarkMode: isDarkMode,
-                        ),
-                        const PopupMenuDivider(height: 8),
-                        _buildMenuOptionItem(
-                          value: 2,
-                          title: isAr ? 'بالشهر...' : 'By Month...',
-                          icon: Icons.calendar_month_rounded,
-                          isSelected: !isThisMonth && !isLastMonth && _startDate.day == 1 && _endDate.day == DateTime(_startDate.year, _startDate.month + 1, 0).day,
-                          isDarkMode: isDarkMode,
-                        ),
-                        _buildMenuOptionItem(
-                          value: 3,
-                          title: isAr ? 'فترة مخصصة...' : 'Custom Range...',
-                          icon: Icons.date_range_rounded,
-                          isSelected: !isThisMonth && !isLastMonth && !(_startDate.day == 1 && _endDate.day == DateTime(_startDate.year, _startDate.month + 1, 0).day),
-                          isDarkMode: isDarkMode,
-                        ),
-                      ];
-                    },
+              : Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _showDateRangeModalSheetAndroid(isDarkMode),
+                    borderRadius: BorderRadius.circular(20),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                       decoration: BoxDecoration(
@@ -443,11 +353,197 @@ mixin _HomeTabWidgets on _HomeTabState {
       ),
     );
   }
+
+  void _showDateRangeModalSheetAndroid(bool isDarkMode) {
+    HapticFeedback.selectionClick();
+    final now = DateTime.now();
+    final isThisMonth = _startDate.year == now.year &&
+        _startDate.month == now.month &&
+        _startDate.day == 1 &&
+        _endDate.day == DateTime(now.year, now.month + 1, 0).day;
+    final prevMonthDate = DateTime(now.year, now.month - 1, 1);
+    final isLastMonth = _startDate.year == prevMonthDate.year &&
+        _startDate.month == prevMonthDate.month &&
+        _startDate.day == 1 &&
+        _endDate.day == DateTime(now.year, now.month, 0).day;
+    final isByMonth = !isThisMonth && !isLastMonth && _startDate.day == 1 && _endDate.day == DateTime(_startDate.year, _startDate.month + 1, 0).day;
+    final isCustom = !isThisMonth && !isLastMonth && !isByMonth;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          decoration: BoxDecoration(
+            color: isDarkMode ? const Color(0xFF18181B) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border.all(
+              color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+              width: 1,
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  height: 4,
+                  width: 36,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    context.l10n.selectDateRange,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: isDarkMode ? Colors.white : Colors.black,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.close_rounded,
+                      size: 20,
+                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _buildDateRangeSheetItem(
+                ctx: ctx,
+                title: context.l10n.thisMonth,
+                icon: Icons.calendar_today_rounded,
+                isSelected: isThisMonth,
+                isDarkMode: isDarkMode,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  setState(() {
+                    _startDate = DateTime(now.year, now.month, 1);
+                    _endDate = DateTime(now.year, now.month + 1, 0);
+                  });
+                },
+              ),
+              const SizedBox(height: 8),
+              _buildDateRangeSheetItem(
+                ctx: ctx,
+                title: context.l10n.lastMonth,
+                icon: Icons.history_rounded,
+                isSelected: isLastMonth,
+                isDarkMode: isDarkMode,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  setState(() {
+                    _startDate = DateTime(now.year, now.month - 1, 1);
+                    _endDate = DateTime(now.year, now.month, 0);
+                  });
+                },
+              ),
+              const SizedBox(height: 8),
+              _buildDateRangeSheetItem(
+                ctx: ctx,
+                title: context.l10n.byMonth,
+                icon: Icons.calendar_month_rounded,
+                isSelected: isByMonth,
+                isDarkMode: isDarkMode,
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _pickMonthPicker(context);
+                },
+              ),
+              const SizedBox(height: 8),
+              _buildDateRangeSheetItem(
+                ctx: ctx,
+                title: context.l10n.customRangeDots,
+                icon: Icons.date_range_rounded,
+                isSelected: isCustom,
+                isDarkMode: isDarkMode,
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _pickCustomDateRange(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDateRangeSheetItem({
+    required BuildContext ctx,
+    required String title,
+    required IconData icon,
+    required bool isDarkMode,
+    required VoidCallback onTap,
+    bool isSelected = false,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? (isDarkMode ? Colors.white.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.06))
+                : (isDarkMode ? const Color(0xFF27272A).withValues(alpha: 0.45) : const Color(0xFFF4F4F5)),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSelected
+                  ? (isDarkMode ? Colors.white : Colors.black)
+                  : Colors.transparent,
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 20,
+                color: isSelected
+                    ? (isDarkMode ? Colors.white : Colors.black)
+                    : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                    color: isDarkMode ? Colors.white : Colors.black,
+                  ),
+                ),
+              ),
+              if (isSelected)
+                Icon(
+                  Icons.check_circle_rounded,
+                  size: 18,
+                  color: isDarkMode ? Colors.white : Colors.black,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
   //#endregion
 
   //#region Hero Header (Say Style - Spent & Balance)
   Widget _buildSayHeroHeader(bool isDarkMode, HideBalanceService hideService) {
-    final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final isRtl = Directionality.of(context) == ui.TextDirection.rtl;
     final isIOS = Platform.isIOS;
 
@@ -482,50 +578,63 @@ mixin _HomeTabWidgets on _HomeTabState {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // "Wallet Balance" Label
-            Text(
-              isAr ? 'الرصيد' : 'Balance',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Colors.white.withValues(alpha: 0.75),
-              ),
-            ),
-            const SizedBox(height: 2),
-
-            // Big Balance Amount: e.g. $ 12,450.00 (Animated on swipe/switch)
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
-              transitionBuilder: (child, animation) {
-                final offsetTween = Tween<Offset>(
-                  begin: Offset(_heroSlideFromLeft ? -0.25 : 0.25, 0.0),
-                  end: Offset.zero,
-                );
-                return FadeTransition(
-                  opacity: animation,
-                  child: SlideTransition(
-                    position: offsetTween.animate(
-                      CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-                    ),
-                    child: child,
-                  ),
-                );
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                HapticFeedback.lightImpact();
+                hideService.toggle();
               },
-              child: Row(
-                key: ValueKey('balance_hero_$_selectedAccountId'),
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildBlurrableNumber(
-                    _selectedAccount.balance,
-                    const TextStyle(
-                      fontSize: 44,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1.5,
-                      color: Colors.white,
+                  // "Wallet Balance" Label
+                  Text(
+                    context.l10n.balance,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white.withValues(alpha: 0.75),
                     ),
-                    hideService.isHidden,
+                  ),
+                  const SizedBox(height: 2),
+
+                  // Big Balance Amount: e.g. $ 12,450.00 (Animated on swipe/switch)
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    transitionBuilder: (child, animation) {
+                      final offsetTween = Tween<Offset>(
+                        begin: Offset(_heroSlideFromLeft ? -0.25 : 0.25, 0.0),
+                        end: Offset.zero,
+                      );
+                      return FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: offsetTween.animate(
+                            CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+                          ),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Row(
+                      key: ValueKey('balance_hero_$_selectedAccountId'),
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        _buildBlurrableNumber(
+                          _selectedAccount.balance,
+                          const TextStyle(
+                            fontSize: 44,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -1.5,
+                            color: Colors.white,
+                          ),
+                          hideService.isHidden,
+                          currencyCode: _selectedAccount.isAll ? null : _selectedAccount.currency,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -558,12 +667,12 @@ mixin _HomeTabWidgets on _HomeTabState {
                           const IosContextMenuDivider(),
                           IosContextMenuAction(
                             id: 'add_account',
-                            title: isAr ? 'إضافة حساب جديد' : 'Add account',
+                            title: context.l10n.addAccount,
                             iconSystemName: 'plus',
                           ),
                           IosContextMenuAction(
                             id: 'manage_accounts',
-                            title: isAr ? 'إدارة المحافظ والحسابات' : 'Manage accounts',
+                            title: context.l10n.manageAccounts,
                             iconSystemName: 'slider.horizontal.3',
                           ),
                         ],
@@ -601,80 +710,14 @@ mixin _HomeTabWidgets on _HomeTabState {
                           ),
                         ),
                       )
-                    : Theme(
-                        data: Theme.of(context).copyWith(
-                          popupMenuTheme: PopupMenuThemeData(
-                            color: isDarkMode ? const Color(0xFF1E1E24) : Colors.white,
-                            surfaceTintColor: Colors.transparent,
-                            elevation: 8,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                              side: BorderSide(
-                                color: isDarkMode ? const Color(0xFF2E2E36) : const Color(0xFFE4E4E7),
-                                width: 1,
-                              ),
-                            ),
-                            shadowColor: Colors.black.withValues(alpha: 0.25),
-                          ),
-                        ),
-                        child: PopupMenuButton<int>(
-                          tooltip: isAr ? 'تبديل المحفظة' : 'Switch wallet',
-                          offset: const Offset(0, 26),
-                          position: PopupMenuPosition.under,
-                          elevation: 8,
-                          color: isDarkMode ? const Color(0xFF1E1E24) : Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                            side: BorderSide(
-                              color: isDarkMode ? const Color(0xFF2E2E36) : const Color(0xFFE4E4E7),
-                              width: 1,
-                            ),
-                          ),
-                          splashRadius: 18,
-                          padding: EdgeInsets.zero,
-                          onSelected: (index) {
+                    : Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
                             HapticFeedback.selectionClick();
-                            final accountsCount = _accounts.length;
-                            if (index < accountsCount) {
-                              final targetAcc = _accounts[index];
-                              final curIdx = _accounts.indexWhere((a) => a.id == _selectedAccountId);
-                              final isMovingForward = index > curIdx;
-                              setState(() {
-                                _heroSlideFromLeft = isRtl ? isMovingForward : !isMovingForward;
-                                _selectedAccountId = targetAcc.id;
-                              });
-                              _syncWalletsCarouselToSelected();
-                            } else if (index == accountsCount + 1) { // after divider
-                              _showAddAccountModal();
-                            } else if (index == accountsCount + 2) {
-                              _showManageAccountsModal();
-                            }
+                            _showAccountSwitcherModal();
                           },
-                          itemBuilder: (context) {
-                            final accountsCount = _accounts.length;
-                            return [
-                              for (int i = 0; i < accountsCount; i++)
-                                _buildAccountPopupMenuItem(
-                                  value: i,
-                                  account: _accounts[i],
-                                  isSelected: _accounts[i].id == _selectedAccountId,
-                                  isDarkMode: isDarkMode,
-                                ),
-                              const PopupMenuDivider(height: 8),
-                              _buildMenuOptionItem(
-                                value: accountsCount + 1,
-                                title: isAr ? 'إضافة حساب جديد' : 'Add account',
-                                icon: Icons.add_card_rounded,
-                                isDarkMode: isDarkMode,
-                              ),
-                              _buildMenuOptionItem(
-                                value: accountsCount + 2,
-                                title: isAr ? 'إدارة المحافظ والحسابات' : 'Manage accounts',
-                                icon: Icons.tune_rounded,
-                                isDarkMode: isDarkMode,
-                              ),
-                            ];
-                          },
+                          borderRadius: BorderRadius.circular(16),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             child: Row(
@@ -755,7 +798,7 @@ mixin _HomeTabWidgets on _HomeTabState {
           // 1. Add (+)
           _buildCircularActionItem(
             icon: Icons.add_rounded,
-            label: isAr ? 'إضافة' : 'Add',
+            label: context.l10n.add,
             isDarkMode: isDarkMode,
             onTap: () => _showUnifiedAddModal(),
           ),
@@ -780,7 +823,7 @@ mixin _HomeTabWidgets on _HomeTabState {
           // 3. Receipt Scanner (🧾)
           _buildCircularActionItem(
             icon: Icons.document_scanner_rounded,
-            label: isAr ? 'فاتورة' : 'Receipt',
+            label: context.l10n.receipt,
             isDarkMode: isDarkMode,
             onTap: () => _showReceiptScannerModal(isDarkMode, isAr),
           ),
@@ -795,32 +838,34 @@ mixin _HomeTabWidgets on _HomeTabState {
   void _showReceiptScannerModal(bool isDarkMode, bool isAr) {
     HapticFeedback.selectionClick();
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) {
+    _showAdaptiveBottomSheet(
+      showDragHandle: true,
+      builder: (ctx, isGlass, _) {
         return Container(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
-          decoration: BoxDecoration(
-            color: isDarkMode ? const Color(0xFF15151A) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            border: Border.all(
-              color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-              width: 1.2,
-            ),
-          ),
+          padding: EdgeInsets.fromLTRB(24, isGlass ? 8 : 16, 24, 28),
+          decoration: isGlass
+              ? const BoxDecoration(color: Colors.transparent)
+              : BoxDecoration(
+                  color: isDarkMode ? const Color(0xFF15151A) : Colors.white,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                  border: Border.all(
+                    color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                    width: 1.2,
+                  ),
+                ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 40,
-                height: 4.5,
-                decoration: BoxDecoration(
-                  color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                  borderRadius: BorderRadius.circular(3),
+              if (!isGlass)
+                Container(
+                  width: 40,
+                  height: 4.5,
+                  decoration: BoxDecoration(
+                    color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
+                    borderRadius: BorderRadius.circular(3),
+                  ),
                 ),
-              ),
+              if (isGlass) const SizedBox(height: 12),
               const SizedBox(height: 22),
               Container(
                 width: 64,
@@ -841,7 +886,7 @@ mixin _HomeTabWidgets on _HomeTabState {
               ),
               const SizedBox(height: 16),
               Text(
-                isAr ? 'مسح الفواتير بالذكاء الاصطناعي' : 'AI Receipt Scanner',
+                context.l10n.aiReceiptScanner,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w900,
@@ -851,9 +896,7 @@ mixin _HomeTabWidgets on _HomeTabState {
               ),
               const SizedBox(height: 8),
               Text(
-                isAr
-                    ? 'صور أو ارفع أي فاتورة ورقية، والذكاء الاصطناعي هيقرأ المبلغ والتاريخ والتصنيف ويسجلها تلقائياً!'
-                    : 'Scan or upload any paper receipt, and AI will automatically extract amount, date, and category!',
+                context.l10n.aiReceiptScannerDesc,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
@@ -873,7 +916,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                       },
                       icon: const Icon(Icons.edit_note_rounded, size: 18),
                       label: Text(
-                        isAr ? 'إدخال يدوي' : 'Manual',
+                        context.l10n.manual,
                         style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
                       ),
                       style: OutlinedButton.styleFrom(
@@ -893,9 +936,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                         Navigator.pop(ctx);
                         MessageService.showSuccess(
                           context: context,
-                          message: isAr
-                              ? 'جاري ربط الـ AI OCR والكاميرا قريباً!'
-                              : 'AI Camera OCR will be available soon!',
+                          message: context.l10n.aiCameraComingSoon,
                         );
                       },
                       icon: Icon(
@@ -904,7 +945,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                         color: isDarkMode ? Colors.black : Colors.white,
                       ),
                       label: Text(
-                        isAr ? 'فتح الكاميرا' : 'Camera',
+                        context.l10n.camera,
                         style: TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 13,
@@ -930,7 +971,6 @@ mixin _HomeTabWidgets on _HomeTabState {
   }
 
   Widget _buildMoreActionButton(bool isDarkMode) {
-    final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final isIOS = Platform.isIOS;
 
     if (isIOS) {
@@ -954,18 +994,18 @@ mixin _HomeTabWidgets on _HomeTabState {
               actions: [
                 IosContextMenuAction(
                   id: 'add_account',
-                  title: isAr ? 'إضافة حساب جديد' : 'Add account',
+                  title: context.l10n.addAccount,
                   iconSystemName: 'plus',
                 ),
                 IosContextMenuAction(
                   id: 'manage_accounts',
-                  title: isAr ? 'إدارة المحافظ والحسابات' : 'Manage accounts',
+                  title: context.l10n.manageAccounts,
                   iconSystemName: 'slider.horizontal.3',
                 ),
                 const IosContextMenuDivider(),
                 IosContextMenuAction(
                   id: 'switch_account',
-                  title: isAr ? 'تبديل المحفظة' : 'Switch account',
+                  title: context.l10n.switchAccount,
                   iconSystemName: 'arrow.left.arrow.right',
                 ),
               ],
@@ -997,7 +1037,7 @@ mixin _HomeTabWidgets on _HomeTabState {
           ),
           const SizedBox(height: 6),
           Text(
-            isAr ? 'المزيد' : 'More',
+            context.l10n.more,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -1032,64 +1072,11 @@ mixin _HomeTabWidgets on _HomeTabState {
                 ? Colors.white.withValues(alpha: 0.18)
                 : Colors.white.withValues(alpha: 0.22),
           ),
-          child: Theme(
-            data: Theme.of(context).copyWith(
-              popupMenuTheme: PopupMenuThemeData(
-                color: isDarkMode ? const Color(0xFF1E1E24) : Colors.white,
-                surfaceTintColor: Colors.transparent,
-                elevation: 8,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  side: BorderSide(
-                    color: isDarkMode ? const Color(0xFF2E2E36) : const Color(0xFFE4E4E7),
-                    width: 1,
-                  ),
-                ),
-                shadowColor: Colors.black.withValues(alpha: 0.25),
-              ),
-            ),
-            child: PopupMenuButton<int>(
-              tooltip: isAr ? 'المزيد' : 'More',
-              offset: const Offset(0, 10),
-              position: PopupMenuPosition.under,
-              elevation: 8,
-              splashRadius: 28,
-              padding: EdgeInsets.zero,
-              onSelected: (value) {
-                HapticFeedback.selectionClick();
-                switch (value) {
-                  case 0:
-                    _showAddAccountModal();
-                    break;
-                  case 1:
-                    _showManageAccountsModal();
-                    break;
-                  case 2:
-                    _showAccountSwitcherModal();
-                    break;
-                }
-              },
-              itemBuilder: (context) => [
-                _buildMenuOptionItem(
-                  value: 0,
-                  icon: Icons.add_card_rounded,
-                  title: isAr ? 'إضافة حساب جديد' : 'Add account',
-                  isDarkMode: isDarkMode,
-                ),
-                _buildMenuOptionItem(
-                  value: 1,
-                  icon: Icons.tune_rounded,
-                  title: isAr ? 'إدارة المحافظ والحسابات' : 'Manage accounts',
-                  isDarkMode: isDarkMode,
-                ),
-                const PopupMenuDivider(height: 8),
-                _buildMenuOptionItem(
-                  value: 2,
-                  icon: Icons.swap_horiz_rounded,
-                  title: isAr ? 'تبديل المحفظة' : 'Switch account',
-                  isDarkMode: isDarkMode,
-                ),
-              ],
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => _showMoreActionsModalAndroid(isDarkMode),
+              borderRadius: BorderRadius.circular(26),
               child: const Center(
                 child: Icon(
                   Icons.more_horiz_rounded,
@@ -1102,7 +1089,7 @@ mixin _HomeTabWidgets on _HomeTabState {
         ),
         const SizedBox(height: 6),
         Text(
-          isAr ? 'المزيد' : 'More',
+          context.l10n.more,
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w700,
@@ -1119,6 +1106,99 @@ mixin _HomeTabWidgets on _HomeTabState {
           ),
         ),
       ],
+    );
+  }
+
+  void _showMoreActionsModalAndroid(bool isDarkMode) {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          decoration: BoxDecoration(
+            color: isDarkMode ? const Color(0xFF18181B) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border.all(
+              color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+              width: 1,
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  height: 4,
+                  width: 36,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    context.l10n.more,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: isDarkMode ? Colors.white : Colors.black,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.close_rounded,
+                      size: 20,
+                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _buildDateRangeSheetItem(
+                ctx: ctx,
+                title: context.l10n.addAccount,
+                icon: Icons.add_card_rounded,
+                isDarkMode: isDarkMode,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showAddAccountModal();
+                },
+              ),
+              const SizedBox(height: 8),
+              _buildDateRangeSheetItem(
+                ctx: ctx,
+                title: context.l10n.manageAccounts,
+                icon: Icons.tune_rounded,
+                isDarkMode: isDarkMode,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showManageAccountsModal();
+                },
+              ),
+              const SizedBox(height: 8),
+              _buildDateRangeSheetItem(
+                ctx: ctx,
+                title: context.l10n.switchAccount,
+                icon: Icons.swap_horiz_rounded,
+                isDarkMode: isDarkMode,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showAccountSwitcherModal();
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1250,7 +1330,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        isAr ? 'فترة مخصصة' : 'Custom Range',
+                        context.l10n.customRange,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
@@ -1266,7 +1346,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                           border: Border.all(color: borderColor, width: 0.8),
                         ),
                         child: Text(
-                          '$dayCount ${isAr ? 'يوم' : 'days'}',
+                          context.l10n.daysCount(dayCount),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
@@ -1284,7 +1364,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                     child: Row(
                       children: [
                         _buildPresetChip(
-                          label: isAr ? 'آخر 7 أيام' : 'Last 7 days',
+                          label: context.l10n.last7Days,
                           isDarkMode: isDarkMode,
                           borderColor: borderColor,
                           textPrimary: textPrimary,
@@ -1293,7 +1373,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                         ),
                         const SizedBox(width: 8),
                         _buildPresetChip(
-                          label: isAr ? 'آخر 30 يوم' : 'Last 30 days',
+                          label: context.l10n.last30Days,
                           isDarkMode: isDarkMode,
                           borderColor: borderColor,
                           textPrimary: textPrimary,
@@ -1302,7 +1382,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                         ),
                         const SizedBox(width: 8),
                         _buildPresetChip(
-                          label: isAr ? 'هذا الشهر' : 'This month',
+                          label: context.l10n.thisMonth,
                           isDarkMode: isDarkMode,
                           borderColor: borderColor,
                           textPrimary: textPrimary,
@@ -1339,7 +1419,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
-                                        isAr ? 'من' : 'From',
+                                        context.l10n.from,
                                         style: TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.w700,
@@ -1392,7 +1472,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
-                                        isAr ? 'إلى' : 'To',
+                                        context.l10n.to,
                                         style: TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.w700,
@@ -1448,7 +1528,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                         elevation: 0,
                       ),
                       child: Text(
-                        isAr ? 'تأكيد' : 'Confirm',
+                        context.l10n.confirm,
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -1531,7 +1611,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        isAr ? 'اختر الشهر' : 'Select Month',
+                        context.l10n.selectMonth,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
@@ -1689,7 +1769,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                         elevation: 0,
                       ),
                       child: Text(
-                        isAr ? 'تأكيد' : 'Confirm',
+                        context.l10n.confirm,
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -1840,7 +1920,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        isAr ? 'فترة مخصصة' : 'Custom Range',
+                        context.l10n.customRange,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
@@ -1913,7 +1993,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                     child: Row(
                       children: [
                         _buildPresetChip(
-                          label: isAr ? 'آخر 7 أيام' : 'Last 7 days',
+                          label: context.l10n.last7Days,
                           isDarkMode: isDarkMode,
                           borderColor: borderColor,
                           textPrimary: textPrimary,
@@ -1922,7 +2002,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                         ),
                         const SizedBox(width: 8),
                         _buildPresetChip(
-                          label: isAr ? 'آخر 30 يوم' : 'Last 30 days',
+                          label: context.l10n.last30Days,
                           isDarkMode: isDarkMode,
                           borderColor: borderColor,
                           textPrimary: textPrimary,
@@ -1931,7 +2011,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                         ),
                         const SizedBox(width: 8),
                         _buildPresetChip(
-                          label: isAr ? 'هذا الشهر' : 'This month',
+                          label: context.l10n.thisMonth,
                           isDarkMode: isDarkMode,
                           borderColor: borderColor,
                           textPrimary: textPrimary,
@@ -1969,7 +2049,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                         if (dayCount > 1) ...[
                           const SizedBox(width: 8),
                           Text(
-                            '($dayCount ${isAr ? 'يوم' : 'days'})',
+                            context.l10n.daysCountInParens(dayCount),
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -2158,7 +2238,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                         elevation: 0,
                       ),
                       child: Text(
-                        isAr ? 'تأكيد' : 'Confirm',
+                        context.l10n.confirm,
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -2241,7 +2321,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        isAr ? 'اختر الشهر' : 'Select Month',
+                        context.l10n.selectMonth,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
@@ -2437,7 +2517,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                         elevation: 0,
                       ),
                       child: Text(
-                        isAr ? 'تأكيد' : 'Confirm',
+                        context.l10n.confirm,
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -2456,119 +2536,6 @@ mixin _HomeTabWidgets on _HomeTabState {
   }
   //#endregion
 
-  PopupMenuItem<int> _buildMenuOptionItem({
-    required int value,
-    required String title,
-    required IconData icon,
-    bool isSelected = false,
-    required bool isDarkMode,
-  }) {
-    return PopupMenuItem<int>(
-      value: value,
-      height: 46,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 20,
-            color: isSelected
-                ? (isDarkMode ? Colors.white : Colors.black)
-                : (isDarkMode ? const Color(0xFFCBD5E1) : const Color(0xFF475569)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              title,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isDarkMode ? Colors.white : const Color(0xFF0F172A),
-              ),
-            ),
-          ),
-          if (isSelected) ...[
-            const SizedBox(width: 8),
-            Icon(
-              Icons.check_rounded,
-              size: 18,
-              color: isDarkMode ? Colors.white : Colors.black,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  PopupMenuItem<int> _buildAccountPopupMenuItem({
-    required int value,
-    required AccountItem account,
-    required bool isSelected,
-    required bool isDarkMode,
-  }) {
-    return PopupMenuItem<int>(
-      value: value,
-      height: 46,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            account.icon,
-            size: 20,
-            color: isSelected
-                ? (isDarkMode ? Colors.white : Colors.black)
-                : (isDarkMode ? const Color(0xFFCBD5E1) : const Color(0xFF475569)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Row(
-              children: [
-                Flexible(
-                  child: Text(
-                    account.name,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isDarkMode ? Colors.white : const Color(0xFF0F172A),
-                    ),
-                  ),
-                ),
-                if (account.isMain) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      Localizations.localeOf(context).languageCode == 'ar' ? 'الرئيسي' : 'Main',
-                      style: const TextStyle(
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF10B981),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          if (isSelected) ...[
-            const SizedBox(width: 8),
-            Icon(
-              Icons.check_circle_rounded,
-              size: 18,
-              color: isDarkMode ? Colors.white : Colors.black,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 
   Widget _buildCircularActionItem({
     required IconData icon,
@@ -2694,7 +2661,8 @@ mixin _HomeTabWidgets on _HomeTabState {
 
   //#region Compact Wallets Bar
   Widget _buildWalletsCarousel(bool isDarkMode, HideBalanceService hideService) {
-    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    final isRtl = Directionality.of(context) == ui.TextDirection.rtl;
+    final isAr = isRtl || Localizations.localeOf(context).languageCode == 'ar';
     final wallets = _walletsCarouselList;
 
     if (wallets.isEmpty) return const SizedBox.shrink();
@@ -2712,7 +2680,7 @@ mixin _HomeTabWidgets on _HomeTabState {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                isAr ? 'محافظي' : 'My Wallets',
+                context.l10n.myWallets,
                 style: TextStyle(
                   color: isDarkMode ? Colors.white : Colors.black,
                   fontSize: 17,
@@ -2730,7 +2698,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                     child: Row(
                       children: [
                         Text(
-                          isAr ? 'عرض الكل' : 'View all',
+                          context.l10n.viewAll,
                           style: TextStyle(
                             color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                             fontSize: 13,
@@ -2739,7 +2707,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                         ),
                         const SizedBox(width: 3),
                         Icon(
-                          isAr ? Icons.arrow_back_ios_new_rounded : Icons.arrow_forward_ios_rounded,
+                          Icons.arrow_forward_ios_rounded,
                           size: 11,
                           color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                         ),
@@ -2799,7 +2767,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            isAr ? 'إضافة' : 'Add',
+                            context.l10n.add,
                             style: TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w700,
@@ -2947,54 +2915,42 @@ mixin _HomeTabWidgets on _HomeTabState {
       (
         id: 'auto_track',
         icon: Icons.bolt_rounded,
-        title: isAr ? 'تتبع المصاريف تلقائياً' : 'Track spending automatically',
-        subtitle: isAr
-            ? 'سجّل مشترياتك ومعاملاتك من إشعارات ورسائل البنوك تلقائياً وبدقة دون الحاجة لإدخالها يدوياً كل مرة'
-            : 'Automatically sync and log your transactions from bank SMS and alerts with zero manual entry required',
-        actionText: isAr ? 'تفعيل الآن' : 'Set Up',
+        title: context.l10n.autoTrackSpendingTitle,
+        subtitle: context.l10n.autoTrackSpendingSubtitle,
+        actionText: context.l10n.setUpNow,
         onTap: () {
           MessageService.showSuccess(
             context: context,
-            message: isAr
-                ? 'سيتم تفعيل المزامنة التلقائية قريباً 🚀'
-                : 'Auto-tracking sync coming soon 🚀',
+            message: context.l10n.autoSyncComingSoon,
           );
         },
       ),
       (
         id: 'salary',
         icon: Icons.payments_rounded,
-        title: isAr ? 'أضف راتبك ومصادر دخلك' : 'Add your salary & income',
-        subtitle: isAr
-            ? 'حدّد موعد نزول دخلك الشهري والمصادر الإضافية لتوقع صافي التدفق المالي والتخطيط لمدخراتك مبكراً'
-            : 'Schedule your monthly salary and additional income streams to forecast cash flow and plan your savings',
-        actionText: isAr ? 'إضافة دخل' : 'Add Salary',
+        title: context.l10n.addSalaryIncomeTitle,
+        subtitle: context.l10n.addSalaryIncomeSubtitle,
+        actionText: context.l10n.addSalary,
         onTap: () => _showUnifiedAddModal(),
       ),
       (
         id: 'accounts',
         icon: Icons.account_balance_wallet_rounded,
-        title: isAr ? 'نظّم محافظك وبطاقاتك' : 'Organize your accounts',
-        subtitle: isAr
-            ? 'اجمع بطاقاتك البنكية، محافظك الإلكترونية ونقد الكاش في مكان واحد لمتابعة إجمالي ثروتك لحظة بلحظة'
-            : 'Consolidate bank cards, e-wallets, and cash accounts in one unified space to see your total net worth',
-        actionText: isAr ? 'إضافة محفظة' : 'Add Account',
+        title: context.l10n.organizeAccountsTitle,
+        subtitle: context.l10n.organizeAccountsSubtitle,
+        actionText: context.l10n.addAccount,
         onTap: () => _showAddAccountModal(),
       ),
       (
         id: 'budget',
         icon: Icons.pie_chart_rounded,
-        title: isAr ? 'حدد ميزانية لمصاريفك' : 'Set a monthly budget',
-        subtitle: isAr
-            ? 'ضع سقفاً ذكياً للإنفاق على المطاعم والتسوق والفواتير لتصلك تنبيهات مبكرة قبل تجاوز الميزانية المحددة'
-            : 'Set smart spending limits for dining, shopping, and bills to receive early warnings before overspending',
-        actionText: isAr ? 'تحديد ميزانية' : 'Create Budget',
+        title: context.l10n.setMonthlyBudgetPromptTitle,
+        subtitle: context.l10n.setMonthlyBudgetPromptSubtitle,
+        actionText: context.l10n.createBudget,
         onTap: () {
           MessageService.showSuccess(
             context: context,
-            message: isAr
-                ? 'قريباً: تحديد الميزانيات والتنبيهات الذكية 🎯'
-                : 'Coming soon: Smart Budgets & Alerts 🎯',
+            message: context.l10n.budgetAlertsComingSoon,
           );
         },
       ),
@@ -3018,7 +2974,7 @@ mixin _HomeTabWidgets on _HomeTabState {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                isAr ? 'ابدأ الآن' : 'Get started',
+                context.l10n.getStarted,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
@@ -3249,7 +3205,6 @@ mixin _HomeTabWidgets on _HomeTabState {
 
   //#region Recent Transactions Section (Say Style)
   Widget _buildRecentTransactionsSection(bool isDarkMode) {
-    final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final transactions = _filteredTransactions;
 
     return Padding(
@@ -3262,7 +3217,7 @@ mixin _HomeTabWidgets on _HomeTabState {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                isAr ? 'أحدث المعاملات' : 'Recent Transactions',
+                context.l10n.recentTransactions,
                 style: TextStyle(
                   color: isDarkMode ? Colors.white : Colors.black,
                   fontSize: 17,
@@ -3284,7 +3239,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                     child: Row(
                       children: [
                         Text(
-                          isAr ? 'عرض الكل' : 'View all',
+                          context.l10n.viewAll,
                           style: TextStyle(
                             color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                             fontSize: 13,
@@ -3311,12 +3266,16 @@ mixin _HomeTabWidgets on _HomeTabState {
               key: ValueKey('tx_list_$_selectedAccountId'),
               child: transactions.isEmpty
                   ? _buildEmptyState(isDarkMode)
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: transactions
-                          .take(4)
-                          .map((t) => _buildTransactionCard(t, isDarkMode))
-                          .toList(),
+                  : SlidableAutoCloseBehavior(
+                      closeWhenOpened: true,
+                      closeWhenTapped: true,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: transactions
+                            .take(4)
+                            .map((t) => _buildTransactionCard(t, isDarkMode))
+                            .toList(),
+                      ),
                     ),
             ),
           ),
@@ -3329,7 +3288,8 @@ mixin _HomeTabWidgets on _HomeTabState {
 
   //#region Financial Insights 2x2 Bento Grid (Realistic Data & App Theme)
   Widget _buildInsightsGridSection(bool isDarkMode, HideBalanceService hideService) {
-    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    final isRtl = Directionality.of(context) == ui.TextDirection.rtl;
+    final isAr = isRtl || Localizations.localeOf(context).languageCode == 'ar';
     final balance = _homeData?.balance;
     final totalSpent = _budgetData?.currentSpending ?? (balance?.totalWithdrawals ?? 0.0);
     final monthlyBudget = _budgetData?.monthlyBudget ?? 0.0;
@@ -3440,7 +3400,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              isAr ? 'الميزانية' : 'Budget',
+                              context.l10n.budget,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
@@ -3476,6 +3436,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                               alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
                               child: Text(
                                 hideService.isHidden ? '••••••' : _formatAmount(remaining),
+                                textDirection: ui.TextDirection.ltr,
                                 style: TextStyle(
                                   fontSize: 16.5,
                                   fontWeight: FontWeight.w900,
@@ -3489,8 +3450,8 @@ mixin _HomeTabWidgets on _HomeTabState {
                             const SizedBox(height: 2),
                             Text(
                               isOverBudget
-                                  ? (isAr ? 'تجاوزت الميزانية' : 'Over limit')
-                                  : (isAr ? 'المتبقي للشهر' : 'Remaining'),
+                                  ? context.l10n.overLimit
+                                  : context.l10n.remainingMonth,
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
@@ -3522,7 +3483,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                             ),
                             const SizedBox(height: 5),
                             Text(
-                              '~${hideService.isHidden ? '••••' : _formatAmount(dailySafeSpend)} / ${isAr ? 'يوم' : 'day'}',
+                              '~${hideService.isHidden ? '••••' : _formatAmount(dailySafeSpend)} ${context.l10n.perDay}',
                               style: TextStyle(
                                 fontSize: 9.5,
                                 fontWeight: FontWeight.w600,
@@ -3541,7 +3502,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              isAr ? 'الميزانية' : 'Budget',
+                              context.l10n.budget,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
@@ -3555,7 +3516,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                isAr ? 'غير محددة' : 'Not set',
+                                context.l10n.notSet,
                                 style: TextStyle(
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w700,
@@ -3587,7 +3548,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                isAr ? 'اضغط لتعيين الميزانية الشهرية' : 'Tap to set monthly budget',
+                                context.l10n.tapToSetMonthlyBudget,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -3609,7 +3570,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              isAr ? 'تعيين الميزانية' : 'Set Budget',
+                              context.l10n.setBudget,
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w800,
@@ -3665,7 +3626,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              isAr ? 'توزيع المحافظ' : 'Accounts',
+                              context.l10n.accounts,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
@@ -3679,7 +3640,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                isAr ? '$activeCount محافظ' : '$activeCount wallets',
+                                context.l10n.walletsCount(activeCount),
                                 style: TextStyle(
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w800,
@@ -3720,7 +3681,10 @@ mixin _HomeTabWidgets on _HomeTabState {
                                   ),
                                   const SizedBox(height: 1),
                                   Text(
-                                    hideService.isHidden ? '••••••' : _formatAmount(topAcc?.balance ?? 0.0),
+                                    hideService.isHidden
+                                        ? '••••••'
+                                        : _formatAmount(topAcc?.balance ?? 0.0, currencyCode: topAcc?.currency),
+                                    textDirection: ui.TextDirection.ltr,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
@@ -3790,7 +3754,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              isAr ? 'توزيع المحافظ' : 'Accounts',
+                              context.l10n.accounts,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
@@ -3804,7 +3768,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                isAr ? '0 محافظ' : '0 wallets',
+                                context.l10n.walletsCount(0),
                                 style: TextStyle(
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w800,
@@ -3832,7 +3796,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                isAr ? 'اضغط لإدارة أو إضافة محفظة' : 'Tap to manage wallets',
+                                context.l10n.tapToManageWallets,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -3849,7 +3813,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                             Icon(Icons.add_circle_outline_rounded, size: 12, color: isDarkMode ? Colors.white : Colors.black),
                             const SizedBox(width: 4),
                             Text(
-                              isAr ? 'إدارة المحافظ' : 'Manage wallets',
+                              context.l10n.manageWallets,
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w800,
@@ -3923,7 +3887,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              isAr ? 'أعلى فئات الصرف' : 'Top Categories',
+                              context.l10n.topCategories,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
@@ -3979,6 +3943,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                                   const SizedBox(height: 1),
                                   Text(
                                     hideService.isHidden ? '••••••' : _formatAmount(topCatSpent),
+                                    textDirection: ui.TextDirection.ltr,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
@@ -4047,22 +4012,27 @@ mixin _HomeTabWidgets on _HomeTabState {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              isAr ? 'أعلى فئات الصرف' : 'Top Categories',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                            Flexible(
+                              child: Text(
+                                context.l10n.topCategories,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                ),
                               ),
                             ),
+                            const SizedBox(width: 4),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                               decoration: BoxDecoration(
                                 color: const Color(0xFF10B981).withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                isAr ? 'متوازن' : 'Balanced',
+                                context.l10n.balanced,
                                 style: const TextStyle(
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w800,
@@ -4090,7 +4060,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                isAr ? 'المصاريف متوازنة' : 'Balanced spending',
+                                context.l10n.balancedSpending,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -4112,7 +4082,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              isAr ? 'تصفح كل الفئات' : 'View categories',
+                              context.l10n.viewCategories,
                               style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w800,
@@ -4154,7 +4124,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        isAr ? 'صافي التدفق' : 'Cash Flow',
+                        context.l10n.cashFlow,
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
@@ -4170,8 +4140,8 @@ mixin _HomeTabWidgets on _HomeTabState {
                         ),
                         child: Text(
                           isPositiveFlow
-                              ? (isAr ? '+فائض $savingsRate%' : '+$savingsRate% saved')
-                              : (isAr ? '-عجز' : '-Deficit'),
+                              ? context.l10n.savedPercent(savingsRate)
+                              : context.l10n.deficit,
                           style: TextStyle(
                             fontSize: 9.5,
                             fontWeight: FontWeight.w800,
@@ -4190,7 +4160,11 @@ mixin _HomeTabWidgets on _HomeTabState {
                         child: Text(
                           hideService.isHidden
                               ? '••••••'
-                              : '${isPositiveFlow ? '+' : '-'}${_formatAmount(netCashFlow.abs())}',
+                              : _formatAmount(
+                                  netCashFlow.abs(),
+                                  prefix: isPositiveFlow ? '+ ' : '- ',
+                                ),
+                          textDirection: ui.TextDirection.ltr,
                           style: TextStyle(
                             fontSize: 16.5,
                             fontWeight: FontWeight.w900,
@@ -4203,9 +4177,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        isAr
-                            ? (isPositiveFlow ? 'فائض السيولة هذا الشهر' : 'عجز في حركة الشهر')
-                            : (isPositiveFlow ? 'Net surplus this month' : 'Net deficit this month'),
+                        isPositiveFlow
+                            ? context.l10n.positiveFlowMonth
+                            : context.l10n.negativeFlowMonth,
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
@@ -4231,7 +4205,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                isAr ? 'وارد' : 'In',
+                                context.l10n.incoming,
                                 style: TextStyle(
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w700,
@@ -4242,6 +4216,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                           ),
                           Text(
                             hideService.isHidden ? '••••' : _formatAmount(totalIncome),
+                            textDirection: ui.TextDirection.ltr,
                             style: const TextStyle(
                               fontSize: 9.5,
                               fontWeight: FontWeight.w800,
@@ -4266,7 +4241,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                isAr ? 'صادر' : 'Out',
+                                context.l10n.outgoing,
                                 style: TextStyle(
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w700,
@@ -4277,6 +4252,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                           ),
                           Text(
                             hideService.isHidden ? '••••' : _formatAmount(totalExpense),
+                            textDirection: ui.TextDirection.ltr,
                             style: TextStyle(
                               fontSize: 9.5,
                               fontWeight: FontWeight.w800,
@@ -4360,17 +4336,11 @@ mixin _HomeTabWidgets on _HomeTabState {
                                     borderRadius: BorderRadius.circular(5),
                                   ),
                                   child: Text(
-                                    isAr
-                                        ? (daysUntil == 0
-                                            ? 'اليوم!'
-                                            : daysUntil == 1
-                                                ? 'غداً'
-                                                : 'بعد $daysUntil يوم')
-                                        : (daysUntil == 0
-                                            ? 'Today!'
-                                            : daysUntil == 1
-                                                ? 'Tomorrow'
-                                                : 'In ${daysUntil}d'),
+                                    daysUntil == 0
+                                        ? context.l10n.dueToday
+                                        : daysUntil == 1
+                                            ? context.l10n.dueTomorrow
+                                            : context.l10n.dueInDays(daysUntil ?? 0),
                                     style: TextStyle(
                                       fontSize: 9,
                                       fontWeight: FontWeight.w800,
@@ -4386,9 +4356,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              isAr
-                                  ? 'استحقاق يوم ${upcoming.renewalDay} • من ${_subscriptions.length} اشتراكات'
-                                  : 'Due day ${upcoming.renewalDay} • ${_subscriptions.length} bills',
+                              context.l10n.dueDayWithBillsCount(upcoming.renewalDay, _subscriptions.length),
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
@@ -4405,6 +4373,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                         children: [
                           Text(
                             hideService.isHidden ? '••••••' : _formatAmount(upcoming.amount),
+                            textDirection: ui.TextDirection.ltr,
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w900,
@@ -4417,7 +4386,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                isAr ? 'الاشتراكات' : 'View all',
+                                context.l10n.viewAll,
                                 style: TextStyle(
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w700,
@@ -4458,7 +4427,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              isAr ? 'الالتزامات والفواتير' : 'Bills & Subscriptions',
+                              context.l10n.billsAndSubscriptions,
                               style: TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w800,
@@ -4467,7 +4436,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              isAr ? 'لا توجد فواتير مستحقة قريباً' : 'No upcoming bills due',
+                              context.l10n.noUpcomingBills,
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
@@ -4489,7 +4458,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                             const Icon(Icons.add_rounded, size: 12, color: Color(0xFF10B981)),
                             const SizedBox(width: 2),
                             Text(
-                              isAr ? 'إضافة' : 'Add',
+                              context.l10n.add,
                               style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w800,
@@ -4516,7 +4485,7 @@ mixin _HomeTabWidgets on _HomeTabState {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                isAr ? 'الرؤى والتحليلات المالية' : 'Financial Insights',
+                context.l10n.financialInsights,
                 style: TextStyle(
                   fontSize: 16.5,
                   fontWeight: FontWeight.w800,
@@ -4540,7 +4509,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          isAr ? 'التحليلات الكاملة' : 'Full analytics',
+                          context.l10n.fullAnalytics,
                           style: TextStyle(
                             color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                             fontSize: 12.5,
@@ -4601,40 +4570,65 @@ mixin _HomeTabWidgets on _HomeTabState {
         ? (transaction.categoryNameAr ?? transaction.categoryNameEn ?? '')
         : (transaction.categoryNameEn ?? transaction.categoryNameAr ?? '');
 
-    return Slidable(
-      key: Key('transaction_${transaction.id}'),
-      endActionPane: ActionPane(
-        motion: const BehindMotion(),
-        extentRatio: 0.45,
-        children: [
-          SlidableAction(
-            onPressed: (_) => _showEditTransactionDialog(transaction),
-            backgroundColor: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-            foregroundColor: isDarkMode ? Colors.white : Colors.black,
-            icon: Icons.edit_outlined,
-            borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Slidable(
+        key: Key('transaction_${transaction.id}'),
+        groupTag: 'home_transactions_list',
+        endActionPane: ActionPane(
+          motion: const StretchMotion(),
+          extentRatio: 0.28,
+          dismissible: Builder(
+            builder: (paneContext) => DismissiblePane(
+              motion: const _SlidableSeamlessStretchMotion(),
+              dismissThreshold: 0.90,
+              closeOnCancel: false,
+              confirmDismiss: () async {
+                HapticFeedback.lightImpact();
+                Slidable.of(paneContext)?.openCurrentActionPane();
+                return false;
+              },
+              onDismissed: () {},
+            ),
           ),
-          SlidableAction(
-            onPressed: (_) => _showDeleteConfirmationDialog(transaction),
-            backgroundColor: const Color(0xFFF43F5E),
-            foregroundColor: Colors.white,
-            icon: Icons.delete_outline_rounded,
-            borderRadius: const BorderRadius.horizontal(right: Radius.circular(16)),
-          ),
-        ],
-      ),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFFAFAFA),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-            width: 1,
-          ),
+          children: [
+            CustomSlidableAction(
+              onPressed: (_) {
+                HapticFeedback.selectionClick();
+                _showDeleteConfirmationDialog(transaction);
+              },
+              backgroundColor: const Color(0xFFEF4444),
+              foregroundColor: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              padding: EdgeInsets.zero,
+              child: const Icon(
+                CupertinoIcons.trash_fill,
+                color: Colors.white,
+                size: 22,
+              ),
+            ),
+          ],
         ),
-        child: Row(
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFFAFAFA),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+              width: 1,
+            ),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                _showEditTransactionDialog(transaction);
+              },
+              borderRadius: BorderRadius.circular(18),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
           children: [
             // Category Mono Icon Container
             Container(
@@ -4721,6 +4715,10 @@ mixin _HomeTabWidgets on _HomeTabState {
           ],
         ),
       ),
+    ),
+    ),
+    ),
+    ),
     );
   }
   //#endregion
@@ -4760,9 +4758,7 @@ mixin _HomeTabWidgets on _HomeTabState {
             ),
             const SizedBox(height: 4),
             Text(
-              context.l10n.all == 'All'
-                  ? 'Tap + or use voice to add your first expense'
-                  : 'اضغط + أو استخدم الصوت لإضافة أول حركة',
+              context.l10n.tapToAddFirstExpense,
               style: TextStyle(
                 fontSize: 12,
                 color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
@@ -4837,18 +4833,32 @@ mixin _HomeTabWidgets on _HomeTabState {
   //#endregion
 
   //#region Blur Number Helper
-  Widget _buildBlurrableNumber(double amount, TextStyle style, bool blurred, {String prefix = '', String? currencyCode}) {
-    final formatted = '$prefix${_formatAmount(amount, currencyCode: currencyCode)}';
+  Widget _buildBlurrableNumber(
+    double amount,
+    TextStyle style,
+    bool blurred, {
+    String prefix = '',
+    String? currencyCode,
+  }) {
+    final formatted = _formatAmount(amount, currencyCode: currencyCode, prefix: prefix);
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: blurred ? 0 : 8, end: blurred ? 8 : 0),
       duration: const Duration(milliseconds: 250),
       builder: (context, sigma, child) {
         if (sigma == 0) {
-          return Text(formatted, style: style);
+          return Text(
+            formatted,
+            style: style,
+            textDirection: ui.TextDirection.ltr,
+          );
         }
         return ImageFiltered(
           imageFilter: ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-          child: Text(formatted, style: style),
+          child: Text(
+            formatted,
+            style: style,
+            textDirection: ui.TextDirection.ltr,
+          ),
         );
       },
     );
@@ -4963,3 +4973,36 @@ class _MiniDonutChartPainter extends CustomPainter {
   }
 }
 //#endregion
+
+//#region Slidable Seamless Stretch Motion
+class _SlidableSeamlessStretchMotion extends StatelessWidget {
+  const _SlidableSeamlessStretchMotion();
+
+  @override
+  Widget build(BuildContext context) {
+    final paneData = ActionPane.of(context);
+    final controller = Slidable.of(context);
+
+    if (paneData == null || controller == null) {
+      return const SizedBox.shrink();
+    }
+
+    return AnimatedBuilder(
+      animation: controller.animation,
+      builder: (BuildContext context, Widget? child) {
+        final value = controller.animation.value.clamp(0.0, 1.0);
+        return FractionallySizedBox(
+          alignment: paneData.alignment,
+          widthFactor: paneData.direction == Axis.horizontal ? value : 1.0,
+          heightFactor: paneData.direction == Axis.horizontal ? 1.0 : value,
+          child: child,
+        );
+      },
+      child: const ClipRect(
+        child: BehindMotion(),
+      ),
+    );
+  }
+}
+//#endregion
+

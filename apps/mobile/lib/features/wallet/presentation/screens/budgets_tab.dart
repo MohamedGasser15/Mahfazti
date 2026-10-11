@@ -6,6 +6,7 @@ import 'package:ios_adaptive_context_menu/ios_adaptive_context_menu.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:intl/intl.dart';
 import 'package:my_wallet/core/constants/currency_constants.dart';
+import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/services/wallet_cache_service.dart';
 import 'package:my_wallet/core/utils/app_responsive.dart';
@@ -101,7 +102,6 @@ class _BudgetsTabState extends State<BudgetsTab> {
   }
 
   void _showSetMonthlyBudgetDialog(bool isDarkMode) {
-    final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final hasExistingBudget = (_budgetData?.monthlyBudget ?? 0) > 0;
     final controller = TextEditingController(
       text: hasExistingBudget
@@ -146,7 +146,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
               ),
               const SizedBox(height: 18),
               Text(
-                isAr ? 'تحديد الميزانية الشهرية' : 'Set Monthly Budget',
+                context.l10n.setMonthlyBudget,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
@@ -156,9 +156,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
               ),
               const SizedBox(height: 6),
               Text(
-                isAr
-                    ? 'حدد الحد الأقصى للمصاريف المتوقعة لهذا الشهر'
-                    : 'Set your spending target for this month',
+                context.l10n.setMonthlyBudgetSpending,
                 style: TextStyle(
                   fontSize: 13,
                   color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
@@ -215,7 +213,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                     if (amount == null || amount < 0) {
                       MessageService.showError(
                         context: context,
-                        message: isAr ? 'يرجى إدخال مبلغ صحيح' : 'Please enter a valid amount',
+                        message: context.l10n.pleaseEnterValidAmount,
                       );
                       return;
                     }
@@ -236,7 +234,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                     if (mounted) {
                       MessageService.showSuccess(
                         context: context,
-                        message: isAr ? 'تم تحديث الميزانية بنجاح' : 'Budget updated successfully',
+                        message: context.l10n.budgetUpdatedSuccessfully,
                       );
                     }
 
@@ -252,7 +250,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                     elevation: 0,
                   ),
                   child: Text(
-                    isAr ? 'حفظ الميزانية' : 'Save Budget',
+                    context.l10n.saveBudget,
                     style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -277,13 +275,13 @@ class _BudgetsTabState extends State<BudgetsTab> {
                       if (mounted) {
                         MessageService.showSuccess(
                           context: context,
-                          message: isAr ? 'تم إلغاء الميزانية الشهرية' : 'Monthly budget removed',
+                          message: context.l10n.monthlyBudgetRemoved,
                         );
                       }
                     },
                     icon: const Icon(Icons.money_off_rounded, size: 17, color: Colors.redAccent),
                     label: Text(
-                      isAr ? 'إلغاء الميزانية الشهرية' : 'Remove Monthly Budget',
+                      context.l10n.removeMonthlyBudget,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
@@ -344,7 +342,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
               ),
               const SizedBox(height: 18),
               Text(
-                isAr ? 'ميزانية $name' : 'Budget for $name',
+                context.l10n.budgetForCategory(name),
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
@@ -354,9 +352,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
               ),
               const SizedBox(height: 6),
               Text(
-                isAr
-                    ? 'حدد الحد الأقصى للمصاريف في هذا التصنيف'
-                    : 'Set spending limit for this category',
+                context.l10n.setCategorySpendingLimit,
                 style: TextStyle(
                   fontSize: 13,
                   color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
@@ -413,7 +409,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                     if (amount == null || amount < 0) {
                       MessageService.showError(
                         context: context,
-                        message: isAr ? 'يرجى إدخال مبلغ صحيح' : 'Please enter a valid amount',
+                        message: context.l10n.pleaseEnterValidAmount,
                       );
                       return;
                     }
@@ -438,7 +434,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                     if (mounted) {
                       MessageService.showSuccess(
                         context: context,
-                        message: isAr ? 'تم تحديث ميزانية التصنيف' : 'Category budget updated',
+                        message: context.l10n.categoryBudgetUpdated,
                       );
                     }
 
@@ -454,7 +450,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                     elevation: 0,
                   ),
                   child: Text(
-                    isAr ? 'حفظ' : 'Save',
+                    context.l10n.save,
                     style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -511,7 +507,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                   ),
                 ),
                 title: Text(
-                  isAr ? 'فئة جديدة' : 'New Category',
+                  context.l10n.newCategory,
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -519,7 +515,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                   ),
                 ),
                 subtitle: Text(
-                  isAr ? 'إضافة فئة جديدة وتحديد سقف مصاريفها' : 'Add a new category with a budget limit',
+                  context.l10n.addNewCategorySubtitle,
                   style: TextStyle(
                     fontSize: 12,
                     color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
@@ -555,7 +551,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                   ),
                 ),
                 title: Text(
-                  isAr ? 'الميزانية الشهرية' : 'Monthly Budget',
+                  context.l10n.monthlyBudget,
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -563,7 +559,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                   ),
                 ),
                 subtitle: Text(
-                  isAr ? 'تحديد أو تعديل الحد الإجمالي للشهر' : 'Set or edit overall monthly limit',
+                  context.l10n.setOrEditOverallMonthlyLimit,
                   style: TextStyle(
                     fontSize: 12,
                     color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
@@ -588,7 +584,6 @@ class _BudgetsTabState extends State<BudgetsTab> {
   }
 
   void _showAddCategoryDialog(bool isDarkMode) {
-    final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final nameController = TextEditingController();
     final budgetController = TextEditingController();
 
@@ -633,7 +628,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                     ),
                     const SizedBox(height: 18),
                     Text(
-                      isAr ? 'فئة جديدة' : 'New Category',
+                      context.l10n.newCategory,
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
@@ -643,9 +638,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      isAr
-                          ? 'أضف فئة جديدة لتتبع مصاريفها وميزانيتها'
-                          : 'Add a new category to track its spending & budget',
+                      context.l10n.addCategoryToTrackSubtitle,
                       style: TextStyle(
                         fontSize: 13,
                         color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
@@ -653,7 +646,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                     ),
                     const SizedBox(height: 18),
                     Text(
-                      isAr ? 'اسم الفئة' : 'Category Name',
+                      context.l10n.categoryName,
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
@@ -680,7 +673,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                         ),
                         decoration: InputDecoration(
                           border: InputBorder.none,
-                          hintText: isAr ? 'مثال: اشتراكات، مواصلات...' : 'e.g. Subscriptions, Transport',
+                          hintText: context.l10n.categoryNameHint,
                           hintStyle: TextStyle(
                             color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
                             fontWeight: FontWeight.normal,
@@ -690,7 +683,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      isAr ? 'حد الميزانية (اختياري)' : 'Budget Limit (optional)',
+                      context.l10n.budgetLimitOptional,
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
@@ -746,7 +739,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                           if (name.isEmpty) {
                             MessageService.showError(
                               context: context,
-                              message: isAr ? 'يرجى إدخال اسم الفئة' : 'Please enter category name',
+                              message: context.l10n.pleaseEnterCategoryName,
                             );
                             return;
                           }
@@ -778,7 +771,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                           if (mounted) {
                             MessageService.showSuccess(
                               context: context,
-                              message: isAr ? 'تمت إضافة الفئة بنجاح' : 'Category added successfully',
+                              message: context.l10n.categoryAddedSuccess,
                             );
                           }
                         },
@@ -789,7 +782,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                           elevation: 0,
                         ),
                         child: Text(
-                          isAr ? 'إضافة الفئة' : 'Add Category',
+                          context.l10n.addCategory,
                           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                         ),
                       ),
@@ -813,16 +806,14 @@ class _BudgetsTabState extends State<BudgetsTab> {
       showCupertinoDialog(
         context: context,
         builder: (ctx) => CupertinoAlertDialog(
-          title: Text(isAr ? 'حذف الفئة' : 'Delete Category'),
+          title: Text(context.l10n.deleteCategory),
           content: Text(
-            isAr
-                ? 'هل أنت متأكد من حذف فئة "$name" من الميزانية؟'
-                : 'Are you sure you want to delete "$name" from budgets?',
+            context.l10n.confirmDeleteCategory(name),
           ),
           actions: [
             CupertinoDialogAction(
               onPressed: () => Navigator.pop(ctx),
-              child: Text(isAr ? 'إلغاء' : 'Cancel'),
+              child: Text(context.l10n.cancel),
             ),
             CupertinoDialogAction(
               isDestructiveAction: true,
@@ -843,11 +834,11 @@ class _BudgetsTabState extends State<BudgetsTab> {
                 if (mounted) {
                   MessageService.showSuccess(
                     context: context,
-                    message: isAr ? 'تم حذف الفئة بنجاح' : 'Category deleted successfully',
+                    message: context.l10n.categoryDeletedSuccess,
                   );
                 }
               },
-              child: Text(isAr ? 'حذف' : 'Delete'),
+              child: Text(context.l10n.delete),
             ),
           ],
         ),
@@ -861,7 +852,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
         backgroundColor: isDarkMode ? const Color(0xFF18181B) : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
-          isAr ? 'حذف الفئة' : 'Delete Category',
+          context.l10n.deleteCategory,
           style: TextStyle(
             fontWeight: FontWeight.w800,
             fontSize: 18,
@@ -869,9 +860,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
           ),
         ),
         content: Text(
-          isAr
-              ? 'هل أنت متأكد من حذف فئة "$name" من الميزانية؟'
-              : 'Are you sure you want to delete "$name" from budgets?',
+          context.l10n.confirmDeleteCategory(name),
           style: TextStyle(
             color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
             fontSize: 14,
@@ -881,7 +870,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(
-              isAr ? 'إلغاء' : 'Cancel',
+              context.l10n.cancel,
               style: TextStyle(
                 color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                 fontWeight: FontWeight.w600,
@@ -906,12 +895,12 @@ class _BudgetsTabState extends State<BudgetsTab> {
               if (mounted) {
                 MessageService.showSuccess(
                   context: context,
-                  message: isAr ? 'تم حذف الفئة بنجاح' : 'Category deleted successfully',
+                  message: context.l10n.categoryDeletedSuccess,
                 );
               }
             },
             child: Text(
-              isAr ? 'حذف' : 'Delete',
+              context.l10n.delete,
               style: const TextStyle(
                 color: Colors.redAccent,
                 fontWeight: FontWeight.w700,
@@ -987,10 +976,8 @@ class _BudgetsTabState extends State<BudgetsTab> {
                         const SizedBox(height: 2),
                         Text(
                           hasBudget
-                              ? (isAr
-                                  ? 'الحد الحالي: ${_formatAmount(cat.budget)}'
-                                  : 'Current limit: ${_formatAmount(cat.budget)}')
-                              : (isAr ? 'بدون حد ميزانية' : 'No limit set'),
+                              ? context.l10n.currentLimitAmount(_formatAmount(cat.budget))
+                              : context.l10n.noLimitSet,
                           style: TextStyle(
                             fontSize: 12,
                             color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
@@ -1025,8 +1012,8 @@ class _BudgetsTabState extends State<BudgetsTab> {
                 ),
                 title: Text(
                   hasBudget
-                      ? (isAr ? 'تعديل الميزانية' : 'Edit Budget')
-                      : (isAr ? 'تحديد الميزانية' : 'Set Budget'),
+                      ? context.l10n.editBudget
+                      : context.l10n.setBudget,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -1060,7 +1047,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                   ),
                 ),
                 title: Text(
-                  isAr ? 'حذف الفئة' : 'Delete Category',
+                  context.l10n.deleteCategory,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -1097,7 +1084,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
       backgroundColor: bgColor,
       appBar: AppBar(
         title: Text(
-          isAr ? 'الميزانيات' : 'Budgets',
+          context.l10n.budgets,
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w800,
@@ -1130,12 +1117,12 @@ class _BudgetsTabState extends State<BudgetsTab> {
                         actions: [
                           IosContextMenuAction(
                             id: 'new_category',
-                            title: isAr ? 'فئة جديدة' : 'New Category',
+                            title: context.l10n.newCategory,
                             iconSystemName: 'plus.circle',
                           ),
                           IosContextMenuAction(
                             id: 'monthly_budget',
-                            title: isAr ? 'الميزانية الشهرية' : 'Monthly Budget',
+                            title: context.l10n.monthlyBudget,
                             iconSystemName: 'slider.horizontal.3',
                           ),
                         ],
@@ -1245,7 +1232,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              isAr ? 'ميزانية الشهر الإجمالية' : 'Monthly Spending Budget',
+                              context.l10n.monthlySpendingBudget,
                               style: TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w600,
@@ -1295,9 +1282,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              isAr
-                                  ? 'من ${_formatAmount(monthlyBudget)}'
-                                  : 'of ${_formatAmount(monthlyBudget)}',
+                              context.l10n.ofMonthlyBudget(_formatAmount(monthlyBudget)),
                               style: TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w600,
@@ -1344,7 +1329,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      isAr ? 'المتبقي للشهر' : 'Remaining Budget',
+                                      context.l10n.remainingBudget,
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w600,
@@ -1354,7 +1339,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                                     const SizedBox(height: 2),
                                     Text(
                                       isOverBudget
-                                          ? (isAr ? 'تجاوزت الميزانية!' : 'Over budget!')
+                                          ? context.l10n.overBudgetExclamation
                                           : _formatAmount(remaining),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -1385,7 +1370,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      isAr ? 'متاح يومياً (آمن)' : 'Daily Safe Spend',
+                                      context.l10n.dailySafeSpend,
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w600,
@@ -1394,7 +1379,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      '~${_formatAmount(dailySafeSpend)} / ${isAr ? 'يوم' : 'day'}',
+                                      '~${_formatAmount(dailySafeSpend)} / ${context.l10n.day}',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
@@ -1418,7 +1403,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              isAr ? 'ميزانية الشهر الإجمالية' : 'Monthly Spending Budget',
+                              context.l10n.monthlySpendingBudget,
                               style: TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w600,
@@ -1432,7 +1417,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                isAr ? 'غير محددة' : 'Not set',
+                                context.l10n.notSet,
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
@@ -1458,7 +1443,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              isAr ? 'إجمالي المصاريف حتى الآن' : 'total spent this month',
+                              context.l10n.totalSpentThisMonth,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -1506,7 +1491,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        isAr ? 'تحديد ميزانية الشهر' : 'Set Monthly Budget',
+                                        context.l10n.setMonthlyBudget,
                                         style: TextStyle(
                                           fontSize: 13.5,
                                           fontWeight: FontWeight.w800,
@@ -1515,9 +1500,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        isAr
-                                            ? 'حدد سقفاً لمتابعة المتبقي والمصروف الآمن'
-                                            : 'Set a limit to track remaining & safe spend',
+                                        context.l10n.setLimitToTrackSafeSpend,
                                         style: TextStyle(
                                           fontSize: 11,
                                           color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
@@ -1534,7 +1517,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
-                                    isAr ? 'تحديد' : 'Set',
+                                    context.l10n.selectAction,
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w800,
@@ -1559,7 +1542,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                 Row(
                   children: [
                     Text(
-                      isAr ? 'ميزانيات التصنيفات' : 'Category Budgets',
+                      context.l10n.categoryBudgets,
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
@@ -1586,7 +1569,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                   ],
                 ),
                 Text(
-                  isAr ? 'اضغط للتعديل' : 'Tap to edit',
+                  context.l10n.tapToEdit,
                   style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w600,
@@ -1725,7 +1708,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                                         ),
                                       ),
                                       child: Text(
-                                        isAr ? 'تحديد' : 'Set',
+                                        context.l10n.setAction,
                                         style: TextStyle(
                                           fontSize: 11.5,
                                           fontWeight: FontWeight.w700,
@@ -1751,13 +1734,13 @@ class _BudgetsTabState extends State<BudgetsTab> {
                                               IosContextMenuAction(
                                                 id: 'budget',
                                                 title: hasBudget
-                                                    ? (isAr ? 'تعديل الميزانية' : 'Edit Budget')
-                                                    : (isAr ? 'تحديد الميزانية' : 'Set Budget'),
+                                                    ? context.l10n.editBudget
+                                                    : context.l10n.setBudget,
                                                 iconSystemName: 'pencil',
                                               ),
                                               IosContextMenuAction(
                                                 id: 'delete',
-                                                title: isAr ? 'حذف الفئة' : 'Delete Category',
+                                                title: context.l10n.deleteCategory,
                                                 iconSystemName: 'trash',
                                                 destructive: true,
                                               ),
@@ -1808,8 +1791,8 @@ class _BudgetsTabState extends State<BudgetsTab> {
                                 child: LinearProgressIndicator(
                                   value: catRatio,
                                   backgroundColor: isDarkMode
-                                      ? const Color(0xFF27272A)
-                                      : const Color(0xFFE4E4E7),
+                                  ? const Color(0xFF27272A)
+                                  : const Color(0xFFE4E4E7),
                                   valueColor: AlwaysStoppedAnimation<Color>(
                                     isCatOver
                                         ? Colors.redAccent
@@ -1826,9 +1809,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  isAr
-                                      ? 'صرفت ${_formatAmount(spent)}'
-                                      : 'Spent ${_formatAmount(spent)}',
+                                  context.l10n.spentAmount(_formatAmount(spent)),
                                   style: TextStyle(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w600,
@@ -1837,10 +1818,8 @@ class _BudgetsTabState extends State<BudgetsTab> {
                                 ),
                                 Text(
                                   catBudget > 0
-                                      ? (isAr
-                                          ? 'الحد: ${_formatAmount(catBudget)}'
-                                          : 'Limit: ${_formatAmount(catBudget)}')
-                                      : (isAr ? 'الحد: غير محدد' : 'Limit: Not set'),
+                                      ? context.l10n.limitAmount(_formatAmount(catBudget))
+                                      : context.l10n.limitNotSet,
                                   style: TextStyle(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w600,

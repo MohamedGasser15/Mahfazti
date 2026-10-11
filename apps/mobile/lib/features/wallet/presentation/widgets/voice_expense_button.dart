@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/features/wallet/data/models/voice_expense_model.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
 
@@ -121,35 +122,36 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
     if (_hasProcessed) return;
     if (!_isListening && _recognizedText.isEmpty) return;
 
+    final serverErrorMsg = context.l10n.serverConnectionFailed;
     _hasProcessed = true;
     await _speech.stop();
 
     if (mounted) setState(() { _isListening = false; _isProcessing = true; });
 
     if (_recognizedText.isNotEmpty) {
-  try {
-    final result = await _repo.parseVoiceText(
-      _recognizedText,
-      language: _isArabic ? 'ar' : 'en',
-    );
-    widget.onResult(VoiceExpenseResult(
-      amount: result.amount,
-      transactionType: result.transactionType,
-      categoryId: result.categoryId,
-      categoryNameAr: result.categoryNameAr,
-      categoryNameEn: result.categoryNameEn,
-      title: result.title,
-      note: null,
-      isSuccess: result.isSuccess,
-      errorMessage: result.errorMessage,
-    ));
-  } catch (e) {
-    widget.onResult(VoiceExpenseResult(
-      isSuccess: false,
-      errorMessage: 'فشل الاتصال بالسيرفر',
-    ));
-  }
-}
+      try {
+        final result = await _repo.parseVoiceText(
+          _recognizedText,
+          language: _isArabic ? 'ar' : 'en',
+        );
+        widget.onResult(VoiceExpenseResult(
+          amount: result.amount,
+          transactionType: result.transactionType,
+          categoryId: result.categoryId,
+          categoryNameAr: result.categoryNameAr,
+          categoryNameEn: result.categoryNameEn,
+          title: result.title,
+          note: null,
+          isSuccess: result.isSuccess,
+          errorMessage: result.errorMessage,
+        ));
+      } catch (e) {
+        widget.onResult(VoiceExpenseResult(
+          isSuccess: false,
+          errorMessage: serverErrorMsg,
+        ));
+      }
+    }
 
     if (mounted) setState(() => _isProcessing = false);
   }
@@ -164,7 +166,6 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
   @override
   Widget build(BuildContext context) {
     final isDark = widget.isDarkMode;
-    final appIsAr = Localizations.localeOf(context).languageCode == 'ar';
 
     return AnimatedBuilder(
       animation: _pulseController,
@@ -265,8 +266,8 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
               const SizedBox(height: 6),
               Text(
                 _isListening
-                    ? (appIsAr ? 'أستمع...' : 'Listening...')
-                    : (appIsAr ? 'صوت' : 'Voice'),
+                    ? context.l10n.listening
+                    : context.l10n.voice,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: widget.isInHero ? FontWeight.w700 : FontWeight.w600,
@@ -344,8 +345,8 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
                   Flexible(
                     child: Text(
                       _isListening
-                          ? (appIsAr ? 'أستمع...' : 'Listening...')
-                          : (appIsAr ? 'صوت' : 'Voice'),
+                          ? context.l10n.listening
+                          : context.l10n.voice,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
