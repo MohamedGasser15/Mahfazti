@@ -19,6 +19,8 @@ import 'package:my_wallet/core/utils/api_error_handler.dart';
 import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/navigation_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
+import 'package:my_wallet/core/widgets/ios_keyboard_floating_button.dart';
+import 'package:my_wallet/core/widgets/ios_hold_context_menu.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:my_wallet/features/settings/presentation/screens/categories_management_screen.dart';
@@ -77,6 +79,9 @@ abstract class _HomeTabState extends State<HomeTab> {
   bool _isDismissingCard = false;
   PageController _getStartedPageController = PageController(viewportFraction: 0.90);
   final ScrollController _walletsScrollController = ScrollController();
+  final Map<String, double> _accountBalancesOverrides = {};
+  final Map<String, String> _accountNamesOverrides = {};
+  final Map<String, int> _accountIconsOverrides = {};
   //#endregion
 
   //#region Lifecycle
@@ -87,6 +92,7 @@ abstract class _HomeTabState extends State<HomeTab> {
       _loadHomeData();
     });
     _loadCategories();
+    _loadAccountOverrides();
   }
 
   @override
@@ -97,18 +103,138 @@ abstract class _HomeTabState extends State<HomeTab> {
   }
   //#endregion
 
-  //#region Accounts Data Getter
+  //#region Accounts Data Getter & Overrides
+  Future<void> _loadAccountOverrides() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final balancesStr = prefs.getString('wallet_override_balances');
+      if (balancesStr != null) {
+        final decoded = jsonDecode(balancesStr) as Map<String, dynamic>;
+        _accountBalancesOverrides.clear();
+        decoded.forEach((key, val) {
+          if (val is num) _accountBalancesOverrides[key] = val.toDouble();
+        });
+      }
+
+      final namesStr = prefs.getString('wallet_override_names');
+      if (namesStr != null) {
+        final decoded = jsonDecode(namesStr) as Map<String, dynamic>;
+        _accountNamesOverrides.clear();
+        decoded.forEach((key, val) {
+          if (val is String) _accountNamesOverrides[key] = val;
+        });
+      }
+
+      final iconsStr = prefs.getString('wallet_override_icons');
+      if (iconsStr != null) {
+        final decoded = jsonDecode(iconsStr) as Map<String, dynamic>;
+        _accountIconsOverrides.clear();
+        decoded.forEach((key, val) {
+          if (val is int) _accountIconsOverrides[key] = val;
+        });
+      }
+      if (mounted) setState(() {});
+    } catch (e) {
+      debugPrint('Error loading account overrides: $e');
+    }
+  }
+
+  Future<void> _saveAccountOverrides() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('wallet_override_balances', jsonEncode(_accountBalancesOverrides));
+      await prefs.setString('wallet_override_names', jsonEncode(_accountNamesOverrides));
+      await prefs.setString('wallet_override_icons', jsonEncode(_accountIconsOverrides));
+    } catch (e) {
+      debugPrint('Error saving account overrides: $e');
+    }
+  }
+
+  void _updateAccountBalance(String id, double newBalance) {
+    setState(() {
+      _accountBalancesOverrides[id] = newBalance;
+      final customIndex = _customAccounts.indexWhere((a) => a.id == id);
+      if (customIndex != -1) {
+        final old = _customAccounts[customIndex];
+        _customAccounts[customIndex] = AccountItem(
+          id: old.id,
+          name: old.name,
+          type: old.type,
+          balance: newBalance,
+          income: old.income,
+          expense: old.expense,
+          icon: old.icon,
+          isAll: old.isAll,
+          isMain: old.isMain,
+          accountNumber: old.accountNumber,
+          currency: old.currency,
+        );
+      }
+    });
+    _saveAccountOverrides();
+  }
+
+  void _updateAccountDetails(String id, String newName, IconData newIcon) {
+    setState(() {
+      _accountNamesOverrides[id] = newName;
+      _accountIconsOverrides[id] = newIcon.codePoint;
+      final customIndex = _customAccounts.indexWhere((a) => a.id == id);
+      if (customIndex != -1) {
+        final old = _customAccounts[customIndex];
+        _customAccounts[customIndex] = AccountItem(
+          id: old.id,
+          name: newName,
+          type: old.type,
+          balance: old.balance,
+          income: old.income,
+          expense: old.expense,
+          icon: newIcon,
+          isAll: old.isAll,
+          isMain: old.isMain,
+          accountNumber: old.accountNumber,
+          currency: old.currency,
+        );
+      }
+    });
+    _saveAccountOverrides();
+  }
+
   List<AccountItem> get _accounts {
     final balance = _homeData?.balance.totalBalance ?? 0.0;
     final income = _homeData?.balance.totalDeposits ?? 0.0;
     final expense = _homeData?.balance.totalWithdrawals ?? 0.0;
+
+    final defaultBank = balance * 0.62;
+    final defaultCash = balance * 0.18;
+    final defaultEwallet = balance * 0.20;
+
+    final bankBalance = _accountBalancesOverrides['bank'] ?? defaultBank;
+    final cashBalance = _accountBalancesOverrides['cash'] ?? defaultCash;
+    final ewalletBalance = _accountBalancesOverrides['ewallet'] ?? defaultEwallet;
+    final customTotal = _customAccounts.fold<double>(
+      0.0,
+      (sum, a) => sum + (_accountBalancesOverrides[a.id] ?? a.balance),
+    );
+
+    final totalEffectiveBalance = _accountBalancesOverrides.isNotEmpty
+        ? (bankBalance + cashBalance + ewalletBalance + customTotal)
+        : balance;
+
+    IconData getAccountIcon(String id, IconData fallback) {
+      final codePoint = _accountIconsOverrides[id];
+      if (codePoint != null) {
+        // ignore: non_const_argument_for_const_parameter
+        return IconData(codePoint, fontFamily: 'MaterialIcons');
+      }
+      return fallback;
+    }
 
     return [
       AccountItem(
         id: 'all',
         name: context.l10n.allAccounts,
         type: 'all',
-        balance: balance,
+        balance: totalEffectiveBalance,
         income: income,
         expense: expense,
         icon: Icons.account_balance_wallet_rounded,
@@ -118,41 +244,53 @@ abstract class _HomeTabState extends State<HomeTab> {
       ),
       AccountItem(
         id: 'bank',
-        name: context.l10n.banqueMisr,
+        name: _accountNamesOverrides['bank'] ?? context.l10n.banqueMisr,
         type: 'bank',
-        balance: balance * 0.62,
+        balance: bankBalance,
         income: income * 0.8,
         expense: expense * 0.45,
-        icon: Icons.account_balance_rounded,
+        icon: getAccountIcon('bank', Icons.account_balance_rounded),
         isMain: _mainAccountId == 'bank',
         accountNumber: '•••• 8920',
         currency: 'EGP',
       ),
       AccountItem(
         id: 'cash',
-        name: context.l10n.cashWallet,
+        name: _accountNamesOverrides['cash'] ?? context.l10n.cashWallet,
         type: 'cash',
-        balance: balance * 0.18,
+        balance: cashBalance,
         income: income * 0.1,
         expense: expense * 0.35,
-        icon: Icons.payments_rounded,
+        icon: getAccountIcon('cash', Icons.payments_rounded),
         isMain: _mainAccountId == 'cash',
         accountNumber: context.l10n.cash,
         currency: 'USD',
       ),
       AccountItem(
         id: 'ewallet',
-        name: context.l10n.vodafoneCash,
+        name: _accountNamesOverrides['ewallet'] ?? context.l10n.vodafoneCash,
         type: 'ewallet',
-        balance: balance * 0.20,
+        balance: ewalletBalance,
         income: income * 0.1,
         expense: expense * 0.2,
-        icon: Icons.phone_iphone_rounded,
+        icon: getAccountIcon('ewallet', Icons.phone_iphone_rounded),
         isMain: _mainAccountId == 'ewallet',
         accountNumber: '010 •••• 567',
         currency: 'EGP',
       ),
-      ..._customAccounts,
+      ..._customAccounts.map((a) => AccountItem(
+        id: a.id,
+        name: _accountNamesOverrides[a.id] ?? a.name,
+        type: a.type,
+        balance: _accountBalancesOverrides[a.id] ?? a.balance,
+        income: a.income,
+        expense: a.expense,
+        icon: getAccountIcon(a.id, a.icon),
+        isAll: a.isAll,
+        isMain: a.isMain,
+        accountNumber: a.accountNumber,
+        currency: a.currency,
+      )),
     ];
   }
 
@@ -440,7 +578,13 @@ abstract class _HomeTabState extends State<HomeTab> {
   void _showDeleteConfirmationDialog(WalletTransaction transaction);
   Widget _buildSkeletonLoading(bool isDarkMode);
   Widget _buildErrorWidget(bool isDarkMode);
-  void _showUnifiedAddModal({VoiceExpenseResult? prefillFromVoice});
+  void _showUnifiedAddModal({
+    VoiceExpenseResult? prefillFromVoice,
+    TransactionType? initialType,
+    String? initialAccountId,
+  });
+  void _showAdjustBalanceModal(AccountItem acc, bool isDarkMode, bool isAr);
+  void _showEditAccountModal(AccountItem acc, bool isDarkMode, bool isAr);
   void _showAddAccountModal();
   void _showManageAccountsModal();
   void _showAccountSwitcherModal();

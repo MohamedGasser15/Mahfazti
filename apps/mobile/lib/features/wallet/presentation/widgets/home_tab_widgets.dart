@@ -171,110 +171,147 @@ mixin _HomeTabWidgets on _HomeTabState {
   Widget _buildSayTopBar(bool isDarkMode, HideBalanceService hideService) {
     final isIOS = Platform.isIOS;
 
+    final topBarGlassSettings = LiquidGlassSettings(
+      thickness: 14,
+      blur: 10,
+      glassColor: isDarkMode
+          ? Colors.white.withValues(alpha: 0.12)
+          : Colors.white.withValues(alpha: 0.20),
+    );
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Left: User Profile Avatar
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => SettingsScreen(
-                    onLocaleChanged: (locale) {},
-                  ),
-                ),
-              ),
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.25),
-                    width: 1,
-                  ),
-                ),
-                child: const Center(
-                  child: Icon(
+          isIOS
+              ? GlassButton(
+                  width: 38,
+                  height: 38,
+                  shape: const LiquidOval(),
+                  useOwnLayer: true,
+                  settings: topBarGlassSettings,
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SettingsScreen(
+                          onLocaleChanged: (locale) {},
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(
                     Icons.person_rounded,
-                    size: 20,
+                    size: 19,
                     color: Colors.white,
                   ),
-                ),
-              ),
-            ),
-          ),
-
-          // Center: Date Range Selector Pill (Say Style / Native iOS Menu on iOS)
-          isIOS
-              ? Container(
-                  height: 28,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.25),
-                      width: 1,
+                )
+              : Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SettingsScreen(
+                          onLocaleChanged: (locale) {},
+                        ),
+                      ),
                     ),
-                  ),
-                  child: Center(
-                    child: IosSingleTapContextMenu(
-                      actions: [
-                        IosContextMenuAction(
-                          id: 'this_month',
-                          title: context.l10n.thisMonth,
-                          iconSystemName: 'calendar',
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.25),
+                          width: 1,
                         ),
-                        IosContextMenuAction(
-                          id: 'last_month',
-                          title: context.l10n.lastMonth,
-                          iconSystemName: 'clock.arrow.circlepath',
-                        ),
-                        const IosContextMenuDivider(),
-                        IosContextMenuAction(
-                          id: 'by_month',
-                          title: context.l10n.byMonth,
-                          iconSystemName: 'calendar.day.timeline.left',
-                        ),
-                        IosContextMenuAction(
-                          id: 'custom_range',
-                          title: context.l10n.customRangeDots,
-                          iconSystemName: 'calendar.badge.clock',
-                        ),
-                      ],
-                      onSelected: (id) async {
-                        final now = DateTime.now();
-                        if (id == 'this_month') {
-                          setState(() {
-                            _startDate = DateTime(now.year, now.month, 1);
-                            _endDate = DateTime(now.year, now.month + 1, 0);
-                          });
-                        } else if (id == 'last_month') {
-                          setState(() {
-                            _startDate = DateTime(now.year, now.month - 1, 1);
-                            _endDate = DateTime(now.year, now.month, 0);
-                          });
-                        } else if (id == 'by_month') {
-                          await _pickMonthPicker(context);
-                        } else if (id == 'custom_range') {
-                          await _pickCustomDateRange(context);
-                        }
-                      },
-                      child: Text(
-                        '$_formattedDateRange ⌵',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.person_rounded,
+                          size: 20,
                           color: Colors.white,
                         ),
                       ),
+                    ),
+                  ),
+                ),
+
+          // Center: Date Range Selector Pill (Say Style / Native iOS Menu on iOS)
+          isIOS
+              ? IosSingleTapContextMenu(
+                  actions: [
+                    IosContextMenuAction(
+                      id: 'this_month',
+                      title: context.l10n.thisMonth,
+                      iconSystemName: 'calendar',
+                    ),
+                    IosContextMenuAction(
+                      id: 'last_month',
+                      title: context.l10n.lastMonth,
+                      iconSystemName: 'clock.arrow.circlepath',
+                    ),
+                    const IosContextMenuDivider(),
+                    IosContextMenuAction(
+                      id: 'by_month',
+                      title: context.l10n.byMonth,
+                      iconSystemName: 'calendar.day.timeline.left',
+                    ),
+                    IosContextMenuAction(
+                      id: 'custom_range',
+                      title: context.l10n.customRangeDots,
+                      iconSystemName: 'calendar.badge.clock',
+                    ),
+                  ],
+                  onSelected: (id) async {
+                    final now = DateTime.now();
+                    if (id == 'this_month') {
+                      setState(() {
+                        _startDate = DateTime(now.year, now.month, 1);
+                        _endDate = DateTime(now.year, now.month + 1, 0);
+                      });
+                    } else if (id == 'last_month') {
+                      setState(() {
+                        _startDate = DateTime(now.year, now.month - 1, 1);
+                        _endDate = DateTime(now.year, now.month, 0);
+                      });
+                    } else if (id == 'by_month') {
+                      await _pickMonthPicker(context);
+                    } else if (id == 'custom_range') {
+                      await _pickCustomDateRange(context);
+                    }
+                  },
+                  child: GlassContainer(
+                    height: 38,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    shape: const LiquidRoundedRectangle(borderRadius: 19),
+                    useOwnLayer: true,
+                    settings: topBarGlassSettings,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _formattedDateRange,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: 17,
+                          color: Colors.white.withValues(alpha: 0.9),
+                        ),
+                      ],
                     ),
                   ),
                 )
@@ -282,15 +319,16 @@ mixin _HomeTabWidgets on _HomeTabState {
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: () => _showDateRangeModalSheetAndroid(isDarkMode),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(19),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      height: 38,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
+                        color: Colors.white.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(19),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.25),
-                          width: 1,
+                          color: Colors.white.withValues(alpha: 0.28),
+                          width: 1.1,
                         ),
                       ),
                       child: Row(
@@ -299,17 +337,17 @@ mixin _HomeTabWidgets on _HomeTabState {
                           Text(
                             _formattedDateRange,
                             style: const TextStyle(
-                              fontSize: 12.5,
+                              fontSize: 13.5,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
                               letterSpacing: -0.2,
                             ),
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 5),
                           Icon(
                             Icons.keyboard_arrow_down_rounded,
-                            size: 16,
-                            color: Colors.white.withValues(alpha: 0.85),
+                            size: 17,
+                            color: Colors.white.withValues(alpha: 0.88),
                           ),
                         ],
                       ),
@@ -318,37 +356,59 @@ mixin _HomeTabWidgets on _HomeTabState {
                 ),
 
           // Right: Analytics Chart Icon
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AnalyticsScreen(),
-                ),
-              ),
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.25),
-                    width: 1,
-                  ),
-                ),
-                child: const Center(
-                  child: Icon(
+          isIOS
+              ? GlassButton(
+                  width: 38,
+                  height: 38,
+                  shape: const LiquidOval(),
+                  useOwnLayer: true,
+                  settings: topBarGlassSettings,
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AnalyticsScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(
                     Icons.auto_graph_rounded,
                     size: 19,
                     color: Colors.white,
                   ),
+                )
+              : Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AnalyticsScreen(),
+                      ),
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.25),
+                          width: 1,
+                        ),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.auto_graph_rounded,
+                          size: 19,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -694,19 +754,26 @@ mixin _HomeTabWidgets on _HomeTabState {
                             _showManageAccountsModal();
                           }
                         },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '${_selectedAccount.name} ⌵',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white.withValues(alpha: 0.90),
-                            ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _selectedAccount.name,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white.withValues(alpha: 0.90),
+                                ),
+                              ),
+                              const SizedBox(width: 3),
+                              Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                size: 15,
+                                color: Colors.white.withValues(alpha: 0.75),
+                              ),
+                            ],
                           ),
                         ),
                       )
@@ -726,7 +793,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                                 Text(
                                   _selectedAccount.name,
                                   style: TextStyle(
-                                    fontSize: 12.5,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white.withValues(alpha: 0.90),
                                   ),
@@ -2784,18 +2851,49 @@ mixin _HomeTabWidgets on _HomeTabState {
               final acc = wallets[index];
               final isSelected = acc.id == _selectedAccountId;
 
-              return Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    setState(() {
-                      _heroSlideFromLeft = false;
-                      _selectedAccountId = acc.id;
-                    });
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: AnimatedContainer(
+              return IosHoldContextMenu(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() {
+                    _heroSlideFromLeft = false;
+                    _selectedAccountId = acc.id;
+                  });
+                },
+                actions: [
+                  IosContextMenuAction(
+                    id: 'transfer',
+                    title: isAr ? 'تحويل' : 'Transfer',
+                    iconSystemName: 'arrow.left.arrow.right',
+                  ),
+                  IosContextMenuAction(
+                    id: 'adjust_balance',
+                    title: isAr ? 'تعديل الرصيد' : 'Adjust Balance',
+                    iconSystemName: 'slider.horizontal.3',
+                  ),
+                  IosContextMenuAction(
+                    id: 'edit_account',
+                    title: isAr ? 'تعديل الحساب' : 'Edit Account',
+                    iconSystemName: 'pencil',
+                  ),
+                ],
+                onSelected: (actionId) {
+                  switch (actionId) {
+                    case 'transfer':
+                      _showUnifiedAddModal(
+                        initialType: TransactionType.transfer,
+                        initialAccountId: acc.id,
+                      );
+                      break;
+                    case 'adjust_balance':
+                      _showAdjustBalanceModal(acc, isDarkMode, isAr);
+                      break;
+                    case 'edit_account':
+                      _showEditAccountModal(acc, isDarkMode, isAr);
+                      break;
+                  }
+                },
+                child: AnimatedContainer(
                     duration: const Duration(milliseconds: 220),
                     curve: Curves.easeOutCubic,
                     width: 156,
@@ -2898,8 +2996,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                       ],
                     ),
                   ),
-                ),
-              );
+                );
             },
           ),
         ),

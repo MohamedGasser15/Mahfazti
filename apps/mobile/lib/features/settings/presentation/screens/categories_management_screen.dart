@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -660,15 +661,29 @@ class _CategoriesManagementScreenState
               children: [
                 ListView(
                   physics: const BouncingScrollPhysics(),
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   padding: EdgeInsets.only(
                     left: 16,
                     right: 16,
                     top: 12,
-                    bottom: MediaQuery.of(context).padding.bottom + 84,
+                    bottom: Platform.isIOS
+                        ? MediaQuery.of(context).padding.bottom + 84
+                        : MediaQuery.of(context).padding.bottom + 24,
                   ),
-                    children: [
-                      // Categories Card Group
-                  if (categories.isEmpty)
+                  children: [
+                    // Top Search Bar (Android only)
+                    if (!Platform.isIOS) ...[
+                      _buildAndroidSearchBar(
+                        isDarkMode: isDarkMode,
+                        cardBg: cardBg,
+                        borderColor: borderColor,
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+
+                    // Categories Card Group
+                    if (categories.isEmpty)
                     Container(
                       padding: const EdgeInsets.symmetric(vertical: 40),
                       alignment: Alignment.center,
@@ -940,142 +955,148 @@ class _CategoriesManagementScreenState
                 ],
               ),
 
-            // Floating Bottom Search Bar (Liquid Glass on iOS, Material Card on Android)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: MediaQuery.of(context).viewInsets.bottom > 0
-                  ? MediaQuery.of(context).viewInsets.bottom + 12
-                  : MediaQuery.of(context).padding.bottom + 12,
-              child: Platform.isIOS
-                  ? Center(
-                      child: Container(
-                        width: (MediaQuery.of(context).size.width - 48).clamp(310.0, 335.0),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(
-                                alpha: isDarkMode ? 0.35 : 0.10,
-                              ),
-                              blurRadius: 18,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
+            // Floating Bottom Search Bar (Only on iOS)
+            if (Platform.isIOS)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: math.max(
+                      MediaQuery.of(context).padding.bottom + 12.0,
+                      MediaQuery.of(context).viewInsets.bottom + 10.0,
+                    ) -
+                    MediaQuery.of(context).viewInsets.bottom,
+                child: Center(
+                  child: Container(
+                    width: (MediaQuery.of(context).size.width - 48).clamp(310.0, 335.0),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(
+                            alpha: isDarkMode ? 0.35 : 0.10,
+                          ),
+                          blurRadius: 18,
+                          offset: const Offset(0, 6),
                         ),
-                        child: GlassSearchBar(
-                          controller: _searchController,
-                          placeholder: context.l10n.searchCategories,
-                          useOwnLayer: true,
-                          height: 44,
-                          settings: LiquidGlassSettings(
-                            thickness: 20,
-                            blur: 16,
-                            glassColor: isDarkMode
-                                ? Colors.white.withValues(alpha: 0.12)
-                                : Colors.white.withValues(alpha: 0.85),
-                          ),
-                          textStyle: TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w500,
-                            color: isDarkMode
-                                ? Colors.white
-                                : const Color(0xFF09090B),
-                          ),
-                          placeholderStyle: TextStyle(
-                            fontSize: 13.5,
-                            color: isDarkMode
-                                ? const Color(0xFF71717A)
-                                : const Color(0xFFA1A1AA),
-                          ),
-                          searchIconColor: isDarkMode
-                              ? const Color(0xFFA1A1AA)
-                              : const Color(0xFF71717A),
-                          clearIconColor: isDarkMode
-                              ? const Color(0xFFA1A1AA)
-                              : const Color(0xFF71717A),
-                          onChanged: (val) {
-                            setState(() => _searchQuery = val);
-                          },
-                        ),
+                      ],
+                    ),
+                    child: GlassSearchBar(
+                      controller: _searchController,
+                      placeholder: context.l10n.searchCategories,
+                      useOwnLayer: true,
+                      height: 44,
+                      settings: LiquidGlassSettings(
+                        thickness: 20,
+                        blur: 16,
+                        glassColor: isDarkMode
+                            ? Colors.white.withValues(alpha: 0.12)
+                            : Colors.white.withValues(alpha: 0.85),
                       ),
-                    )
-                  : Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Container(
-                        height: 48,
-                      decoration: BoxDecoration(
-                        color: cardBg,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: borderColor, width: 1),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(
-                              alpha: isDarkMode ? 0.35 : 0.08,
-                            ),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
+                      textStyle: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w500,
+                        color: isDarkMode
+                            ? Colors.white
+                            : const Color(0xFF09090B),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.search_rounded,
-                            size: 20,
-                            color: isDarkMode
-                                ? const Color(0xFFA1A1AA)
-                                : const Color(0xFF71717A),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextField(
-                              controller: _searchController,
-                              onChanged: (val) {
-                                setState(() => _searchQuery = val);
-                              },
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: isDarkMode
-                                    ? Colors.white
-                                    : const Color(0xFF09090B),
-                              ),
-                              decoration: InputDecoration(
-                                hintText: context.l10n.searchCategories,
-                                hintStyle: TextStyle(
-                                  fontSize: 13,
-                                  color: isDarkMode
-                                      ? const Color(0xFF71717A)
-                                      : const Color(0xFFA1A1AA),
-                                ),
-                                border: InputBorder.none,
-                                isDense: true,
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                          ),
-                          if (_searchQuery.isNotEmpty)
-                            GestureDetector(
-                              onTap: () {
-                                _searchController.clear();
-                                setState(() => _searchQuery = '');
-                              },
-                              child: Icon(
-                                Icons.close_rounded,
-                                size: 18,
-                                color: isDarkMode
-                                    ? const Color(0xFFA1A1AA)
-                                    : const Color(0xFF71717A),
-                              ),
-                            ),
-                        ],
+                      placeholderStyle: TextStyle(
+                        fontSize: 13.5,
+                        color: isDarkMode
+                            ? const Color(0xFF71717A)
+                            : const Color(0xFFA1A1AA),
                       ),
+                      searchIconColor: isDarkMode
+                          ? const Color(0xFFA1A1AA)
+                          : const Color(0xFF71717A),
+                      clearIconColor: isDarkMode
+                          ? const Color(0xFFA1A1AA)
+                          : const Color(0xFF71717A),
+                      onChanged: (val) {
+                        setState(() => _searchQuery = val);
+                      },
                     ),
                   ),
-            ),
+                ),
+              ),
           ],
         ),
+    );
+  }
+
+  Widget _buildAndroidSearchBar({
+    required bool isDarkMode,
+    required Color cardBg,
+    required Color borderColor,
+  }) {
+    return Container(
+      height: 48,
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(
+              alpha: isDarkMode ? 0.35 : 0.06,
+            ),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: Row(
+        children: [
+          Icon(
+            Icons.search_rounded,
+            size: 20,
+            color: isDarkMode
+                ? const Color(0xFFA1A1AA)
+                : const Color(0xFF71717A),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              onChanged: (val) {
+                setState(() => _searchQuery = val);
+              },
+              style: TextStyle(
+                fontSize: 14,
+                color: isDarkMode
+                    ? Colors.white
+                    : const Color(0xFF09090B),
+              ),
+              decoration: InputDecoration(
+                hintText: context.l10n.searchCategories,
+                hintStyle: TextStyle(
+                  fontSize: 13,
+                  color: isDarkMode
+                      ? const Color(0xFF71717A)
+                      : const Color(0xFFA1A1AA),
+                ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+          if (_searchQuery.isNotEmpty)
+            GestureDetector(
+              onTap: () {
+                _searchController.clear();
+                setState(() => _searchQuery = '');
+              },
+              child: Icon(
+                Icons.close_rounded,
+                size: 18,
+                color: isDarkMode
+                    ? const Color(0xFFA1A1AA)
+                    : const Color(0xFF71717A),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

@@ -5,19 +5,28 @@ mixin _HomeTabDialogs on _HomeTabState {
   //#region Unified 3-in-1 Transaction Sheet (Say / Linear Minimalist)
   void _showUnifiedAddModal({
     VoiceExpenseResult? prefillFromVoice,
+    TransactionType? initialType,
+    String? initialAccountId,
   }) {
-    TransactionType activeType = prefillFromVoice != null
-        ? (prefillFromVoice.transactionType == 'Deposit'
-            ? TransactionType.income
-            : TransactionType.expense)
-        : TransactionType.expense;
+    TransactionType activeType = initialType ??
+        (prefillFromVoice != null
+            ? (prefillFromVoice.transactionType == 'Deposit'
+                ? TransactionType.income
+                : TransactionType.expense)
+            : TransactionType.expense);
 
     final availableAccounts = _accounts.where((a) => !a.isAll).toList();
-    String selectedAccountId = _selectedAccountId != 'all' && availableAccounts.any((a) => a.id == _selectedAccountId)
-        ? _selectedAccountId
+    String selectedAccountId = initialAccountId != null && availableAccounts.any((a) => a.id == initialAccountId)
+        ? initialAccountId
+        : (_selectedAccountId != 'all' && availableAccounts.any((a) => a.id == _selectedAccountId)
+            ? _selectedAccountId
+            : (availableAccounts.isNotEmpty ? availableAccounts.first.id : 'cash'));
+    String fromAccountId = (activeType == TransactionType.transfer && initialAccountId != null && availableAccounts.any((a) => a.id == initialAccountId))
+        ? initialAccountId
         : (availableAccounts.isNotEmpty ? availableAccounts.first.id : 'cash');
-    String fromAccountId = availableAccounts.isNotEmpty ? availableAccounts.first.id : 'cash';
-    String toAccountId = availableAccounts.length > 1 ? availableAccounts[1].id : (availableAccounts.isNotEmpty ? availableAccounts.first.id : 'bank');
+    String toAccountId = availableAccounts.length > 1
+        ? (availableAccounts.firstWhere((a) => a.id != fromAccountId, orElse: () => availableAccounts.last).id)
+        : (availableAccounts.isNotEmpty ? availableAccounts.first.id : 'bank');
 
     final amountController = TextEditingController(
       text: prefillFromVoice?.amount != null ? prefillFromVoice!.amount.toString() : '',
@@ -68,6 +77,12 @@ mixin _HomeTabDialogs on _HomeTabState {
 
     final amountFocusNode = FocusNode();
     final descriptionFocusNode = FocusNode();
+    bool shouldAutofocus = prefillFromVoice == null;
+    amountFocusNode.addListener(() {
+      if (!amountFocusNode.hasFocus) {
+        shouldAutofocus = false;
+      }
+    });
 
     _showAdaptiveBottomSheet(
       isScrollControlled: true,
@@ -86,6 +101,29 @@ mixin _HomeTabDialogs on _HomeTabState {
       builder: (context, isGlass, controller) {
         return StatefulBuilder(
           builder: (context, setState) {
+            if (shouldAutofocus) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                shouldAutofocus = false;
+              });
+            }
+
+            void returnToPage0() {
+              shouldAutofocus = false;
+              amountFocusNode.canRequestFocus = false;
+              descriptionFocusNode.canRequestFocus = false;
+              amountFocusNode.unfocus();
+              descriptionFocusNode.unfocus();
+              FocusScope.of(context).unfocus();
+              pageController.animateToPage(
+                0,
+                duration: const Duration(milliseconds: 320),
+                curve: Curves.easeInOutCubic,
+              ).then((_) {
+                amountFocusNode.canRequestFocus = true;
+                descriptionFocusNode.canRequestFocus = true;
+              });
+            }
+
             final isDarkMode = Theme.of(context).brightness == Brightness.dark;
             final isAr = Localizations.localeOf(context).languageCode == 'ar';
             final currencySymbol = currencySymbols[_currencyCode ?? 'USD'] ?? '\$';
@@ -282,11 +320,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                     categorySearchController.clear();
                   });
 
-                  pageController.animateToPage(
-                    0,
-                    duration: const Duration(milliseconds: 320),
-                    curve: Curves.easeInOutCubic,
-                  );
+                  returnToPage0();
 
                   MessageService.showSuccess(
                     context: context,
@@ -333,6 +367,9 @@ mixin _HomeTabDialogs on _HomeTabState {
             );
 
             void openWalletPicker(String target) {
+              shouldAutofocus = false;
+              amountFocusNode.unfocus();
+              descriptionFocusNode.unfocus();
               FocusScope.of(context).unfocus();
               HapticFeedback.selectionClick();
               setState(() {
@@ -398,17 +435,12 @@ mixin _HomeTabDialogs on _HomeTabState {
                               borderRadius: itemRadius,
                               onTap: () {
                                 HapticFeedback.selectionClick();
-                                FocusScope.of(context).unfocus();
                                 setState(() {
                                   selectedCategoryId = cat.id;
                                   categorySearchQuery = '';
                                   categorySearchController.clear();
                                 });
-                                pageController.animateToPage(
-                                  0,
-                                  duration: const Duration(milliseconds: 320),
-                                  curve: Curves.easeInOutCubic,
-                                );
+                                returnToPage0();
                               },
                               splashColor: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.04),
                               highlightColor: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.02),
@@ -483,33 +515,33 @@ mixin _HomeTabDialogs on _HomeTabState {
               onPopInvokedWithResult: (didPop, result) {
                 if (didPop) return;
                 if (currentPage != 0) {
-                  pageController.animateToPage(
-                    0,
-                    duration: const Duration(milliseconds: 320),
-                    curve: Curves.easeInOutCubic,
-                  );
+                  returnToPage0();
                 }
               },
               child: Directionality(
                 textDirection: isAr ? ui.TextDirection.rtl : ui.TextDirection.ltr,
-                child: Container(
-                  height: (screenHeight * 0.93).clamp(640.0, screenHeight - 28),
-                decoration: isGlass
-                    ? const BoxDecoration(color: Colors.transparent)
-                    : BoxDecoration(
-                        color: isDarkMode ? const Color(0xFF121214) : Colors.white,
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                        border: Border.all(
-                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-                          width: 1,
-                        ),
-                      ),
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 8,
-                  top: 0,
-                  left: 16,
-                  right: 16,
-                ),
+                child: Stack(
+                  children: [
+                    Container(
+                      height: (screenHeight * 0.93).clamp(640.0, screenHeight - 28),
+                    decoration: isGlass
+                        ? const BoxDecoration(color: Colors.transparent)
+                        : BoxDecoration(
+                            color: isDarkMode ? const Color(0xFF121214) : Colors.white,
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                            border: Border.all(
+                              color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                              width: 1,
+                            ),
+                          ),
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).viewInsets.bottom > 0
+                          ? MediaQuery.of(context).viewInsets.bottom
+                          : 8,
+                      top: 0,
+                      left: 16,
+                      right: 16,
+                    ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -534,6 +566,9 @@ mixin _HomeTabDialogs on _HomeTabState {
                           physics: const NeverScrollableScrollPhysics(),
                           onPageChanged: (idx) {
                             setState(() => currentPage = idx);
+                            if (idx != 0) {
+                              shouldAutofocus = false;
+                            }
                           },
                           children: [
                             // ─── PAGE 0: MAIN TRANSACTION FORM ───
@@ -713,8 +748,10 @@ mixin _HomeTabDialogs on _HomeTabState {
                                   // Scrollable Form Content
                                   Expanded(
                                     child: SingleChildScrollView(
-                                      physics: const BouncingScrollPhysics(),
-                                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                                      physics: const AlwaysScrollableScrollPhysics(
+                                        parent: BouncingScrollPhysics(),
+                                      ),
+                                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.manual,
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.stretch,
                                         children: [
@@ -908,7 +945,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                                       controller: amountController,
                                       focusNode: amountFocusNode,
                                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                      autofocus: prefillFromVoice == null,
+                                      autofocus: shouldAutofocus,
                                       textAlign: TextAlign.center,
                                       cursorColor: themeColor,
                                       cursorWidth: 2.2,
@@ -1205,6 +1242,9 @@ mixin _HomeTabDialogs on _HomeTabState {
                                   ),
                                   InkWell(
                                     onTap: () {
+                                      shouldAutofocus = false;
+                                      amountFocusNode.unfocus();
+                                      descriptionFocusNode.unfocus();
                                       FocusScope.of(context).unfocus();
                                       HapticFeedback.selectionClick();
                                       setState(() => secondaryPageType = 'category');
@@ -1515,21 +1555,38 @@ mixin _HomeTabDialogs on _HomeTabState {
                                             });
                                           }
                                         },
-                                        borderRadius: BorderRadius.circular(20),
+                                        borderRadius: BorderRadius.circular(16),
                                         child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                                           decoration: BoxDecoration(
                                             color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                          child: Text(
-                                            DateFormat('d MMM yyyy', isAr ? 'ar' : 'en').format(selectedDate),
-                                            style: TextStyle(
-                                              fontSize: 14.5,
-                                              fontWeight: FontWeight.w600,
-                                              color: isDarkMode ? Colors.white : Colors.black,
-                                              letterSpacing: -0.2,
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(
+                                              color: isDarkMode
+                                                  ? Colors.white.withValues(alpha: 0.08)
+                                                  : Colors.black.withValues(alpha: 0.06),
+                                              width: 1,
                                             ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                DateFormat('d MMM yyyy', isAr ? 'ar' : 'en').format(selectedDate),
+                                                style: TextStyle(
+                                                  fontSize: 13.5,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: isDarkMode ? Colors.white : Colors.black87,
+                                                  letterSpacing: -0.2,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Icon(
+                                                Icons.keyboard_arrow_down_rounded,
+                                                size: 16,
+                                                color: isDarkMode ? Colors.white70 : Colors.black54,
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       );
@@ -1542,7 +1599,11 @@ mixin _HomeTabDialogs on _HomeTabState {
                         );
                       },
                     ),
-                const SizedBox(height: 16),
+                SizedBox(
+                  height: Platform.isIOS && amountFocusNode.hasFocus && MediaQuery.of(context).viewInsets.bottom > 0
+                      ? 56
+                      : 16,
+                ),
                                   ],
                                 ),
                               ),
@@ -1593,12 +1654,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                                         ),
                                   onTap: () {
                                     HapticFeedback.selectionClick();
-                                    FocusScope.of(context).unfocus();
-                                    pageController.animateToPage(
-                                      0,
-                                      duration: const Duration(milliseconds: 320),
-                                      curve: Curves.easeInOutCubic,
-                                    );
+                                    returnToPage0();
                                   },
                                   child: Icon(
                                     isAr ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded,
@@ -1612,12 +1668,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                                   child: InkWell(
                                     onTap: () {
                                       HapticFeedback.selectionClick();
-                                      FocusScope.of(context).unfocus();
-                                      pageController.animateToPage(
-                                        0,
-                                        duration: const Duration(milliseconds: 320),
-                                        curve: Curves.easeInOutCubic,
-                                      );
+                                      returnToPage0();
                                     },
                                     borderRadius: BorderRadius.circular(21),
                                     child: Container(
@@ -1983,12 +2034,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                                         ),
                                   onTap: () {
                                     HapticFeedback.selectionClick();
-                                    FocusScope.of(context).unfocus();
-                                    pageController.animateToPage(
-                                      0,
-                                      duration: const Duration(milliseconds: 320),
-                                      curve: Curves.easeInOutCubic,
-                                    );
+                                    returnToPage0();
                                   },
                                   child: Icon(
                                     isAr ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded,
@@ -2002,12 +2048,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                                   child: InkWell(
                                     onTap: () {
                                       HapticFeedback.selectionClick();
-                                      FocusScope.of(context).unfocus();
-                                      pageController.animateToPage(
-                                        0,
-                                        duration: const Duration(milliseconds: 320),
-                                        curve: Curves.easeInOutCubic,
-                                      );
+                                      returnToPage0();
                                     },
                                     borderRadius: BorderRadius.circular(21),
                                     child: Container(
@@ -2081,7 +2122,6 @@ mixin _HomeTabDialogs on _HomeTabState {
                                       child: InkWell(
                                         onTap: () {
                                           HapticFeedback.selectionClick();
-                                          FocusScope.of(context).unfocus();
                                           setState(() {
                                             if (walletPickTarget == 'from') {
                                               fromAccountId = acc.id;
@@ -2091,11 +2131,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                                               selectedAccountId = acc.id;
                                             }
                                           });
-                                          pageController.animateToPage(
-                                            0,
-                                            duration: const Duration(milliseconds: 320),
-                                            curve: Curves.easeInOutCubic,
-                                          );
+                                          returnToPage0();
                                         },
                                         borderRadius: BorderRadius.circular(18),
                                         child: Container(
@@ -2179,7 +2215,16 @@ mixin _HomeTabDialogs on _HomeTabState {
           ],
         ),
       ),
-    ),
+
+      // Floating Glass "Next" button above iOS numeric keyboard only
+      IosKeyboardFloatingButton(
+        focusNode: amountFocusNode,
+        isVisible: () => currentPage == 0,
+        isGlass: isGlass,
+      ),
+    ],
+  ),
+),
   );
   },
 );
@@ -2397,7 +2442,10 @@ mixin _HomeTabDialogs on _HomeTabState {
               }
             }
 
-            return Container(
+            return IosKeyboardFloatingButton.wrap(
+              focusNode: amountFocusNode,
+              isGlass: isGlass,
+              child: Container(
               decoration: isGlass
                   ? const BoxDecoration(color: Colors.transparent)
                   : BoxDecoration(
@@ -2647,8 +2695,9 @@ mixin _HomeTabDialogs on _HomeTabState {
                   ),
                 ),
               ),
-            );
-          },
+            ),
+          );
+        },
         ),
       );
     },
@@ -2772,7 +2821,10 @@ mixin _HomeTabDialogs on _HomeTabState {
               );
             }
 
-            return Container(
+            return IosKeyboardFloatingButton.wrap(
+              focusNode: balanceFocusNode,
+              isGlass: isGlass,
+              child: Container(
               decoration: isGlass
                   ? const BoxDecoration(color: Colors.transparent)
                   : BoxDecoration(
@@ -3089,8 +3141,9 @@ mixin _HomeTabDialogs on _HomeTabState {
                   ),
                 ),
               ),
-            );
-          },
+            ),
+          );
+        },
         ),
       );
     },
@@ -3664,6 +3717,444 @@ mixin _HomeTabDialogs on _HomeTabState {
     );
   }
 
+  //#endregion
+
+  //#region Adjust Balance Modal
+  void _showAdjustBalanceModal(AccountItem acc, bool isDarkMode, bool isAr) {
+    final amountController = TextEditingController(
+      text: _formatThousands(acc.balance.toInt().toString()),
+    );
+    final amountFocusNode = FocusNode();
+
+    _showAdaptiveBottomSheet(
+      isScrollControlled: true,
+      showDragHandle: false,
+      initialState: GlassSheetState.half,
+      detents: const {GlassSheetDetent.medium, GlassSheetDetent.large},
+      focusNodes: [amountFocusNode],
+      builder: (context, isGlass, controller) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final currencySymbol = currencySymbols[acc.currency] ?? acc.currency;
+
+            void submitAdjustBalance() {
+              final raw = _cleanNumberString(amountController.text.trim());
+              final newBal = double.tryParse(raw);
+              if (newBal == null) return;
+              HapticFeedback.selectionClick();
+              _updateAccountBalance(acc.id, newBal);
+              Navigator.pop(context);
+              MessageService.showSuccess(
+                context: context,
+                message: isAr
+                    ? 'تم تحديث رصيد "${acc.name}" بنجاح'
+                    : 'Balance updated successfully for "${acc.name}"',
+              );
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Header
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  acc.icon,
+                                  size: 18,
+                                  color: isDarkMode ? Colors.white : Colors.black,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isAr ? 'تعديل الرصيد' : 'Adjust Balance',
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w800,
+                                      color: isDarkMode ? Colors.white : Colors.black,
+                                    ),
+                                  ),
+                                  Text(
+                                    acc.name,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              Icons.close_rounded,
+                              color: isDarkMode ? Colors.white70 : Colors.black87,
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+
+                      // Current balance info pill
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.04),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              isAr ? 'الرصيد الحالي' : 'Current Balance',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                              ),
+                            ),
+                            Text(
+                              _formatAmount(acc.balance, currencyCode: acc.currency),
+                              textDirection: ui.TextDirection.ltr,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: isDarkMode ? Colors.white : Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+
+                      // New Balance Input
+                      Text(
+                        isAr ? 'الرصيد الجديد' : 'New Balance',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: amountController,
+                        focusNode: amountFocusNode,
+                        autofocus: true,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [_ThousandsSeparatorInputFormatter()],
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: isDarkMode ? Colors.white : Colors.black,
+                        ),
+                        decoration: InputDecoration(
+                          prefixText: '$currencySymbol ',
+                          prefixStyle: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                          ),
+                          filled: true,
+                          fillColor: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.06),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Save Button
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: submitAdjustBalance,
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: isDarkMode ? Colors.white : Colors.black,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              isAr ? 'تحديث الرصيد' : 'Update Balance',
+                              style: TextStyle(
+                                color: isDarkMode ? Colors.black : Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+  //#endregion
+
+  //#region Edit Account Modal
+  void _showEditAccountModal(AccountItem acc, bool isDarkMode, bool isAr) {
+    final nameController = TextEditingController(text: acc.name);
+    final nameFocusNode = FocusNode();
+    IconData selectedIcon = acc.icon;
+
+    final availableIcons = <IconData>[
+      Icons.account_balance_rounded,
+      Icons.payments_rounded,
+      Icons.phone_iphone_rounded,
+      Icons.credit_card_rounded,
+      Icons.savings_rounded,
+      Icons.account_balance_wallet_rounded,
+      Icons.storefront_rounded,
+      Icons.currency_exchange_rounded,
+      Icons.monetization_on_rounded,
+      Icons.trending_up_rounded,
+      Icons.savings_outlined,
+      Icons.attach_money_rounded,
+    ];
+
+    _showAdaptiveBottomSheet(
+      isScrollControlled: true,
+      showDragHandle: false,
+      initialState: GlassSheetState.half,
+      detents: const {GlassSheetDetent.medium, GlassSheetDetent.large},
+      focusNodes: [nameFocusNode],
+      builder: (context, isGlass, controller) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            void submitEditAccount() {
+              final newName = nameController.text.trim();
+              if (newName.isEmpty) return;
+              HapticFeedback.selectionClick();
+              _updateAccountDetails(acc.id, newName, selectedIcon);
+              Navigator.pop(context);
+              MessageService.showSuccess(
+                context: context,
+                message: isAr
+                    ? 'تم تعديل بيانات "$newName" بنجاح'
+                    : 'Account "$newName" updated successfully',
+              );
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Header
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  selectedIcon,
+                                  size: 18,
+                                  color: isDarkMode ? Colors.white : Colors.black,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isAr ? 'تعديل الحساب' : 'Edit Account',
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w800,
+                                      color: isDarkMode ? Colors.white : Colors.black,
+                                    ),
+                                  ),
+                                  Text(
+                                    acc.name,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              Icons.close_rounded,
+                              color: isDarkMode ? Colors.white70 : Colors.black87,
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+
+                      // Account Name Label
+                      Text(
+                        isAr ? 'اسم الحساب / المحفظة' : 'Account Name',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: nameController,
+                        focusNode: nameFocusNode,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: isDarkMode ? Colors.white : Colors.black,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: isAr ? 'أدخل اسم الحساب' : 'Enter account name',
+                          filled: true,
+                          fillColor: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.06),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+
+                      // Icon Selector Label
+                      Text(
+                        isAr ? 'أيقونة الحساب' : 'Account Icon',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: availableIcons.map((icon) {
+                          final isIconSelected = icon.codePoint == selectedIcon.codePoint;
+                          return InkWell(
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              setModalState(() {
+                                selectedIcon = icon;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(14),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: isIconSelected
+                                    ? (isDarkMode ? Colors.white : Colors.black)
+                                    : (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: isIconSelected
+                                      ? (isDarkMode ? Colors.white : Colors.black)
+                                      : Colors.transparent,
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Icon(
+                                icon,
+                                size: 20,
+                                color: isIconSelected
+                                    ? (isDarkMode ? Colors.black : Colors.white)
+                                    : (isDarkMode ? Colors.white70 : Colors.black87),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Save Button
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: submitEditAccount,
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: isDarkMode ? Colors.white : Colors.black,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              isAr ? 'حفظ التعديلات' : 'Save Changes',
+                              style: TextStyle(
+                                color: isDarkMode ? Colors.black : Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
   //#endregion
 }
 
