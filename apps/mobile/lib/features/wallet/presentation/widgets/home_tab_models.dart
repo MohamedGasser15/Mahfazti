@@ -39,3 +39,19 @@ class AccountItem {
     this.currency = 'EGP',
   });
 }
+
+const List<IconData> kAvailableAccountIcons = [
+  Icons.account_balance_rounded,
+  Icons.payments_rounded,
+  Icons.phone_iphone_rounded,
+  Icons.credit_card_rounded,
+  Icons.savings_rounded,
+  Icons.account_balance_wallet_rounded,
+  Icons.storefront_rounded,
+  Icons.currency_exchange_rounded,
+  Icons.monetization_on_rounded,
+  Icons.trending_up_rounded,
+  Icons.savings_outlined,
+  Icons.attach_money_rounded,
+];
+

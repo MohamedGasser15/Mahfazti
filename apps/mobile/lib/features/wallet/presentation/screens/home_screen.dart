@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:real_liquid_glass/real_liquid_glass.dart';
+import 'package:neo_cupertino/neo_cupertino.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/utils/navigation_service.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/analytics_screen.dart';

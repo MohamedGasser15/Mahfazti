@@ -2,14 +2,12 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
-import 'package:cupertino_calendar_picker/cupertino_calendar_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:ios_adaptive_context_menu/ios_adaptive_context_menu.dart';
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
+import 'package:neo_cupertino/neo_cupertino.dart';
 import 'package:my_wallet/core/constants/currency_constants.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/hide_balance_service.dart';
@@ -19,8 +17,6 @@ import 'package:my_wallet/core/utils/api_error_handler.dart';
 import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/navigation_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
-import 'package:my_wallet/core/widgets/ios_keyboard_floating_button.dart';
-import 'package:my_wallet/core/widgets/ios_hold_context_menu.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:my_wallet/features/settings/presentation/screens/categories_management_screen.dart';
@@ -223,8 +219,9 @@ abstract class _HomeTabState extends State<HomeTab> {
     IconData getAccountIcon(String id, IconData fallback) {
       final codePoint = _accountIconsOverrides[id];
       if (codePoint != null) {
-        // ignore: non_const_argument_for_const_parameter
-        return IconData(codePoint, fontFamily: 'MaterialIcons');
+        for (final icon in kAvailableAccountIcons) {
+          if (icon.codePoint == codePoint) return icon;
+        }
       }
       return fallback;
     }
@@ -757,7 +754,7 @@ abstract class _HomeTabState extends State<HomeTab> {
 
     NavigationService.isModalOpenNotifier.value = true;
     try {
-      if (isIOS) {
+      if (isIOS && PlatformInfo.isIOS26OrHigher()) {
         final sheetController = controller ?? GlassModalSheetController();
         final glassSettings = isDarkMode
             ? const LiquidGlassSettings(

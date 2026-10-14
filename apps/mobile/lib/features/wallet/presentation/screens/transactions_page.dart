@@ -9,6 +9,8 @@ import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/core/widgets/app_shimmer.dart';
 import 'package:my_wallet/core/widgets/app_states.dart';
+import 'dart:io';
+import 'package:neo_cupertino/neo_cupertino.dart';
 import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
 
@@ -340,12 +342,23 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
                 style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54),
               ),
               onTap: () async {
-                final date = await showDatePicker(
-                  context: context,
-                  initialDate: tempFromDate ?? DateTime.now(),
-                  firstDate: DateTime(2000),
-                  lastDate: DateTime.now(),
-                );
+                DateTime? date;
+                if (Platform.isIOS) {
+                  date = await showCupertinoCalendarPicker(
+                    context,
+                    widgetRenderBox: null,
+                    initialDate: tempFromDate ?? DateTime.now(),
+                    minimumDate: DateTime(2000),
+                    maximumDate: DateTime.now(),
+                  );
+                } else {
+                  date = await showDatePicker(
+                    context: context,
+                    initialDate: tempFromDate ?? DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime.now(),
+                  );
+                }
                 if (date != null) {
                   setState(() => tempFromDate = date);
                 }
@@ -359,12 +372,23 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
                 style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54),
               ),
               onTap: () async {
-                final date = await showDatePicker(
-                  context: context,
-                  initialDate: tempToDate ?? DateTime.now(),
-                  firstDate: DateTime(2000),
-                  lastDate: DateTime.now(),
-                );
+                DateTime? date;
+                if (Platform.isIOS) {
+                  date = await showCupertinoCalendarPicker(
+                    context,
+                    widgetRenderBox: null,
+                    initialDate: tempToDate ?? DateTime.now(),
+                    minimumDate: DateTime(2000),
+                    maximumDate: DateTime.now(),
+                  );
+                } else {
+                  date = await showDatePicker(
+                    context: context,
+                    initialDate: tempToDate ?? DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime.now(),
+                  );
+                }
                 if (date != null) {
                   setState(() => tempToDate = date);
                 }

@@ -1,5 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:neo_cupertino/neo_cupertino.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/features/wallet/data/models/voice_expense_model.dart';
@@ -174,7 +175,7 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              widget.isInHero
+              (widget.isInHero && Platform.isIOS)
                   ? GestureDetector(
                       onLongPress: _toggleLanguage,
                       child: GlassButton.custom(

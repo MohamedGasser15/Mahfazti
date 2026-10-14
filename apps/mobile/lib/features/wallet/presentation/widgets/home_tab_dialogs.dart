@@ -197,7 +197,7 @@ mixin _HomeTabDialogs on _HomeTabState {
               final normalized = _cleanNumberString(amountController.text);
               final amount = double.tryParse(normalized);
               if (amount == null || amount <= 0) {
-                MessageService.showError(
+                MessageService.showErrorAlert(
                   context: context,
                   message: context.l10n.enterValidAmount,
                 );
@@ -206,7 +206,7 @@ mixin _HomeTabDialogs on _HomeTabState {
 
               if (isTransfer) {
                 if (fromAccountId == toAccountId) {
-                  MessageService.showError(
+                  MessageService.showErrorAlert(
                     context: context,
                     message: isAr
                         ? 'لا يمكن التحويل لنفس الحساب'
@@ -228,7 +228,7 @@ mixin _HomeTabDialogs on _HomeTabState {
               }
 
               if (selectedCategoryId == null) {
-                MessageService.showError(
+                MessageService.showErrorAlert(
                   context: context,
                   message: context.l10n.selectCategory,
                 );
@@ -257,7 +257,7 @@ mixin _HomeTabDialogs on _HomeTabState {
                 );
               } catch (e) {
                 if (!context.mounted) return;
-                MessageService.showError(
+                MessageService.showErrorAlert(
                   context: context,
                   message: context.l10n.failedToAddTransaction(e.toString()),
                 );
@@ -3934,20 +3934,7 @@ mixin _HomeTabDialogs on _HomeTabState {
     final nameFocusNode = FocusNode();
     IconData selectedIcon = acc.icon;
 
-    final availableIcons = <IconData>[
-      Icons.account_balance_rounded,
-      Icons.payments_rounded,
-      Icons.phone_iphone_rounded,
-      Icons.credit_card_rounded,
-      Icons.savings_rounded,
-      Icons.account_balance_wallet_rounded,
-      Icons.storefront_rounded,
-      Icons.currency_exchange_rounded,
-      Icons.monetization_on_rounded,
-      Icons.trending_up_rounded,
-      Icons.savings_outlined,
-      Icons.attach_money_rounded,
-    ];
+    const availableIcons = kAvailableAccountIcons;
 
     _showAdaptiveBottomSheet(
       isScrollControlled: true,
