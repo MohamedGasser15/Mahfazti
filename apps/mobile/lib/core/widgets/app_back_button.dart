@@ -1,7 +1,8 @@
 import 'dart:io';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:neo_cupertino/neo_cupertino.dart';
 
 /// Adaptive back button that renders a circular liquid glass button on iOS
 /// and a clean standard Material button on Android.
@@ -31,7 +32,9 @@ class AppGlassBackButton extends StatelessWidget {
       }
     }
 
-    if (isIOS) {
+    final isIOS26 = PlatformInfo.isIOS26OrHigher();
+
+    if (isIOS26) {
       return Center(
         child: GlassButton(
           width: 38,
@@ -50,6 +53,30 @@ class AppGlassBackButton extends StatelessWidget {
             icon,
             size: 15,
             color: dark ? Colors.white : const Color(0xFF09090B),
+          ),
+        ),
+      );
+    }
+
+    if (isIOS) {
+      return Center(
+        child: CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: handleTap,
+          child: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: dark
+                  ? CupertinoColors.systemGrey6.darkColor
+                  : CupertinoColors.systemGrey6,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              size: 16,
+              color: dark ? CupertinoColors.white : CupertinoColors.black,
+            ),
           ),
         ),
       );

@@ -1,12 +1,66 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:neo_cupertino/neo_cupertino.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/themes/app_colors.dart';
 import 'package:my_wallet/core/themes/app_text_styles.dart';
 
 class MessageService {
   static OverlayEntry? _currentEntry;
+
+  /// Shows the exact native iOS 26 Alert Dialog with pixel-perfect
+  /// Light Mode (#ECECEF) and Dark Mode (#1C1C1E) matching the reference design on iOS,
+  /// or a clean Material AlertDialog on Android.
+  static Future<void> showErrorAlert({
+    required BuildContext context,
+    required String message,
+    String? title,
+    String? buttonText,
+    VoidCallback? onConfirm,
+  }) async {
+    final localizedMsg = localizeMessage(context: context, rawMessage: message);
+    final isAr = context.isArabic;
+    final alertTitle = title ?? (isAr ? 'تنبيه' : 'Alert');
+    final confirmText = buttonText ?? (isAr ? 'حسناً' : 'OK');
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (Platform.isIOS) {
+      await NeoNativeAlert.show(
+        context: context,
+        title: alertTitle,
+        message: localizedMsg,
+        isDark: isDark,
+        actions: [
+          NeoDialogAction(
+            title: confirmText,
+            role: NeoDialogActionRole.primary,
+            onPressed: () {
+              onConfirm?.call();
+            },
+          ),
+        ],
+      );
+    } else {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(alertTitle),
+          content: Text(localizedMsg),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                onConfirm?.call();
+              },
+              child: Text(confirmText),
+            ),
+          ],
+        ),
+      );
+    }
+  }
 
   static void showSuccess({
     required BuildContext context,
@@ -23,7 +77,12 @@ class MessageService {
   static void showError({
     required BuildContext context,
     required String message,
+    bool asAlert = false,
   }) {
+    if (asAlert) {
+      showErrorAlert(context: context, message: message);
+      return;
+    }
     _show(
       context: context,
       message: message,
