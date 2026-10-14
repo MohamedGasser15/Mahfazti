@@ -1,8 +1,7 @@
-// features/profile/presentation/screens/profile_edit_screen.dart
-
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:neo_cupertino/neo_cupertino.dart';
 import 'package:my_wallet/core/widgets/app_back_button.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
@@ -378,30 +377,50 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Center(
-                child: GlassButton.custom(
-                  onTap: _resetForm,
-                  height: 32,
-                  shape: const LiquidRoundedSuperellipse(borderRadius: 16),
-                  useOwnLayer: true,
-                  settings: LiquidGlassSettings(
-                    thickness: 14,
-                    blur: 10,
-                    glassColor: isDarkMode
-                        ? Colors.white.withValues(alpha: 0.12)
-                        : Colors.white.withValues(alpha: 0.85),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
+                child: Platform.isIOS
+                    ? GlassButton.custom(
+                        onTap: _resetForm,
+                        height: 32,
+                        shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+                        useOwnLayer: true,
+                        settings: LiquidGlassSettings(
+                          thickness: 14,
+                          blur: 10,
+                          glassColor: isDarkMode
+                              ? Colors.white.withValues(alpha: 0.12)
+                              : Colors.white.withValues(alpha: 0.85),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.undo_rounded,
+                                size: 13,
+                                color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                l10n.reset,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : TextButton.icon(
+                        onPressed: _resetForm,
+                        icon: Icon(
                           Icons.undo_rounded,
-                          size: 13,
+                          size: 14,
                           color: isDarkMode ? Colors.white : const Color(0xFF09090B),
                         ),
-                        const SizedBox(width: 4),
-                        Text(
+                        label: Text(
                           l10n.reset,
                           style: TextStyle(
                             fontSize: 12,
@@ -409,10 +428,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                             color: isDarkMode ? Colors.white : const Color(0xFF09090B),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
+                      ),
               ),
             ),
         ],

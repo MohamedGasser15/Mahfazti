@@ -4,7 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:neo_cupertino/neo_cupertino.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/utils/navigation_service.dart';
@@ -45,7 +45,7 @@ class CategoriesManagementScreen extends StatefulWidget {
 
     NavigationService.isModalOpenNotifier.value = true;
     try {
-      if (Platform.isIOS) {
+      if (Platform.isIOS && PlatformInfo.isIOS26OrHigher()) {
         final sheetController = GlassModalSheetController();
         final glassSettings = isDarkMode
             ? const LiquidGlassSettings(
@@ -263,7 +263,7 @@ class _CategoriesManagementScreenState
 
     NavigationService.isModalOpenNotifier.value = true;
     try {
-      if (Platform.isIOS) {
+      if (Platform.isIOS && PlatformInfo.isIOS26OrHigher()) {
         final sheetController = GlassModalSheetController();
         final glassSettings = isDarkMode
             ? const LiquidGlassSettings(
@@ -602,7 +602,7 @@ class _CategoriesManagementScreenState
         actions: [
           Padding(
             padding: const EdgeInsetsDirectional.only(end: 12),
-            child: Platform.isIOS
+            child: PlatformInfo.isIOS26OrHigher()
                 ? GlassButton(
                     width: 38,
                     height: 38,
@@ -626,6 +626,31 @@ class _CategoriesManagementScreenState
                           isDarkMode ? Colors.white : const Color(0xFF09090B),
                     ),
                   )
+                : Platform.isIOS
+                    ? CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        onPressed: () {
+                          HapticFeedback.selectionClick();
+                          _showAddCategorySheet(isDarkMode);
+                        },
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: isDarkMode
+                                ? CupertinoColors.systemGrey6.darkColor
+                                : CupertinoColors.systemGrey6,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            CupertinoIcons.add,
+                            size: 19,
+                            color: isDarkMode
+                                ? CupertinoColors.white
+                                : CupertinoColors.black,
+                          ),
+                        ),
+                      )
                 : IconButton(
                     onPressed: () {
                       HapticFeedback.selectionClick();
@@ -667,13 +692,13 @@ class _CategoriesManagementScreenState
                     left: 16,
                     right: 16,
                     top: 12,
-                    bottom: Platform.isIOS
+                    bottom: PlatformInfo.isIOS26OrHigher()
                         ? MediaQuery.of(context).padding.bottom + 84
                         : MediaQuery.of(context).padding.bottom + 24,
                   ),
                   children: [
-                    // Top Search Bar (Android only)
-                    if (!Platform.isIOS) ...[
+                    // Top Search Bar (iOS < 26 & Android)
+                    if (!PlatformInfo.isIOS26OrHigher()) ...[
                       _buildAndroidSearchBar(
                         isDarkMode: isDarkMode,
                         cardBg: cardBg,
@@ -955,8 +980,8 @@ class _CategoriesManagementScreenState
                 ],
               ),
 
-            // Floating Bottom Search Bar (Only on iOS)
-            if (Platform.isIOS)
+            // Floating Bottom Search Bar (Only on iOS 26+)
+            if (PlatformInfo.isIOS26OrHigher())
               Positioned(
                 left: 0,
                 right: 0,

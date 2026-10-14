@@ -2,8 +2,7 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:ios_adaptive_context_menu/ios_adaptive_context_menu.dart';
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:neo_cupertino/neo_cupertino.dart';
 import 'package:my_wallet/core/constants/app_routes.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/app_lock_service.dart';
@@ -476,11 +475,11 @@ class _SettingsContentState extends State<SettingsContent> {
     required bool isDarkMode,
     Color? activeColor,
   }) {
-    if (!Platform.isIOS) {
+    if (!Platform.isIOS || !PlatformInfo.isIOS26OrHigher()) {
       return CupertinoSwitch(
         value: value,
         activeTrackColor: activeColor ??
-            (isDarkMode ? Colors.white : const Color(0xFF09090B)),
+            (isDarkMode ? CupertinoColors.activeGreen : const Color(0xFF10B981)),
         thumbColor: value
             ? (isDarkMode ? const Color(0xFF09090B) : Colors.white)
             : null,
@@ -523,6 +522,7 @@ class _SettingsContentState extends State<SettingsContent> {
   // Theme Dropdown (Native iOS UIMenu on iOS / Material PopupMenuButton on Android)
   Widget _buildThemeDropdown(bool isDarkMode) {
     final l10n = context.l10n;
+    final isIOS = Platform.isIOS;
     String themeLabel;
     if (_currentTheme == ThemeService.dark) {
       themeLabel = l10n.dark;
@@ -532,62 +532,221 @@ class _SettingsContentState extends State<SettingsContent> {
       themeLabel = l10n.system;
     }
 
-    return Container(
-      height: 32,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
-          width: 1,
+    if (isIOS) {
+      return Container(
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+            width: 1,
+          ),
+        ),
+        child: IosSingleTapContextMenu(
+          actions: [
+            IosContextMenuAction(
+              id: ThemeService.light,
+              title: l10n.light,
+              iconSystemName: 'sun.max',
+              showTrailingCheckmark: _currentTheme == ThemeService.light,
+            ),
+            IosContextMenuAction(
+              id: ThemeService.dark,
+              title: l10n.dark,
+              iconSystemName: 'moon',
+              showTrailingCheckmark: _currentTheme == ThemeService.dark,
+            ),
+            const IosContextMenuDivider(),
+            IosContextMenuAction(
+              id: ThemeService.system,
+              title: l10n.system,
+              iconSystemName: 'circle.lefthalf.filled',
+              showTrailingCheckmark: _currentTheme == ThemeService.system,
+            ),
+          ],
+          onSelected: (id) {
+            HapticFeedback.selectionClick();
+            setState(() => _currentTheme = id);
+            _setTheme(id);
+          },
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                themeLabel,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 16,
+                color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Android / Other Platforms: Styled Material PopupMenuButton
+    return Theme(
+      data: Theme.of(context).copyWith(
+        popupMenuTheme: PopupMenuThemeData(
+          color: isDarkMode ? const Color(0xFF1E1E24) : Colors.white,
+          surfaceTintColor: Colors.transparent,
+          elevation: 8,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: isDarkMode ? const Color(0xFF2E2E36) : const Color(0xFFE4E4E7),
+              width: 1,
+            ),
+          ),
+          shadowColor: Colors.black.withValues(alpha: 0.25),
         ),
       ),
-      child: IosSingleTapContextMenu(
-        actions: [
-          IosContextMenuAction(
-            id: ThemeService.light,
-            title: l10n.light,
-            iconSystemName: 'sun.max',
-            showTrailingCheckmark: _currentTheme == ThemeService.light,
+      child: PopupMenuButton<String>(
+        tooltip: themeLabel,
+        offset: const Offset(0, 36),
+        position: PopupMenuPosition.under,
+        elevation: 8,
+        color: isDarkMode ? const Color(0xFF1E1E24) : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: isDarkMode ? const Color(0xFF2E2E36) : const Color(0xFFE4E4E7),
+            width: 1,
           ),
-          IosContextMenuAction(
-            id: ThemeService.dark,
-            title: l10n.dark,
-            iconSystemName: 'moon',
-            showTrailingCheckmark: _currentTheme == ThemeService.dark,
-          ),
-          const IosContextMenuDivider(),
-          IosContextMenuAction(
-            id: ThemeService.system,
-            title: l10n.system,
-            iconSystemName: 'circle.lefthalf.filled',
-            showTrailingCheckmark: _currentTheme == ThemeService.system,
-          ),
-        ],
+        ),
+        splashRadius: 18,
+        padding: EdgeInsets.zero,
         onSelected: (id) {
           HapticFeedback.selectionClick();
           setState(() => _currentTheme = id);
           _setTheme(id);
         },
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              themeLabel,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+        itemBuilder: (context) => [
+          PopupMenuItem<String>(
+            value: ThemeService.light,
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.light,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: _currentTheme == ThemeService.light ? FontWeight.w700 : FontWeight.w500,
+                      color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                    ),
+                  ),
+                ),
+                if (_currentTheme == ThemeService.light) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.check_rounded,
+                    size: 18,
+                    color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          PopupMenuItem<String>(
+            value: ThemeService.dark,
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.dark,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: _currentTheme == ThemeService.dark ? FontWeight.w700 : FontWeight.w500,
+                      color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                    ),
+                  ),
+                ),
+                if (_currentTheme == ThemeService.dark) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.check_rounded,
+                    size: 18,
+                    color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const PopupMenuDivider(height: 1),
+          PopupMenuItem<String>(
+            value: ThemeService.system,
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.system,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: _currentTheme == ThemeService.system ? FontWeight.w700 : FontWeight.w500,
+                      color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                    ),
+                  ),
+                ),
+                if (_currentTheme == ThemeService.system) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.check_rounded,
+                    size: 18,
+                    color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                themeLabel,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                ),
               ),
-            ),
-            const SizedBox(width: 4),
-            Icon(
-              Icons.keyboard_arrow_down_rounded,
-              size: 16,
-              color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
-            ),
-          ],
+              const SizedBox(width: 4),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 16,
+                color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1473,135 +1632,51 @@ class _SettingsContentState extends State<SettingsContent> {
   }
 
   void _showLogoutDialog(bool isDarkMode) {
-    final pureRed = isDarkMode ? const Color(0xFFEF4444) : const Color(0xFFDC2626);
-    final sheetBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: sheetBg,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          border: Border(
-            top: BorderSide(
-              color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-              width: 1,
-            ),
+    if (Platform.isIOS) {
+      NeoAlertDialog.show(
+        context: context,
+        title: context.l10n.logout,
+        message: context.l10n.logoutConfirmation,
+        actions: [
+          NeoDialogAction(
+            title: context.l10n.cancel,
+            role: NeoDialogActionRole.cancel,
+            onPressed: () {},
           ),
-        ),
-        padding: EdgeInsets.fromLTRB(
-          24,
-          14,
-          24,
-          24 + MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).padding.bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
-                borderRadius: BorderRadius.circular(2),
-              ),
+          NeoDialogAction(
+            title: context.l10n.logout,
+            role: NeoDialogActionRole.destructive,
+            onPressed: () {
+              _logout();
+            },
+          ),
+        ],
+      );
+    } else {
+      showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(context.l10n.logout),
+          content: Text(context.l10n.logoutConfirmation),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(context.l10n.cancel),
             ),
-            const SizedBox(height: 24),
-
-            // Icon
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: pureRed.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.logout_rounded,
-                size: 30,
-                color: pureRed,
-              ),
-            ),
-            const SizedBox(height: 18),
-
-            Text(
-              context.l10n.logout,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.3,
-                color: isDarkMode ? Colors.white : const Color(0xFF09090B),
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            Text(
-              context.l10n.logoutConfirmation,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 28),
-
-            // Confirm Logout
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _logout();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: pureRed,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 0,
-                ),
-                child: Text(
-                  context.l10n.logout,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            // Cancel button
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () => Navigator.pop(context),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: Text(
-                  context.l10n.cancel,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
-                  ),
-                ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _logout();
+              },
+              child: Text(
+                context.l10n.logout,
+                style: const TextStyle(color: Colors.red),
               ),
             ),
           ],
         ),
-      ),
-    );
+      );
+    }
   }
 
   void _logout() async {
