@@ -11,13 +11,10 @@ PODS:
   - flutter_facebook_auth (7.1.5):
     - FBSDKLoginKit (= 18.0.2)
     - Flutter
-  - ios_adaptive_context_menu (0.1.0):
-    - Flutter
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
   - flutter_facebook_auth (from `.symlinks/plugins/flutter_facebook_auth/ios`)
-  - ios_adaptive_context_menu (from `.symlinks/plugins/ios_adaptive_context_menu/ios`)
 
 SPEC REPOS:
   trunk:
@@ -31,8 +28,6 @@ EXTERNAL SOURCES:
     :path: Flutter
   flutter_facebook_auth:
     :path: ".symlinks/plugins/flutter_facebook_auth/ios"
-  ios_adaptive_context_menu:
-    :path: ".symlinks/plugins/ios_adaptive_context_menu/ios"
 
 SPEC CHECKSUMS:
   FBAEMKit: 56a4f5a9607957b547b6458b17a98c5bb2736367
@@ -41,7 +36,6 @@ SPEC CHECKSUMS:
   FBSDKLoginKit: 6a70798793e499335a98fab1a758d7da34af196e
   Flutter: 71a624a5bc0c04062bf19101d501e466baf2fb47
   flutter_facebook_auth: fa3b69b1df0831d2178fe87a05ee2d7d0156db70
-  ios_adaptive_context_menu: 66dd9a682d15e86be58a3b18a584435409d1460f
 
 PODFILE CHECKSUM: 6a3e7f0189fd7a5e78fec5ccc3f9d3b82f9ef438
 
