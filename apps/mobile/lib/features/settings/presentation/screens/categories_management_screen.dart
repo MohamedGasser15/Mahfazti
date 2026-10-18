@@ -36,109 +36,81 @@ class CategoriesManagementScreen extends StatefulWidget {
     Icons.work_rounded,
   ];
 
+  /// Public helper method called across the app (e.g. home_tab_dialogs) to show
+  /// the Add Category modal sheet with native iOS Liquid Glass styling.
   static Future<void> showAddCategoryModal({
     required BuildContext context,
     required bool isDarkMode,
     required void Function(String name, int iconIndex, BuildContext sheetContext) onSave,
   }) async {
+    await _presentCategoryModal(
+      context: context,
+      isDarkMode: isDarkMode,
+      onSave: onSave,
+    );
+  }
+
+  /// Unified modal presentation using neo_cupertino's showGlassModalSheet on iOS
+  /// and standard bottom sheet on Android.
+  static Future<void> _presentCategoryModal({
+    required BuildContext context,
+    required bool isDarkMode,
+    Category? categoryToEdit,
+    String initialName = '',
+    int initialIconIndex = 0,
+    int expenseCount = 0,
+    required void Function(String name, int iconIndex, BuildContext sheetContext) onSave,
+    void Function(BuildContext sheetContext)? onDelete,
+  }) async {
     final focusNode = FocusNode();
 
-    NavigationService.isModalOpenNotifier.value = true;
-    try {
-      if (Platform.isIOS && PlatformInfo.isIOS26OrHigher()) {
-        final sheetController = GlassModalSheetController();
-        final glassSettings = isDarkMode
-            ? const LiquidGlassSettings(
-                thickness: 20,
-                blur: 28,
-                glassColor: Color(0x661E1E26),
-                refractiveIndex: 1.18,
-                lightIntensity: 0.90,
-                whitenStrength: 0.08,
-              )
-            : const LiquidGlassSettings(
-                thickness: 18,
-                blur: 24,
-                glassColor: Color(0xCCFFFFFF),
-                refractiveIndex: 1.12,
-                whitenStrength: 0.15,
-              );
-
-        await GlassModalSheet.show(
-          context: context,
-          useRootNavigator: true,
-          platformViewBackdrop: true,
-          controller: sheetController,
-          initialState: GlassSheetState.half,
-          halfSize: 0.69,
-          fullSize: 0.87,
-          detents: const {GlassSheetDetent.medium, GlassSheetDetent.large},
-          horizontalMargin: 5.0,
-          bottomMargin: 6.0,
-          topBorderRadius: 38.0,
-          bottomBorderRadius: 38.0,
-          fullTopBorderRadius: 24.0,
-          fullBottomBorderRadius: 0.0,
-          showDragIndicator: true,
-          dragIndicatorColor: isDarkMode
-              ? Colors.white.withValues(alpha: 0.35)
-              : const Color(0x33000000),
-          barrierColor: isDarkMode
-              ? const Color(0x80000000)
-              : const Color(0x33000000),
-          enableInteractionGlow: false,
-          enableSaturationGlow: false,
-          fillThreshold: 1.0,
-          expandedColor: Colors.transparent,
-          expandedDarkColor: Colors.transparent,
-          settings: glassSettings,
-          halfSettings: glassSettings,
-          fullSettings: glassSettings,
-          onStateChanged: (state) {
-            if (state == GlassSheetState.half) {
-              focusNode.unfocus();
-            }
-          },
-          builder: (sheetContext) {
-            return Material(
-              type: MaterialType.transparency,
-              child: _CategoryModalContent(
-                isDarkMode: isDarkMode,
-                controller: sheetController,
-                focusNode: focusNode,
-                isGlass: true,
-                initialName: '',
-                initialIconIndex: 0,
-                onSave: (name, iconIndex) {
-                  onSave(name, iconIndex, sheetContext);
-                },
-              ),
-            );
-          },
-        );
-      } else {
-        await showModalBottomSheet(
-          context: context,
-          useRootNavigator: true,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          builder: (sheetContext) {
-            return _CategoryModalContent(
-              isDarkMode: isDarkMode,
-              controller: null,
-              focusNode: focusNode,
-              isGlass: false,
-              initialName: '',
-              initialIconIndex: 0,
-              onSave: (name, iconIndex) {
-                onSave(name, iconIndex, sheetContext);
-              },
-            );
-          },
-        );
-      }
-    } finally {
-      NavigationService.isModalOpenNotifier.value = false;
+    if (Platform.isIOS) {
+      final sheetController = GlassModalSheetController();
+      await GlassModalSheet.present(
+        context: context,
+        controller: sheetController,
+        halfSize: 0.69,
+        fullSize: 0.87,
+        onStateChanged: (state) {
+          if (state == GlassSheetState.half) {
+            focusNode.unfocus();
+          }
+        },
+        builder: (sheetContext) => Material(
+          type: MaterialType.transparency,
+          child: _CategoryModalContent(
+            isDarkMode: isDarkMode,
+            controller: sheetController,
+            focusNode: focusNode,
+            isGlass: true,
+            categoryToEdit: categoryToEdit,
+            initialName: initialName,
+            initialIconIndex: initialIconIndex >= 0 ? initialIconIndex : 0,
+            expenseCount: expenseCount,
+            onSave: (name, iconIndex) => onSave(name, iconIndex, sheetContext),
+            onDelete: onDelete != null ? () => onDelete(sheetContext) : null,
+          ),
+        ),
+      );
+    } else {
+      await showModalBottomSheet(
+        context: context,
+        useRootNavigator: true,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (sheetContext) => _CategoryModalContent(
+          isDarkMode: isDarkMode,
+          controller: null,
+          focusNode: focusNode,
+          isGlass: false,
+          categoryToEdit: categoryToEdit,
+          initialName: initialName,
+          initialIconIndex: initialIconIndex >= 0 ? initialIconIndex : 0,
+          expenseCount: expenseCount,
+          onSave: (name, iconIndex) => onSave(name, iconIndex, sheetContext),
+          onDelete: onDelete != null ? () => onDelete(sheetContext) : null,
+        ),
+      );
     }
   }
 
@@ -155,16 +127,24 @@ class _CategoriesManagementScreenState
   final Map<int, IconData> _categoryCustomIcons = {};
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
+    _searchFocusNode.addListener(_onSearchFocusChanged);
     _loadData();
+  }
+
+  void _onSearchFocusChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _searchFocusNode.removeListener(_onSearchFocusChanged);
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -192,31 +172,30 @@ class _CategoriesManagementScreenState
       ];
 
   static Map<int, int> get _defaultSeedCounts => {
-        1: 8, // 8 expenses
-        2: 5, // 5 expenses
-        3: 12, // 12 expenses
-        4: 3, // 3 expenses
-        5: 6, // 6 expenses
-        6: 9, // 9 expenses
-        7: 2, // 2 expenses
-        8: 1, // 1 expense
-        9: 4, // 4 expenses
-        10: 0, // 0 -> hidden!
-        11: 1, // 1 expense
-        12: 3, // 3 expenses
-        13: 0, // 0 -> hidden!
-        14: 2, // 2 expenses
-        15: 0, // 0 -> hidden!
-        16: 2, // 2 expenses
-        17: 1, // 1 expense
-        18: 0, // 0 -> hidden!
-        19: 0, // 0 -> hidden!
-        20: 0, // 0 -> hidden!
+        1: 8,
+        2: 5,
+        3: 12,
+        4: 3,
+        5: 6,
+        6: 9,
+        7: 2,
+        8: 1,
+        9: 4,
+        10: 0,
+        11: 1,
+        12: 3,
+        13: 0,
+        14: 2,
+        15: 0,
+        16: 2,
+        17: 1,
+        18: 0,
+        19: 0,
+        20: 0,
       };
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    // Simulate slight instant load for smooth UX
     await Future.delayed(const Duration(milliseconds: 150));
     if (!mounted) return;
 
@@ -244,8 +223,6 @@ class _CategoriesManagementScreenState
   void _showAddCategorySheet(bool isDarkMode) => _showCategorySheet(isDarkMode);
 
   Future<void> _showCategorySheet(bool isDarkMode, {Category? categoryToEdit}) async {
-    final focusNode = FocusNode();
-
     final isAr = Directionality.of(context) == TextDirection.rtl;
     final initialName = categoryToEdit != null
         ? (isAr ? categoryToEdit.nameAr : categoryToEdit.nameEn)
@@ -261,149 +238,38 @@ class _CategoriesManagementScreenState
         ? (_categoryExpenseCounts[categoryToEdit.id] ?? 0)
         : 0;
 
-    NavigationService.isModalOpenNotifier.value = true;
-    try {
-      if (Platform.isIOS && PlatformInfo.isIOS26OrHigher()) {
-        final sheetController = GlassModalSheetController();
-        final glassSettings = isDarkMode
-            ? const LiquidGlassSettings(
-                thickness: 20,
-                blur: 28,
-                glassColor: Color(0x661E1E26),
-                refractiveIndex: 1.18,
-                lightIntensity: 0.90,
-                whitenStrength: 0.08,
-              )
-            : const LiquidGlassSettings(
-                thickness: 18,
-                blur: 24,
-                glassColor: Color(0xCCFFFFFF),
-                refractiveIndex: 1.12,
-                whitenStrength: 0.15,
+    await CategoriesManagementScreen._presentCategoryModal(
+      context: context,
+      isDarkMode: isDarkMode,
+      categoryToEdit: categoryToEdit,
+      initialName: initialName,
+      initialIconIndex: initialIconIndex,
+      expenseCount: expenseCount,
+      onSave: (name, iconIndex, sheetContext) {
+        if (categoryToEdit != null) {
+          _submitEditCategory(
+            category: categoryToEdit,
+            name: name,
+            iconIndex: iconIndex,
+            bottomSheetContext: sheetContext,
+          );
+        } else {
+          _submitNewCategory(
+            name: name,
+            iconIndex: iconIndex,
+            bottomSheetContext: sheetContext,
+          );
+        }
+      },
+      onDelete: categoryToEdit != null
+          ? (sheetContext) {
+              _submitDeleteCategory(
+                category: categoryToEdit,
+                bottomSheetContext: sheetContext,
               );
-
-        await GlassModalSheet.show(
-          context: context,
-          useRootNavigator: true,
-          platformViewBackdrop: true,
-          controller: sheetController,
-          initialState: GlassSheetState.half,
-          halfSize: 0.69,
-          fullSize: 0.87,
-          detents: const {GlassSheetDetent.medium, GlassSheetDetent.large},
-          horizontalMargin: 5.0,
-          bottomMargin: 6.0,
-          topBorderRadius: 38.0,
-          bottomBorderRadius: 38.0,
-          fullTopBorderRadius: 24.0,
-          fullBottomBorderRadius: 0.0,
-          showDragIndicator: true,
-          dragIndicatorColor: isDarkMode
-              ? Colors.white.withValues(alpha: 0.35)
-              : const Color(0x33000000),
-          barrierColor: isDarkMode
-              ? const Color(0x80000000)
-              : const Color(0x33000000),
-          enableInteractionGlow: false,
-          enableSaturationGlow: false,
-          fillThreshold: 1.0,
-          expandedColor: Colors.transparent,
-          expandedDarkColor: Colors.transparent,
-          settings: glassSettings,
-          halfSettings: glassSettings,
-          fullSettings: glassSettings,
-          onStateChanged: (state) {
-            if (state == GlassSheetState.half) {
-              focusNode.unfocus();
             }
-          },
-          builder: (sheetContext) {
-            return Material(
-              type: MaterialType.transparency,
-              child: _CategoryModalContent(
-                isDarkMode: isDarkMode,
-                controller: sheetController,
-                focusNode: focusNode,
-                isGlass: true,
-                categoryToEdit: categoryToEdit,
-                initialName: initialName,
-                initialIconIndex: initialIconIndex >= 0 ? initialIconIndex : 0,
-                expenseCount: expenseCount,
-                onSave: (name, iconIndex) {
-                  if (categoryToEdit != null) {
-                    _submitEditCategory(
-                      category: categoryToEdit,
-                      name: name,
-                      iconIndex: iconIndex,
-                      bottomSheetContext: sheetContext,
-                    );
-                  } else {
-                    _submitNewCategory(
-                      name: name,
-                      iconIndex: iconIndex,
-                      bottomSheetContext: sheetContext,
-                    );
-                  }
-                },
-                onDelete: categoryToEdit != null
-                    ? () {
-                        _submitDeleteCategory(
-                          category: categoryToEdit,
-                          bottomSheetContext: sheetContext,
-                        );
-                      }
-                    : null,
-              ),
-            );
-          },
-        );
-      } else {
-        await showModalBottomSheet(
-          context: context,
-          useRootNavigator: true,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          builder: (sheetContext) {
-            return _CategoryModalContent(
-              isDarkMode: isDarkMode,
-              controller: null,
-              focusNode: focusNode,
-              isGlass: false,
-              categoryToEdit: categoryToEdit,
-              initialName: initialName,
-              initialIconIndex: initialIconIndex >= 0 ? initialIconIndex : 0,
-              expenseCount: expenseCount,
-              onSave: (name, iconIndex) {
-                if (categoryToEdit != null) {
-                  _submitEditCategory(
-                    category: categoryToEdit,
-                    name: name,
-                    iconIndex: iconIndex,
-                    bottomSheetContext: sheetContext,
-                  );
-                } else {
-                  _submitNewCategory(
-                    name: name,
-                    iconIndex: iconIndex,
-                    bottomSheetContext: sheetContext,
-                  );
-                }
-              },
-              onDelete: categoryToEdit != null
-                  ? () {
-                      _submitDeleteCategory(
-                        category: categoryToEdit,
-                        bottomSheetContext: sheetContext,
-                      );
-                    }
-                  : null,
-            );
-          },
-        );
-      }
-    } finally {
-      NavigationService.isModalOpenNotifier.value = false;
-    }
+          : null,
+    );
   }
 
   void _submitNewCategory({
@@ -517,52 +383,41 @@ class _CategoriesManagementScreenState
     final isAr = Directionality.of(context) == TextDirection.rtl;
     final catName = isAr ? category.nameAr : category.nameEn;
 
-    showCupertinoDialog<void>(
+    NeoAlertDialog.show(
       context: context,
-      builder: (dialogCtx) => CupertinoAlertDialog(
-        title: Text(
-          isAr ? 'حذف التصنيف' : 'Delete Category',
+      title: isAr ? 'حذف التصنيف' : 'Delete Category',
+      message: count > 0
+          ? (isAr
+              ? 'هل أنت متأكد من حذف "$catName"؟ هذا التصنيف مرتبط بـ $count ${count == 1 ? 'معاملة' : 'معاملات'} وستصبح هذه المعاملات بدون تصنيف.'
+              : 'Are you sure you want to delete "$catName"? This category has $count linked ${count == 1 ? 'expense' : 'expenses'} that will become uncategorized.')
+          : (isAr
+              ? 'هل أنت متأكد من حذف "$catName"؟'
+              : 'Are you sure you want to delete "$catName"?'),
+      actions: [
+        NeoDialogAction(
+          title: context.l10n.cancel,
+          role: NeoDialogActionRole.cancel,
+          onPressed: () {},
         ),
-        content: Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Text(
-            count > 0
-                ? (isAr
-                    ? 'هل أنت متأكد من حذف "$catName"؟ هذا التصنيف مرتبط بـ $count ${count == 1 ? 'معاملة' : 'معاملات'} وستصبح هذه المعاملات بدون تصنيف.'
-                    : 'Are you sure you want to delete "$catName"? This category has $count linked ${count == 1 ? 'expense' : 'expenses'} that will become uncategorized.')
-                : (isAr
-                    ? 'هل أنت متأكد من حذف "$catName"؟'
-                    : 'Are you sure you want to delete "$catName"?'),
-          ),
+        NeoDialogAction(
+          title: isAr ? 'حذف' : 'Delete',
+          role: NeoDialogActionRole.destructive,
+          onPressed: () {
+            setState(() {
+              _categories =
+                  _categories.where((c) => c.id != category.id).toList();
+              _categoryExpenseCounts.remove(category.id);
+              _categoryCustomIcons.remove(category.id);
+            });
+            MessageService.showSuccess(
+              context: context,
+              message: isAr
+                  ? 'تم حذف التصنيف بنجاح'
+                  : 'Category deleted successfully',
+            );
+          },
         ),
-        actions: [
-          CupertinoDialogAction(
-            onPressed: () => Navigator.of(dialogCtx).pop(),
-            child: Text(context.l10n.cancel),
-          ),
-          CupertinoDialogAction(
-            isDestructiveAction: true,
-            onPressed: () {
-              Navigator.of(dialogCtx).pop();
-              setState(() {
-                _categories =
-                    _categories.where((c) => c.id != category.id).toList();
-                _categoryExpenseCounts.remove(category.id);
-                _categoryCustomIcons.remove(category.id);
-              });
-              MessageService.showSuccess(
-                context: context,
-                message: isAr
-                    ? 'تم حذف التصنيف بنجاح'
-                    : 'Category deleted successfully',
-              );
-            },
-            child: Text(
-              isAr ? 'حذف' : 'Delete',
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -584,6 +439,7 @@ class _CategoriesManagementScreenState
 
     return Scaffold(
       backgroundColor: bgColor,
+      resizeToAvoidBottomInset: !Platform.isIOS,
       appBar: AppBar(
         title: Text(
           context.l10n.manageCategories,
@@ -602,7 +458,7 @@ class _CategoriesManagementScreenState
         actions: [
           Padding(
             padding: const EdgeInsetsDirectional.only(end: 12),
-            child: PlatformInfo.isIOS26OrHigher()
+            child: Platform.isIOS
                 ? GlassButton(
                     width: 38,
                     height: 38,
@@ -626,31 +482,6 @@ class _CategoriesManagementScreenState
                           isDarkMode ? Colors.white : const Color(0xFF09090B),
                     ),
                   )
-                : Platform.isIOS
-                    ? CupertinoButton(
-                        padding: EdgeInsets.zero,
-                        onPressed: () {
-                          HapticFeedback.selectionClick();
-                          _showAddCategorySheet(isDarkMode);
-                        },
-                        child: Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: isDarkMode
-                                ? CupertinoColors.systemGrey6.darkColor
-                                : CupertinoColors.systemGrey6,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            CupertinoIcons.add,
-                            size: 19,
-                            color: isDarkMode
-                                ? CupertinoColors.white
-                                : CupertinoColors.black,
-                          ),
-                        ),
-                      )
                 : IconButton(
                     onPressed: () {
                       HapticFeedback.selectionClick();
@@ -692,13 +523,16 @@ class _CategoriesManagementScreenState
                     left: 16,
                     right: 16,
                     top: 12,
-                    bottom: PlatformInfo.isIOS26OrHigher()
-                        ? MediaQuery.of(context).padding.bottom + 84
+                    bottom: Platform.isIOS
+                        ? (MediaQuery.of(context).viewPadding.bottom > 0
+                                ? MediaQuery.of(context).viewPadding.bottom + 70
+                                : 80) +
+                            MediaQuery.of(context).viewInsets.bottom
                         : MediaQuery.of(context).padding.bottom + 24,
                   ),
                   children: [
-                    // Top Search Bar (iOS < 26 & Android)
-                    if (!PlatformInfo.isIOS26OrHigher()) ...[
+                    // Top Search Bar (Android only)
+                    if (!Platform.isIOS) ...[
                       _buildAndroidSearchBar(
                         isDarkMode: isDarkMode,
                         cardBg: cardBg,
@@ -707,42 +541,30 @@ class _CategoriesManagementScreenState
                       const SizedBox(height: 12),
                     ],
 
-                    // Categories Card Group
+                    // Categories Card Group or Authentic Empty State
                     if (categories.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 40),
-                      alignment: Alignment.center,
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.category_outlined,
-                            size: 44,
-                            color: isDarkMode
-                                ? const Color(0xFF3F3F46)
-                                : const Color(0xFFE4E4E7),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            context.l10n.noCategoriesFound,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: isDarkMode
-                                  ? const Color(0xFFA1A1AA)
-                                  : const Color(0xFF71717A),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    Builder(
-                      builder: (context) {
-                        const double cardRadius = 18.0;
-                        return Container(
+                      _searchQuery.isNotEmpty
+                          ? GlassContentUnavailableView.search(
+                              query: _searchQuery,
+                              onClear: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : GlassContentUnavailableView(
+                              icon: CupertinoIcons.folder_badge_minus,
+                              title: context.l10n.noCategoriesFound,
+                              actionLabel: context.l10n.newCategory,
+                              onAction: () => _showAddCategorySheet(isDarkMode),
+                            )
+                    else
+                      SlidableAutoCloseBehavior(
+                        closeWhenOpened: true,
+                        closeWhenTapped: true,
+                        child: Container(
                           decoration: BoxDecoration(
                             color: cardBg,
-                            borderRadius: BorderRadius.circular(cardRadius),
+                            borderRadius: BorderRadius.circular(18),
                             border: Border.all(color: borderColor, width: 1),
                             boxShadow: isDarkMode
                                 ? null
@@ -755,296 +577,219 @@ class _CategoriesManagementScreenState
                                   ],
                           ),
                           clipBehavior: Clip.antiAlias,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(cardRadius - 0.5),
-                            child: SlidableAutoCloseBehavior(
-                              closeWhenOpened: true,
-                              closeWhenTapped: true,
-                              child: Column(
-                                children: List.generate(categories.length, (index) {
-                                  final cat = categories[index];
-                                  final isLast = index == categories.length - 1;
-                                  final catName = isRtl ? cat.nameAr : cat.nameEn;
-                                  final meta =
-                                      CategoryIconHelper.getMeta(cat.id, catName);
-                                  final catIcon = _categoryCustomIcons[cat.id] ?? meta.icon;
-                                  final count = _categoryExpenseCounts[cat.id] ?? 0;
-                                  final countLabel =
-                                      context.l10n.categoryExpensesCount(count);
+                          child: Column(
+                            children: List.generate(categories.length, (index) {
+                              final cat = categories[index];
+                              final isLast = index == categories.length - 1;
+                              final catName = isRtl ? cat.nameAr : cat.nameEn;
+                              final meta =
+                                  CategoryIconHelper.getMeta(cat.id, catName);
+                              final catIcon = _categoryCustomIcons[cat.id] ?? meta.icon;
+                              final count = _categoryExpenseCounts[cat.id] ?? 0;
+                              final countLabel =
+                                  context.l10n.categoryExpensesCount(count);
 
-                                  final BorderRadius itemRadius;
-                                  if (categories.length == 1) {
-                                    itemRadius = BorderRadius.circular(cardRadius - 0.5);
-                                  } else if (index == 0) {
-                                    itemRadius = const BorderRadius.vertical(top: Radius.circular(cardRadius - 0.5));
-                                  } else if (isLast) {
-                                    itemRadius = const BorderRadius.vertical(bottom: Radius.circular(cardRadius - 0.5));
-                                  } else {
-                                    itemRadius = BorderRadius.zero;
-                                  }
-
-                                  return Column(
-                              children: [
-                                Slidable(
-                                  key: ValueKey('category_${cat.id}'),
-                                  groupTag: 'categories_list',
-                                  startActionPane: ActionPane(
-                                    motion: const StretchMotion(),
-                                    extentRatio: 0.28,
-                                    dismissible: Builder(
-                                      builder: (paneContext) => DismissiblePane(
-                                        motion: const _SlidableSeamlessStretchMotion(),
-                                        dismissThreshold: 0.90,
-                                        closeOnCancel: false,
-                                        confirmDismiss: () async {
-                                          HapticFeedback.lightImpact();
-                                          Slidable.of(paneContext)?.openCurrentActionPane();
-                                          return false;
-                                        },
-                                        onDismissed: () {},
-                                      ),
+                              return Column(
+                                children: [
+                                  Slidable(
+                                    key: ValueKey('cat_${cat.id}'),
+                                    groupTag: 'categories_group',
+                                    startActionPane: ActionPane(
+                                      motion: const BehindMotion(),
+                                      extentRatio: 0.25,
+                                      children: [
+                                        CustomSlidableAction(
+                                          onPressed: (_) {
+                                            HapticFeedback.selectionClick();
+                                            _showCategorySheet(isDarkMode,
+                                                categoryToEdit: cat);
+                                          },
+                                          backgroundColor: const Color(0xFF3B82F6),
+                                          foregroundColor: Colors.white,
+                                          padding: EdgeInsets.zero,
+                                          child: const Icon(
+                                            Icons.edit_rounded,
+                                            color: Colors.white,
+                                            size: 22,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    children: [
-                                      CustomSlidableAction(
-                                        onPressed: (_) {
+                                    endActionPane: ActionPane(
+                                      motion: const BehindMotion(),
+                                      extentRatio: 0.25,
+                                      children: [
+                                        CustomSlidableAction(
+                                          onPressed: (_) {
+                                            HapticFeedback.selectionClick();
+                                            _confirmDeleteCategoryFromList(cat);
+                                          },
+                                          backgroundColor: const Color(0xFFEF4444),
+                                          foregroundColor: Colors.white,
+                                          padding: EdgeInsets.zero,
+                                          child: const Icon(
+                                            CupertinoIcons.trash_fill,
+                                            color: Colors.white,
+                                            size: 22,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Material(
+                                      color: cardBg,
+                                      child: InkWell(
+                                        onTap: () {
                                           HapticFeedback.selectionClick();
                                           _showCategorySheet(isDarkMode,
                                               categoryToEdit: cat);
                                         },
-                                        backgroundColor: const Color(0xFF3B82F6),
-                                        foregroundColor: Colors.white,
-                                        borderRadius: itemRadius,
-                                        padding: EdgeInsets.zero,
-                                        child: const Icon(
-                                          Icons.edit_rounded,
-                                          color: Colors.white,
-                                          size: 22,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  endActionPane: ActionPane(
-                                    motion: const StretchMotion(),
-                                    extentRatio: 0.28,
-                                    dismissible: Builder(
-                                      builder: (paneContext) => DismissiblePane(
-                                        motion: const _SlidableSeamlessStretchMotion(),
-                                        dismissThreshold: 0.90,
-                                        closeOnCancel: false,
-                                        confirmDismiss: () async {
-                                          HapticFeedback.lightImpact();
-                                          Slidable.of(paneContext)?.openCurrentActionPane();
-                                          return false;
-                                        },
-                                        onDismissed: () {},
-                                      ),
-                                    ),
-                                    children: [
-                                      CustomSlidableAction(
-                                        onPressed: (_) {
-                                          HapticFeedback.selectionClick();
-                                          _confirmDeleteCategoryFromList(cat);
-                                        },
-                                        backgroundColor: const Color(0xFFEF4444),
-                                        foregroundColor: Colors.white,
-                                        borderRadius: itemRadius,
-                                        padding: EdgeInsets.zero,
-                                        child: const Icon(
-                                          CupertinoIcons.trash_fill,
-                                          color: Colors.white,
-                                          size: 22,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                child: Material(
-                                  color: cardBg,
-                                  borderRadius: itemRadius,
-                                  child: InkWell(
-                                    borderRadius: itemRadius,
-                                    onTap: () {
-                                      HapticFeedback.selectionClick();
-                                      _showCategorySheet(isDarkMode,
-                                          categoryToEdit: cat);
-                                    },
-                                  splashColor: (isDarkMode
-                                          ? Colors.white
-                                          : Colors.black)
-                                      .withValues(alpha: 0.04),
-                                  highlightColor: (isDarkMode
-                                          ? Colors.white
-                                          : Colors.black)
-                                      .withValues(alpha: 0.02),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 12,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        // Category Icon Box
-                                        Container(
-                                          width: 40,
-                                          height: 40,
-                                          decoration: BoxDecoration(
-                                            color: meta.color.withValues(
-                                              alpha: isDarkMode ? 0.18 : 0.12,
-                                            ),
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                            border: Border.all(
-                                              color: meta.color.withValues(
-                                                alpha: isDarkMode ? 0.30 : 0.20,
-                                              ),
-                                              width: 0.8,
-                                            ),
+                                        splashColor: (isDarkMode
+                                                ? Colors.white
+                                                : Colors.black)
+                                            .withValues(alpha: 0.04),
+                                        highlightColor: (isDarkMode
+                                                ? Colors.white
+                                                : Colors.black)
+                                            .withValues(alpha: 0.02),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 12,
                                           ),
-                                          child: Icon(
-                                            catIcon,
-                                            size: 20,
-                                            color: meta.color,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 14),
-
-                                        // Category Name & Expenses Count
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            mainAxisSize: MainAxisSize.min,
+                                          child: Row(
                                             children: [
-                                              Text(
-                                                catName,
-                                                style: TextStyle(
-                                                  color: isDarkMode
-                                                      ? Colors.white
-                                                      : const Color(0xFF09090B),
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.w600,
-                                                  letterSpacing: -0.1,
-                                                ),
-                                              ),
-                                              if (count > 0) ...[
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  countLabel,
-                                                  style: TextStyle(
-                                                    color: isDarkMode
-                                                        ? const Color(0xFFA1A1AA)
-                                                        : const Color(0xFF71717A),
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w400,
+                                              // Icon Box
+                                              Container(
+                                                width: 40,
+                                                height: 40,
+                                                decoration: BoxDecoration(
+                                                  color: meta.color.withValues(
+                                                    alpha: isDarkMode ? 0.18 : 0.12,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: meta.color.withValues(
+                                                      alpha: isDarkMode ? 0.30 : 0.20,
+                                                    ),
+                                                    width: 0.8,
                                                   ),
                                                 ),
-                                              ],
+                                                child: Icon(
+                                                  catIcon,
+                                                  size: 20,
+                                                  color: meta.color,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 14),
+
+                                              // Name & Counts
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Text(
+                                                      catName,
+                                                      style: TextStyle(
+                                                        color: isDarkMode
+                                                            ? Colors.white
+                                                            : const Color(0xFF09090B),
+                                                        fontSize: 15,
+                                                        fontWeight: FontWeight.w600,
+                                                        letterSpacing: -0.1,
+                                                      ),
+                                                    ),
+                                                    if (count > 0) ...[
+                                                      const SizedBox(height: 2),
+                                                      Text(
+                                                        countLabel,
+                                                        style: TextStyle(
+                                                          color: isDarkMode
+                                                              ? const Color(0xFFA1A1AA)
+                                                              : const Color(0xFF71717A),
+                                                          fontSize: 12,
+                                                          fontWeight: FontWeight.w400,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ],
+                                                ),
+                                              ),
+
+                                              // Chevron
+                                              Icon(
+                                                Icons.arrow_forward_ios_rounded,
+                                                size: 13,
+                                                color: chevronColor,
+                                              ),
                                             ],
                                           ),
                                         ),
-
-                                        // Light iOS-style Chevron (>)
-                                        Icon(
-                                          Icons.arrow_forward_ios_rounded,
-                                          size: 13,
-                                          color: chevronColor,
-                                        ),
-                                      ],
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ),
-                            ),
-                              // <hr> Horizontal divider line under every item (except the last)
-                              if (!isLast)
-                                Padding(
-                                  padding: const EdgeInsetsDirectional.only(
-                                    start: 70,
-                                    end: 16,
-                                  ),
-                                  child: Divider(
-                                    height: 1,
-                                    thickness: 1,
-                                    color: dividerColor,
-                                  ),
-                                ),
-                            ],
-                          );
-                        }),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-                  const SizedBox(height: 32),
-                ],
-              ),
-
-            // Floating Bottom Search Bar (Only on iOS 26+)
-            if (PlatformInfo.isIOS26OrHigher())
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: math.max(
-                      MediaQuery.of(context).padding.bottom + 12.0,
-                      MediaQuery.of(context).viewInsets.bottom + 10.0,
-                    ) -
-                    MediaQuery.of(context).viewInsets.bottom,
-                child: Center(
-                  child: Container(
-                    width: (MediaQuery.of(context).size.width - 48).clamp(310.0, 335.0),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(
-                            alpha: isDarkMode ? 0.35 : 0.10,
+                                  if (!isLast)
+                                    Padding(
+                                      padding: const EdgeInsetsDirectional.only(
+                                        start: 70,
+                                        end: 16,
+                                      ),
+                                      child: Divider(
+                                        height: 1,
+                                        thickness: 1,
+                                        color: dividerColor,
+                                      ),
+                                    ),
+                                ],
+                              );
+                            }),
                           ),
-                          blurRadius: 18,
-                          offset: const Offset(0, 6),
                         ),
-                      ],
-                    ),
+                      ),
+                    const SizedBox(height: 32),
+                  ],
+                ),
+
+                // Floating Bottom Search Bar (iOS Authentic Liquid Glass)
+                // Automatically hides when modal sheet opens to prevent show-through
+                if (Platform.isIOS)
+                  ValueListenableBuilder<bool>(
+                    valueListenable: NavigationService.isModalOpenNotifier,
+                    builder: (context, isModalOpen, child) {
+                      final bottomPadding = math.max(
+                        MediaQuery.of(context).viewPadding.bottom > 0
+                            ? MediaQuery.of(context).viewPadding.bottom - 2.0
+                            : 14.0,
+                        MediaQuery.of(context).viewInsets.bottom + 10.0,
+                      );
+
+                      return Positioned(
+                        left: 20,
+                        right: 20,
+                        bottom: isModalOpen ? -120.0 : bottomPadding,
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 200),
+                          opacity: isModalOpen ? 0.0 : 1.0,
+                          child: IgnorePointer(
+                            ignoring: isModalOpen,
+                            child: child,
+                          ),
+                        ),
+                      );
+                    },
                     child: GlassSearchBar(
                       controller: _searchController,
+                      focusNode: _searchFocusNode,
                       placeholder: context.l10n.searchCategories,
-                      useOwnLayer: true,
-                      height: 44,
-                      settings: LiquidGlassSettings(
-                        thickness: 20,
-                        blur: 16,
-                        glassColor: isDarkMode
-                            ? Colors.white.withValues(alpha: 0.12)
-                            : Colors.white.withValues(alpha: 0.85),
-                      ),
-                      textStyle: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w500,
-                        color: isDarkMode
-                            ? Colors.white
-                            : const Color(0xFF09090B),
-                      ),
-                      placeholderStyle: TextStyle(
-                        fontSize: 13.5,
-                        color: isDarkMode
-                            ? const Color(0xFF71717A)
-                            : const Color(0xFFA1A1AA),
-                      ),
-                      searchIconColor: isDarkMode
-                          ? const Color(0xFFA1A1AA)
-                          : const Color(0xFF71717A),
-                      clearIconColor: isDarkMode
-                          ? const Color(0xFFA1A1AA)
-                          : const Color(0xFF71717A),
                       onChanged: (val) {
                         setState(() => _searchQuery = val);
                       },
                     ),
                   ),
-                ),
-              ),
-          ],
-        ),
+              ],
+            ),
     );
   }
 
@@ -1083,6 +828,7 @@ class _CategoriesManagementScreenState
           Expanded(
             child: TextField(
               controller: _searchController,
+              keyboardAppearance: isDarkMode ? Brightness.dark : Brightness.light,
               onChanged: (val) {
                 setState(() => _searchQuery = val);
               },
@@ -1152,8 +898,7 @@ class _CategoryModalContent extends StatefulWidget {
   });
 
   @override
-  State<_CategoryModalContent> createState() =>
-      _CategoryModalContentState();
+  State<_CategoryModalContent> createState() => _CategoryModalContentState();
 }
 
 class _CategoryModalContentState extends State<_CategoryModalContent>
@@ -1218,41 +963,30 @@ class _CategoryModalContentState extends State<_CategoryModalContent>
         ? widget.categoryToEdit!.nameAr
         : widget.categoryToEdit!.nameEn;
 
-    showCupertinoDialog<void>(
+    NeoAlertDialog.show(
       context: context,
-      builder: (dialogCtx) => CupertinoAlertDialog(
-        title: Text(
-          isAr ? 'حذف التصنيف' : 'Delete Category',
+      title: isAr ? 'حذف التصنيف' : 'Delete Category',
+      message: widget.expenseCount > 0
+          ? (isAr
+              ? 'هل أنت متأكد من حذف "$catName"؟ هذا التصنيف مرتبط بـ ${widget.expenseCount} معاملة وستصبح هذه المعاملات بدون تصنيف.'
+              : 'Are you sure you want to delete "$catName"? This category has ${widget.expenseCount} linked expenses that will become uncategorized.')
+          : (isAr
+              ? 'هل أنت متأكد من حذف "$catName"؟'
+              : 'Are you sure you want to delete "$catName"?'),
+      actions: [
+        NeoDialogAction(
+          title: context.l10n.cancel,
+          role: NeoDialogActionRole.cancel,
+          onPressed: () {},
         ),
-        content: Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Text(
-            widget.expenseCount > 0
-                ? (isAr
-                    ? 'هل أنت متأكد من حذف "$catName"؟ هذا التصنيف مرتبط بـ ${widget.expenseCount} معاملة وستصبح هذه المعاملات بدون تصنيف.'
-                    : 'Are you sure you want to delete "$catName"? This category has ${widget.expenseCount} linked expenses that will become uncategorized.')
-                : (isAr
-                    ? 'هل أنت متأكد من حذف "$catName"؟'
-                    : 'Are you sure you want to delete "$catName"?'),
-          ),
+        NeoDialogAction(
+          title: isAr ? 'حذف' : 'Delete',
+          role: NeoDialogActionRole.destructive,
+          onPressed: () {
+            widget.onDelete?.call();
+          },
         ),
-        actions: [
-          CupertinoDialogAction(
-            onPressed: () => Navigator.of(dialogCtx).pop(),
-            child: Text(context.l10n.cancel),
-          ),
-          CupertinoDialogAction(
-            isDestructiveAction: true,
-            onPressed: () {
-              Navigator.of(dialogCtx).pop();
-              widget.onDelete?.call();
-            },
-            child: Text(
-              isAr ? 'حذف' : 'Delete',
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -1287,7 +1021,7 @@ class _CategoryModalContentState extends State<_CategoryModalContent>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Drag Handle for Android
+            // Android top drag handle
             if (!widget.isGlass)
               Center(
                 child: Container(
@@ -1301,13 +1035,12 @@ class _CategoryModalContentState extends State<_CategoryModalContent>
                 ),
               ),
 
-            // Header Bar with Cancel, Centered Title, and Save Checkmark
+            // Header Bar: Cancel on Left, Centered Title, Save Checkmark on Right
             SizedBox(
               height: 42,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Perfectly Centered Title
                   Text(
                     widget.categoryToEdit != null
                         ? (Directionality.of(context) == TextDirection.rtl
@@ -1324,13 +1057,11 @@ class _CategoryModalContentState extends State<_CategoryModalContent>
                           : const Color(0xFF09090B),
                     ),
                   ),
-
-                  // Left & Right Action Buttons
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Left: Cancel Button (Glass on iOS, Material on Android)
+                      // Cancel Button
                       widget.isGlass
                           ? GlassButton.custom(
                               height: 42,
@@ -1367,44 +1098,24 @@ class _CategoryModalContentState extends State<_CategoryModalContent>
                                 ),
                               ),
                             )
-                          : Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () {
-                                  HapticFeedback.selectionClick();
-                                  Navigator.of(context).pop();
-                                },
-                                borderRadius: BorderRadius.circular(21),
-                                child: Container(
-                                  height: 38,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                                  decoration: BoxDecoration(
-                                    color: widget.isDarkMode
-                                        ? const Color(0xFF1E1E24)
-                                        : const Color(0xFFF4F4F5),
-                                    borderRadius: BorderRadius.circular(21),
-                                    border: Border.all(
-                                      color: widget.isDarkMode
-                                          ? const Color(0xFF2E2E38)
-                                          : const Color(0xFFE4E4E7),
-                                    ),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    context.l10n.cancel,
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: widget.isDarkMode
-                                          ? const Color(0xFFE4E4E7)
-                                          : const Color(0xFF71717A),
-                                    ),
-                                  ),
+                          : TextButton(
+                              onPressed: () {
+                                HapticFeedback.selectionClick();
+                                Navigator.of(context).pop();
+                              },
+                              child: Text(
+                                context.l10n.cancel,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: widget.isDarkMode
+                                      ? const Color(0xFFE4E4E7)
+                                      : const Color(0xFF71717A),
                                 ),
                               ),
                             ),
 
-                      // Right: Checkmark (Save) Button (Glass on iOS, Material on Android)
+                      // Save Checkmark Button
                       widget.isGlass
                           ? GlassButton.custom(
                               width: 42,
@@ -1432,35 +1143,15 @@ class _CategoryModalContentState extends State<_CategoryModalContent>
                                 color: themeColor,
                               ),
                             )
-                          : Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () {
-                                  HapticFeedback.selectionClick();
-                                  widget.onSave(_nameController.text, _selectedIconIndex);
-                                },
-                                borderRadius: BorderRadius.circular(21),
-                                child: Container(
-                                  width: 38,
-                                  height: 38,
-                                  decoration: BoxDecoration(
-                                    color: widget.isDarkMode
-                                        ? const Color(0xFF1E1E24)
-                                        : const Color(0xFFF4F4F5),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: widget.isDarkMode
-                                          ? const Color(0xFF2E2E38)
-                                          : const Color(0xFFE4E4E7),
-                                    ),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Icon(
-                                    CupertinoIcons.checkmark,
-                                    size: 19,
-                                    color: themeColor,
-                                  ),
-                                ),
+                          : IconButton(
+                              onPressed: () {
+                                HapticFeedback.selectionClick();
+                                widget.onSave(_nameController.text, _selectedIconIndex);
+                              },
+                              icon: Icon(
+                                CupertinoIcons.checkmark,
+                                size: 20,
+                                color: themeColor,
                               ),
                             ),
                     ],
@@ -1469,357 +1160,324 @@ class _CategoryModalContentState extends State<_CategoryModalContent>
               ),
             ),
 
-          const SizedBox(height: 18),
+            const SizedBox(height: 18),
 
-          // Interactive Icon Preview Pill
-          Center(
-            child: Container(
-              width: 58,
-              height: 58,
-              decoration: BoxDecoration(
-                color: widget.isDarkMode
-                    ? Colors.white.withValues(alpha: 0.12)
-                    : const Color(0xFF09090B).withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: widget.isDarkMode
-                    ? Colors.white.withValues(alpha: 0.22)
-                    : const Color(0xFF09090B).withValues(alpha: 0.14),
-                  width: 1.5,
-                ),
-              ),
-              child: Icon(
-                activeIcon,
-                color: themeColor,
-                size: 28,
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 18),
-
-          // Label above Name Field
-          Text(
-            Directionality.of(context) == TextDirection.rtl
-                ? 'اسم التصنيف'
-                : 'Category Name',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: widget.isDarkMode
-                  ? const Color(0xFFD4D4D8)
-                  : const Color(0xFF71717A),
-            ),
-          ),
-          const SizedBox(height: 6),
-
-          // Single Category Name Field
-          TextField(
-            controller: _nameController,
-            focusNode: widget.focusNode,
-            autofocus: true,
-            cursorColor: themeColor,
-            style: TextStyle(
-              color: widget.isDarkMode
-                  ? Colors.white
-                  : const Color(0xFF09090B),
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-            ),
-            decoration: InputDecoration(
-              hintText: Directionality.of(context) == TextDirection.rtl
-                  ? 'مثال: مشتريات، مواصلات...'
-                  : 'e.g. Shopping, Transport...',
-              hintStyle: TextStyle(
-                color: widget.isDarkMode
-                    ? const Color(0xFF71717A)
-                    : const Color(0xFFA1A1AA),
-                fontSize: 14,
-              ),
-              filled: true,
-              fillColor: fieldBg,
-              contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 14),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(
+            // Icon Preview Pill
+            Center(
+              child: Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
                   color: widget.isDarkMode
                       ? Colors.white.withValues(alpha: 0.12)
-                      : const Color(0xFFE4E4E7),
-                  width: 1.0,
+                      : const Color(0xFF09090B).withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: widget.isDarkMode
+                        ? Colors.white.withValues(alpha: 0.22)
+                        : const Color(0xFF09090B).withValues(alpha: 0.14),
+                    width: 1.5,
+                  ),
                 ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(
-                  color: widget.isDarkMode
-                      ? Colors.white.withValues(alpha: 0.12)
-                      : const Color(0xFFE4E4E7),
-                  width: 1.0,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(
-                  color: widget.isDarkMode
-                      ? Colors.white.withValues(alpha: 0.40)
-                      : const Color(0xFF09090B),
-                  width: 1.5,
+                child: Icon(
+                  activeIcon,
+                  color: themeColor,
+                  size: 28,
                 ),
               ),
             ),
-          ),
 
-          const SizedBox(height: 14),
+            const SizedBox(height: 18),
 
-          // Icon Grid Selector
-          Text(
-            Directionality.of(context) == TextDirection.rtl
-                ? 'أيقونة التصنيف'
-                : 'Category Icon',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: widget.isDarkMode
-                  ? const Color(0xFFD4D4D8)
-                  : const Color(0xFF71717A),
+            // Category Name Label
+            Text(
+              Directionality.of(context) == TextDirection.rtl
+                  ? 'اسم التصنيف'
+                  : 'Category Name',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: widget.isDarkMode
+                    ? const Color(0xFFD4D4D8)
+                    : const Color(0xFF71717A),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
+            const SizedBox(height: 6),
 
-          // Icon Grid Selector (Row of Expanded items for 100% fluid, glitch-free responsiveness)
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (int rowIndex = 0; rowIndex < 3; rowIndex++) ...[
-                if (rowIndex > 0) const SizedBox(height: 10),
-                Row(
-                  children: [
-                    for (int colIndex = 0; colIndex < 6; colIndex++) ...[
-                      if (colIndex > 0) const SizedBox(width: 10),
+            // Name Field
+            TextField(
+              controller: _nameController,
+              focusNode: widget.focusNode,
+              autofocus: false,
+              keyboardAppearance:
+                  widget.isDarkMode ? Brightness.dark : Brightness.light,
+              cursorColor: themeColor,
+              style: TextStyle(
+                color: widget.isDarkMode
+                    ? Colors.white
+                    : const Color(0xFF09090B),
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+              decoration: InputDecoration(
+                hintText: Directionality.of(context) == TextDirection.rtl
+                    ? 'مثال: مشتريات، مواصلات...'
+                    : 'e.g. Shopping, Transport...',
+                hintStyle: TextStyle(
+                  color: widget.isDarkMode
+                      ? const Color(0xFF71717A)
+                      : const Color(0xFFA1A1AA),
+                  fontSize: 14,
+                ),
+                filled: true,
+                fillColor: fieldBg,
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: widget.isDarkMode
+                        ? Colors.white.withValues(alpha: 0.12)
+                        : const Color(0xFFE4E4E7),
+                    width: 1.0,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: widget.isDarkMode
+                        ? Colors.white.withValues(alpha: 0.12)
+                        : const Color(0xFFE4E4E7),
+                    width: 1.0,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: widget.isDarkMode
+                        ? Colors.white.withValues(alpha: 0.40)
+                        : const Color(0xFF09090B),
+                    width: 1.5,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 14),
+
+            // Category Icon Selection
+            Text(
+              Directionality.of(context) == TextDirection.rtl
+                  ? 'أيقونة التصنيف'
+                  : 'Category Icon',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: widget.isDarkMode
+                    ? const Color(0xFFD4D4D8)
+                    : const Color(0xFF71717A),
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Icon Grid (3 rows x 6 columns)
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (int rowIndex = 0; rowIndex < 3; rowIndex++) ...[
+                  if (rowIndex > 0) const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      for (int colIndex = 0; colIndex < 6; colIndex++) ...[
+                        if (colIndex > 0) const SizedBox(width: 10),
+                        Expanded(
+                          child: AspectRatio(
+                            aspectRatio: 1,
+                            child: Builder(
+                              builder: (context) {
+                                final idx = rowIndex * 6 + colIndex;
+                                final icon = _CategoriesManagementScreenState
+                                    ._availableCategoryIcons[idx];
+                                final isSelected = idx == _selectedIconIndex;
+
+                                return GestureDetector(
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    setState(() => _selectedIconIndex = idx);
+                                  },
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 180),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? (widget.isDarkMode
+                                              ? Colors.white.withValues(alpha: 0.22)
+                                              : const Color(0xFF09090B)
+                                                  .withValues(alpha: 0.08))
+                                          : (widget.isDarkMode
+                                              ? Colors.white.withValues(alpha: 0.06)
+                                              : fieldBg),
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? themeColor
+                                            : (widget.isDarkMode
+                                                ? Colors.white.withValues(alpha: 0.10)
+                                                : Colors.black.withValues(alpha: 0.05)),
+                                        width: isSelected ? 1.5 : 1.0,
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Icon(
+                                        icon,
+                                        size: 22,
+                                        color: isSelected
+                                            ? themeColor
+                                            : (widget.isDarkMode
+                                                ? const Color(0xFFD4D4D8)
+                                                : const Color(0xFF71717A)),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ],
+            ),
+
+            // Edit Mode: Warning & Delete Button
+            if (widget.categoryToEdit != null) ...[
+              const SizedBox(height: 18),
+              if (widget.expenseCount > 0) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: widget.isDarkMode
+                        ? const Color(0xFFF59E0B).withValues(alpha: 0.12)
+                        : const Color(0xFFFFFBEB),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: widget.isDarkMode
+                          ? const Color(0xFFF59E0B).withValues(alpha: 0.32)
+                          : const Color(0xFFFDE68A),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        size: 20,
+                        color: widget.isDarkMode
+                            ? const Color(0xFFFBBF24)
+                            : const Color(0xFFD97706),
+                      ),
+                      const SizedBox(width: 10),
                       Expanded(
-                        child: AspectRatio(
-                          aspectRatio: 1,
-                          child: Builder(
-                            builder: (context) {
-                              final idx = rowIndex * 6 + colIndex;
-                              final icon = _CategoriesManagementScreenState
-                                  ._availableCategoryIcons[idx];
-                              final isSelected = idx == _selectedIconIndex;
-
-                              return GestureDetector(
-                                onTap: () {
-                                  HapticFeedback.selectionClick();
-                                  setState(() => _selectedIconIndex = idx);
-                                },
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 180),
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? (widget.isDarkMode
-                                            ? Colors.white.withValues(alpha: 0.22)
-                                            : const Color(0xFF09090B)
-                                                .withValues(alpha: 0.08))
-                                        : (widget.isDarkMode
-                                            ? Colors.white.withValues(alpha: 0.06)
-                                            : fieldBg),
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(
-                                      color: isSelected
-                                          ? themeColor
-                                          : (widget.isDarkMode
-                                              ? Colors.white.withValues(alpha: 0.10)
-                                              : Colors.black.withValues(alpha: 0.05)),
-                                      width: isSelected ? 1.5 : 1.0,
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: Icon(
-                                      icon,
-                                      size: 22,
-                                      color: isSelected
-                                          ? themeColor
-                                          : (widget.isDarkMode
-                                              ? const Color(0xFFD4D4D8)
-                                              : const Color(0xFF71717A)),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
+                        child: Text(
+                          Directionality.of(context) == TextDirection.rtl
+                              ? 'هذا التصنيف مرتبط بـ ${widget.expenseCount} ${widget.expenseCount == 1 ? 'معاملة' : 'معاملات'}. حذفه سيترك هذه المعاملات بدون تصنيف.'
+                              : 'This category has ${widget.expenseCount} linked ${widget.expenseCount == 1 ? 'expense' : 'expenses'}. Deleting it will leave these expenses uncategorized.',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            height: 1.35,
+                            fontWeight: FontWeight.w500,
+                            color: widget.isDarkMode
+                                ? const Color(0xFFFDE68A)
+                                : const Color(0xFF92400E),
                           ),
                         ),
                       ),
                     ],
-                  ],
+                  ),
                 ),
+                const SizedBox(height: 12),
               ],
-            ],
-          ),
 
-          // Edit Mode: Linked Expenses Warning & Delete Category Button
-          if (widget.categoryToEdit != null) ...[
-            const SizedBox(height: 18),
-
-            // Warning Banner if category has linked expenses
-            if (widget.expenseCount > 0) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: widget.isDarkMode
-                      ? const Color(0xFFF59E0B).withValues(alpha: 0.12)
-                      : const Color(0xFFFFFBEB),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
+              // Delete Category Button
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _confirmDelete(context);
+                },
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
                     color: widget.isDarkMode
-                        ? const Color(0xFFF59E0B).withValues(alpha: 0.32)
-                        : const Color(0xFFFDE68A),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      size: 20,
+                        ? const Color(0xFFEF4444).withValues(alpha: 0.14)
+                        : const Color(0xFFFEE2E2),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
                       color: widget.isDarkMode
-                          ? const Color(0xFFFBBF24)
-                          : const Color(0xFFD97706),
+                          ? const Color(0xFFEF4444).withValues(alpha: 0.30)
+                          : const Color(0xFFFECACA),
+                      width: 1,
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        Directionality.of(context) == TextDirection.rtl
-                            ? 'هذا التصنيف مرتبط بـ ${widget.expenseCount} ${widget.expenseCount == 1 ? 'معاملة' : 'معاملات'}. حذفه سيترك هذه المعاملات بدون تصنيف.'
-                            : 'This category has ${widget.expenseCount} linked ${widget.expenseCount == 1 ? 'expense' : 'expenses'}. Deleting it will leave these expenses uncategorized.',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          height: 1.35,
-                          fontWeight: FontWeight.w500,
-                          color: widget.isDarkMode
-                              ? const Color(0xFFFDE68A)
-                              : const Color(0xFF92400E),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-
-            // Delete Category Button
-            GestureDetector(
-              onTap: () {
-                HapticFeedback.mediumImpact();
-                _confirmDelete(context);
-              },
-              child: Container(
-                height: 44,
-                decoration: BoxDecoration(
-                  color: widget.isDarkMode
-                      ? const Color(0xFFEF4444).withValues(alpha: 0.14)
-                      : const Color(0xFFFEE2E2),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: widget.isDarkMode
-                        ? const Color(0xFFEF4444).withValues(alpha: 0.30)
-                        : const Color(0xFFFECACA),
-                    width: 1,
                   ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      CupertinoIcons.trash,
-                      size: 17,
-                      color: widget.isDarkMode
-                          ? const Color(0xFFF87171)
-                          : const Color(0xFFDC2626),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      Directionality.of(context) == TextDirection.rtl
-                          ? 'حذف التصنيف'
-                          : 'Delete Category',
-                      style: TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w600,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        CupertinoIcons.trash,
+                        size: 17,
                         color: widget.isDarkMode
                             ? const Color(0xFFF87171)
                             : const Color(0xFFDC2626),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      Text(
+                        Directionality.of(context) == TextDirection.rtl
+                            ? 'حذف التصنيف'
+                            : 'Delete Category',
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                          color: widget.isDarkMode
+                              ? const Color(0xFFF87171)
+                              : const Color(0xFFDC2626),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
+            ],
+
+            const SizedBox(height: 24),
           ],
-
-          const SizedBox(height: 24),
-        ],
+        ),
       ),
-    ),
-  );
+    );
 
-  if (widget.isGlass) {
-    return sheetContent;
-  }
-
-  return Container(
-    constraints: BoxConstraints(
-      maxHeight: MediaQuery.sizeOf(context).height * 0.9,
-    ),
-    decoration: BoxDecoration(
-      color: widget.isDarkMode ? const Color(0xFF141417) : Colors.white,
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      border: Border.all(
-        color: widget.isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-        width: 1,
-      ),
-    ),
-    child: SafeArea(
-      top: false,
-      child: sheetContent,
-    ),
-  );
-}
-}
-
-//#region Slidable Seamless Stretch Motion
-class _SlidableSeamlessStretchMotion extends StatelessWidget {
-  const _SlidableSeamlessStretchMotion();
-
-  @override
-  Widget build(BuildContext context) {
-    final paneData = ActionPane.of(context);
-    final controller = Slidable.of(context);
-
-    if (paneData == null || controller == null) {
-      return const SizedBox.shrink();
+    if (widget.isGlass) {
+      return sheetContent;
     }
 
-    return AnimatedBuilder(
-      animation: controller.animation,
-      builder: (BuildContext context, Widget? child) {
-        final value = controller.animation.value.clamp(0.0, 1.0);
-        return FractionallySizedBox(
-          alignment: paneData.alignment,
-          widthFactor: paneData.direction == Axis.horizontal ? value : 1.0,
-          heightFactor: paneData.direction == Axis.horizontal ? 1.0 : value,
-          child: child,
-        );
-      },
-      child: const ClipRect(
-        child: BehindMotion(),
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+      ),
+      decoration: BoxDecoration(
+        color: widget.isDarkMode ? const Color(0xFF141417) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        border: Border.all(
+          color: widget.isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+          width: 1,
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: sheetContent,
       ),
     );
   }
 }
-//#endregion
-

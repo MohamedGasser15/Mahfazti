@@ -119,6 +119,254 @@ class _SettingsContentState extends State<SettingsContent> {
 
   // Currency Selection Modal
   void _openCurrencySelection() {
+    if (Platform.isIOS) {
+      _openGlassCurrencySelection();
+    } else {
+      _openAndroidCurrencySelection();
+    }
+  }
+
+  // iOS 26 Liquid Glass Modal Sheet
+  void _openGlassCurrencySelection() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    final List<Map<String, String>> currencies = [
+      {'code': 'USD', 'flag': '🇺🇸', 'name': 'US Dollar'},
+      {'code': 'EUR', 'flag': '🇪🇺', 'name': 'Euro'},
+      {'code': 'EGP', 'flag': '🇪🇬', 'name': 'Egyptian Pound'},
+      {'code': 'SAR', 'flag': '🇸🇦', 'name': 'Saudi Riyal'},
+      {'code': 'AED', 'flag': '🇦🇪', 'name': 'UAE Dirham'},
+      {'code': 'KWD', 'flag': '🇰🇼', 'name': 'Kuwaiti Dinar'},
+    ];
+
+    showGlassModalSheet(
+      context: context,
+      halfSize: 0.60,
+      fullSize: 0.88,
+      builder: (context) {
+        String? tempSelected = _currencyCode;
+        bool isSubmitting = false;
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 18, 4, 14),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            context.l10n.selectCurrency,
+                            style: TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3,
+                              color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                            ),
+                          ),
+                          CupertinoButton(
+                            padding: EdgeInsets.zero,
+                            onPressed: () => Navigator.pop(context),
+                            child: Container(
+                              width: 30,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                color: isDarkMode
+                                    ? Colors.white.withValues(alpha: 0.12)
+                                    : Colors.black.withValues(alpha: 0.06),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                CupertinoIcons.xmark,
+                                size: 14,
+                                color: isDarkMode ? Colors.white70 : Colors.black54,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Currency List
+                    Flexible(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: currencies.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) {
+                          final currency = currencies[index];
+                          final isSelected = tempSelected == currency['code'];
+                          return GestureDetector(
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              setModalState(() => tempSelected = currency['code']);
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? (isDarkMode
+                                        ? Colors.white.withValues(alpha: 0.15)
+                                        : const Color(0xFF09090B).withValues(alpha: 0.08))
+                                    : (isDarkMode
+                                        ? Colors.white.withValues(alpha: 0.05)
+                                        : Colors.black.withValues(alpha: 0.03)),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? (isDarkMode ? Colors.white : const Color(0xFF09090B))
+                                      : (isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7)),
+                                  width: isSelected ? 1.5 : 1,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  // Flag
+                                  Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF1F1F5),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        currency['flag']!,
+                                        style: const TextStyle(fontSize: 20),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  // Name & Code
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          currency['name']!,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 15,
+                                            color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          currency['code']!,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Check
+                                  if (isSelected)
+                                    Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.check_rounded,
+                                        size: 15,
+                                        color: isDarkMode ? const Color(0xFF09090B) : Colors.white,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Save Button
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: isSubmitting
+                              ? null
+                              : () async {
+                                  final currentContext = context;
+                                  if (tempSelected == null) return;
+                                  setModalState(() => isSubmitting = true);
+                                  try {
+                                    await AuthRepository().setUserCurrency(tempSelected!);
+                                    await SharedPrefs.setCurrency(tempSelected!);
+                                    setState(() => _currencyCode = tempSelected!);
+                                    if (!currentContext.mounted) return;
+                                    Navigator.pop(currentContext);
+                                    MessageService.showSuccess(
+                                      context: currentContext,
+                                      message: currentContext.l10n.currencySavedSuccess,
+                                    );
+                                  } catch (e) {
+                                    if (!currentContext.mounted) return;
+                                    MessageService.showError(
+                                      context: currentContext,
+                                      message: e.toString(),
+                                    );
+                                    setModalState(() => isSubmitting = false);
+                                  }
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                            foregroundColor: isDarkMode ? const Color(0xFF09090B) : Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: isSubmitting
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      isDarkMode ? const Color(0xFF09090B) : Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  context.l10n.save,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Android Material Modal Bottom Sheet (Preserved Original)
+  void _openAndroidCurrencySelection() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
     final itemBorder = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
@@ -519,10 +767,17 @@ class _SettingsContentState extends State<SettingsContent> {
     );
   }
 
-  // Theme Dropdown (Native iOS UIMenu on iOS / Material PopupMenuButton on Android)
+  // Theme Dropdown (iOS Native UIMenu / Android Material PopupMenuButton)
   Widget _buildThemeDropdown(bool isDarkMode) {
+    if (Platform.isIOS) {
+      return _buildIosThemeDropdown(isDarkMode);
+    } else {
+      return _buildAndroidThemeDropdown(isDarkMode);
+    }
+  }
+
+  Widget _buildIosThemeDropdown(bool isDarkMode) {
     final l10n = context.l10n;
-    final isIOS = Platform.isIOS;
     String themeLabel;
     if (_currentTheme == ThemeService.dark) {
       themeLabel = l10n.dark;
@@ -532,69 +787,81 @@ class _SettingsContentState extends State<SettingsContent> {
       themeLabel = l10n.system;
     }
 
-    if (isIOS) {
-      return Container(
-        height: 32,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
-            width: 1,
-          ),
+    return Container(
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+          width: 1,
         ),
-        child: IosSingleTapContextMenu(
-          actions: [
-            IosContextMenuAction(
-              id: ThemeService.light,
-              title: l10n.light,
-              iconSystemName: 'sun.max',
-              showTrailingCheckmark: _currentTheme == ThemeService.light,
+      ),
+      child: NeoSingleTapContextMenu(
+        actions: [
+          NeoContextMenuAction(
+            id: ThemeService.light,
+            title: l10n.light,
+            iconSystemName: 'sun.max',
+            icon: CupertinoIcons.sun_max,
+            showTrailingCheckmark: _currentTheme == ThemeService.light,
+          ),
+          NeoContextMenuAction(
+            id: ThemeService.dark,
+            title: l10n.dark,
+            iconSystemName: 'moon',
+            icon: CupertinoIcons.moon,
+            showTrailingCheckmark: _currentTheme == ThemeService.dark,
+          ),
+          const NeoContextMenuDivider(),
+          NeoContextMenuAction(
+            id: ThemeService.system,
+            title: l10n.system,
+            iconSystemName: 'circle.lefthalf.filled',
+            icon: CupertinoIcons.circle_lefthalf_fill,
+            showTrailingCheckmark: _currentTheme == ThemeService.system,
+          ),
+        ],
+        onSelected: (id) {
+          HapticFeedback.selectionClick();
+          setState(() => _currentTheme = id);
+          _setTheme(id);
+        },
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              themeLabel,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+              ),
             ),
-            IosContextMenuAction(
-              id: ThemeService.dark,
-              title: l10n.dark,
-              iconSystemName: 'moon',
-              showTrailingCheckmark: _currentTheme == ThemeService.dark,
-            ),
-            const IosContextMenuDivider(),
-            IosContextMenuAction(
-              id: ThemeService.system,
-              title: l10n.system,
-              iconSystemName: 'circle.lefthalf.filled',
-              showTrailingCheckmark: _currentTheme == ThemeService.system,
+            const SizedBox(width: 4),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 16,
+              color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
             ),
           ],
-          onSelected: (id) {
-            HapticFeedback.selectionClick();
-            setState(() => _currentTheme = id);
-            _setTheme(id);
-          },
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                themeLabel,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: isDarkMode ? Colors.white : const Color(0xFF09090B),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: 16,
-                color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
-              ),
-            ],
-          ),
         ),
-      );
+      ),
+    );
+  }
+
+  Widget _buildAndroidThemeDropdown(bool isDarkMode) {
+    final l10n = context.l10n;
+    String themeLabel;
+    if (_currentTheme == ThemeService.dark) {
+      themeLabel = l10n.dark;
+    } else if (_currentTheme == ThemeService.light) {
+      themeLabel = l10n.light;
+    } else {
+      themeLabel = l10n.system;
     }
 
-    // Android / Other Platforms: Styled Material PopupMenuButton
     return Theme(
       data: Theme.of(context).copyWith(
         popupMenuTheme: PopupMenuThemeData(
@@ -752,71 +1019,82 @@ class _SettingsContentState extends State<SettingsContent> {
     );
   }
 
-  // Language Button (Native iOS UIMenu on iOS / Material PopupMenuButton on Android)
+  // Language Button (iOS Native UIMenu / Android Material PopupMenuButton)
   Widget _buildLanguageButton() {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final isIOS = Platform.isIOS;
-    String currentLanguageLabel = _isEnglish ? context.l10n.english : context.l10n.arabic;
+    if (Platform.isIOS) {
+      return _buildIosLanguageButton();
+    } else {
+      return _buildAndroidLanguageButton();
+    }
+  }
 
-    if (isIOS) {
-      return Container(
-        height: 32,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
-            width: 1,
-          ),
+  Widget _buildIosLanguageButton() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final currentLanguageLabel = _isEnglish ? context.l10n.english : context.l10n.arabic;
+
+    return Container(
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+          width: 1,
         ),
-        child: IosSingleTapContextMenu(
-          actions: [
-            IosContextMenuAction(
-              id: 'ar',
-              title: 'العربية',
-              iconSystemName: 'globe',
-              showTrailingCheckmark: !_isEnglish,
+      ),
+      child: NeoSingleTapContextMenu(
+        actions: [
+          NeoContextMenuAction(
+            id: 'ar',
+            title: 'العربية',
+            iconSystemName: 'globe',
+            icon: CupertinoIcons.globe,
+            showTrailingCheckmark: !_isEnglish,
+          ),
+          NeoContextMenuAction(
+            id: 'en',
+            title: 'English',
+            iconSystemName: 'globe',
+            icon: CupertinoIcons.globe,
+            showTrailingCheckmark: _isEnglish,
+          ),
+        ],
+        onSelected: (id) {
+          HapticFeedback.selectionClick();
+          if (id == 'ar') {
+            _switchToArabic();
+          } else if (id == 'en') {
+            _switchToEnglish();
+          }
+        },
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              currentLanguageLabel,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+              ),
             ),
-            IosContextMenuAction(
-              id: 'en',
-              title: 'English',
-              iconSystemName: 'globe',
-              showTrailingCheckmark: _isEnglish,
+            const SizedBox(width: 4),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 16,
+              color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
             ),
           ],
-          onSelected: (id) {
-            HapticFeedback.selectionClick();
-            if (id == 'ar') {
-              _switchToArabic();
-            } else if (id == 'en') {
-              _switchToEnglish();
-            }
-          },
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                currentLanguageLabel,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: isDarkMode ? Colors.white : const Color(0xFF09090B),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: 16,
-                color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
-              ),
-            ],
-          ),
         ),
-      );
-    }
+      ),
+    );
+  }
 
-    // Android / Other Platforms: Styled Material PopupMenuButton
+  Widget _buildAndroidLanguageButton() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final currentLanguageLabel = _isEnglish ? context.l10n.english : context.l10n.arabic;
+
     return Theme(
       data: Theme.of(context).copyWith(
         popupMenuTheme: PopupMenuThemeData(
@@ -1533,6 +1811,36 @@ class _SettingsContentState extends State<SettingsContent> {
   }
 
   void _showCloseAccountDialog(bool isDarkMode) {
+    if (Platform.isIOS) {
+      _showIosCloseAccountDialog(isDarkMode);
+    } else {
+      _showAndroidCloseAccountDialog(isDarkMode);
+    }
+  }
+
+  void _showIosCloseAccountDialog(bool isDarkMode) {
+    NeoAlertDialog.show(
+      context: context,
+      title: context.l10n.closeAccount,
+      message: context.l10n.closeAccountConfirmation,
+      icon: 'exclamationmark.triangle',
+      iconColor: const Color(0xFFEF4444),
+      actions: [
+        NeoDialogAction(
+          title: context.l10n.cancel,
+          role: NeoDialogActionRole.cancel,
+          onPressed: () {},
+        ),
+        NeoDialogAction(
+          title: context.l10n.closeAccount,
+          role: NeoDialogActionRole.destructive,
+          onPressed: () => _showComingSoonSnackbar(),
+        ),
+      ],
+    );
+  }
+
+  void _showAndroidCloseAccountDialog(bool isDarkMode) {
     final pureRed = isDarkMode ? const Color(0xFFEF4444) : const Color(0xFFDC2626);
     final dialogBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
 
@@ -1588,7 +1896,6 @@ class _SettingsContentState extends State<SettingsContent> {
     );
   }
 
-  // Logout Button
   Widget _buildLogoutButton(bool isDarkMode) {
     final pureRed = isDarkMode ? const Color(0xFFEF4444) : const Color(0xFFDC2626);
     return Material(
