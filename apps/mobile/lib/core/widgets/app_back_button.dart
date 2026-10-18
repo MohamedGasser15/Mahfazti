@@ -32,7 +32,7 @@ class AppGlassBackButton extends StatelessWidget {
       }
     }
 
-    final isIOS26 = PlatformInfo.isIOS26OrHigher();
+    final isIOS26 = isIOS;
 
     if (isIOS26) {
       return Center(

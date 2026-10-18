@@ -33,12 +33,16 @@ class _AppModalObserver extends NavigatorObserver {
         void listener(AnimationStatus status) {
           if (status == AnimationStatus.dismissed) {
             anim.removeStatusListener(listener);
-            _decrement();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _decrement();
+            });
           }
         }
         anim.addStatusListener(listener);
       } else {
-        _decrement();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _decrement();
+        });
       }
     }
   }

@@ -10,6 +10,9 @@ import 'package:my_wallet/core/themes/app_text_styles.dart';
 class MessageService {
   static OverlayEntry? _currentEntry;
 
+  /// لون نص زر التنبيه المخصص (إذا رغبت في لون مخصص، وإلا اتركه null ليأخذ نفس مظهر زر الخروج الطبيعي)
+  static const Color? defaultAlertButtonColor = null;
+
   /// Shows the exact native iOS 26 Alert Dialog with pixel-perfect
   /// Light Mode (#ECECEF) and Dark Mode (#1C1C1E) matching the reference design on iOS,
   /// or a clean Material AlertDialog on Android.
@@ -19,6 +22,7 @@ class MessageService {
     String? title,
     String? buttonText,
     VoidCallback? onConfirm,
+    Color? tint,
   }) async {
     final localizedMsg = localizeMessage(context: context, rawMessage: message);
     final isAr = context.isArabic;
@@ -27,7 +31,7 @@ class MessageService {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (Platform.isIOS) {
-      await NeoNativeAlert.show(
+      await NeoAlertDialog.show(
         context: context,
         title: alertTitle,
         message: localizedMsg,
@@ -35,7 +39,7 @@ class MessageService {
         actions: [
           NeoDialogAction(
             title: confirmText,
-            role: NeoDialogActionRole.primary,
+            role: NeoDialogActionRole.cancel,
             onPressed: () {
               onConfirm?.call();
             },
@@ -78,9 +82,10 @@ class MessageService {
     required BuildContext context,
     required String message,
     bool asAlert = false,
+    Color? tint,
   }) {
     if (asAlert) {
-      showErrorAlert(context: context, message: message);
+      showErrorAlert(context: context, message: message, tint: tint);
       return;
     }
     _show(

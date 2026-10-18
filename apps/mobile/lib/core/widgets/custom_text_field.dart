@@ -49,6 +49,7 @@ class CustomTextField extends StatelessWidget {
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
+          keyboardAppearance: isDark ? Brightness.dark : Brightness.light,
           obscureText: obscureText,
           enabled: enabled,
           maxLines: maxLines,
