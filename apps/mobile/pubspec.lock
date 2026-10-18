@@ -560,11 +560,9 @@ packages:
   neo_cupertino:
     dependency: "direct main"
     description:
-      path: "."
-      ref: main
-      resolved-ref: "5ec228e7f26945febcb1d433195707e1c849d5d8"
-      url: "https://github.com/MohamedGasser15/neo_cupertino.git"
-    source: git
+      path: "/Users/mohamed/Programming/neo_cupertino"
+      relative: false
+    source: path
     version: "1.0.0"
   nested:
     dependency: transitive
