@@ -101,10 +101,20 @@ class _HomeScreenState extends State<HomeScreen> {
               child: ValueListenableBuilder<bool>(
                 valueListenable: NavigationService.isModalOpenNotifier,
                 builder: (context, isModalOpen, child) {
-                  if (isModalOpen) {
-                    return const SizedBox.shrink();
-                  }
-                  return child!;
+                  return AnimatedSlide(
+                    offset: isModalOpen ? const Offset(0, 1.2) : Offset.zero,
+                    duration: const Duration(milliseconds: 250),
+                    curve: isModalOpen ? Curves.easeInCubic : Curves.easeOutCubic,
+                    child: AnimatedOpacity(
+                      opacity: isModalOpen ? 0.0 : 1.0,
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOut,
+                      child: IgnorePointer(
+                        ignoring: isModalOpen,
+                        child: child!,
+                      ),
+                    ),
+                  );
                 },
                 child: LiquidGlassBottomBar(
                   key: ValueKey('tab_bar_${isRtl}_$isDarkMode'),

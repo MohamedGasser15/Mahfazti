@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:neo_cupertino/neo_cupertino.dart';
 import 'package:intl/intl.dart';
 import 'package:my_wallet/core/constants/currency_constants.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
@@ -194,6 +197,400 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
   }
 
   void _showAddSubscriptionModal(bool isDarkMode) {
+    if (Platform.isIOS) {
+      _showIosAddSubscriptionModal(isDarkMode);
+    } else {
+      _showAndroidAddSubscriptionModal(isDarkMode);
+    }
+  }
+
+  void _showIosAddSubscriptionModal(bool isDarkMode) {
+    final titleController = TextEditingController();
+    final amountController = TextEditingController();
+    final dayController = TextEditingController(text: '15');
+    String cycle = 'monthly';
+    IconData selectedIcon = Icons.credit_card_rounded;
+
+    final presets = [
+      {'name': 'Netflix', 'amount': '250', 'icon': Icons.movie_filter_rounded},
+      {'name': 'Spotify', 'amount': '80', 'icon': Icons.music_note_rounded},
+      {'name': context.l10n.weInternet, 'amount': '380', 'icon': Icons.wifi_rounded},
+      {'name': context.l10n.gym, 'amount': '600', 'icon': Icons.fitness_center_rounded},
+      {'name': 'YouTube', 'amount': '90', 'icon': Icons.play_circle_fill_rounded},
+      {'name': 'iCloud', 'amount': '45', 'icon': Icons.cloud_rounded},
+    ];
+
+    showGlassModalSheet(
+      context: context,
+      halfSize: 0.72,
+      fullSize: 0.92,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            context.l10n.newSubscription,
+                            style: TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3,
+                              color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                            ),
+                          ),
+                          CupertinoButton(
+                            padding: EdgeInsets.zero,
+                            onPressed: () => Navigator.pop(ctx),
+                            child: Container(
+                              width: 30,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                color: isDarkMode
+                                    ? Colors.white.withValues(alpha: 0.12)
+                                    : Colors.black.withValues(alpha: 0.06),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                CupertinoIcons.xmark,
+                                size: 14,
+                                color: isDarkMode ? Colors.white70 : Colors.black54,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        context.l10n.trackRecurringBillsSubtitle,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Quick Presets
+                      SizedBox(
+                        height: 38,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: presets.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            final preset = presets[index];
+                            return GestureDetector(
+                              onTap: () {
+                                setModalState(() {
+                                  titleController.text = preset['name'] as String;
+                                  amountController.text = preset['amount'] as String;
+                                  selectedIcon = preset['icon'] as IconData;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: (isDarkMode ? Colors.white : Colors.black)
+                                      .withValues(alpha: isDarkMode ? 0.08 : 0.05),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      preset['icon'] as IconData,
+                                      size: 15,
+                                      color: isDarkMode ? Colors.white : Colors.black,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      preset['name'] as String,
+                                      style: TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: isDarkMode ? Colors.white : Colors.black,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Title Field
+                      Text(
+                        context.l10n.title,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: (isDarkMode ? Colors.white : Colors.black)
+                              .withValues(alpha: isDarkMode ? 0.08 : 0.05),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                          ),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        child: TextField(
+                          controller: titleController,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: isDarkMode ? Colors.white : Colors.black,
+                          ),
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            hintText: context.l10n.subscriptionTitleHint,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Amount & Renewal Day
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  context.l10n.amount,
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: (isDarkMode ? Colors.white : Colors.black)
+                                        .withValues(alpha: isDarkMode ? 0.08 : 0.05),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                                    ),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                  child: TextField(
+                                    controller: amountController,
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                      color: isDarkMode ? Colors.white : Colors.black,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      border: InputBorder.none,
+                                      hintText: '0.00',
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  context.l10n.subscriptionDayHint,
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: (isDarkMode ? Colors.white : Colors.black)
+                                        .withValues(alpha: isDarkMode ? 0.08 : 0.05),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                                    ),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                  child: TextField(
+                                    controller: dayController,
+                                    keyboardType: TextInputType.number,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                      color: isDarkMode ? Colors.white : Colors.black,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      border: InputBorder.none,
+                                      hintText: '1-31',
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Billing Cycle Toggle
+                      Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setModalState(() => cycle = 'monthly'),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: cycle == 'monthly'
+                                      ? (isDarkMode ? Colors.white : const Color(0xFF09090B))
+                                      : (isDarkMode
+                                          ? const Color(0xFF1E1E24)
+                                          : const Color(0xFFF4F4F5)),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    context.l10n.monthly,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: cycle == 'monthly'
+                                          ? (isDarkMode ? Colors.black : Colors.white)
+                                          : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setModalState(() => cycle = 'yearly'),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: cycle == 'yearly'
+                                      ? (isDarkMode ? Colors.white : const Color(0xFF09090B))
+                                      : (isDarkMode
+                                          ? const Color(0xFF1E1E24)
+                                          : const Color(0xFFF4F4F5)),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    context.l10n.yearly,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: cycle == 'yearly'
+                                          ? (isDarkMode ? Colors.black : Colors.white)
+                                          : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Submit Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final title = titleController.text.trim();
+                            final amount = double.tryParse(amountController.text.trim());
+                            final day = int.tryParse(dayController.text.trim()) ?? 1;
+
+                            if (title.isEmpty || amount == null || amount <= 0) {
+                              MessageService.showError(
+                                context: context,
+                                message: context.l10n.pleaseEnterSubscriptionTitleAndAmount,
+                              );
+                              return;
+                            }
+
+                            Navigator.pop(ctx);
+                            HapticFeedback.mediumImpact();
+
+                            final newItem = SubscriptionItem(
+                              id: 'sub_${DateTime.now().millisecondsSinceEpoch}',
+                              title: title,
+                              amount: amount,
+                              billingCycle: cycle,
+                              renewalDay: day.clamp(1, 31),
+                              category: 'Subscriptions',
+                              icon: selectedIcon,
+                            );
+
+                            setState(() {
+                              _subscriptions.insert(0, newItem);
+                            });
+                            await _saveSubscriptions();
+
+                            if (context.mounted) {
+                              MessageService.showSuccess(
+                                context: context,
+                                message: context.l10n.subscriptionAddedSuccess,
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                            foregroundColor: isDarkMode ? const Color(0xFF09090B) : Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            context.l10n.saveSubscription,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showAndroidAddSubscriptionModal(bool isDarkMode) {
     final titleController = TextEditingController();
     final amountController = TextEditingController();
     final dayController = TextEditingController(text: '15');
@@ -565,6 +962,108 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
   }
 
   void _showSubscriptionOptions(SubscriptionItem sub, bool isDarkMode) {
+    if (Platform.isIOS) {
+      _showIosSubscriptionOptions(sub, isDarkMode);
+    } else {
+      _showAndroidSubscriptionOptions(sub, isDarkMode);
+    }
+  }
+
+  void _showIosSubscriptionOptions(SubscriptionItem sub, bool isDarkMode) {
+    showGlassModalSheet(
+      context: context,
+      halfSize: 0.32,
+      fullSize: 0.45,
+      builder: (ctx) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(sub.icon, size: 22, color: isDarkMode ? Colors.white : Colors.black),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            sub.title,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: isDarkMode ? Colors.white : Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${_formatAmount(sub.amount)} / ${sub.billingCycle == 'yearly' ? context.l10n.yrUnit : context.l10n.moUnit}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                CupertinoListTile(
+                  leading: const Icon(
+                    CupertinoIcons.trash,
+                    color: CupertinoColors.destructiveRed,
+                    size: 20,
+                  ),
+                  title: Text(
+                    context.l10n.deleteSubscription,
+                    style: const TextStyle(
+                      color: CupertinoColors.destructiveRed,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  trailing: const CupertinoListTileChevron(),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _deleteSubscription(sub);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteSubscription(SubscriptionItem sub) async {
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _subscriptions.removeWhere((item) => item.id == sub.id);
+    });
+    await _saveSubscriptions();
+    if (mounted) {
+      MessageService.showSuccess(
+        context: context,
+        message: context.l10n.subscriptionDeletedSuccess,
+      );
+    }
+  }
+
+  void _showAndroidSubscriptionOptions(SubscriptionItem sub, bool isDarkMode) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,

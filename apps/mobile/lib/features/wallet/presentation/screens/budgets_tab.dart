@@ -101,6 +101,218 @@ class _BudgetsTabState extends State<BudgetsTab> {
   }
 
   void _showSetMonthlyBudgetDialog(bool isDarkMode) {
+    if (Platform.isIOS) {
+      _showIosSetMonthlyBudgetDialog(isDarkMode);
+    } else {
+      _showAndroidSetMonthlyBudgetDialog(isDarkMode);
+    }
+  }
+
+  void _showIosSetMonthlyBudgetDialog(bool isDarkMode) {
+    final hasExistingBudget = (_budgetData?.monthlyBudget ?? 0) > 0;
+    final controller = TextEditingController(
+      text: hasExistingBudget
+          ? (_budgetData!.monthlyBudget).toStringAsFixed(0)
+          : '',
+    );
+
+    showGlassModalSheet(
+      context: context,
+      halfSize: 0.55,
+      fullSize: 0.85,
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      context.l10n.setMonthlyBudget,
+                      style: TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                        color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                      ),
+                    ),
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: isDarkMode
+                              ? Colors.white.withValues(alpha: 0.12)
+                              : Colors.black.withValues(alpha: 0.06),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          CupertinoIcons.xmark,
+                          size: 14,
+                          color: isDarkMode ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  context.l10n.setMonthlyBudgetSpending,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Container(
+                  decoration: BoxDecoration(
+                    color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: isDarkMode ? 0.08 : 0.05),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: TextField(
+                    controller: controller,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    autofocus: true,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: isDarkMode ? Colors.white : Colors.black,
+                    ),
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: '0.00',
+                      hintStyle: TextStyle(
+                        color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
+                      ),
+                      prefixIcon: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Text(
+                          _currencyCode,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                      prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 0),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final text = controller.text.trim();
+                      final amount = double.tryParse(text);
+                      if (amount == null || amount < 0) {
+                        MessageService.showError(
+                          context: context,
+                          message: context.l10n.pleaseEnterValidAmount,
+                        );
+                        return;
+                      }
+                      Navigator.pop(ctx);
+                      HapticFeedback.mediumImpact();
+
+                      setState(() {
+                        _budgetData = _budgetData != null
+                            ? _budgetData!.copyWith(monthlyBudget: amount)
+                            : BudgetDto(
+                                monthlyBudget: amount,
+                                currentSpending: 0,
+                                categoryBudgets: BudgetDto.defaultSeed().categoryBudgets,
+                              );
+                      });
+                      await WalletCacheService.saveBudget(_budgetData!.toJson());
+
+                      if (mounted) {
+                        MessageService.showSuccess(
+                          context: context,
+                          message: context.l10n.budgetUpdatedSuccessfully,
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                      foregroundColor: isDarkMode ? const Color(0xFF09090B) : Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      context.l10n.saveBudget,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+                if (hasExistingBudget) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        HapticFeedback.mediumImpact();
+                        setState(() {
+                          if (_budgetData != null) {
+                            _budgetData = _budgetData!.copyWith(monthlyBudget: 0.0);
+                          }
+                        });
+                        if (_budgetData != null) {
+                          await WalletCacheService.saveBudget(_budgetData!.toJson());
+                        }
+                        if (mounted) {
+                          MessageService.showSuccess(
+                            context: context,
+                            message: context.l10n.monthlyBudgetRemoved,
+                          );
+                        }
+                      },
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(CupertinoIcons.trash, size: 16, color: CupertinoColors.destructiveRed),
+                          const SizedBox(width: 6),
+                          Text(
+                            context.l10n.removeMonthlyBudget,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: CupertinoColors.destructiveRed,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+      },
+    );
+  }
+
+  void _showAndroidSetMonthlyBudgetDialog(bool isDarkMode) {
     final hasExistingBudget = (_budgetData?.monthlyBudget ?? 0) > 0;
     final controller = TextEditingController(
       text: hasExistingBudget
@@ -298,6 +510,178 @@ class _BudgetsTabState extends State<BudgetsTab> {
   }
 
   void _showSetCategoryBudgetDialog(CategoryBudgetDto cat, bool isDarkMode) {
+    if (Platform.isIOS) {
+      _showIosSetCategoryBudgetDialog(cat, isDarkMode);
+    } else {
+      _showAndroidSetCategoryBudgetDialog(cat, isDarkMode);
+    }
+  }
+
+  void _showIosSetCategoryBudgetDialog(CategoryBudgetDto cat, bool isDarkMode) {
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    final name = isAr ? cat.categoryNameAr : cat.categoryNameEn;
+    final controller = TextEditingController(
+      text: cat.budget > 0 ? cat.budget.toStringAsFixed(0) : '',
+    );
+
+    showGlassModalSheet(
+      context: context,
+      halfSize: 0.52,
+      fullSize: 0.82,
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      name,
+                      style: TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                        color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                      ),
+                    ),
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: isDarkMode
+                              ? Colors.white.withValues(alpha: 0.12)
+                              : Colors.black.withValues(alpha: 0.06),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          CupertinoIcons.xmark,
+                          size: 14,
+                          color: isDarkMode ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  context.l10n.setCategorySpendingLimit,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Container(
+                  decoration: BoxDecoration(
+                    color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: isDarkMode ? 0.08 : 0.05),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: TextField(
+                    controller: controller,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    autofocus: true,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: isDarkMode ? Colors.white : Colors.black,
+                    ),
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: '0.00',
+                      hintStyle: TextStyle(
+                        color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
+                      ),
+                      prefixIcon: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Text(
+                          _currencyCode,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                      prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 0),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final text = controller.text.trim();
+                      final amount = double.tryParse(text);
+                      if (amount == null || amount < 0) {
+                        MessageService.showError(
+                          context: context,
+                          message: context.l10n.pleaseEnterValidAmount,
+                        );
+                        return;
+                      }
+                      Navigator.pop(ctx);
+                      HapticFeedback.mediumImpact();
+
+                      setState(() {
+                        if (_budgetData != null) {
+                          final updatedList = _budgetData!.categoryBudgets.map((item) {
+                            if (item.categoryId == cat.categoryId) {
+                              return item.copyWith(budget: amount);
+                            }
+                            return item;
+                          }).toList();
+                          _budgetData = _budgetData!.copyWith(categoryBudgets: updatedList);
+                        }
+                      });
+                      if (_budgetData != null) {
+                        await WalletCacheService.saveBudget(_budgetData!.toJson());
+                      }
+
+                      if (mounted) {
+                        MessageService.showSuccess(
+                          context: context,
+                          message: context.l10n.categoryBudgetUpdated,
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                      foregroundColor: isDarkMode ? const Color(0xFF09090B) : Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      context.l10n.save,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      },
+    );
+  }
+
+  void _showAndroidSetCategoryBudgetDialog(CategoryBudgetDto cat, bool isDarkMode) {
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final name = isAr ? cat.categoryNameAr : cat.categoryNameEn;
     final controller = TextEditingController(
@@ -583,6 +967,225 @@ class _BudgetsTabState extends State<BudgetsTab> {
   }
 
   void _showAddCategoryDialog(bool isDarkMode) {
+    if (Platform.isIOS) {
+      _showIosAddCategoryDialog(isDarkMode);
+    } else {
+      _showAndroidAddCategoryDialog(isDarkMode);
+    }
+  }
+
+  void _showIosAddCategoryDialog(bool isDarkMode) {
+    final nameController = TextEditingController();
+    final budgetController = TextEditingController();
+
+    showGlassModalSheet(
+      context: context,
+      halfSize: 0.60,
+      fullSize: 0.88,
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        context.l10n.newCategory,
+                        style: TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
+                          color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                        ),
+                      ),
+                      CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            color: isDarkMode
+                                ? Colors.white.withValues(alpha: 0.12)
+                                : Colors.black.withValues(alpha: 0.06),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            CupertinoIcons.xmark,
+                            size: 14,
+                            color: isDarkMode ? Colors.white70 : Colors.black54,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    context.l10n.addCategoryToTrackSubtitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    context.l10n.categoryName,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: isDarkMode ? 0.08 : 0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: TextField(
+                      controller: nameController,
+                      autofocus: true,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      ),
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        hintText: context.l10n.categoryNameHint,
+                        hintStyle: TextStyle(
+                          color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
+                          fontWeight: FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    context.l10n.budgetLimitOptional,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: isDarkMode ? 0.08 : 0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: TextField(
+                      controller: budgetController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      ),
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        hintText: '0.00',
+                        hintStyle: TextStyle(
+                          color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
+                        ),
+                        prefixIcon: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Text(
+                            _currencyCode,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                        prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 0),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final name = nameController.text.trim();
+                        if (name.isEmpty) {
+                          MessageService.showError(
+                            context: context,
+                            message: context.l10n.pleaseEnterCategoryName,
+                          );
+                          return;
+                        }
+                        final budgetVal = double.tryParse(budgetController.text.trim()) ?? 0.0;
+                        Navigator.pop(ctx);
+                        HapticFeedback.mediumImpact();
+
+                        final currentCats = _budgetData?.categoryBudgets ?? [];
+                        final maxId = currentCats.fold<int>(0, (prev, c) => c.categoryId > prev ? c.categoryId : prev);
+                        final newCat = CategoryBudgetDto(
+                          id: maxId + 1,
+                          categoryId: maxId + 1,
+                          categoryNameAr: name,
+                          categoryNameEn: name,
+                          budget: budgetVal,
+                          spent: 0.0,
+                        );
+
+                        setState(() {
+                          if (_budgetData != null) {
+                            _budgetData = _budgetData!.copyWith(
+                              categoryBudgets: [..._budgetData!.categoryBudgets, newCat],
+                            );
+                          }
+                        });
+                        if (_budgetData != null) {
+                          await WalletCacheService.saveBudget(_budgetData!.toJson());
+                        }
+                        if (mounted) {
+                          MessageService.showSuccess(
+                            context: context,
+                            message: context.l10n.categoryAddedSuccess,
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                        foregroundColor: isDarkMode ? const Color(0xFF09090B) : Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        context.l10n.addCategory,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showAndroidAddCategoryDialog(bool isDarkMode) {
     final nameController = TextEditingController();
     final budgetController = TextEditingController();
 
@@ -802,34 +1405,32 @@ class _BudgetsTabState extends State<BudgetsTab> {
     final isIOS = Platform.isIOS || Theme.of(context).platform == TargetPlatform.iOS;
 
     if (isIOS) {
-      showCupertinoDialog(
+      NeoAlertDialog.show(
         context: context,
-        builder: (ctx) => CupertinoAlertDialog(
-          title: Text(context.l10n.deleteCategory),
-          content: Text(
-            context.l10n.confirmDeleteCategory(name),
+        title: context.l10n.deleteCategory,
+        message: context.l10n.confirmDeleteCategory(name),
+        actions: [
+          NeoDialogAction(
+            title: context.l10n.cancel,
+            role: NeoDialogActionRole.cancel,
+            onPressed: () {},
           ),
-          actions: [
-            CupertinoDialogAction(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(context.l10n.cancel),
-            ),
-            CupertinoDialogAction(
-              isDestructiveAction: true,
-              onPressed: () async {
-                Navigator.pop(ctx);
-                HapticFeedback.mediumImpact();
-                setState(() {
-                  if (_budgetData != null) {
-                    final updated = _budgetData!.categoryBudgets
-                        .where((item) => item.categoryId != cat.categoryId)
-                        .toList();
-                    _budgetData = _budgetData!.copyWith(categoryBudgets: updated);
-                  }
-                });
+          NeoDialogAction(
+            title: isAr ? 'حذف' : 'Delete',
+            role: NeoDialogActionRole.destructive,
+            onPressed: () async {
+              HapticFeedback.mediumImpact();
+              setState(() {
                 if (_budgetData != null) {
-                  await WalletCacheService.saveBudget(_budgetData!.toJson());
+                  final updated = _budgetData!.categoryBudgets
+                      .where((item) => item.categoryId != cat.categoryId)
+                      .toList();
+                  _budgetData = _budgetData!.copyWith(categoryBudgets: updated);
                 }
+              });
+              if (_budgetData != null) {
+                await WalletCacheService.saveBudget(_budgetData!.toJson());
+              }
                 if (mounted) {
                   MessageService.showSuccess(
                     context: context,
@@ -837,13 +1438,11 @@ class _BudgetsTabState extends State<BudgetsTab> {
                   );
                 }
               },
-              child: Text(context.l10n.delete),
             ),
           ],
-        ),
-      );
-      return;
-    }
+        );
+        return;
+      }
 
     showDialog(
       context: context,
@@ -912,6 +1511,116 @@ class _BudgetsTabState extends State<BudgetsTab> {
   }
 
   void _showCategoryOptions(CategoryBudgetDto cat, bool isDarkMode, bool isAr) {
+    if (Platform.isIOS) {
+      _showIosCategoryOptions(cat, isDarkMode, isAr);
+    } else {
+      _showAndroidCategoryOptions(cat, isDarkMode, isAr);
+    }
+  }
+
+  void _showIosCategoryOptions(CategoryBudgetDto cat, bool isDarkMode, bool isAr) {
+    final name = isAr ? cat.categoryNameAr : cat.categoryNameEn;
+    final icon = _getCategoryIcon(cat.categoryId, name);
+    final hasBudget = cat.budget > 0;
+
+    showGlassModalSheet(
+      context: context,
+      halfSize: 0.38,
+      fullSize: 0.50,
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(icon, size: 20, color: isDarkMode ? Colors.white : Colors.black),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: isDarkMode ? Colors.white : Colors.black,
+                            ),
+                          ),
+                          Text(
+                            hasBudget
+                                ? context.l10n.currentLimitAmount(_formatAmount(cat.budget))
+                                : context.l10n.noLimitSet,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                CupertinoListTile(
+                  leading: Icon(
+                    CupertinoIcons.pencil,
+                    size: 20,
+                    color: isDarkMode ? Colors.white : Colors.black,
+                  ),
+                  title: Text(
+                    hasBudget ? context.l10n.editBudget : context.l10n.setBudget,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: isDarkMode ? Colors.white : Colors.black,
+                    ),
+                  ),
+                  trailing: const CupertinoListTileChevron(),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showSetCategoryBudgetDialog(cat, isDarkMode);
+                  },
+                ),
+                CupertinoListTile(
+                  leading: const Icon(
+                    CupertinoIcons.trash,
+                    size: 20,
+                    color: CupertinoColors.destructiveRed,
+                  ),
+                  title: Text(
+                    context.l10n.deleteCategory,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: CupertinoColors.destructiveRed,
+                    ),
+                  ),
+                  trailing: const CupertinoListTileChevron(),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _confirmDeleteCategory(cat, isDarkMode);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showAndroidCategoryOptions(CategoryBudgetDto cat, bool isDarkMode, bool isAr) {
     final name = isAr ? cat.categoryNameAr : cat.categoryNameEn;
     final icon = _getCategoryIcon(cat.categoryId, name);
     final hasBudget = cat.budget > 0;

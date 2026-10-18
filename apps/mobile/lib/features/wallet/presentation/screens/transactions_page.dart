@@ -1,5 +1,5 @@
-// features/home/presentation/screens/TransactionsPage.dart (TransactionsTab)
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:my_wallet/core/constants/currency_constants.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
@@ -285,46 +285,51 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
   }
 
   void _showFilterDialog() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _buildFilterSheet(),
-    );
+    if (Platform.isIOS) {
+      showGlassModalSheet(
+        context: context,
+        halfSize: 0.55,
+        fullSize: 0.78,
+        builder: (context) => _buildFilterSheet(isGlass: true),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => _buildFilterSheet(isGlass: false),
+      );
+    }
   }
 
   // ==================  Filter Sheet ==================
 
-  Widget _buildFilterSheet() {
+  Widget _buildFilterSheet({bool isGlass = false}) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     DateTime? tempFromDate = _fromDate;
     DateTime? tempToDate = _toDate;
 
     return StatefulBuilder(
-      builder: (context, setState) => Container(
-        decoration: BoxDecoration(
-          color: isDarkMode ? Colors.grey[900] : Colors.white,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
+      builder: (context, setState) {
+        final content = Padding(
+          padding: EdgeInsets.fromLTRB(20, isGlass ? 8 : 24, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!isGlass) ...[
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 16),
+                const SizedBox(height: 16),
+              ],
             Text(
               context.l10n.filterTransactions,
               style: TextStyle(
@@ -434,7 +439,29 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
             ),
           ],
         ),
-      ),
+      );
+
+        if (isGlass) {
+          return SafeArea(
+            top: false,
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: content,
+            ),
+          );
+        }
+
+        return Container(
+          decoration: BoxDecoration(
+            color: isDarkMode ? Colors.grey[900] : Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+          ),
+          child: content,
+        );
+      },
     );
   }
 
@@ -834,6 +861,41 @@ class _TransactionsTabState extends State<TransactionsTab> with TickerProviderSt
   }
 
   void _showDeleteDialog(WalletTransaction transaction) {
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    if (Platform.isIOS) {
+      NeoAlertDialog.show(
+        context: context,
+        title: context.l10n.deleteTransaction,
+        message: context.l10n.confirmDeleteTransaction(transaction.title),
+        actions: [
+          NeoDialogAction(
+            title: context.l10n.cancel,
+            role: NeoDialogActionRole.cancel,
+            onPressed: () {},
+          ),
+          NeoDialogAction(
+            title: isAr ? 'حذف' : 'Delete',
+            role: NeoDialogActionRole.destructive,
+            onPressed: () async {
+              HapticFeedback.mediumImpact();
+              try {
+                await _walletRepository.deleteTransaction(transaction.id);
+                await _refreshData();
+                if (mounted) {
+                  MessageService.showSuccess(context: context, message: context.l10n.transactionDeletedSuccess);
+                }
+              } catch (e) {
+                if (mounted) {
+                  MessageService.showError(context: context, message: context.l10n.failedToDeleteWithError(e.toString()));
+                }
+              }
+            },
+          ),
+        ],
+      );
+      return;
+    }
+
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,

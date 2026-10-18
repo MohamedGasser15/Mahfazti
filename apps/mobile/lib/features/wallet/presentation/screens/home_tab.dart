@@ -15,7 +15,6 @@ import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/services/wallet_cache_service.dart';
 import 'package:my_wallet/core/utils/api_error_handler.dart';
 import 'package:my_wallet/core/utils/app_responsive.dart';
-import 'package:my_wallet/core/utils/navigation_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -75,15 +74,24 @@ abstract class _HomeTabState extends State<HomeTab> {
   bool _isDismissingCard = false;
   PageController _getStartedPageController = PageController(viewportFraction: 0.90);
   final ScrollController _walletsScrollController = ScrollController();
+  final ScrollController _mainScrollController = ScrollController();
   final Map<String, double> _accountBalancesOverrides = {};
   final Map<String, String> _accountNamesOverrides = {};
   final Map<String, int> _accountIconsOverrides = {};
+  final ValueNotifier<double> _topScrollProgress = ValueNotifier<double>(0.0);
   //#endregion
 
   //#region Lifecycle
   @override
   void initState() {
     super.initState();
+    _mainScrollController.addListener(() {
+      if (!_mainScrollController.hasClients) return;
+      final progress = (_mainScrollController.offset / 35.0).clamp(0.0, 1.0);
+      if (_topScrollProgress.value != progress) {
+        _topScrollProgress.value = progress;
+      }
+    });
     _loadCurrency().then((_) {
       _loadHomeData();
     });
@@ -93,6 +101,8 @@ abstract class _HomeTabState extends State<HomeTab> {
 
   @override
   void dispose() {
+    _topScrollProgress.dispose();
+    _mainScrollController.dispose();
     _getStartedPageController.dispose();
     _walletsScrollController.dispose();
     super.dispose();
@@ -601,80 +611,128 @@ abstract class _HomeTabState extends State<HomeTab> {
       ),
       child: Container(
         color: isDarkMode ? const Color(0xFF09090B) : Colors.white,
-        child: RefreshIndicator(
-          onRefresh: _refreshData,
-          color: Colors.white,
-          backgroundColor: isDarkMode ? const Color(0xFF26262E) : const Color(0xFF202026),
-          child: SingleChildScrollView(
-            clipBehavior: Clip.none,
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.zero,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                // Top overscroll extension: matches top of hero gradient seamlessly
-                Positioned(
-                  top: -1000,
-                  left: -1000,
-                  right: -1000,
-                  height: 1000,
-                  child: Container(
-                    color: isDarkMode
-                        ? const Color(0xFF16161B)
-                        : const Color(0xFF141418),
-                  ),
-                ),
-                ResponsiveWrapper(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
+          children: [
+            NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (notification.depth == 0) {
+                  final progress = (notification.metrics.pixels / 35.0).clamp(0.0, 1.0);
+                  if (_topScrollProgress.value != progress) {
+                    _topScrollProgress.value = progress;
+                  }
+                }
+                return false;
+              },
+              child: RefreshIndicator(
+                onRefresh: _refreshData,
+                color: Colors.white,
+                backgroundColor: isDarkMode ? const Color(0xFF26262E) : const Color(0xFF202026),
+                child: SingleChildScrollView(
+                  controller: _mainScrollController,
+                  clipBehavior: Clip.none,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero,
+                  child: Stack(
+                    clipBehavior: Clip.none,
                     children: [
-                      // Say-Style Hero Section with Atmospheric Black Gradient / Shadow (Status bar down to actions)
-                      _buildSayHeroSection(isDarkMode, hideService),
-
-                      if (_homeData == null) ...[
-                        if (_isLoading)
-                          _buildSkeletonLoading(isDarkMode)
-                        else if (_errorMessage != null)
-                          _buildErrorWidget(isDarkMode)
-                        else
-                          const SizedBox.shrink(),
-                      ] else ...[
-                        // "Get Started / Auto-Tracking" Banner Card
-                        AnimatedSize(
-                          duration: const Duration(milliseconds: 320),
-                          curve: Curves.easeInOutCubic,
-                          child: (_showAutoTrackingBanner && _dismissedGetStartedCards.length < 4)
-                              ? Column(
-                                  children: [
-                                    _buildAutoTrackingBanner(isDarkMode),
-                                    const SizedBox(height: 20),
-                                  ],
-                                )
-                              : const SizedBox.shrink(),
+                      // Top overscroll extension: matches top of hero gradient seamlessly
+                      Positioned(
+                        top: -1000,
+                        left: -1000,
+                        right: -1000,
+                        height: 1000,
+                        child: Container(
+                          color: isDarkMode
+                              ? const Color(0xFF16161B)
+                              : const Color(0xFF141418),
                         ),
+                      ),
+                      ResponsiveWrapper(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Say-Style Hero Section with Atmospheric Black Gradient / Shadow (Status bar down to actions)
+                            _buildSayHeroSection(isDarkMode, hideService),
 
-                        // Wallets Carousel (Displayed if user has multiple accounts/wallets)
-                        if (_accounts.where((a) => !a.isAll).length > 1) ...[
-                          _buildWalletsCarousel(isDarkMode, hideService),
-                          const SizedBox(height: 20),
-                        ],
+                            if (_homeData == null) ...[
+                              if (_isLoading)
+                                _buildSkeletonLoading(isDarkMode)
+                              else if (_errorMessage != null)
+                                _buildErrorWidget(isDarkMode)
+                              else
+                                const SizedBox.shrink(),
+                            ] else ...[
+                              // "Get Started / Auto-Tracking" Banner Card
+                              AnimatedSize(
+                                duration: const Duration(milliseconds: 320),
+                                curve: Curves.easeInOutCubic,
+                                child: (_showAutoTrackingBanner && _dismissedGetStartedCards.length < 4)
+                                    ? Column(
+                                        children: [
+                                          _buildAutoTrackingBanner(isDarkMode),
+                                          const SizedBox(height: 20),
+                                        ],
+                                      )
+                                    : const SizedBox.shrink(),
+                              ),
 
-                        // Recent Transactions Section
-                        _buildRecentTransactionsSection(isDarkMode),
+                              // Wallets Carousel (Displayed if user has multiple accounts/wallets)
+                              if (_accounts.where((a) => !a.isAll).length > 1) ...[
+                                _buildWalletsCarousel(isDarkMode, hideService),
+                                const SizedBox(height: 20),
+                              ],
 
-                        const SizedBox(height: 24),
+                              // Recent Transactions Section
+                              _buildRecentTransactionsSection(isDarkMode),
 
-                        // Insights Grid Widgets Section
-                        _buildInsightsGridSection(isDarkMode, hideService),
+                              const SizedBox(height: 24),
 
-                        const SizedBox(height: 120),
-                      ],
+                              // Insights Grid Widgets Section
+                              _buildInsightsGridSection(isDarkMode, hideService),
+
+                              const SizedBox(height: 120),
+                            ],
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
+
+            // Top Status Bar Liquid Glass Soft Edge Dock (iOS only)
+            // Matches Apple's .scrollEdgeEffectStyle(.soft) (Hard scroll edge: OFF)
+            if (Platform.isIOS)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: MediaQuery.of(context).padding.top + 32,
+                child: AnimatedBuilder(
+                  animation: Listenable.merge([_mainScrollController, _topScrollProgress]),
+                  builder: (context, _) {
+                    final offset = _mainScrollController.hasClients
+                        ? _mainScrollController.offset
+                        : 0.0;
+                    final progress = _mainScrollController.hasClients
+                        ? (offset / 35.0).clamp(0.0, 1.0)
+                        : _topScrollProgress.value;
+                    if (progress <= 0.0) return const SizedBox.shrink();
+                    return IgnorePointer(
+                      child: Opacity(
+                        opacity: progress,
+                        child: const ProgressiveBlur(
+                          maxSigma: 4,
+                          direction: ProgressiveBlurDirection.topToBottom,
+                          falloff: 2.6,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -752,83 +810,78 @@ abstract class _HomeTabState extends State<HomeTab> {
     final isIOS = Platform.isIOS;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    NavigationService.isModalOpenNotifier.value = true;
-    try {
-      if (isIOS && PlatformInfo.isIOS26OrHigher()) {
-        final sheetController = controller ?? GlassModalSheetController();
-        final glassSettings = isDarkMode
-            ? const LiquidGlassSettings(
-                thickness: 20,
-                blur: 28,
-                glassColor: Color(0x661E1E26),
-                refractiveIndex: 1.18,
-                lightIntensity: 0.90,
-                whitenStrength: 0.08,
-              )
-            : const LiquidGlassSettings(
-                thickness: 18,
-                blur: 24,
-                glassColor: Color(0xCCFFFFFF),
-                refractiveIndex: 1.12,
-                whitenStrength: 0.15,
-              );
+    if (isIOS) {
+      final sheetController = controller ?? GlassModalSheetController();
+      final glassSettings = isDarkMode
+          ? const LiquidGlassSettings(
+              thickness: 20,
+              blur: 28,
+              glassColor: Color(0x661E1E26),
+              refractiveIndex: 1.18,
+              lightIntensity: 0.90,
+              whitenStrength: 0.08,
+            )
+          : const LiquidGlassSettings(
+              thickness: 18,
+              blur: 24,
+              glassColor: Color(0xCCFFFFFF),
+              refractiveIndex: 1.12,
+              whitenStrength: 0.15,
+            );
 
-        return await GlassModalSheet.show<T>(
-          context: context,
-          useRootNavigator: true,
-          platformViewBackdrop: true,
-          controller: sheetController,
-          initialState: initialState,
-          halfSize: halfSize,
-          fullSize: fullSize,
-          detents: detents,
-          dismissible: dismissible,
-          horizontalMargin: horizontalMargin,
-          bottomMargin: bottomMargin,
-          topBorderRadius: topBorderRadius,
-          bottomBorderRadius: bottomBorderRadius,
-          fullTopBorderRadius: fullTopBorderRadius,
-          fullBottomBorderRadius: fullBottomBorderRadius,
-          showDragIndicator: showDragHandle,
-          dragIndicatorColor: isDarkMode
-              ? Colors.white.withValues(alpha: 0.35)
-              : const Color(0x33000000),
-          barrierColor: isDarkMode
-              ? const Color(0x80000000)
-              : const Color(0x33000000),
-          enableInteractionGlow: false,
-          enableSaturationGlow: false,
-          fillThreshold: 1.0,
-          expandedColor: Colors.transparent,
-          expandedDarkColor: Colors.transparent,
-          settings: glassSettings,
-          halfSettings: glassSettings,
-          fullSettings: glassSettings,
-          onStateChanged: (state) {
-            if (state == GlassSheetState.half && focusNodes != null) {
-              for (final node in focusNodes) {
-                node.unfocus();
-              }
+      return await GlassModalSheet.show<T>(
+        context: context,
+        useRootNavigator: true,
+        platformViewBackdrop: true,
+        controller: sheetController,
+        initialState: initialState,
+        halfSize: halfSize,
+        fullSize: fullSize,
+        detents: detents,
+        dismissible: dismissible,
+        horizontalMargin: horizontalMargin,
+        bottomMargin: bottomMargin,
+        topBorderRadius: topBorderRadius,
+        bottomBorderRadius: bottomBorderRadius,
+        fullTopBorderRadius: fullTopBorderRadius,
+        fullBottomBorderRadius: fullBottomBorderRadius,
+        showDragIndicator: showDragHandle,
+        dragIndicatorColor: isDarkMode
+            ? Colors.white.withValues(alpha: 0.35)
+            : const Color(0x33000000),
+        barrierColor: isDarkMode
+            ? const Color(0x80000000)
+            : const Color(0x33000000),
+        enableInteractionGlow: false,
+        enableSaturationGlow: false,
+        fillThreshold: 1.0,
+        expandedColor: Colors.transparent,
+        expandedDarkColor: Colors.transparent,
+        settings: glassSettings,
+        halfSettings: glassSettings,
+        fullSettings: glassSettings,
+        onStateChanged: (state) {
+          if (state == GlassSheetState.half && focusNodes != null) {
+            for (final node in focusNodes) {
+              node.unfocus();
             }
-            onStateChanged?.call(state);
-          },
-          builder: (ctx) => Material(
-            type: MaterialType.transparency,
-            child: builder(ctx, true, sheetController),
-          ),
-        );
-      } else {
-        return await showModalBottomSheet<T>(
-          context: context,
-          useRootNavigator: true,
-          isScrollControlled: isScrollControlled,
-          enableDrag: enableDrag,
-          backgroundColor: Colors.transparent,
-          builder: (ctx) => builder(ctx, false, null),
-        );
-      }
-    } finally {
-      NavigationService.isModalOpenNotifier.value = false;
+          }
+          onStateChanged?.call(state);
+        },
+        builder: (ctx) => Material(
+          type: MaterialType.transparency,
+          child: builder(ctx, true, sheetController),
+        ),
+      );
+    } else {
+      return await showModalBottomSheet<T>(
+        context: context,
+        useRootNavigator: true,
+        isScrollControlled: isScrollControlled,
+        enableDrag: enableDrag,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => builder(ctx, false, null),
+      );
     }
   }
   //#endregion

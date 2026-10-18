@@ -1291,7 +1291,6 @@ mixin _HomeTabWidgets on _HomeTabState {
   Future<void> _pickCustomDateRangeIOS(BuildContext context) async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
-    final sheetBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
     final borderColor = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
     final textPrimary = isDarkMode ? Colors.white : const Color(0xFF09090B);
     final textSecondary = isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
@@ -1308,10 +1307,10 @@ mixin _HomeTabWidgets on _HomeTabState {
       return DateFormat('d MMM yyyy', isAr ? 'ar' : 'en').format(d);
     }
 
-    await showModalBottomSheet<void>(
+    await showGlassModalSheet<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      halfSize: 0.52,
+      fullSize: 0.70,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
@@ -1366,31 +1365,15 @@ mixin _HomeTabWidgets on _HomeTabState {
               }
             }
 
-            return Container(
-              decoration: BoxDecoration(
-                color: sheetBg,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-                border: Border(top: BorderSide(color: borderColor, width: 1)),
-              ),
-              padding: EdgeInsets.fromLTRB(
-                20,
-                14,
-                20,
-                MediaQuery.of(ctx).padding.bottom + 20,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Handle
-                  Container(
-                    width: 38,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+            return SafeArea(
+              top: false,
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
 
                   // Header
                   Row(
@@ -1606,7 +1589,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                   ),
                 ],
               ),
-            );
+            ),
+          ),
+        );
           },
         );
       },
@@ -1616,7 +1601,6 @@ mixin _HomeTabWidgets on _HomeTabState {
   Future<void> _pickMonthPickerIOS(BuildContext context) async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
-    final sheetBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
     final borderColor = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
     final textPrimary = isDarkMode ? Colors.white : const Color(0xFF09090B);
 
@@ -1640,38 +1624,22 @@ mixin _HomeTabWidgets on _HomeTabState {
     // Years only up to current year (cannot pick future year)
     final years = List.generate(now.year - 2020 + 1, (index) => 2020 + index);
 
-    await showModalBottomSheet<void>(
+    await showGlassModalSheet<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      halfSize: 0.46,
+      fullSize: 0.60,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
-            return Container(
-              decoration: BoxDecoration(
-                color: sheetBg,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-                border: Border(top: BorderSide(color: borderColor, width: 1)),
-              ),
-              padding: EdgeInsets.fromLTRB(
-                20,
-                14,
-                20,
-                MediaQuery.of(ctx).padding.bottom + 20,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Handle
-                  Container(
-                    width: 38,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+            return SafeArea(
+              top: false,
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
 
                   // Header with selection pill
                   Row(
@@ -1847,7 +1815,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                   ),
                 ],
               ),
-            );
+            ),
+          ),
+        );
           },
         );
       },

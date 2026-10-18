@@ -2707,6 +2707,31 @@ mixin _HomeTabDialogs on _HomeTabState {
 
   //#region Delete Confirmation Dialog
   void _showDeleteConfirmationDialog(WalletTransaction transaction) {
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    if (Platform.isIOS) {
+      NeoAlertDialog.show(
+        context: context,
+        title: context.l10n.deleteTransaction,
+        message: context.l10n.confirmDeleteTransaction(transaction.title),
+        actions: [
+          NeoDialogAction(
+            title: context.l10n.cancel,
+            role: NeoDialogActionRole.cancel,
+            onPressed: () {},
+          ),
+          NeoDialogAction(
+            title: isAr ? 'حذف' : 'Delete',
+            role: NeoDialogActionRole.destructive,
+            onPressed: () async {
+              HapticFeedback.mediumImpact();
+              await _deleteTransaction(transaction);
+            },
+          ),
+        ],
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (context) {
