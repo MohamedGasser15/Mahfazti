@@ -9,11 +9,13 @@ import 'package:my_wallet/features/auth/presentation/widgets/otp_input_field.dar
 class ForgotPasswordSheet extends StatefulWidget {
   final AuthRepository authRepository;
   final VoidCallback onSuccess;
+  final bool isGlass;
 
   const ForgotPasswordSheet({
     super.key,
     required this.authRepository,
     required this.onSuccess,
+    this.isGlass = false,
   });
 
   @override
@@ -183,27 +185,11 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
     final isDark = theme.brightness == Brightness.dark;
     final isRTL = Directionality.of(context) == TextDirection.rtl;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF141414) : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(
-          top: BorderSide(
-            color: isDark ? Colors.white12 : Colors.grey.shade200,
-            width: 1,
-          ),
-        ),
-      ),
-      padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (!widget.isGlass) ...[
           // Drag Handle
           Center(
             child: Container(
@@ -216,11 +202,12 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
             ),
           ),
           const SizedBox(height: 16),
+        ],
 
-          // Header Row with Step indicator or Back button
-          Row(
-            children: [
-              if (_step > 0)
+        // Header Row with Step indicator or Back button
+        Row(
+          children: [
+            if (_step > 0)
                 IconButton(
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -563,7 +550,44 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
             ),
           ],
         ],
+      );
+
+    if (widget.isGlass) {
+      return SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 8,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            child: content,
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF141414) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        border: Border(
+          top: BorderSide(
+            color: isDark ? Colors.white12 : Colors.grey.shade200,
+            width: 1,
+          ),
+        ),
       ),
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: content,
     );
   }
 }

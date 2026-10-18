@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:neo_cupertino/neo_cupertino.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_wallet/core/constants/app_routes.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
@@ -331,21 +333,41 @@ class _EmailScreenState extends State<EmailScreen>
 
   // =================== FORGOT PASSWORD MODAL ===================
   void _showForgotPasswordBottomSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => ForgotPasswordSheet(
-        authRepository: _authRepository,
-        onSuccess: () {
-          Navigator.pop(ctx);
-          MessageService.showSuccess(
-            context: context,
-            message: context.l10n.passwordResetSuccess,
-          );
-        },
-      ),
-    );
+    if (Platform.isIOS) {
+      showGlassModalSheet(
+        context: context,
+        halfSize: 0.60,
+        fullSize: 0.85,
+        builder: (ctx) => ForgotPasswordSheet(
+          authRepository: _authRepository,
+          isGlass: true,
+          onSuccess: () {
+            Navigator.pop(ctx);
+            MessageService.showSuccess(
+              context: context,
+              message: context.l10n.passwordResetSuccess,
+            );
+          },
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => ForgotPasswordSheet(
+          authRepository: _authRepository,
+          isGlass: false,
+          onSuccess: () {
+            Navigator.pop(ctx);
+            MessageService.showSuccess(
+              context: context,
+              message: context.l10n.passwordResetSuccess,
+            );
+          },
+        ),
+      );
+    }
   }
 
   @override
