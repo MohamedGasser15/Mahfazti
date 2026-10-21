@@ -17,6 +17,7 @@ namespace Mahfazti.Infrastructure.Data
         public DbSet<UserSubscription> UserSubscriptions { get; set; }
         public DbSet<PaymentLog> PaymentLogs { get; set; }
         public DbSet<PromoCode> PromoCodes { get; set; }
+        public DbSet<FinancialInstitution> FinancialInstitutions { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {

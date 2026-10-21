@@ -84,6 +84,7 @@ builder.Services.AddAuthentication(options =>
 
 // MemoryCache
 builder.Services.AddMemoryCache();
+builder.Services.AddHttpContextAccessor();
 
 // HttpClient for external login
 builder.Services.AddHttpClient();
@@ -176,6 +177,7 @@ var app = builder.Build();
 // =======================
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseCors("AllowAll");
 
 app.UseAuthentication();
@@ -207,6 +209,7 @@ using (var scope = app.Services.CreateScope())
     await db.Database.MigrateAsync();
     await CategorySeeder.SeedAsync(db);
     await CurrencySeeder.SeedAsync(db);
+    await FinancialInstitutionSeeder.SeedAsync(db);
     await SubscriptionSeeder.SeedAsync(db);
 
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
