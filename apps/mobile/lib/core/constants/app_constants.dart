@@ -3,6 +3,11 @@ class AppConstants {
   static const String appVersion = '1.0.0';
   static const String baseUrl = 'https://mahfazati.runasp.net/';
 
+  /// When true, the app uses the in-memory + local storage Mock Backend Engine
+  /// for wallets, transactions, summaries, and categories.
+  /// Set to false when connecting to the real ASP.NET Core backend.
+  static const bool useMockBackend = true;
+
   // Storage Keys
   static const String isFirstTimeKey = 'isFirstTime';
   static const String authTokenKey = 'authToken';

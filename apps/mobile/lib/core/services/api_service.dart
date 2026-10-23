@@ -12,9 +12,15 @@ class ApiService {
   factory ApiService() => _instance;
 
   late Dio _dio;
+  bool _hasTestingDio = false;
+
+  bool get hasTestingDio => _hasTestingDio;
 
   @visibleForTesting
-  set dioForTesting(Dio value) => _dio = value;
+  set dioForTesting(Dio value) {
+    _dio = value;
+    _hasTestingDio = true;
+  }
 
   ApiService._internal() {
     _dio = Dio(

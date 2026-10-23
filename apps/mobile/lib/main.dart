@@ -37,7 +37,10 @@ void main() async {
   await LanguageService.init();
   await LiquidGlassWidgets.initialize();
 
-  runApp(LiquidGlassWidgets.wrap(child: const MyWalletApp()));
+  runApp(LiquidGlassWidgets.wrap(
+    brightnessResolver: Theme.maybeBrightnessOf,
+    child: const MyWalletApp(),
+  ));
 }
 
 class MyWalletApp extends StatefulWidget {

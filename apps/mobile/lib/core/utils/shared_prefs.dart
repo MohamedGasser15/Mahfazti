@@ -62,7 +62,8 @@ class SharedPrefs {
   }
 
   static Future<String?> getCurrency() async {
-    return _prefs.getString(AppConstants.selectedCurrencyKey);
+    final saved = _prefs.getString(AppConstants.selectedCurrencyKey);
+    return saved ?? 'EGP';
   }
 
   static Future<void> setCurrency(String currency) async {
@@ -70,6 +71,23 @@ class SharedPrefs {
   }
 
   // User Data (stored securely)
+  // Ask assistant (custom name)
+  static const String _defaultAssistantName = 'Mahfazti AI';
+
+  static String get assistantName {
+    final saved = _prefs.getString('ask_assistant_name')?.trim();
+    return (saved == null || saved.isEmpty) ? _defaultAssistantName : saved;
+  }
+
+  static Future<void> setAssistantName(String? value) async {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      await _prefs.remove('ask_assistant_name');
+      return;
+    }
+    await _prefs.setString('ask_assistant_name', trimmed);
+  }
+
   static String? get userData => _userData;
 
   static Future<String?> getUserData() async => _userData;

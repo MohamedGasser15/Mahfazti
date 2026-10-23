@@ -106,15 +106,15 @@ class AppTheme {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(
-            color: AppColors.primaryBlack,
-            width: 2,
+            color: AppColors.gray400,
+            width: 1.0,
           ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(
             color: AppColors.accentRed,
-            width: 2,
+            width: 1.2,
           ),
         ),
         contentPadding: const EdgeInsets.symmetric(
@@ -264,15 +264,15 @@ class AppTheme {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(
-            color: AppColors.primaryWhite,
-            width: 2,
+            color: AppColors.gray600,
+            width: 1.0,
           ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(
             color: AppColors.accentRed,
-            width: 2,
+            width: 1.2,
           ),
         ),
         contentPadding: const EdgeInsets.symmetric(

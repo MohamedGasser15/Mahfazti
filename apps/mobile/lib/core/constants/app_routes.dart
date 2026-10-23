@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:my_wallet/features/auth/presentation/screens/currency_selection_screen.dart';
 import 'package:my_wallet/features/auth/presentation/screens/email_screen.dart';
 import 'package:my_wallet/features/onboarding/presentation/screens/onboarding_screen.dart';
+import 'package:my_wallet/features/settings/presentation/screens/categories_management_screen.dart';
 import 'package:my_wallet/features/splash/presentation/screens/splash_screen.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/home_screen.dart';
+import 'package:my_wallet/features/wallet/presentation/screens/spending_breakdown_screen.dart';
+import 'package:my_wallet/features/wallet/presentation/screens/transactions_page.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -15,6 +18,9 @@ class AppRoutes {
   static const String register = '/register';
   static const String currencySelection = '/currency-selection';
   static const String home = '/home';
+  static const String spendingBreakdown = '/spending-breakdown';
+  static const String transactions = '/transactions';
+  static const String categoriesManagement = '/categories-management';
   static const String setPasscode = '/set-passcode';
   static const String pin = '/pin';
   static const String changePasscode = '/change-passcode';
@@ -54,6 +60,24 @@ class AppRoutes {
         return MaterialPageRoute(
           settings: settings,
           builder: (context) => const HomeScreen(),
+        );
+
+      case spendingBreakdown:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (context) => const SpendingBreakdownScreen(),
+        );
+
+      case transactions:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (context) => const TransactionsPage(),
+        );
+
+      case categoriesManagement:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (context) => const CategoriesManagementScreen(),
         );
 
       default:

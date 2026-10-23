@@ -4,24 +4,82 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:neo_cupertino/neo_cupertino.dart';
 
+/// Canonical "go back" icon used everywhere in the app.
+///
+/// iOS renders Cupertino chevrons, Android (and everything else) plain
+/// Material arrows. Direction is resolved from the active layout direction:
+/// LTR → left-pointing, RTL → right-pointing.
+IconData appBackIcon({required bool isIOS, required bool isRtl}) {
+  if (isIOS) {
+    return isRtl ? CupertinoIcons.chevron_right : CupertinoIcons.chevron_left;
+  }
+  return isRtl ? Icons.arrow_forward : Icons.arrow_back;
+}
+
+/// Canonical "go forward / next" chevron used for list rows, section links
+/// ("View all ›") and any disclosure affordance.
+IconData appForwardIcon({required bool isIOS, required bool isRtl}) {
+  if (isIOS) {
+    return isRtl ? CupertinoIcons.chevron_left : CupertinoIcons.chevron_right;
+  }
+  return isRtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded;
+}
+
+/// Chevron for previous/next steppers (month switchers).
+/// [forward] = true means "next".
+IconData appStepperIcon({
+  required bool isIOS,
+  required bool isRtl,
+  required bool forward,
+}) {
+  final pointRight = forward != isRtl;
+  if (isIOS) {
+    return pointRight ? CupertinoIcons.chevron_right : CupertinoIcons.chevron_left;
+  }
+  return pointRight
+      ? Icons.chevron_right_rounded
+      : Icons.chevron_left_rounded;
+}
+
+/// Context-aware convenience wrappers — they resolve both the platform and
+/// the text direction, so call sites stay one-liners.
+IconData appBackIconOf(BuildContext context) => appBackIcon(
+      isIOS: Platform.isIOS,
+      isRtl: Directionality.of(context) == TextDirection.rtl,
+    );
+
+IconData appForwardIconOf(BuildContext context) => appForwardIcon(
+      isIOS: Platform.isIOS,
+      isRtl: Directionality.of(context) == TextDirection.rtl,
+    );
+
+IconData appStepperIconOf(BuildContext context, {required bool forward}) =>
+    appStepperIcon(
+      isIOS: Platform.isIOS,
+      isRtl: Directionality.of(context) == TextDirection.rtl,
+      forward: forward,
+    );
+
 /// Adaptive back button that renders a circular liquid glass button on iOS
 /// and a clean standard Material button on Android.
 class AppGlassBackButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool? isDarkMode;
-  final IconData icon;
+  final IconData? icon;
 
   const AppGlassBackButton({
     super.key,
     this.onPressed,
     this.isDarkMode,
-    this.icon = Icons.arrow_back_ios_rounded,
+    this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
     final dark = isDarkMode ?? (Theme.of(context).brightness == Brightness.dark);
     final isIOS = Platform.isIOS;
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final effectiveIcon = icon ?? appBackIcon(isIOS: isIOS, isRtl: isRtl);
 
     void handleTap() {
       HapticFeedback.selectionClick();
@@ -37,22 +95,23 @@ class AppGlassBackButton extends StatelessWidget {
     if (isIOS26) {
       return Center(
         child: GlassButton(
-          width: 38,
-          height: 38,
+          width: 44,
+          height: 44,
           shape: const LiquidOval(),
           useOwnLayer: true,
-          settings: LiquidGlassSettings(
-            thickness: 14,
-            blur: 10,
-            glassColor: dark
-                ? Colors.white.withValues(alpha: 0.12)
-                : Colors.white.withValues(alpha: 0.85),
-          ),
+          quality: GlassQuality.premium,
+          settings: dark
+              ? LiquidGlassSettings.ios27Dark
+              : LiquidGlassSettings.ios27Light,
           onTap: handleTap,
-          icon: Icon(
-            icon,
-            size: 15,
-            color: dark ? Colors.white : const Color(0xFF09090B),
+          icon: Transform.translate(
+            // Micro-shift to optically center the chevron
+            offset: Offset(isRtl ? 1.0 : -1.0, 0),
+            child: Icon(
+              effectiveIcon,
+              size: 20,
+              color: dark ? Colors.white : const Color(0xFF09090B),
+            ),
           ),
         ),
       );
@@ -73,7 +132,7 @@ class AppGlassBackButton extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             child: Icon(
-              icon,
+              effectiveIcon,
               size: 16,
               color: dark ? CupertinoColors.white : CupertinoColors.black,
             ),
@@ -101,8 +160,8 @@ class AppGlassBackButton extends StatelessWidget {
             ),
             child: Center(
               child: Icon(
-                icon,
-                size: 15,
+                effectiveIcon,
+                size: 18,
                 color: dark ? Colors.white : const Color(0xFF09090B),
               ),
             ),

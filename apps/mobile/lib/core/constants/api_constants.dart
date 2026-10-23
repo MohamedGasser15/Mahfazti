@@ -32,6 +32,9 @@ class ApiEndpoints {
   static const String categories = 'api/Category';
   static const String categoryById = 'api/Category/';
 
+  // Banks & Financial Institutions
+  static const String banks = 'api/banks';
+
   // Profile
   static const String profileGet = 'api/Profile/get';
   static const String profileUpdate = 'api/Profile/update';

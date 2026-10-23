@@ -1,8 +1,19 @@
 // core/utils/navigation_service.dart
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class _AppModalObserver extends NavigatorObserver {
   int _modalCount = 0;
+
+  /// Sheets and full-screen modals hide the bottom bar, but *alerts* are
+  /// centered dialogs — the nav bar should stay visible behind them.
+  bool _hidesNavBar(Route<dynamic>? route) {
+    if (route is! PopupRoute) return false;
+    // Material `showDialog` and Cupertino `showCupertinoDialog` are alerts.
+    // Note: glass/modal sheets are plain `RawDialogRoute`s, so they still
+    // hide the bar.
+    return route is! DialogRoute && route is! CupertinoDialogRoute;
+  }
 
   void _increment() {
     _modalCount++;
@@ -19,7 +30,7 @@ class _AppModalObserver extends NavigatorObserver {
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPush(route, previousRoute);
-    if (route is PopupRoute) {
+    if (_hidesNavBar(route)) {
       _increment();
     }
   }
@@ -27,7 +38,7 @@ class _AppModalObserver extends NavigatorObserver {
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPop(route, previousRoute);
-    if (route is PopupRoute) {
+    if (_hidesNavBar(route) && route is PopupRoute) {
       final anim = route.animation;
       if (anim != null && !anim.isDismissed) {
         void listener(AnimationStatus status) {
@@ -50,7 +61,7 @@ class _AppModalObserver extends NavigatorObserver {
   @override
   void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didRemove(route, previousRoute);
-    if (route is PopupRoute) {
+    if (_hidesNavBar(route)) {
       _decrement();
     }
   }
@@ -58,10 +69,10 @@ class _AppModalObserver extends NavigatorObserver {
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
     super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
-    if (oldRoute is PopupRoute) {
+    if (_hidesNavBar(oldRoute)) {
       _decrement();
     }
-    if (newRoute is PopupRoute) {
+    if (_hidesNavBar(newRoute)) {
       _increment();
     }
   }
