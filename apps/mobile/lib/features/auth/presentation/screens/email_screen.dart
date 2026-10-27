@@ -377,6 +377,7 @@ class _EmailScreenState extends State<EmailScreen>
 
     return Scaffold(
       backgroundColor: isDark ? Colors.black : const Color(0xFFF9FAFB),
+      resizeToAvoidBottomInset: !Platform.isIOS,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -398,7 +399,14 @@ class _EmailScreenState extends State<EmailScreen>
         child: ResponsiveWrapper(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            padding: EdgeInsets.fromLTRB(
+              24,
+              8,
+              24,
+              Platform.isIOS
+                  ? MediaQuery.viewInsetsOf(context).bottom + 24
+                  : 8,
+            ),
             child: FadeTransition(
               opacity: _fadeAnimation,
               child: SlideTransition(
@@ -569,6 +577,7 @@ class _EmailScreenState extends State<EmailScreen>
           TextFormField(
             controller: _loginEmailController,
             keyboardType: TextInputType.emailAddress,
+            keyboardAppearance: isDark ? Brightness.dark : Brightness.light,
             textInputAction: TextInputAction.next,
             textDirection: TextDirection.ltr,
             inputFormatters: [
@@ -597,6 +606,7 @@ class _EmailScreenState extends State<EmailScreen>
           TextFormField(
             controller: _loginPasswordController,
             obscureText: _obscureLoginPassword,
+            keyboardAppearance: isDark ? Brightness.dark : Brightness.light,
             textInputAction: TextInputAction.done,
             textDirection: TextDirection.ltr,
             inputFormatters: [
@@ -707,6 +717,7 @@ class _EmailScreenState extends State<EmailScreen>
           TextField(
             controller: _registerEmailController,
             keyboardType: TextInputType.emailAddress,
+            keyboardAppearance: isDark ? Brightness.dark : Brightness.light,
             textInputAction: TextInputAction.done,
             textDirection: TextDirection.ltr,
             inputFormatters: [
@@ -843,6 +854,7 @@ class _EmailScreenState extends State<EmailScreen>
                 TextFormField(
                   controller: _registerNameController,
                   textInputAction: TextInputAction.next,
+                  keyboardAppearance: isDark ? Brightness.dark : Brightness.light,
                   textDirection: TextDirection.ltr,
                   inputFormatters: [
                     FilteringTextInputFormatter.deny(
@@ -870,6 +882,7 @@ class _EmailScreenState extends State<EmailScreen>
                   controller: _registerPasswordController,
                   obscureText: _obscureRegisterPassword,
                   textInputAction: TextInputAction.next,
+                  keyboardAppearance: isDark ? Brightness.dark : Brightness.light,
                   textDirection: TextDirection.ltr,
                   inputFormatters: [
                     FilteringTextInputFormatter.deny(
@@ -908,6 +921,7 @@ class _EmailScreenState extends State<EmailScreen>
                   controller: _registerConfirmPasswordController,
                   obscureText: _obscureRegisterConfirmPassword,
                   textInputAction: TextInputAction.done,
+                  keyboardAppearance: isDark ? Brightness.dark : Brightness.light,
                   textDirection: TextDirection.ltr,
                   inputFormatters: [
                     FilteringTextInputFormatter.deny(

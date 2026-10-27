@@ -96,6 +96,7 @@ class _OtpInputFieldState extends State<OtpInputField> {
               controller: controller,
               focusNode: focusNode,
               keyboardType: TextInputType.number,
+              keyboardAppearance: isDark ? Brightness.dark : Brightness.light,
               textAlign: TextAlign.center,
               maxLength: 1,
               style: TextStyle(

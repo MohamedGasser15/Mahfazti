@@ -4,29 +4,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:neo_cupertino/neo_cupertino.dart';
 import 'package:my_wallet/core/constants/app_routes.dart';
+import 'package:my_wallet/core/constants/currency_constants.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/app_lock_service.dart';
 import 'package:my_wallet/core/services/biometric_service.dart';
 import 'package:my_wallet/core/services/hide_balance_service.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/services/theme_service.dart';
+import 'package:my_wallet/core/themes/app_icons.dart';
 import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/language_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
+import 'package:my_wallet/core/widgets/app_back_button.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 import 'package:my_wallet/features/profile/data/models/user_profile.dart';
 import 'package:my_wallet/features/profile/data/repositories/profile_repository.dart';
 import 'package:my_wallet/features/profile/presentation/screens/profile_edit_screen.dart';
 import 'package:my_wallet/features/settings/presentation/screens/categories_management_screen.dart';
+import 'package:my_wallet/features/wallet/presentation/screens/currency_picker_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SettingsContent extends StatefulWidget {
   final Function(Locale) onLocaleChanged;
+  final ScrollController? scrollController;
 
   const SettingsContent({
     super.key,
     required this.onLocaleChanged,
+    this.scrollController,
   });
 
   @override
@@ -34,6 +40,11 @@ class SettingsContent extends StatefulWidget {
 }
 
 class _SettingsContentState extends State<SettingsContent> {
+  ScrollController? _internalScrollController;
+  ScrollController get _effectiveScrollController =>
+      widget.scrollController ??
+      (_internalScrollController ??= ScrollController());
+
   bool _isEnglish = true;
   String _currentTheme = 'system';
   String _currencyCode = 'USD';
@@ -58,6 +69,7 @@ class _SettingsContentState extends State<SettingsContent> {
 
   @override
   void dispose() {
+    _internalScrollController?.dispose();
     ThemeService.themeNotifier.removeListener(_onThemeChanged);
     super.dispose();
   }
@@ -117,492 +129,30 @@ class _SettingsContentState extends State<SettingsContent> {
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
 
-  // Currency Selection Modal
-  void _openCurrencySelection() {
-    if (Platform.isIOS) {
-      _openGlassCurrencySelection();
-    } else {
-      _openAndroidCurrencySelection();
+  // Currency Selection Full Screen Page
+  Future<void> _openCurrencySelection() async {
+    final picked = await CurrencyPickerScreen.open(
+      context,
+      initialCurrency: _currencyCode,
+    );
+    if (picked != null && mounted) {
+      try {
+        await AuthRepository().setUserCurrency(picked);
+        await SharedPrefs.setCurrency(picked);
+        setState(() => _currencyCode = picked);
+        if (!mounted) return;
+        MessageService.showSuccess(
+          context: context,
+          message: context.l10n.currencySavedSuccess,
+        );
+      } catch (e) {
+        if (!mounted) return;
+        MessageService.showError(
+          context: context,
+          message: e.toString(),
+        );
+      }
     }
-  }
-
-  // iOS 26 Liquid Glass Modal Sheet
-  void _openGlassCurrencySelection() {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    final List<Map<String, String>> currencies = [
-      {'code': 'USD', 'flag': '🇺🇸', 'name': 'US Dollar'},
-      {'code': 'EUR', 'flag': '🇪🇺', 'name': 'Euro'},
-      {'code': 'EGP', 'flag': '🇪🇬', 'name': 'Egyptian Pound'},
-      {'code': 'SAR', 'flag': '🇸🇦', 'name': 'Saudi Riyal'},
-      {'code': 'AED', 'flag': '🇦🇪', 'name': 'UAE Dirham'},
-      {'code': 'KWD', 'flag': '🇰🇼', 'name': 'Kuwaiti Dinar'},
-    ];
-
-    showGlassModalSheet(
-      context: context,
-      halfSize: 0.60,
-      fullSize: 0.88,
-      builder: (context) {
-        String? tempSelected = _currencyCode;
-        bool isSubmitting = false;
-
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Header
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(4, 18, 4, 14),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            context.l10n.selectCurrency,
-                            style: TextStyle(
-                              fontSize: 19,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.3,
-                              color: isDarkMode ? Colors.white : const Color(0xFF09090B),
-                            ),
-                          ),
-                          CupertinoButton(
-                            padding: EdgeInsets.zero,
-                            onPressed: () => Navigator.pop(context),
-                            child: Container(
-                              width: 30,
-                              height: 30,
-                              decoration: BoxDecoration(
-                                color: isDarkMode
-                                    ? Colors.white.withValues(alpha: 0.12)
-                                    : Colors.black.withValues(alpha: 0.06),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                CupertinoIcons.xmark,
-                                size: 14,
-                                color: isDarkMode ? Colors.white70 : Colors.black54,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Currency List
-                    Flexible(
-                      child: ListView.separated(
-                        shrinkWrap: true,
-                        itemCount: currencies.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
-                          final currency = currencies[index];
-                          final isSelected = tempSelected == currency['code'];
-                          return GestureDetector(
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              setModalState(() => tempSelected = currency['code']);
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 180),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? (isDarkMode
-                                        ? Colors.white.withValues(alpha: 0.15)
-                                        : const Color(0xFF09090B).withValues(alpha: 0.08))
-                                    : (isDarkMode
-                                        ? Colors.white.withValues(alpha: 0.05)
-                                        : Colors.black.withValues(alpha: 0.03)),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? (isDarkMode ? Colors.white : const Color(0xFF09090B))
-                                      : (isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7)),
-                                  width: isSelected ? 1.5 : 1,
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  // Flag
-                                  Container(
-                                    width: 40,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF1F1F5),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        currency['flag']!,
-                                        style: const TextStyle(fontSize: 20),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  // Name & Code
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          currency['name']!,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 15,
-                                            color: isDarkMode ? Colors.white : const Color(0xFF09090B),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          currency['code']!,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  // Check
-                                  if (isSelected)
-                                    Container(
-                                      width: 24,
-                                      height: 24,
-                                      decoration: BoxDecoration(
-                                        color: isDarkMode ? Colors.white : const Color(0xFF09090B),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        Icons.check_rounded,
-                                        size: 15,
-                                        color: isDarkMode ? const Color(0xFF09090B) : Colors.white,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Save Button
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: isSubmitting
-                              ? null
-                              : () async {
-                                  final currentContext = context;
-                                  if (tempSelected == null) return;
-                                  setModalState(() => isSubmitting = true);
-                                  try {
-                                    await AuthRepository().setUserCurrency(tempSelected!);
-                                    await SharedPrefs.setCurrency(tempSelected!);
-                                    setState(() => _currencyCode = tempSelected!);
-                                    if (!currentContext.mounted) return;
-                                    Navigator.pop(currentContext);
-                                    MessageService.showSuccess(
-                                      context: currentContext,
-                                      message: currentContext.l10n.currencySavedSuccess,
-                                    );
-                                  } catch (e) {
-                                    if (!currentContext.mounted) return;
-                                    MessageService.showError(
-                                      context: currentContext,
-                                      message: e.toString(),
-                                    );
-                                    setModalState(() => isSubmitting = false);
-                                  }
-                                },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
-                            foregroundColor: isDarkMode ? const Color(0xFF09090B) : Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: isSubmitting
-                              ? SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      isDarkMode ? const Color(0xFF09090B) : Colors.white,
-                                    ),
-                                  ),
-                                )
-                              : Text(
-                                  context.l10n.save,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // Android Material Modal Bottom Sheet (Preserved Original)
-  void _openAndroidCurrencySelection() {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
-    final itemBorder = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
-    final selectedBg = (isDarkMode ? Colors.white : Colors.black).withValues(alpha: isDarkMode ? 0.10 : 0.05);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        String? tempSelected = _currencyCode;
-
-        final List<Map<String, String>> currencies = [
-          {'code': 'USD', 'flag': '🇺🇸', 'name': 'US Dollar'},
-          {'code': 'EUR', 'flag': '🇪🇺', 'name': 'Euro'},
-          {'code': 'EGP', 'flag': '🇪🇬', 'name': 'Egyptian Pound'},
-          {'code': 'SAR', 'flag': '🇸🇦', 'name': 'Saudi Riyal'},
-          {'code': 'AED', 'flag': '🇦🇪', 'name': 'UAE Dirham'},
-          {'code': 'KWD', 'flag': '🇰🇼', 'name': 'Kuwaiti Dinar'},
-        ];
-        bool isSubmitting = false;
-
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Container(
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(28),
-                  topRight: Radius.circular(28),
-                ),
-                border: Border(
-                  top: BorderSide(
-                    color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-                    width: 1,
-                  ),
-                ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Handle
-                  Container(
-                    height: 4,
-                    width: 36,
-                    margin: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-
-                  // Header
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(22, 6, 16, 14),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          context.l10n.selectCurrency,
-                          style: TextStyle(
-                            fontSize: 19,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.3,
-                            color: isDarkMode ? Colors.white : const Color(0xFF09090B),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: Icon(
-                            Icons.close_rounded,
-                            size: 20,
-                            color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Currency List
-                  ...currencies.map((currency) {
-                    final isSelected = tempSelected == currency['code'];
-                    return GestureDetector(
-                      onTap: () => setModalState(() => tempSelected = currency['code']),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? selectedBg
-                              : (isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF9F9FB)),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isSelected
-                                ? (isDarkMode ? Colors.white : const Color(0xFF09090B))
-                                : itemBorder,
-                            width: isSelected ? 1.5 : 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            // Flag
-                            Container(
-                              width: 42,
-                              height: 42,
-                              decoration: BoxDecoration(
-                                color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF1F1F5),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: Text(
-                                  currency['flag']!,
-                                  style: const TextStyle(fontSize: 20),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            // Name & Code
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    currency['name']!,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 15,
-                                      color: isDarkMode ? Colors.white : const Color(0xFF09090B),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    currency['code']!,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            // Check
-                            AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 180),
-                              child: isSelected
-                                  ? Container(
-                                      key: const ValueKey('check'),
-                                      width: 24,
-                                      height: 24,
-                                      decoration: BoxDecoration(
-                                        color: isDarkMode ? Colors.white : const Color(0xFF09090B),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        Icons.check_rounded,
-                                        size: 15,
-                                        color: isDarkMode ? const Color(0xFF09090B) : Colors.white,
-                                      ),
-                                    )
-                                  : const SizedBox(key: ValueKey('empty'), width: 24),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }),
-
-                  // Save Button
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      18,
-                      16,
-                      18,
-                      MediaQuery.of(context).padding.bottom + 16,
-                    ),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: isSubmitting
-                            ? null
-                            : () async {
-                                final currentContext = context;
-                                if (tempSelected == null) return;
-                                setModalState(() => isSubmitting = true);
-                                try {
-                                  await AuthRepository().setUserCurrency(tempSelected!);
-                                  await SharedPrefs.setCurrency(tempSelected!);
-                                  setState(() => _currencyCode = tempSelected!);
-                                  if (!currentContext.mounted) return;
-                                  Navigator.pop(currentContext);
-                                  MessageService.showSuccess(
-                                    context: currentContext,
-                                    message: currentContext.l10n.currencySavedSuccess,
-                                  );
-                                } catch (e) {
-                                  if (!currentContext.mounted) return;
-                                  MessageService.showError(
-                                    context: currentContext,
-                                    message: e.toString(),
-                                  );
-                                  setModalState(() => isSubmitting = false);
-                                }
-                              },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
-                          foregroundColor: isDarkMode ? const Color(0xFF09090B) : Colors.white,
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: isSubmitting
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : Text(
-                                context.l10n.save,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
   }
 
   Future<void> _loadSettings() async {
@@ -1228,6 +778,12 @@ class _SettingsContentState extends State<SettingsContent> {
   }
 
   String _getCurrencyName(String code) {
+    final isAr = Directionality.of(context) == TextDirection.rtl;
+    for (final c in kAllCurrencies) {
+      if (c.code == code) {
+        return isAr ? c.nameAr : c.nameEn;
+      }
+    }
     switch (code) {
       case 'USD':
         return context.l10n.currencyUSD;
@@ -1391,7 +947,7 @@ class _SettingsContentState extends State<SettingsContent> {
                     trailing
                   else if (onTap != null)
                     Icon(
-                      Icons.arrow_forward_ios_rounded,
+                      appForwardIconOf(context),
                       size: 13,
                       color: chevronColor,
                     ),
@@ -1544,7 +1100,7 @@ class _SettingsContentState extends State<SettingsContent> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            Icons.edit_outlined,
+                            AppIcons.edit(isIOS: Platform.isIOS),
                             size: 13,
                             color: pillText,
                           ),
@@ -1578,7 +1134,7 @@ class _SettingsContentState extends State<SettingsContent> {
       children: [
         _buildSettingTile(
           isDarkMode: isDarkMode,
-          icon: isDarkMode ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+          icon: AppIcons.appearance(isDark: isDarkMode, isIOS: Platform.isIOS),
           iconColor: isDarkMode ? const Color(0xFF8B5CF6) : const Color(0xFFF59E0B),
           title: context.l10n.darkMode,
           subtitle: isDarkMode ? context.l10n.dark : context.l10n.light,
@@ -1586,7 +1142,7 @@ class _SettingsContentState extends State<SettingsContent> {
         ),
         _buildSettingTile(
           isDarkMode: isDarkMode,
-          icon: Icons.payments_outlined,
+          icon: AppIcons.currency(isIOS: Platform.isIOS),
           iconColor: const Color(0xFF10B981),
           title: context.l10n.currency,
           subtitle: _getCurrencyName(_currencyCode),
@@ -1613,7 +1169,7 @@ class _SettingsContentState extends State<SettingsContent> {
                 ),
                 const SizedBox(width: 4),
                 Icon(
-                  Icons.arrow_forward_ios_rounded,
+                  appForwardIconOf(context),
                   size: 11,
                   color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
                 ),
@@ -1625,7 +1181,7 @@ class _SettingsContentState extends State<SettingsContent> {
         ),
         _buildSettingTile(
           isDarkMode: isDarkMode,
-          icon: Icons.category_outlined,
+          icon: AppIcons.categories(isIOS: Platform.isIOS),
           iconColor: const Color(0xFF06B6D4),
           title: context.l10n.manageCategories,
           subtitle: context.l10n.manageCategoriesSubtitle,
@@ -1651,7 +1207,7 @@ class _SettingsContentState extends State<SettingsContent> {
       children: [
         _buildSettingTile(
           isDarkMode: isDarkMode,
-          icon: Icons.person_outline_rounded,
+          icon: AppIcons.profile(isIOS: Platform.isIOS),
           iconColor: const Color(0xFF3B82F6),
           title: context.l10n.personalDetails,
           subtitle: context.l10n.updateYourPersonalInformation,
@@ -1668,7 +1224,7 @@ class _SettingsContentState extends State<SettingsContent> {
         ),
         _buildSettingTile(
           isDarkMode: isDarkMode,
-          icon: Icons.language_rounded,
+          icon: AppIcons.language(isIOS: Platform.isIOS),
           iconColor: const Color(0xFF06B6D4),
           title: context.l10n.appLanguage,
           subtitle: context.l10n.changeAppLanguage,
@@ -1690,7 +1246,7 @@ class _SettingsContentState extends State<SettingsContent> {
       children: [
         _buildSettingTile(
           isDarkMode: isDarkMode,
-          icon: Icons.visibility_off_outlined,
+          icon: AppIcons.hideBalance(isIOS: Platform.isIOS),
           iconColor: const Color(0xFFF59E0B),
           title: context.l10n.hideBalances,
           subtitle: context.l10n.hideYourBalancesForPrivacy,
@@ -1703,7 +1259,7 @@ class _SettingsContentState extends State<SettingsContent> {
         ),
         _buildSettingTile(
           isDarkMode: isDarkMode,
-          icon: Icons.lock_outline_rounded,
+          icon: AppIcons.security(isIOS: Platform.isIOS),
           iconColor: const Color(0xFF6366F1),
           title: context.l10n.appLock,
           subtitle: context.l10n.appLockSubtitle,
@@ -1745,42 +1301,42 @@ class _SettingsContentState extends State<SettingsContent> {
       children: [
         _buildSettingTile(
           isDarkMode: isDarkMode,
-          icon: Icons.star_rounded,
+          icon: AppIcons.rate(isIOS: Platform.isIOS),
           iconColor: const Color(0xFFF59E0B),
           title: context.l10n.rateUsOnAppStorePlayStore,
           onTap: _openStore,
         ),
         _buildSettingTile(
           isDarkMode: isDarkMode,
-          icon: Icons.thumb_up_alt_rounded,
+          icon: AppIcons.feedback(isIOS: Platform.isIOS),
           iconColor: const Color(0xFF2563EB),
           title: context.l10n.likeUsOnFacebook,
           onTap: _openFacebook,
         ),
         _buildSettingTile(
           isDarkMode: isDarkMode,
-          icon: Icons.public_rounded,
+          icon: AppIcons.website(isIOS: Platform.isIOS),
           iconColor: const Color(0xFF0EA5E9),
           title: context.l10n.followUsOnTwitter,
           onTap: _openTwitter,
         ),
         _buildSettingTile(
           isDarkMode: isDarkMode,
-          icon: Icons.camera_alt_rounded,
+          icon: AppIcons.camera(isIOS: Platform.isIOS),
           iconColor: const Color(0xFFE1306C),
           title: context.l10n.followUsOnInstagram,
           onTap: _openInstagram,
         ),
         _buildSettingTile(
           isDarkMode: isDarkMode,
-          icon: Icons.privacy_tip_outlined,
+          icon: AppIcons.privacy(isIOS: Platform.isIOS),
           iconColor: const Color(0xFF64748B),
           title: context.l10n.privacyPolicy,
           onTap: _openPrivacyPolicy,
         ),
         _buildSettingTile(
           isDarkMode: isDarkMode,
-          icon: Icons.description_outlined,
+          icon: AppIcons.terms(isIOS: Platform.isIOS),
           iconColor: const Color(0xFF64748B),
           title: context.l10n.termsConditions,
           onTap: _openTerms,
@@ -1798,7 +1354,7 @@ class _SettingsContentState extends State<SettingsContent> {
       children: [
         _buildSettingTile(
           isDarkMode: isDarkMode,
-          icon: Icons.delete_outline_rounded,
+          icon: AppIcons.delete(isIOS: Platform.isIOS),
           iconColor: const Color(0xFFEF4444),
           title: context.l10n.closeAccount,
           subtitle: context.l10n.permanentlyDeleteYourAccount,
@@ -1917,7 +1473,7 @@ class _SettingsContentState extends State<SettingsContent> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                Icons.logout_rounded,
+                AppIcons.logout(isIOS: Platform.isIOS),
                 color: pureRed,
                 size: 18,
               ),
@@ -2007,12 +1563,58 @@ class _SettingsContentState extends State<SettingsContent> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      controller: _effectiveScrollController,
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ResponsiveWrapper(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // iOS Authentic Large Title with smooth fade and upward drift on scroll
+            AnimatedBuilder(
+              animation: _effectiveScrollController,
+              builder: (context, child) {
+                final offset = _effectiveScrollController.hasClients
+                    ? _effectiveScrollController.offset
+                    : 0.0;
+                final isAr = Localizations.localeOf(context).languageCode == 'ar';
+                final t = (offset / 55.0).clamp(0.0, 1.0);
+                final curve = Curves.easeOutCubic.transform(t);
+                final deltaX = isAr ? -curve * 90.0 : curve * 90.0;
+                final deltaY = offset > 0 ? -offset * 0.35 : 0.0;
+                final scale = 1.0 - curve * 0.35;
+                final opacity = (1.0 - (offset - 15.0) / 40.0).clamp(0.0, 1.0);
+
+                return Transform.translate(
+                  offset: Offset(deltaX, deltaY),
+                  child: Transform.scale(
+                    scale: scale,
+                    alignment:
+                        isAr ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Opacity(
+                      opacity: opacity,
+                      child: child,
+                    ),
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(4, 2, 4, 16),
+                child: Text(
+                  context.l10n.settings,
+                  style: TextStyle(
+                    fontSize: 34,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.8,
+                    height: 1.15,
+                    color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                  ),
+                ),
+              ),
+            ),
+
             // Profile Card Header
             _buildProfileHeader(isDarkMode),
             const SizedBox(height: 24),

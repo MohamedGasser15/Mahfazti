@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
+import 'package:my_wallet/core/widgets/app_back_button.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 import 'package:my_wallet/features/auth/presentation/widgets/otp_input_field.dart';
 
@@ -212,7 +213,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   icon: Icon(
-                    isRTL ? Icons.arrow_forward_ios_rounded : Icons.arrow_back_ios_rounded,
+                    appBackIcon(isIOS: widget.isGlass, isRtl: isRTL),
                     size: 18,
                     color: theme.colorScheme.onSurface,
                   ),
@@ -294,6 +295,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
             TextField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
+              keyboardAppearance: isDark ? Brightness.dark : Brightness.light,
               textInputAction: TextInputAction.done,
               textDirection: TextDirection.ltr,
               inputFormatters: [
@@ -439,6 +441,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
             TextField(
               controller: _newPasswordController,
               obscureText: _obscureNewPassword,
+              keyboardAppearance: isDark ? Brightness.dark : Brightness.light,
               textInputAction: TextInputAction.next,
               textDirection: TextDirection.ltr,
               inputFormatters: [
@@ -485,6 +488,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
             TextField(
               controller: _confirmPasswordController,
               obscureText: _obscureConfirmPassword,
+              keyboardAppearance: isDark ? Brightness.dark : Brightness.light,
               textInputAction: TextInputAction.done,
               textDirection: TextDirection.ltr,
               inputFormatters: [

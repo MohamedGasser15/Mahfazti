@@ -218,6 +218,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                   controller: controller,
                   enabled: enabled,
                   keyboardType: keyboardType,
+                  keyboardAppearance: isDarkMode ? Brightness.dark : Brightness.light,
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -357,6 +358,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
     return Scaffold(
       backgroundColor: bgColor,
+      resizeToAvoidBottomInset: !Platform.isIOS,
       appBar: AppBar(
         title: Text(
           l10n.personalDetails,
@@ -445,7 +447,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               child: ResponsiveWrapper(
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    12,
+                    20,
+                    Platform.isIOS
+                        ? MediaQuery.viewInsetsOf(context).bottom + 20
+                        : 12,
+                  ),
                   child: Form(
                     key: _formKey,
                     child: Column(
@@ -664,7 +673,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          bottom: Platform.isIOS ? MediaQuery.viewInsetsOf(context).bottom : 0,
+        ),
         child: SizedBox(
           height: 52,
           width: double.infinity,

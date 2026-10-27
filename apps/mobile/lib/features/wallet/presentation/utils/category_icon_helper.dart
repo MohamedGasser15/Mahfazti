@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class CategoryMeta {
@@ -21,7 +23,41 @@ class CategoryIconHelper {
     if (color != null) _customColors[catId] = color;
   }
 
+  /// Material glyph → closest Cupertino glyph (iOS look).
+  /// Categories with no good Cupertino match keep their Material icon.
+  static IconData? _cupertinoFor(IconData icon) {
+    if (icon == Icons.shopping_bag_rounded) return CupertinoIcons.bag_fill;
+    if (icon == Icons.receipt_long_rounded) return CupertinoIcons.doc_text;
+    if (icon == Icons.directions_car_rounded) return CupertinoIcons.car_fill;
+    if (icon == Icons.medical_services_rounded) return CupertinoIcons.bandage;
+    if (icon == Icons.payments_rounded) return CupertinoIcons.money_dollar_circle;
+    if (icon == Icons.school_rounded) return CupertinoIcons.book_fill;
+    if (icon == Icons.sports_esports_rounded) return CupertinoIcons.gamecontroller;
+    if (icon == Icons.local_grocery_store_rounded) return CupertinoIcons.cart_fill;
+    if (icon == Icons.flight_takeoff_rounded) return CupertinoIcons.airplane;
+    if (icon == Icons.subscriptions_rounded) return CupertinoIcons.arrow_2_circlepath;
+    if (icon == Icons.trending_up_rounded) return CupertinoIcons.graph_square;
+    if (icon == Icons.card_giftcard_rounded) return CupertinoIcons.gift_fill;
+    if (icon == Icons.home_rounded) return CupertinoIcons.house_fill;
+    if (icon == Icons.devices_rounded) return CupertinoIcons.device_laptop;
+    if (icon == Icons.pets_rounded) return CupertinoIcons.paw;
+    if (icon == Icons.work_rounded) return CupertinoIcons.briefcase;
+    if (icon == Icons.category_rounded) return CupertinoIcons.tag;
+    return null;
+  }
+
+  /// Resolves the category glyph for the current platform.
   static CategoryMeta getMeta(int? catId, String? name) {
+    final meta = _materialMeta(catId, name);
+    if (!Platform.isIOS) return meta;
+    // Respect icons the user picked themselves.
+    if (catId != null && _customIcons.containsKey(catId)) return meta;
+    final cupertino = _cupertinoFor(meta.icon);
+    if (cupertino == null) return meta;
+    return CategoryMeta(icon: cupertino, color: meta.color);
+  }
+
+  static CategoryMeta _materialMeta(int? catId, String? name) {
     if (catId != null && _customIcons.containsKey(catId)) {
       return CategoryMeta(
         icon: _customIcons[catId]!,
@@ -226,11 +262,19 @@ class CategoryIconHelper {
     if (lower.contains('invest') ||
         lower.contains('saving') ||
         lower.contains('gold') ||
+        lower.contains('silver') ||
+        lower.contains('certificate') ||
         lower.contains('stock') ||
         lower.contains('crypto') ||
         lower.contains('استثمار') ||
         lower.contains('ادخار') ||
         lower.contains('ذهب') ||
+        lower.contains('فضة') ||
+        lower.contains('فضه') ||
+        lower.contains('شهادة') ||
+        lower.contains('شهاده') ||
+        lower.contains('وديعة') ||
+        lower.contains('وديعه') ||
         lower.contains('أسهم')) {
       return const CategoryMeta(
         icon: Icons.trending_up_rounded,

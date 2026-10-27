@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
@@ -7,34 +8,51 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:neo_cupertino/neo_cupertino.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
+import 'package:my_wallet/core/services/wallet_data_sync_service.dart';
 import 'package:my_wallet/core/utils/navigation_service.dart';
 import 'package:my_wallet/core/widgets/app_back_button.dart';
+import 'package:my_wallet/core/widgets/app_icon_picker_modal.dart';
 import 'package:my_wallet/features/wallet/data/models/category_model.dart';
+import 'package:my_wallet/features/wallet/data/repositories/category_repository.dart';
+import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
 import 'package:my_wallet/features/wallet/presentation/utils/category_icon_helper.dart';
 
 class CategoriesManagementScreen extends StatefulWidget {
   const CategoriesManagementScreen({super.key});
 
-  static const availableCategoryIcons = <IconData>[
-    Icons.restaurant_rounded,
-    Icons.shopping_bag_rounded,
-    Icons.local_gas_station_rounded,
-    Icons.directions_car_rounded,
-    Icons.receipt_long_rounded,
-    Icons.local_cafe_rounded,
-    Icons.local_hospital_rounded,
-    Icons.fitness_center_rounded,
-    Icons.sports_esports_rounded,
-    Icons.flight_takeoff_rounded,
-    Icons.school_rounded,
-    Icons.card_giftcard_rounded,
-    Icons.subscriptions_rounded,
-    Icons.trending_up_rounded,
-    Icons.home_rounded,
-    Icons.pets_rounded,
-    Icons.movie_rounded,
-    Icons.work_rounded,
-  ];
+  /// Complete list of category icons.
+  /// Original 18 icons are preserved at indices 0..17 for full backward compatibility,
+  /// followed by all other icons available in the app icon catalog.
+  static final List<IconData> _allCategoryIcons = () {
+    final list = <IconData>[
+      Icons.restaurant_rounded,
+      Icons.shopping_bag_rounded,
+      Icons.local_gas_station_rounded,
+      Icons.directions_car_rounded,
+      Icons.receipt_long_rounded,
+      Icons.local_cafe_rounded,
+      Icons.local_hospital_rounded,
+      Icons.fitness_center_rounded,
+      Icons.sports_esports_rounded,
+      Icons.flight_takeoff_rounded,
+      Icons.school_rounded,
+      Icons.card_giftcard_rounded,
+      Icons.subscriptions_rounded,
+      Icons.trending_up_rounded,
+      Icons.home_rounded,
+      Icons.pets_rounded,
+      Icons.movie_rounded,
+      Icons.work_rounded,
+    ];
+    for (final item in kAppIconItems) {
+      if (!list.contains(item.icon)) {
+        list.add(item.icon);
+      }
+    }
+    return List<IconData>.unmodifiable(list);
+  }();
+
+  static List<IconData> get availableCategoryIcons => _allCategoryIcons;
 
   /// Public helper method called across the app (e.g. home_tab_dialogs) to show
   /// the Add Category modal sheet with native iOS Liquid Glass styling.
@@ -58,6 +76,7 @@ class CategoriesManagementScreen extends StatefulWidget {
     Category? categoryToEdit,
     String initialName = '',
     int initialIconIndex = 0,
+    IconData? initialIcon,
     int expenseCount = 0,
     required void Function(String name, int iconIndex, BuildContext sheetContext) onSave,
     void Function(BuildContext sheetContext)? onDelete,
@@ -66,11 +85,13 @@ class CategoriesManagementScreen extends StatefulWidget {
 
     if (Platform.isIOS) {
       final sheetController = GlassModalSheetController();
+      final isNewCategory = categoryToEdit == null;
       await GlassModalSheet.present(
         context: context,
         controller: sheetController,
         halfSize: 0.69,
         fullSize: 0.87,
+        initialState: isNewCategory ? GlassSheetState.full : GlassSheetState.half,
         onStateChanged: (state) {
           if (state == GlassSheetState.half) {
             focusNode.unfocus();
@@ -86,6 +107,7 @@ class CategoriesManagementScreen extends StatefulWidget {
             categoryToEdit: categoryToEdit,
             initialName: initialName,
             initialIconIndex: initialIconIndex >= 0 ? initialIconIndex : 0,
+            initialIcon: initialIcon,
             expenseCount: expenseCount,
             onSave: (name, iconIndex) => onSave(name, iconIndex, sheetContext),
             onDelete: onDelete != null ? () => onDelete(sheetContext) : null,
@@ -106,6 +128,7 @@ class CategoriesManagementScreen extends StatefulWidget {
           categoryToEdit: categoryToEdit,
           initialName: initialName,
           initialIconIndex: initialIconIndex >= 0 ? initialIconIndex : 0,
+          initialIcon: initialIcon,
           expenseCount: expenseCount,
           onSave: (name, iconIndex) => onSave(name, iconIndex, sheetContext),
           onDelete: onDelete != null ? () => onDelete(sheetContext) : null,
@@ -126,14 +149,55 @@ class _CategoriesManagementScreenState
   Map<int, int> _categoryExpenseCounts = {};
   final Map<int, IconData> _categoryCustomIcons = {};
   String _searchQuery = '';
+  // 'all' | 'unused' | 'noBudget' | 'overBudget'
+  String _usageFilter = 'all';
+  // 'default' | 'mostUsed' | 'leastUsed' | 'az'
+  String _sortMode = 'default';
+
+  // Demo budget data for the seeded categories.
+  // TODO: replace with `WalletRepository.getBudget()` once this screen is
+  // wired to the backend instead of the local seed list.
+  static const Map<int, double> _categoryBudgets = {
+    1: 150,
+    2: 200,
+    3: 250,
+    4: 300,
+    5: 120,
+    6: 80,
+    7: 60,
+    9: 100,
+    11: 90,
+    12: 70,
+  };
+  static const Map<int, double> _categorySpent = {
+    1: 220,
+    2: 90,
+    3: 310,
+    4: 120,
+    5: 60,
+    6: 95,
+    7: 20,
+    9: 40,
+    11: 30,
+    12: 15,
+  };
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
+  final ScrollController _listScrollController = ScrollController();
+  final CategoryRepository _categoryRepository = CategoryRepository();
+  final WalletRepository _walletRepository = WalletRepository();
+  StreamSubscription<void>? _syncSubscription;
 
   @override
   void initState() {
     super.initState();
     _searchFocusNode.addListener(_onSearchFocusChanged);
     _loadData();
+    _syncSubscription = WalletDataSyncService.onDataChanged.listen((_) {
+      if (mounted) {
+        _loadData(silent: true);
+      }
+    });
   }
 
   void _onSearchFocusChanged() {
@@ -142,9 +206,11 @@ class _CategoriesManagementScreenState
 
   @override
   void dispose() {
+    _syncSubscription?.cancel();
     _searchFocusNode.removeListener(_onSearchFocusChanged);
     _searchController.dispose();
     _searchFocusNode.dispose();
+    _listScrollController.dispose();
     super.dispose();
   }
 
@@ -194,27 +260,106 @@ class _CategoriesManagementScreenState
         20: 0,
       };
 
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 150));
-    if (!mounted) return;
+  Future<void> _loadData({bool silent = false}) async {
+    if (!silent) setState(() => _isLoading = true);
+    try {
+      final categories = await _categoryRepository.getAllCategories();
+      final summary = await _walletRepository.getSummary(
+        fromDate: DateTime(2026, 1, 1),
+        toDate: DateTime(2026, 12, 31, 23, 59, 59),
+      );
+      final counts = <int, int>{};
+      for (final cat in summary.expensesByCategory) {
+        counts[cat.categoryId] = cat.count;
+      }
+      for (final cat in summary.incomeByCategory) {
+        counts[cat.categoryId] = (counts[cat.categoryId] ?? 0) + cat.count;
+      }
+      if (!mounted) return;
+      setState(() {
+        _categories = categories;
+        _categoryExpenseCounts = counts;
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        if (_categories.isEmpty) {
+          _categories = _defaultSeedCategories;
+          _categoryExpenseCounts = Map.from(_defaultSeedCounts);
+        }
+        _isLoading = false;
+      });
+    }
+  }
 
-    setState(() {
-      _categories = _defaultSeedCategories;
-      _categoryExpenseCounts = Map.from(_defaultSeedCounts);
-      _isLoading = false;
-    });
+  /// Pull-to-refresh entry point (keeps the current list on screen).
+  Future<void> _refreshCategories() => _loadData(silent: true);
+
+  bool _isOverBudget(Category cat) {
+    final budget = _categoryBudgets[cat.id];
+    if (budget == null || budget <= 0) return false;
+    return (_categorySpent[cat.id] ?? 0) > budget;
+  }
+
+  int _countForFilter(String filterId) {
+    switch (filterId) {
+      case 'unused':
+        return _categories
+            .where((cat) => (_categoryExpenseCounts[cat.id] ?? 0) == 0)
+            .length;
+      case 'noBudget':
+        return _categories
+            .where((cat) => !_categoryBudgets.containsKey(cat.id))
+            .length;
+      case 'overBudget':
+        return _categories.where(_isOverBudget).length;
+      default:
+        return _categories.length;
+    }
   }
 
   List<Category> get _filteredCategories {
-    if (_searchQuery.trim().isEmpty) {
-      return _categories;
+    final isAr = Directionality.of(context) == TextDirection.rtl;
+    Iterable<Category> list = _categories;
+
+    // Usage / budget filter
+    switch (_usageFilter) {
+      case 'unused':
+        list = list.where((cat) => (_categoryExpenseCounts[cat.id] ?? 0) == 0);
+        break;
+      case 'noBudget':
+        list = list.where((cat) => !_categoryBudgets.containsKey(cat.id));
+        break;
+      case 'overBudget':
+        list = list.where(_isOverBudget);
+        break;
     }
+
     final q = _searchQuery.trim().toLowerCase();
-    return _categories.where((cat) {
-      return cat.nameAr.toLowerCase().contains(q) ||
-          cat.nameEn.toLowerCase().contains(q);
-    }).toList();
+    if (q.isNotEmpty) {
+      list = list.where((cat) =>
+          cat.nameAr.toLowerCase().contains(q) ||
+          cat.nameEn.toLowerCase().contains(q));
+    }
+
+    final result = list.toList();
+    switch (_sortMode) {
+      case 'mostUsed':
+        result.sort((a, b) => (_categoryExpenseCounts[b.id] ?? 0)
+            .compareTo(_categoryExpenseCounts[a.id] ?? 0));
+        break;
+      case 'leastUsed':
+        result.sort((a, b) => (_categoryExpenseCounts[a.id] ?? 0)
+            .compareTo(_categoryExpenseCounts[b.id] ?? 0));
+        break;
+      case 'az':
+        result.sort((a, b) => (isAr ? a.nameAr : a.nameEn)
+            .toLowerCase()
+            .compareTo((isAr ? b.nameAr : b.nameEn).toLowerCase()));
+        break;
+    }
+    return result;
   }
 
   static List<IconData> get _availableCategoryIcons =>
@@ -244,6 +389,7 @@ class _CategoriesManagementScreenState
       categoryToEdit: categoryToEdit,
       initialName: initialName,
       initialIconIndex: initialIconIndex,
+      initialIcon: initialIcon,
       expenseCount: expenseCount,
       onSave: (name, iconIndex, sheetContext) {
         if (categoryToEdit != null) {
@@ -272,11 +418,11 @@ class _CategoriesManagementScreenState
     );
   }
 
-  void _submitNewCategory({
+  Future<void> _submitNewCategory({
     required String name,
     required int iconIndex,
     required BuildContext bottomSheetContext,
-  }) {
+  }) async {
     final trimmedName = name.trim();
     if (trimmedName.isEmpty) {
       MessageService.showWarning(
@@ -286,37 +432,37 @@ class _CategoriesManagementScreenState
       return;
     }
 
-    final maxId = _categories.fold<int>(0, (m, c) => c.id > m ? c.id : m);
-    final newId = maxId + 1;
-    final newCat = Category(
-      id: newId,
-      nameAr: trimmedName,
-      nameEn: trimmedName,
-      createdAt: DateTime.now(),
-    );
-
-    setState(() {
-      _categories = [newCat, ..._categories];
-      _categoryExpenseCounts[newId] = 0;
+    try {
+      final created = await _categoryRepository.createCategory(trimmedName, trimmedName);
       if (iconIndex >= 0 && iconIndex < _availableCategoryIcons.length) {
-        _categoryCustomIcons[newId] = _availableCategoryIcons[iconIndex];
+        final icon = _availableCategoryIcons[iconIndex];
+        _categoryCustomIcons[created.id] = icon;
+        CategoryIconHelper.setCustomIcon(created.id, icon);
       }
-    });
-    if (bottomSheetContext.mounted) {
-      Navigator.pop(bottomSheetContext);
+      await _loadData(silent: true);
+      if (bottomSheetContext.mounted) {
+        Navigator.pop(bottomSheetContext);
+      }
+      if (!mounted) return;
+      MessageService.showSuccess(
+        context: context,
+        message: context.l10n.categoryAddedSuccess,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      MessageService.showError(
+        context: context,
+        message: e.toString(),
+      );
     }
-    MessageService.showSuccess(
-      context: context,
-      message: context.l10n.categoryAddedSuccess,
-    );
   }
 
-  void _submitEditCategory({
+  Future<void> _submitEditCategory({
     required Category category,
     required String name,
     required int iconIndex,
     required BuildContext bottomSheetContext,
-  }) {
+  }) async {
     final trimmedName = name.trim();
     if (trimmedName.isEmpty) {
       MessageService.showWarning(
@@ -326,55 +472,59 @@ class _CategoriesManagementScreenState
       return;
     }
 
-    setState(() {
-      _categories = _categories.map((c) {
-        if (c.id == category.id) {
-          return Category(
-            id: c.id,
-            nameAr: trimmedName,
-            nameEn: trimmedName,
-            createdAt: c.createdAt,
-            updatedAt: DateTime.now(),
-          );
-        }
-        return c;
-      }).toList();
-
+    try {
+      await _categoryRepository.updateCategory(category.id, trimmedName, trimmedName);
       if (iconIndex >= 0 && iconIndex < _availableCategoryIcons.length) {
-        _categoryCustomIcons[category.id] = _availableCategoryIcons[iconIndex];
+        final icon = _availableCategoryIcons[iconIndex];
+        _categoryCustomIcons[category.id] = icon;
+        CategoryIconHelper.setCustomIcon(category.id, icon);
       }
-    });
-
-    if (bottomSheetContext.mounted) {
-      Navigator.pop(bottomSheetContext);
+      await _loadData(silent: true);
+      if (bottomSheetContext.mounted) {
+        Navigator.pop(bottomSheetContext);
+      }
+      if (!mounted) return;
+      final isAr = Directionality.of(context) == TextDirection.rtl;
+      MessageService.showSuccess(
+        context: context,
+        message: isAr ? 'تم تعديل التصنيف بنجاح' : 'Category updated successfully',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      MessageService.showError(
+        context: context,
+        message: e.toString(),
+      );
     }
-    final isAr = Directionality.of(context) == TextDirection.rtl;
-    MessageService.showSuccess(
-      context: context,
-      message: isAr ? 'تم تعديل التصنيف بنجاح' : 'Category updated successfully',
-    );
   }
 
-  void _submitDeleteCategory({
+  Future<void> _submitDeleteCategory({
     required Category category,
     required BuildContext bottomSheetContext,
-  }) {
-    setState(() {
-      _categories = _categories.where((c) => c.id != category.id).toList();
+  }) async {
+    try {
+      await _categoryRepository.deleteCategory(category.id);
       _categoryExpenseCounts.remove(category.id);
       _categoryCustomIcons.remove(category.id);
-    });
-
-    if (bottomSheetContext.mounted) {
-      Navigator.pop(bottomSheetContext);
+      await _loadData(silent: true);
+      if (bottomSheetContext.mounted) {
+        Navigator.pop(bottomSheetContext);
+      }
+      if (!mounted) return;
+      final isAr = Directionality.of(context) == TextDirection.rtl;
+      MessageService.showSuccess(
+        context: context,
+        message: isAr
+            ? 'تم حذف التصنيف بنجاح'
+            : 'Category deleted successfully',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      MessageService.showError(
+        context: context,
+        message: e.toString(),
+      );
     }
-    final isAr = Directionality.of(context) == TextDirection.rtl;
-    MessageService.showSuccess(
-      context: context,
-      message: isAr
-          ? 'تم حذف التصنيف بنجاح'
-          : 'Category deleted successfully',
-    );
   }
 
   void _confirmDeleteCategoryFromList(Category category) {
@@ -402,19 +552,26 @@ class _CategoriesManagementScreenState
         NeoDialogAction(
           title: isAr ? 'حذف' : 'Delete',
           role: NeoDialogActionRole.destructive,
-          onPressed: () {
-            setState(() {
-              _categories =
-                  _categories.where((c) => c.id != category.id).toList();
+          onPressed: () async {
+            try {
+              await _categoryRepository.deleteCategory(category.id);
               _categoryExpenseCounts.remove(category.id);
               _categoryCustomIcons.remove(category.id);
-            });
-            MessageService.showSuccess(
-              context: context,
-              message: isAr
-                  ? 'تم حذف التصنيف بنجاح'
-                  : 'Category deleted successfully',
-            );
+              await _loadData(silent: true);
+              if (!mounted) return;
+              MessageService.showSuccess(
+                context: context,
+                message: isAr
+                    ? 'تم حذف التصنيف بنجاح'
+                    : 'Category deleted successfully',
+              );
+            } catch (e) {
+              if (!mounted) return;
+              MessageService.showError(
+                context: context,
+                message: e.toString(),
+              );
+            }
           },
         ),
       ],
@@ -437,18 +594,335 @@ class _CategoriesManagementScreenState
 
     final categories = _filteredCategories;
 
+    final listPadding = EdgeInsets.only(
+      left: 16,
+      right: 16,
+      top: 12,
+      bottom: Platform.isIOS
+          ? (MediaQuery.of(context).viewPadding.bottom > 0
+                  ? MediaQuery.of(context).viewPadding.bottom + 80
+                  : 90) +
+              MediaQuery.of(context).viewInsets.bottom
+          : (MediaQuery.of(context).padding.bottom > 0
+                  ? MediaQuery.of(context).padding.bottom + 70
+                  : 80),
+    );
+
+    final categoryListChildren = <Widget>[
+      // Large title that collapses into the AppBar while scrolling
+      AnimatedBuilder(
+        animation: _listScrollController,
+        builder: (context, child) {
+          final offset = _listScrollController.hasClients
+              ? _listScrollController.offset
+              : 0.0;
+          final isAr = Directionality.of(context) == TextDirection.rtl;
+          final t = (offset / 55.0).clamp(0.0, 1.0);
+          final curve = Curves.easeOutCubic.transform(t);
+          final deltaX = isAr ? -curve * 90.0 : curve * 90.0;
+          final deltaY = offset > 0 ? -offset * 0.35 : 0.0;
+          final scale = 1.0 - curve * 0.35;
+          final opacity = (1.0 - (offset - 15.0) / 40.0).clamp(0.0, 1.0);
+
+          return Transform.translate(
+            offset: Offset(deltaX, deltaY),
+            child: Transform.scale(
+              scale: scale,
+              alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
+              child: Opacity(opacity: opacity, child: child),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsetsDirectional.only(
+            start: 4,
+            end: 4,
+            top: 4,
+            bottom: 12,
+          ),
+          child: Text(
+            context.l10n.manageCategories,
+            style: TextStyle(
+              fontSize: 34,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.8,
+              height: 1.15,
+              color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+            ),
+          ),
+        ),
+      ),
+
+      // Usage filters (All / Used / Unused) — same pill style as Transactions
+      Padding(
+        padding: const EdgeInsetsDirectional.only(start: 4, end: 4, bottom: 14),
+        child: _buildUsageFilters(isDarkMode),
+      ),
+
+      // Top Search Bar (Android only)
+      if (!Platform.isIOS) ...[
+        _buildAndroidSearchBar(
+          isDarkMode: isDarkMode,
+          cardBg: cardBg,
+          borderColor: borderColor,
+        ),
+        const SizedBox(height: 12),
+      ],
+
+      // Categories Card Group or Authentic Empty State
+      if (categories.isEmpty)
+        _searchQuery.isNotEmpty
+            ? GlassContentUnavailableView.search(
+                query: _searchQuery,
+                onClear: () {
+                  _searchController.clear();
+                  setState(() => _searchQuery = '');
+                },
+              )
+            : GlassContentUnavailableView(
+                icon: CupertinoIcons.folder_badge_minus,
+                title: context.l10n.noCategoriesFound,
+                actionLabel: context.l10n.newCategory,
+                onAction: () => _showAddCategorySheet(isDarkMode),
+              )
+      else
+        SlidableAutoCloseBehavior(
+          closeWhenOpened: true,
+          closeWhenTapped: true,
+          child: Container(
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: borderColor, width: 1),
+              boxShadow: isDarkMode
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.02),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: List.generate(categories.length, (index) {
+                final cat = categories[index];
+                final isLast = index == categories.length - 1;
+                final catName = isRtl ? cat.nameAr : cat.nameEn;
+                final meta =
+                    CategoryIconHelper.getMeta(cat.id, catName);
+                final catIcon = _categoryCustomIcons[cat.id] ?? meta.icon;
+                final count = _categoryExpenseCounts[cat.id] ?? 0;
+                final countLabel =
+                    context.l10n.categoryExpensesCount(count);
+
+                return Column(
+                  children: [
+                    Slidable(
+                      key: ValueKey('cat_${cat.id}'),
+                      groupTag: 'categories_group',
+                      startActionPane: ActionPane(
+                        motion: const BehindMotion(),
+                        extentRatio: 0.25,
+                        children: [
+                          CustomSlidableAction(
+                            onPressed: (_) {
+                              HapticFeedback.selectionClick();
+                              _showCategorySheet(isDarkMode,
+                                  categoryToEdit: cat);
+                            },
+                            backgroundColor: const Color(0xFF3B82F6),
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.zero,
+                            child: const Icon(
+                              Icons.edit_rounded,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                          ),
+                        ],
+                      ),
+                      endActionPane: ActionPane(
+                        motion: const BehindMotion(),
+                        extentRatio: 0.25,
+                        children: [
+                          CustomSlidableAction(
+                            onPressed: (_) {
+                              HapticFeedback.selectionClick();
+                              _confirmDeleteCategoryFromList(cat);
+                            },
+                            backgroundColor: const Color(0xFFEF4444),
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.zero,
+                            child: const Icon(
+                              CupertinoIcons.trash_fill,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: cardBg,
+                        child: InkWell(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            _showCategorySheet(isDarkMode,
+                                categoryToEdit: cat);
+                          },
+                          splashColor: (isDarkMode
+                                  ? Colors.white
+                                  : Colors.black)
+                              .withValues(alpha: 0.04),
+                          highlightColor: (isDarkMode
+                                  ? Colors.white
+                                  : Colors.black)
+                              .withValues(alpha: 0.02),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            child: Row(
+                              children: [
+                                // Icon Box (Monochrome)
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: isDarkMode
+                                        ? const Color(0xFF27272A)
+                                        : const Color(0xFFE4E4E7),
+                                    borderRadius:
+                                        BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isDarkMode
+                                          ? const Color(0xFF3F3F46)
+                                          : const Color(0xFFD4D4D8),
+                                      width: 0.8,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    catIcon,
+                                    size: 20,
+                                    color: isDarkMode
+                                        ? Colors.white
+                                        : const Color(0xFF09090B),
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+
+                                // Name & Counts
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        catName,
+                                        style: TextStyle(
+                                          color: isDarkMode
+                                              ? Colors.white
+                                              : const Color(0xFF09090B),
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: -0.1,
+                                        ),
+                                      ),
+                                      if (count > 0) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          countLabel,
+                                          style: TextStyle(
+                                            color: isDarkMode
+                                                ? const Color(0xFFA1A1AA)
+                                                : const Color(0xFF71717A),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w400,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+
+                                // Chevron
+                                Icon(
+                                  appForwardIconOf(context),
+                                  size: 13,
+                                  color: chevronColor,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (!isLast)
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(
+                          start: 70,
+                          end: 16,
+                        ),
+                        child: Divider(
+                          height: 1,
+                          thickness: 1,
+                          color: dividerColor,
+                        ),
+                      ),
+                  ],
+                );
+              }),
+            ),
+          ),
+        ),
+      const SizedBox(height: 32),
+    ];
+
     return Scaffold(
       backgroundColor: bgColor,
       resizeToAvoidBottomInset: !Platform.isIOS,
       appBar: AppBar(
-        title: Text(
-          context.l10n.manageCategories,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.2,
-            color: isDarkMode ? Colors.white : const Color(0xFF09090B),
-          ),
+        // Title stays hidden until the large title scrolls away, then it
+        // travels into the header bar (same behaviour as the Transactions page).
+        title: AnimatedBuilder(
+          animation: _listScrollController,
+          builder: (context, child) {
+            final offset = _listScrollController.hasClients
+                ? _listScrollController.offset
+                : 0.0;
+            final isAr = Directionality.of(context) == TextDirection.rtl;
+            final progress = ((offset - 16.0) / 38.0).clamp(0.0, 1.0);
+            if (progress <= 0.0) return const SizedBox.shrink();
+            final curve = Curves.easeOutCubic.transform(progress);
+
+            // Travels in from the leading side along the diagonal trajectory
+            final incomingX =
+                isAr ? (1.0 - curve) * 60.0 : -(1.0 - curve) * 60.0;
+            final incomingY = (1.0 - curve) * 12.0;
+            final incomingScale = 0.85 + 0.15 * curve;
+
+            return Transform.translate(
+              offset: Offset(incomingX, incomingY),
+              child: Transform.scale(
+                scale: incomingScale,
+                child: Opacity(
+                  opacity: progress,
+                  child: Text(
+                    context.l10n.manageCategories,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.3,
+                      color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
         centerTitle: true,
         backgroundColor: Colors.transparent,
@@ -456,6 +930,10 @@ class _CategoriesManagementScreenState
         scrolledUnderElevation: 0,
         leading: const AppGlassBackButton(),
         actions: [
+          Padding(
+            padding: const EdgeInsetsDirectional.only(end: 8),
+            child: _buildSortButton(isDarkMode),
+          ),
           Padding(
             padding: const EdgeInsetsDirectional.only(end: 12),
             child: Platform.isIOS
@@ -515,242 +993,40 @@ class _CategoriesManagementScreenState
             )
           : Stack(
               children: [
-                ListView(
-                  physics: const BouncingScrollPhysics(),
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: EdgeInsets.only(
-                    left: 16,
-                    right: 16,
-                    top: 12,
-                    bottom: Platform.isIOS
-                        ? (MediaQuery.of(context).viewPadding.bottom > 0
-                                ? MediaQuery.of(context).viewPadding.bottom + 70
-                                : 80) +
-                            MediaQuery.of(context).viewInsets.bottom
-                        : MediaQuery.of(context).padding.bottom + 24,
-                  ),
-                  children: [
-                    // Top Search Bar (Android only)
-                    if (!Platform.isIOS) ...[
-                      _buildAndroidSearchBar(
-                        isDarkMode: isDarkMode,
-                        cardBg: cardBg,
-                        borderColor: borderColor,
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-
-                    // Categories Card Group or Authentic Empty State
-                    if (categories.isEmpty)
-                      _searchQuery.isNotEmpty
-                          ? GlassContentUnavailableView.search(
-                              query: _searchQuery,
-                              onClear: () {
-                                _searchController.clear();
-                                setState(() => _searchQuery = '');
-                              },
-                            )
-                          : GlassContentUnavailableView(
-                              icon: CupertinoIcons.folder_badge_minus,
-                              title: context.l10n.noCategoriesFound,
-                              actionLabel: context.l10n.newCategory,
-                              onAction: () => _showAddCategorySheet(isDarkMode),
-                            )
-                    else
-                      SlidableAutoCloseBehavior(
-                        closeWhenOpened: true,
-                        closeWhenTapped: true,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: cardBg,
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: borderColor, width: 1),
-                            boxShadow: isDarkMode
-                                ? null
-                                : [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.02),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
+                Platform.isIOS
+                    ? CustomScrollView(
+                        controller: _listScrollController,
+                        physics: const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics(),
+                        ),
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        slivers: [
+                          CupertinoSliverRefreshControl(
+                            onRefresh: _refreshCategories,
                           ),
-                          clipBehavior: Clip.antiAlias,
-                          child: Column(
-                            children: List.generate(categories.length, (index) {
-                              final cat = categories[index];
-                              final isLast = index == categories.length - 1;
-                              final catName = isRtl ? cat.nameAr : cat.nameEn;
-                              final meta =
-                                  CategoryIconHelper.getMeta(cat.id, catName);
-                              final catIcon = _categoryCustomIcons[cat.id] ?? meta.icon;
-                              final count = _categoryExpenseCounts[cat.id] ?? 0;
-                              final countLabel =
-                                  context.l10n.categoryExpensesCount(count);
-
-                              return Column(
-                                children: [
-                                  Slidable(
-                                    key: ValueKey('cat_${cat.id}'),
-                                    groupTag: 'categories_group',
-                                    startActionPane: ActionPane(
-                                      motion: const BehindMotion(),
-                                      extentRatio: 0.25,
-                                      children: [
-                                        CustomSlidableAction(
-                                          onPressed: (_) {
-                                            HapticFeedback.selectionClick();
-                                            _showCategorySheet(isDarkMode,
-                                                categoryToEdit: cat);
-                                          },
-                                          backgroundColor: const Color(0xFF3B82F6),
-                                          foregroundColor: Colors.white,
-                                          padding: EdgeInsets.zero,
-                                          child: const Icon(
-                                            Icons.edit_rounded,
-                                            color: Colors.white,
-                                            size: 22,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    endActionPane: ActionPane(
-                                      motion: const BehindMotion(),
-                                      extentRatio: 0.25,
-                                      children: [
-                                        CustomSlidableAction(
-                                          onPressed: (_) {
-                                            HapticFeedback.selectionClick();
-                                            _confirmDeleteCategoryFromList(cat);
-                                          },
-                                          backgroundColor: const Color(0xFFEF4444),
-                                          foregroundColor: Colors.white,
-                                          padding: EdgeInsets.zero,
-                                          child: const Icon(
-                                            CupertinoIcons.trash_fill,
-                                            color: Colors.white,
-                                            size: 22,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Material(
-                                      color: cardBg,
-                                      child: InkWell(
-                                        onTap: () {
-                                          HapticFeedback.selectionClick();
-                                          _showCategorySheet(isDarkMode,
-                                              categoryToEdit: cat);
-                                        },
-                                        splashColor: (isDarkMode
-                                                ? Colors.white
-                                                : Colors.black)
-                                            .withValues(alpha: 0.04),
-                                        highlightColor: (isDarkMode
-                                                ? Colors.white
-                                                : Colors.black)
-                                            .withValues(alpha: 0.02),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 16,
-                                            vertical: 12,
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              // Icon Box
-                                              Container(
-                                                width: 40,
-                                                height: 40,
-                                                decoration: BoxDecoration(
-                                                  color: meta.color.withValues(
-                                                    alpha: isDarkMode ? 0.18 : 0.12,
-                                                  ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                  border: Border.all(
-                                                    color: meta.color.withValues(
-                                                      alpha: isDarkMode ? 0.30 : 0.20,
-                                                    ),
-                                                    width: 0.8,
-                                                  ),
-                                                ),
-                                                child: Icon(
-                                                  catIcon,
-                                                  size: 20,
-                                                  color: meta.color,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 14),
-
-                                              // Name & Counts
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    Text(
-                                                      catName,
-                                                      style: TextStyle(
-                                                        color: isDarkMode
-                                                            ? Colors.white
-                                                            : const Color(0xFF09090B),
-                                                        fontSize: 15,
-                                                        fontWeight: FontWeight.w600,
-                                                        letterSpacing: -0.1,
-                                                      ),
-                                                    ),
-                                                    if (count > 0) ...[
-                                                      const SizedBox(height: 2),
-                                                      Text(
-                                                        countLabel,
-                                                        style: TextStyle(
-                                                          color: isDarkMode
-                                                              ? const Color(0xFFA1A1AA)
-                                                              : const Color(0xFF71717A),
-                                                          fontSize: 12,
-                                                          fontWeight: FontWeight.w400,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ],
-                                                ),
-                                              ),
-
-                                              // Chevron
-                                              Icon(
-                                                Icons.arrow_forward_ios_rounded,
-                                                size: 13,
-                                                color: chevronColor,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  if (!isLast)
-                                    Padding(
-                                      padding: const EdgeInsetsDirectional.only(
-                                        start: 70,
-                                        end: 16,
-                                      ),
-                                      child: Divider(
-                                        height: 1,
-                                        thickness: 1,
-                                        color: dividerColor,
-                                      ),
-                                    ),
-                                ],
-                              );
-                            }),
+                          SliverPadding(
+                            padding: listPadding,
+                            sliver: SliverList(
+                              delegate: SliverChildListDelegate(
+                                categoryListChildren,
+                              ),
+                            ),
                           ),
+                        ],
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _refreshCategories,
+                        color: isDarkMode ? Colors.white : Colors.black,
+                        child: ListView(
+                          controller: _listScrollController,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
+                          padding: listPadding,
+                          children: categoryListChildren,
                         ),
                       ),
-                    const SizedBox(height: 32),
-                  ],
-                ),
 
                 // Floating Bottom Search Bar (iOS Authentic Liquid Glass)
                 // Automatically hides when modal sheet opens to prevent show-through
@@ -790,6 +1066,287 @@ class _CategoriesManagementScreenState
                   ),
               ],
             ),
+    );
+  }
+
+  Widget _buildSortButton(bool isDarkMode) {
+    final isAr = Directionality.of(context) == TextDirection.rtl;
+    final iconColor = isDarkMode ? Colors.white : const Color(0xFF09090B);
+    final borderColor =
+        isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
+
+    final options = <_SortOption>[
+      _SortOption(
+        id: 'default',
+        title: isAr ? 'الترتيب الافتراضي' : 'Default order',
+        icon: CupertinoIcons.list_bullet,
+      ),
+      _SortOption(
+        id: 'mostUsed',
+        title: isAr ? 'الأكثر استخدامًا' : 'Most used',
+        icon: CupertinoIcons.arrow_down,
+      ),
+      _SortOption(
+        id: 'leastUsed',
+        title: isAr ? 'الأقل استخدامًا' : 'Least used',
+        icon: CupertinoIcons.arrow_up,
+      ),
+      _SortOption(
+        id: 'az',
+        title: isAr ? 'أبجديًا' : 'A → Z',
+        icon: CupertinoIcons.textformat,
+      ),
+    ];
+
+    void onSelected(String id) {
+      HapticFeedback.selectionClick();
+      setState(() => _sortMode = id);
+    }
+
+    if (Platform.isIOS) {
+      return GlassButton.custom(
+        width: 38,
+        height: 38,
+        shape: const LiquidOval(),
+        useOwnLayer: true,
+        onTap: () {},
+        settings: LiquidGlassSettings(
+          thickness: 14,
+          blur: 10,
+          glassColor: isDarkMode
+              ? Colors.white.withValues(alpha: 0.12)
+              : Colors.white.withValues(alpha: 0.85),
+        ),
+        child: IosSingleTapContextMenu(
+          actions: [
+            for (final option in options)
+              IosContextMenuAction(
+                id: option.id,
+                title: option.title,
+                iconSystemName: 'arrow.up.arrow.down',
+                icon: option.icon,
+                showTrailingCheckmark: _sortMode == option.id,
+              ),
+          ],
+          onSelected: onSelected,
+          child: Center(
+            child: Icon(Icons.swap_vert_rounded, size: 20, color: iconColor),
+          ),
+        ),
+      );
+    }
+
+    return PopupMenuButton<String>(
+      tooltip: isAr ? 'ترتيب' : 'Sort',
+      onSelected: onSelected,
+      color: isDarkMode ? const Color(0xFF141418) : Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      itemBuilder: (context) => [
+        for (final option in options)
+          PopupMenuItem<String>(
+            value: option.id,
+            child: Row(
+              children: [
+                Icon(option.icon, size: 18, color: iconColor),
+                const SizedBox(width: 10),
+                Text(
+                  option.title,
+                  style: TextStyle(color: iconColor, fontSize: 14),
+                ),
+                const Spacer(),
+                if (_sortMode == option.id)
+                  Icon(Icons.check_rounded, size: 18, color: iconColor),
+              ],
+            ),
+          ),
+      ],
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: isDarkMode ? const Color(0xFF141418) : Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: borderColor, width: 1),
+        ),
+        child: Icon(Icons.swap_vert_rounded, size: 20, color: iconColor),
+      ),
+    );
+  }
+
+  Widget _buildUsageFilters(bool isDarkMode) {
+    final isAr = Directionality.of(context) == TextDirection.rtl;
+
+    final filters = <_UsageFilterItem>[
+      _UsageFilterItem(
+        id: 'all',
+        title: isAr ? 'الكل' : 'All',
+        icon: Icons.grid_view_rounded,
+      ),
+      _UsageFilterItem(
+        id: 'unused',
+        title: isAr ? 'غير مستخدمة' : 'Unused',
+        icon: Icons.remove_circle_outline_rounded,
+      ),
+      _UsageFilterItem(
+        id: 'noBudget',
+        title: isAr ? 'بدون ميزانية' : 'No budget',
+        icon: Icons.savings_outlined,
+      ),
+      _UsageFilterItem(
+        id: 'overBudget',
+        title: isAr ? 'تجاوزت الميزانية' : 'Over budget',
+        icon: Icons.trending_up_rounded,
+      ),
+    ];
+
+    return SizedBox(
+      height: 38,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: filters.length,
+        separatorBuilder: (context, index) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final filter = filters[index];
+          return _buildFilterChip(
+            title: filter.title,
+            icon: filter.icon,
+            count: _countForFilter(filter.id),
+            isSelected: _usageFilter == filter.id,
+            isDarkMode: isDarkMode,
+            onTap: () {
+              if (_usageFilter == filter.id) return;
+              setState(() => _usageFilter = filter.id);
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFilterChip({
+    required String title,
+    required IconData icon,
+    required int count,
+    required bool isSelected,
+    required bool isDarkMode,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (isDarkMode ? Colors.white : const Color(0xFF09090B))
+              : (isDarkMode
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.black.withValues(alpha: 0.04)),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? Colors.transparent
+                : (isDarkMode
+                    ? Colors.white.withValues(alpha: 0.10)
+                    : Colors.black.withValues(alpha: 0.06)),
+            width: 0.8,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: (isDarkMode ? Colors.white : Colors.black)
+                        .withValues(alpha: 0.12),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Icon expands smoothly only when the chip is selected
+            ClipRect(
+              child: AnimatedAlign(
+                duration: const Duration(milliseconds: 240),
+                curve: Curves.easeOutCubic,
+                alignment: AlignmentDirectional.centerStart,
+                widthFactor: isSelected ? 1.0 : 0.0,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                  opacity: isSelected ? 1.0 : 0.0,
+                  child: AnimatedScale(
+                    duration: const Duration(milliseconds: 260),
+                    curve: Curves.easeOutBack,
+                    scale: isSelected ? 1.0 : 0.3,
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.only(end: 6),
+                      child: Icon(
+                        icon,
+                        size: 14.5,
+                        color: isSelected
+                            ? (isDarkMode
+                                ? const Color(0xFF09090B)
+                                : Colors.white)
+                            : (isDarkMode
+                                ? Colors.white.withValues(alpha: 0.75)
+                                : const Color(0xFF52525B)),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                letterSpacing: -0.2,
+                color: isSelected
+                    ? (isDarkMode ? const Color(0xFF09090B) : Colors.white)
+                    : (isDarkMode
+                        ? Colors.white.withValues(alpha: 0.85)
+                        : const Color(0xFF27272A)),
+              ),
+            ),
+            const SizedBox(width: 5),
+            // Live count so the filter row reads like real information
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? (isDarkMode
+                        ? Colors.black.withValues(alpha: 0.10)
+                        : Colors.white.withValues(alpha: 0.20))
+                    : (isDarkMode
+                        ? Colors.white.withValues(alpha: 0.08)
+                        : Colors.black.withValues(alpha: 0.05)),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected
+                      ? (isDarkMode ? const Color(0xFF09090B) : Colors.white)
+                      : (isDarkMode
+                          ? Colors.white.withValues(alpha: 0.55)
+                          : Colors.black.withValues(alpha: 0.45)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -880,6 +1437,7 @@ class _CategoryModalContent extends StatefulWidget {
   final Category? categoryToEdit;
   final String initialName;
   final int initialIconIndex;
+  final IconData? initialIcon;
   final int expenseCount;
   final void Function(String name, int iconIndex) onSave;
   final VoidCallback? onDelete;
@@ -892,6 +1450,7 @@ class _CategoryModalContent extends StatefulWidget {
     this.categoryToEdit,
     required this.initialName,
     required this.initialIconIndex,
+    this.initialIcon,
     this.expenseCount = 0,
     required this.onSave,
     this.onDelete,
@@ -905,12 +1464,19 @@ class _CategoryModalContentState extends State<_CategoryModalContent>
     with WidgetsBindingObserver {
   late final TextEditingController _nameController;
   late int _selectedIconIndex;
+  late IconData _selectedIcon;
   bool _wasKeyboardOpen = false;
 
   @override
   void initState() {
     super.initState();
-    _selectedIconIndex = widget.initialIconIndex;
+    final icons = CategoriesManagementScreen.availableCategoryIcons;
+    _selectedIconIndex = (widget.initialIconIndex >= 0 &&
+            widget.initialIconIndex < icons.length)
+        ? widget.initialIconIndex
+        : 0;
+    _selectedIcon = widget.initialIcon ??
+        (icons.isNotEmpty ? icons[_selectedIconIndex] : Icons.category_rounded);
     _nameController = TextEditingController(text: widget.initialName);
     if (widget.initialName.isNotEmpty) {
       _nameController.selection = TextSelection.fromPosition(
@@ -919,6 +1485,15 @@ class _CategoryModalContentState extends State<_CategoryModalContent>
     }
     WidgetsBinding.instance.addObserver(this);
     widget.focusNode.addListener(_handleFocusChange);
+
+    // Autofocus keyboard immediately when adding a new category
+    if (widget.categoryToEdit == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          widget.focusNode.requestFocus();
+        }
+      });
+    }
   }
 
   void _handleFocusChange() {
@@ -954,6 +1529,30 @@ class _CategoryModalContentState extends State<_CategoryModalContent>
     widget.focusNode.removeListener(_handleFocusChange);
     _nameController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickIcon(BuildContext btnContext) async {
+    widget.focusNode.unfocus();
+    HapticFeedback.selectionClick();
+    final isAr = Directionality.of(context) == TextDirection.rtl;
+    final RenderBox? renderBox =
+        btnContext.findRenderObject() as RenderBox?;
+    final picked = await showAppIconPicker(
+      context,
+      widgetRenderBox: renderBox,
+      selectedIcon: _selectedIcon,
+      isDarkMode: widget.isDarkMode,
+      isAr: isAr,
+      title: isAr ? 'أيقونة التصنيف' : 'Category Icon',
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedIcon = picked;
+        final icons = CategoriesManagementScreen.availableCategoryIcons;
+        final idx = icons.indexOf(picked);
+        _selectedIconIndex = idx >= 0 ? idx : 0;
+      });
+    }
   }
 
   void _confirmDelete(BuildContext context) {
@@ -997,464 +1596,439 @@ class _CategoryModalContentState extends State<_CategoryModalContent>
     final fieldBg = widget.isDarkMode
         ? Colors.white.withValues(alpha: 0.08)
         : const Color(0xFFF4F4F5);
-    final activeIcon =
-        _CategoriesManagementScreenState._availableCategoryIcons[_selectedIconIndex];
     final viewInsetsBottom = MediaQuery.viewInsetsOf(context).bottom;
+    final safeAreaBottom = MediaQuery.paddingOf(context).bottom;
+    final isAr = Directionality.of(context) == TextDirection.rtl;
 
-    final sheetContent = GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        if (widget.focusNode.hasFocus) {
-          widget.focusNode.unfocus();
-        }
-      },
-      child: SingleChildScrollView(
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        padding: EdgeInsets.fromLTRB(
-          20,
-          widget.isGlass ? 12 : 8,
-          20,
-          viewInsetsBottom > 0 ? viewInsetsBottom + 16 : 24,
-        ),
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Android top drag handle
-            if (!widget.isGlass)
-              Center(
-                child: Container(
-                  height: 4,
-                  width: 38,
-                  margin: const EdgeInsets.only(top: 4, bottom: 12),
-                  decoration: BoxDecoration(
-                    color: widget.isDarkMode ? Colors.grey[800] : Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
+    final sheetScrollController = widget.isGlass
+        ? ScrollControllerProvider.of(context)?.controller
+        : null;
 
-            // Header Bar: Cancel on Left, Centered Title, Save Checkmark on Right
-            SizedBox(
-              height: 42,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Text(
-                    widget.categoryToEdit != null
-                        ? (Directionality.of(context) == TextDirection.rtl
-                            ? 'تعديل التصنيف'
-                            : 'Edit Category')
-                        : context.l10n.newCategory,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.3,
-                      color: widget.isDarkMode
-                          ? Colors.white
-                          : const Color(0xFF09090B),
-                    ),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // Cancel Button
-                      widget.isGlass
-                          ? GlassButton.custom(
-                              height: 42,
-                              shape: const LiquidRoundedRectangle(borderRadius: 21),
-                              useOwnLayer: true,
-                              settings: widget.isDarkMode
-                                  ? const LiquidGlassSettings(
-                                      thickness: 12,
-                                      blur: 10,
-                                      glassColor: Color(0x22FFFFFF),
-                                    )
-                                  : const LiquidGlassSettings(
-                                      thickness: 12,
-                                      blur: 10,
-                                      glassColor: Color(0x66FFFFFF),
-                                    ),
-                              onTap: () {
-                                HapticFeedback.selectionClick();
-                                Navigator.of(context).pop();
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                child: Center(
-                                  child: Text(
-                                    context.l10n.cancel,
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: widget.isDarkMode
-                                          ? const Color(0xFFE4E4E7)
-                                          : const Color(0xFF71717A),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            )
-                          : TextButton(
-                              onPressed: () {
-                                HapticFeedback.selectionClick();
-                                Navigator.of(context).pop();
-                              },
-                              child: Text(
-                                context.l10n.cancel,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: widget.isDarkMode
-                                      ? const Color(0xFFE4E4E7)
-                                      : const Color(0xFF71717A),
-                                ),
-                              ),
-                            ),
-
-                      // Save Checkmark Button
-                      widget.isGlass
-                          ? GlassButton.custom(
-                              width: 42,
-                              height: 42,
-                              shape: const LiquidOval(),
-                              useOwnLayer: true,
-                              settings: widget.isDarkMode
-                                  ? const LiquidGlassSettings(
-                                      thickness: 12,
-                                      blur: 10,
-                                      glassColor: Color(0x30FFFFFF),
-                                    )
-                                  : const LiquidGlassSettings(
-                                      thickness: 12,
-                                      blur: 10,
-                                      glassColor: Color(0x18000000),
-                                    ),
-                              onTap: () {
-                                HapticFeedback.selectionClick();
-                                widget.onSave(_nameController.text, _selectedIconIndex);
-                              },
-                              child: Icon(
-                                CupertinoIcons.checkmark,
-                                size: 20,
-                                color: themeColor,
-                              ),
-                            )
-                          : IconButton(
-                              onPressed: () {
-                                HapticFeedback.selectionClick();
-                                widget.onSave(_nameController.text, _selectedIconIndex);
-                              },
-                              icon: Icon(
-                                CupertinoIcons.checkmark,
-                                size: 20,
-                                color: themeColor,
-                              ),
-                            ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 18),
-
-            // Icon Preview Pill
+    final sheetContent = SingleChildScrollView(
+      controller: sheetScrollController,
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.manual,
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        widget.isGlass ? 12 : 8,
+        20,
+        viewInsetsBottom > 0
+            ? viewInsetsBottom + 36
+            : safeAreaBottom + 36,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Android top drag handle
+          if (!widget.isGlass)
             Center(
               child: Container(
-                width: 58,
-                height: 58,
+                height: 4,
+                width: 38,
+                margin: const EdgeInsets.only(top: 4, bottom: 12),
                 decoration: BoxDecoration(
-                  color: widget.isDarkMode
-                      ? Colors.white.withValues(alpha: 0.12)
-                      : const Color(0xFF09090B).withValues(alpha: 0.06),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: widget.isDarkMode
-                        ? Colors.white.withValues(alpha: 0.22)
-                        : const Color(0xFF09090B).withValues(alpha: 0.14),
-                    width: 1.5,
-                  ),
-                ),
-                child: Icon(
-                  activeIcon,
-                  color: themeColor,
-                  size: 28,
+                  color: widget.isDarkMode ? Colors.grey[800] : Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
 
-            const SizedBox(height: 18),
-
-            // Category Name Label
-            Text(
-              Directionality.of(context) == TextDirection.rtl
-                  ? 'اسم التصنيف'
-                  : 'Category Name',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: widget.isDarkMode
-                    ? const Color(0xFFD4D4D8)
-                    : const Color(0xFF71717A),
-              ),
-            ),
-            const SizedBox(height: 6),
-
-            // Name Field
-            TextField(
-              controller: _nameController,
-              focusNode: widget.focusNode,
-              autofocus: false,
-              keyboardAppearance:
-                  widget.isDarkMode ? Brightness.dark : Brightness.light,
-              cursorColor: themeColor,
-              style: TextStyle(
-                color: widget.isDarkMode
-                    ? Colors.white
-                    : const Color(0xFF09090B),
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
-              decoration: InputDecoration(
-                hintText: Directionality.of(context) == TextDirection.rtl
-                    ? 'مثال: مشتريات، مواصلات...'
-                    : 'e.g. Shopping, Transport...',
-                hintStyle: TextStyle(
-                  color: widget.isDarkMode
-                      ? const Color(0xFF71717A)
-                      : const Color(0xFFA1A1AA),
-                  fontSize: 14,
-                ),
-                filled: true,
-                fillColor: fieldBg,
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(
-                    color: widget.isDarkMode
-                        ? Colors.white.withValues(alpha: 0.12)
-                        : const Color(0xFFE4E4E7),
-                    width: 1.0,
-                  ),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(
-                    color: widget.isDarkMode
-                        ? Colors.white.withValues(alpha: 0.12)
-                        : const Color(0xFFE4E4E7),
-                    width: 1.0,
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(
-                    color: widget.isDarkMode
-                        ? Colors.white.withValues(alpha: 0.40)
-                        : const Color(0xFF09090B),
-                    width: 1.5,
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 14),
-
-            // Category Icon Selection
-            Text(
-              Directionality.of(context) == TextDirection.rtl
-                  ? 'أيقونة التصنيف'
-                  : 'Category Icon',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: widget.isDarkMode
-                    ? const Color(0xFFD4D4D8)
-                    : const Color(0xFF71717A),
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Icon Grid (3 rows x 6 columns)
-            Column(
-              mainAxisSize: MainAxisSize.min,
+          // Header Bar: Cancel on Left, Centered Title, Save Checkmark on Right
+          SizedBox(
+            height: 42,
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                for (int rowIndex = 0; rowIndex < 3; rowIndex++) ...[
-                  if (rowIndex > 0) const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      for (int colIndex = 0; colIndex < 6; colIndex++) ...[
-                        if (colIndex > 0) const SizedBox(width: 10),
-                        Expanded(
-                          child: AspectRatio(
-                            aspectRatio: 1,
-                            child: Builder(
-                              builder: (context) {
-                                final idx = rowIndex * 6 + colIndex;
-                                final icon = _CategoriesManagementScreenState
-                                    ._availableCategoryIcons[idx];
-                                final isSelected = idx == _selectedIconIndex;
-
-                                return GestureDetector(
-                                  onTap: () {
-                                    HapticFeedback.selectionClick();
-                                    setState(() => _selectedIconIndex = idx);
-                                  },
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 180),
-                                    decoration: BoxDecoration(
-                                      color: isSelected
-                                          ? (widget.isDarkMode
-                                              ? Colors.white.withValues(alpha: 0.22)
-                                              : const Color(0xFF09090B)
-                                                  .withValues(alpha: 0.08))
-                                          : (widget.isDarkMode
-                                              ? Colors.white.withValues(alpha: 0.06)
-                                              : fieldBg),
-                                      borderRadius: BorderRadius.circular(14),
-                                      border: Border.all(
-                                        color: isSelected
-                                            ? themeColor
-                                            : (widget.isDarkMode
-                                                ? Colors.white.withValues(alpha: 0.10)
-                                                : Colors.black.withValues(alpha: 0.05)),
-                                        width: isSelected ? 1.5 : 1.0,
-                                      ),
-                                    ),
-                                    child: Center(
-                                      child: Icon(
-                                        icon,
-                                        size: 22,
-                                        color: isSelected
-                                            ? themeColor
-                                            : (widget.isDarkMode
-                                                ? const Color(0xFFD4D4D8)
-                                                : const Color(0xFF71717A)),
-                                      ),
-                                    ),
+                Text(
+                  widget.categoryToEdit != null
+                      ? (isAr ? 'تعديل التصنيف' : 'Edit Category')
+                      : context.l10n.newCategory,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
+                    color: themeColor,
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Cancel Button
+                    widget.isGlass
+                        ? GlassButton.custom(
+                            height: 42,
+                            shape: const LiquidRoundedRectangle(
+                                borderRadius: 21),
+                            useOwnLayer: true,
+                            settings: widget.isDarkMode
+                                ? const LiquidGlassSettings(
+                                    thickness: 12,
+                                    blur: 10,
+                                    glassColor: Color(0x22FFFFFF),
+                                  )
+                                : const LiquidGlassSettings(
+                                    thickness: 12,
+                                    blur: 10,
+                                    glassColor: Color(0x66FFFFFF),
                                   ),
-                                );
-                              },
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              Navigator.of(context).pop();
+                            },
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              child: Center(
+                                child: Text(
+                                  context.l10n.cancel,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: widget.isDarkMode
+                                        ? const Color(0xFFE4E4E7)
+                                        : const Color(0xFF71717A),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                        : TextButton(
+                            onPressed: () {
+                              HapticFeedback.selectionClick();
+                              Navigator.of(context).pop();
+                            },
+                            child: Text(
+                              context.l10n.cancel,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: widget.isDarkMode
+                                    ? const Color(0xFFE4E4E7)
+                                    : const Color(0xFF71717A),
+                              ),
+                            ),
+                          ),
+
+                    // Save Checkmark Button
+                    widget.isGlass
+                        ? GlassButton.custom(
+                            width: 42,
+                            height: 42,
+                            shape: const LiquidOval(),
+                            useOwnLayer: true,
+                            settings: widget.isDarkMode
+                                ? const LiquidGlassSettings(
+                                    thickness: 12,
+                                    blur: 10,
+                                    glassColor: Color(0x30FFFFFF),
+                                  )
+                                : const LiquidGlassSettings(
+                                    thickness: 12,
+                                    blur: 10,
+                                    glassColor: Color(0x18000000),
+                                  ),
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              widget.onSave(
+                                  _nameController.text, _selectedIconIndex);
+                            },
+                            child: Icon(
+                              CupertinoIcons.checkmark,
+                              size: 20,
+                              color: themeColor,
+                            ),
+                          )
+                        : IconButton(
+                            onPressed: () {
+                              HapticFeedback.selectionClick();
+                              widget.onSave(
+                                  _nameController.text, _selectedIconIndex);
+                            },
+                            icon: Icon(
+                              CupertinoIcons.checkmark,
+                              size: 20,
+                              color: themeColor,
+                            ),
+                          ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Hero Icon Squircle Avatar (tap directly to open icon picker)
+          Builder(
+            builder: (btnContext) {
+              final avatarBgColor = widget.isDarkMode
+                  ? Colors.white.withValues(alpha: 0.10)
+                  : const Color(0xFF09090B).withValues(alpha: 0.05);
+              final avatarBorder = widget.isDarkMode
+                  ? Colors.white.withValues(alpha: 0.18)
+                  : const Color(0xFFE4E4E7);
+
+              return Center(
+                child: GestureDetector(
+                  onTap: () => _pickIcon(btnContext),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        width: 78,
+                        height: 78,
+                        decoration: BoxDecoration(
+                          color: avatarBgColor,
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(
+                            color: avatarBorder,
+                            width: 1.2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(
+                                alpha: widget.isDarkMode ? 0.35 : 0.06,
+                              ),
+                              blurRadius: 18,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 220),
+                            transitionBuilder: (child, anim) =>
+                                ScaleTransition(
+                              scale: anim,
+                              child: child,
+                            ),
+                            child: Icon(
+                              _selectedIcon,
+                              key: ValueKey(_selectedIcon.codePoint),
+                              size: 38,
+                              color: themeColor,
                             ),
                           ),
                         ),
-                      ],
-                    ],
-                  ),
-                ],
-              ],
-            ),
-
-            // Edit Mode: Warning & Delete Button
-            if (widget.categoryToEdit != null) ...[
-              const SizedBox(height: 18),
-              if (widget.expenseCount > 0) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: widget.isDarkMode
-                        ? const Color(0xFFF59E0B).withValues(alpha: 0.12)
-                        : const Color(0xFFFFFBEB),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: widget.isDarkMode
-                          ? const Color(0xFFF59E0B).withValues(alpha: 0.32)
-                          : const Color(0xFFFDE68A),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.warning_amber_rounded,
-                        size: 20,
-                        color: widget.isDarkMode
-                            ? const Color(0xFFFBBF24)
-                            : const Color(0xFFD97706),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          Directionality.of(context) == TextDirection.rtl
-                              ? 'هذا التصنيف مرتبط بـ ${widget.expenseCount} ${widget.expenseCount == 1 ? 'معاملة' : 'معاملات'}. حذفه سيترك هذه المعاملات بدون تصنيف.'
-                              : 'This category has ${widget.expenseCount} linked ${widget.expenseCount == 1 ? 'expense' : 'expenses'}. Deleting it will leave these expenses uncategorized.',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            height: 1.35,
-                            fontWeight: FontWeight.w500,
+
+                      // Edit Badge on Corner
+                      PositionedDirectional(
+                        bottom: -3,
+                        end: -3,
+                        child: Container(
+                          width: 26,
+                          height: 26,
+                          decoration: BoxDecoration(
                             color: widget.isDarkMode
-                                ? const Color(0xFFFDE68A)
-                                : const Color(0xFF92400E),
+                                ? Colors.white
+                                : Colors.black,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.25),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.edit_rounded,
+                            size: 13,
+                            color: widget.isDarkMode
+                                ? Colors.black
+                                : Colors.white,
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
-              ],
+              );
+            },
+          ),
 
-              // Delete Category Button
-              GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _confirmDelete(context);
-                },
-                child: Container(
-                  height: 44,
-                  decoration: BoxDecoration(
+          const SizedBox(height: 28),
+
+          // Category Name Label
+          Text(
+            isAr ? 'اسم التصنيف' : 'Category Name',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: widget.isDarkMode
+                  ? const Color(0xFFD4D4D8)
+                  : const Color(0xFF71717A),
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // Name Field
+          TextField(
+            controller: _nameController,
+            focusNode: widget.focusNode,
+            autofocus: widget.categoryToEdit == null,
+            keyboardAppearance:
+                widget.isDarkMode ? Brightness.dark : Brightness.light,
+            cursorColor: themeColor,
+            style: TextStyle(
+              color: widget.isDarkMode
+                  ? Colors.white
+                  : const Color(0xFF09090B),
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+            decoration: InputDecoration(
+              hintText: isAr
+                  ? 'مثال: مشتريات، مواصلات...'
+                  : 'e.g. Shopping, Transport...',
+              hintStyle: TextStyle(
+                color: widget.isDarkMode
+                    ? const Color(0xFF71717A)
+                    : const Color(0xFFA1A1AA),
+                fontSize: 14,
+              ),
+              filled: true,
+              fillColor: fieldBg,
+              contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 14),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: widget.isDarkMode
+                      ? Colors.white.withValues(alpha: 0.12)
+                      : const Color(0xFFE4E4E7),
+                  width: 1.0,
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: widget.isDarkMode
+                      ? Colors.white.withValues(alpha: 0.12)
+                      : const Color(0xFFE4E4E7),
+                  width: 1.0,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: widget.isDarkMode
+                      ? Colors.white.withValues(alpha: 0.40)
+                      : const Color(0xFF09090B),
+                  width: 1.5,
+                ),
+              ),
+            ),
+          ),
+
+          // Edit Mode: Warning & Delete Button
+          if (widget.categoryToEdit != null) ...[
+            const SizedBox(height: 18),
+            if (widget.expenseCount > 0) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: widget.isDarkMode
+                      ? const Color(0xFFF59E0B).withValues(alpha: 0.12)
+                      : const Color(0xFFFFFBEB),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
                     color: widget.isDarkMode
-                        ? const Color(0xFFEF4444).withValues(alpha: 0.14)
-                        : const Color(0xFFFEE2E2),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: widget.isDarkMode
-                          ? const Color(0xFFEF4444).withValues(alpha: 0.30)
-                          : const Color(0xFFFECACA),
-                      width: 1,
-                    ),
+                        ? const Color(0xFFF59E0B).withValues(alpha: 0.32)
+                        : const Color(0xFFFDE68A),
+                    width: 1,
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        CupertinoIcons.trash,
-                        size: 17,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      size: 20,
+                      color: widget.isDarkMode
+                          ? const Color(0xFFFBBF24)
+                          : const Color(0xFFD97706),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        isAr
+                            ? 'هذا التصنيف مرتبط بـ ${widget.expenseCount} ${widget.expenseCount == 1 ? 'معاملة' : 'معاملات'}. حذفه سيترك هذه المعاملات بدون تصنيف.'
+                            : 'This category has ${widget.expenseCount} linked ${widget.expenseCount == 1 ? 'expense' : 'expenses'}. Deleting it will leave these expenses uncategorized.',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          height: 1.35,
+                          fontWeight: FontWeight.w500,
+                          color: widget.isDarkMode
+                              ? const Color(0xFFFDE68A)
+                              : const Color(0xFF92400E),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // Delete Category Button
+            GestureDetector(
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                _confirmDelete(context);
+              },
+              child: Container(
+                height: 44,
+                decoration: BoxDecoration(
+                  color: widget.isDarkMode
+                      ? const Color(0xFFEF4444).withValues(alpha: 0.14)
+                      : const Color(0xFFFEE2E2),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: widget.isDarkMode
+                        ? const Color(0xFFEF4444).withValues(alpha: 0.30)
+                        : const Color(0xFFFECACA),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      CupertinoIcons.trash,
+                      size: 17,
+                      color: widget.isDarkMode
+                          ? const Color(0xFFF87171)
+                          : const Color(0xFFDC2626),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      isAr ? 'حذف التصنيف' : 'Delete Category',
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
                         color: widget.isDarkMode
                             ? const Color(0xFFF87171)
                             : const Color(0xFFDC2626),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        Directionality.of(context) == TextDirection.rtl
-                            ? 'حذف التصنيف'
-                            : 'Delete Category',
-                        style: TextStyle(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w600,
-                          color: widget.isDarkMode
-                              ? const Color(0xFFF87171)
-                              : const Color(0xFFDC2626),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-
-            const SizedBox(height: 24),
+            ),
           ],
-        ),
+
+          const SizedBox(height: 24),
+        ],
       ),
     );
 
@@ -1470,7 +2044,9 @@ class _CategoryModalContentState extends State<_CategoryModalContent>
         color: widget.isDarkMode ? const Color(0xFF141417) : Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         border: Border.all(
-          color: widget.isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+          color: widget.isDarkMode
+              ? const Color(0xFF27272A)
+              : const Color(0xFFE4E4E7),
           width: 1,
         ),
       ),
@@ -1480,4 +2056,26 @@ class _CategoryModalContentState extends State<_CategoryModalContent>
       ),
     );
   }
+}
+
+/// Item model for the usage filter pills shown under the page title.
+class _UsageFilterItem {
+  const _UsageFilterItem({
+    required this.id,
+    required this.title,
+    required this.icon,
+  });
+
+  final String id;
+  final String title;
+  final IconData icon;
+}
+
+/// Item model for the sort menu shown in the app bar.
+class _SortOption {
+  const _SortOption({required this.id, required this.title, required this.icon});
+
+  final String id;
+  final String title;
+  final IconData icon;
 }
