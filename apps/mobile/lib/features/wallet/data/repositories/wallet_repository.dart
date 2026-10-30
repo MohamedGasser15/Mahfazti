@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:my_wallet/core/constants/api_constants.dart';
+import 'package:my_wallet/core/constants/app_constants.dart';
 import 'package:my_wallet/core/services/api_service.dart';
+import 'package:my_wallet/core/services/mock_backend_engine.dart';
 import 'package:my_wallet/core/utils/api_error_handler.dart';
 import 'package:my_wallet/features/wallet/data/models/budget_models.dart';
 import 'package:my_wallet/features/wallet/data/models/voice_expense_model.dart';
@@ -9,7 +11,13 @@ import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
 class WalletRepository {
   final ApiService _apiService = ApiService();
 
+  bool get _useMock => AppConstants.useMockBackend && !_apiService.hasTestingDio;
+
   Future<WalletHomeData> getHomeData() async {
+    if (_useMock) {
+      return MockBackendEngine.instance.getHomeData();
+    }
+
     try {
       final response = await _apiService.get(
         ApiEndpoints.walletHome,
@@ -24,6 +32,10 @@ class WalletRepository {
   }
 
   Future<WalletBalance> getBalance() async {
+    if (_useMock) {
+      return MockBackendEngine.instance.getBalance();
+    }
+
     try {
       final response = await _apiService.get(
         ApiEndpoints.walletBalance,
@@ -44,7 +56,20 @@ class WalletRepository {
     DateTime? toDate,
     String? type,
     int? categoryId,
+    String? searchQuery,
   }) async {
+    if (_useMock) {
+      return MockBackendEngine.instance.getTransactions(
+        page: page,
+        pageSize: pageSize,
+        fromDate: fromDate,
+        toDate: toDate,
+        type: type,
+        categoryId: categoryId,
+        searchQuery: searchQuery,
+      );
+    }
+
     try {
       final queryParams = <String, dynamic>{
         'page': page,
@@ -79,18 +104,35 @@ class WalletRepository {
   }
 
   Future<WalletTransaction> addTransaction({
+    String? title,
     String? description,
     required double amount,
     required String type,
     required int categoryId,
     DateTime? transactionDate,
+    bool isRecurring = false,
   }) async {
+    if (_useMock) {
+      return MockBackendEngine.instance.addTransaction(
+        title: title,
+        description: description,
+        amount: amount,
+        type: type,
+        categoryId: categoryId,
+        transactionDate: transactionDate,
+        isRecurring: isRecurring,
+      );
+    }
+
     try {
       final body = <String, dynamic>{
         'amount': amount,
         'type': type,
         'categoryId': categoryId,
       };
+      if (title != null && title.isNotEmpty) {
+        body['title'] = title;
+      }
       if (description != null && description.isNotEmpty) {
         body['description'] = description;
       }
@@ -103,6 +145,7 @@ class WalletRepository {
         body,
         requiresAuth: true,
       );
+
       return WalletTransaction.fromJson(response.data);
     } on DioException catch (e) {
       throw Exception(ApiErrorHandler.getErrorMessage(e));
@@ -113,7 +156,7 @@ class WalletRepository {
 
   Future<WalletTransaction> updateTransaction(
     int transactionId, {
-    required String title,
+    String? title,
     String? description,
     required double amount,
     required String type,
@@ -123,6 +166,18 @@ class WalletRepository {
     String? recurringInterval,
     DateTime? recurringEndDate,
   }) async {
+    if (_useMock) {
+      return MockBackendEngine.instance.updateTransaction(
+        id: transactionId,
+        title: title,
+        description: description,
+        amount: amount,
+        type: type,
+        categoryId: categoryId,
+        transactionDate: transactionDate,
+      );
+    }
+
     try {
       final body = <String, dynamic>{
         'title': title,
@@ -175,6 +230,11 @@ class WalletRepository {
   }
 
   Future<bool> deleteTransaction(int transactionId) async {
+    if (_useMock) {
+      await MockBackendEngine.instance.deleteTransaction(transactionId);
+      return true;
+    }
+
     try {
       final response = await _apiService.delete(
         '${ApiEndpoints.walletDeleteTransaction}/$transactionId',
@@ -195,6 +255,10 @@ class WalletRepository {
   }
 
   Future<BudgetDto> getBudget() async {
+    if (_useMock) {
+      return MockBackendEngine.instance.getBudget();
+    }
+
     try {
       final response = await _apiService.get(
         ApiEndpoints.budget,
@@ -209,6 +273,10 @@ class WalletRepository {
   }
 
   Future<void> updateMonthlyBudget(double monthlyBudget) async {
+    if (_useMock) {
+      return MockBackendEngine.instance.updateMonthlyBudget(monthlyBudget);
+    }
+
     try {
       await _apiService.put(
         ApiEndpoints.budget,
@@ -223,6 +291,10 @@ class WalletRepository {
   }
 
   Future<void> updateCategoryBudget(int categoryId, double budget) async {
+    if (_useMock) {
+      return MockBackendEngine.instance.updateCategoryBudget(categoryId, budget);
+    }
+
     try {
       await _apiService.put(
         ApiEndpoints.budgetCategory,
@@ -240,6 +312,10 @@ class WalletRepository {
     required DateTime fromDate,
     required DateTime toDate,
   }) async {
+    if (_useMock) {
+      return MockBackendEngine.instance.getSummary(fromDate: fromDate, toDate: toDate);
+    }
+
     try {
       final response = await _apiService.get(
         ApiEndpoints.walletSummary,

@@ -197,8 +197,32 @@ abstract class AppLocalizations {
   /// No description provided for @analytics.
   ///
   /// In en, this message translates to:
-  /// **'Analytics'**
+  /// **'Wealth'**
   String get analytics;
+
+  /// No description provided for @couldNotLoadAnalytics.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load analytics'**
+  String get couldNotLoadAnalytics;
+
+  /// No description provided for @previousPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous period'**
+  String get previousPeriod;
+
+  /// No description provided for @savingsRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Savings Rate'**
+  String get savingsRate;
+
+  /// No description provided for @vsPreviousPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'vs previous period'**
+  String get vsPreviousPeriod;
 
   /// No description provided for @any.
   ///
@@ -2231,7 +2255,7 @@ abstract class AppLocalizations {
   /// No description provided for @wallet.
   ///
   /// In en, this message translates to:
-  /// **'WALLET'**
+  /// **'Wallet'**
   String get wallet;
 
   /// No description provided for @insights.

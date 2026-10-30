@@ -1,14 +1,13 @@
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:neo_cupertino/neo_cupertino.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/utils/navigation_service.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/analytics_screen.dart';
+import 'package:my_wallet/features/wallet/presentation/screens/ask_tab.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/budgets_tab.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/home_tab.dart';
-import 'package:my_wallet/features/wallet/presentation/screens/subscriptions_tab.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -48,15 +47,16 @@ class _HomeScreenState extends State<HomeScreen> {
       LiquidGlassBarItem(
         icon: CupertinoIcons.creditcard,
         selectedIcon: CupertinoIcons.creditcard_fill,
-        sfSymbol: 'wallet.pass',
-        selectedSfSymbol: 'wallet.pass.fill',
+        // iOS 26 Wallet app glyph.
+        sfSymbol: 'wallet.bifold',
+        selectedSfSymbol: 'wallet.bifold.fill',
         label: l10n.wallet,
       ),
       LiquidGlassBarItem(
-        icon: CupertinoIcons.chart_pie,
-        selectedIcon: CupertinoIcons.chart_pie_fill,
-        sfSymbol: 'chart.pie',
-        selectedSfSymbol: 'chart.pie.fill',
+        icon: CupertinoIcons.graph_square,
+        selectedIcon: CupertinoIcons.graph_square_fill,
+        sfSymbol: 'chart.line.uptrend.xyaxis',
+        selectedSfSymbol: 'chart.line.uptrend.xyaxis',
         label: l10n.analytics,
       ),
       LiquidGlassBarItem(
@@ -67,11 +67,12 @@ class _HomeScreenState extends State<HomeScreen> {
         label: l10n.budgets,
       ),
       LiquidGlassBarItem(
-        icon: CupertinoIcons.arrow_2_squarepath,
-        selectedIcon: CupertinoIcons.arrow_2_squarepath,
-        sfSymbol: 'arrow.2.squarepath',
-        selectedSfSymbol: 'arrow.2.squarepath',
-        label: l10n.subscriptions,
+        // Apple Intelligence / Siri flower.
+        icon: CupertinoIcons.sparkles,
+        selectedIcon: CupertinoIcons.sparkles,
+        sfSymbol: 'apple.intelligence',
+        selectedSfSymbol: 'apple.intelligence',
+        label: isRtl ? 'اسأل' : 'Ask',
       ),
     ];
     final displayItems = isRtl ? baseTabItems.reversed.toList() : baseTabItems;
@@ -80,6 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: isIOS,
+      resizeToAvoidBottomInset: !isIOS,
       bottomNavigationBar: isIOS ? null : _buildAndroidNavigationBar(context, isDarkMode),
       body: Stack(
         children: [
@@ -90,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
               RepaintBoundary(child: HomeTab(onNavigateToTab: _navigateToTab)),
               const RepaintBoundary(child: AnalyticsScreen()),
               const RepaintBoundary(child: BudgetsTab()),
-              const RepaintBoundary(child: SubscriptionsTab()),
+              const RepaintBoundary(child: AskTab()),
             ],
           ),
           if (isIOS)
@@ -124,7 +126,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   items: displayItems,
                   currentIndex: activeIndex,
                   onTap: (index) {
-                    HapticFeedback.selectionClick();
                     final targetIndex = isRtl ? (displayItems.length - 1 - index) : index;
                     _navigateToTab(targetIndex);
                   },
@@ -136,8 +137,25 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _askIcon(double size) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(size * 0.26),
+      child: Image.asset(
+        'assets/icons/siri_ai.png',
+        width: size,
+        height: size,
+        filterQuality: FilterQuality.high,
+        errorBuilder: (_, __, ___) => Icon(
+          Icons.auto_awesome_rounded,
+          size: size,
+        ),
+      ),
+    );
+  }
+
   Widget _buildAndroidNavigationBar(BuildContext context, bool isDarkMode) {
     final l10n = context.l10n;
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
 
     return Container(
       decoration: BoxDecoration(
@@ -193,7 +211,6 @@ class _HomeScreenState extends State<HomeScreen> {
         child: NavigationBar(
           selectedIndex: _currentIndex,
           onDestinationSelected: (index) {
-            HapticFeedback.selectionClick();
             _navigateToTab(index);
           },
           destinations: [
@@ -203,8 +220,8 @@ class _HomeScreenState extends State<HomeScreen> {
               label: l10n.wallet,
             ),
             NavigationDestination(
-              icon: const Icon(Icons.pie_chart_outline_rounded),
-              selectedIcon: const Icon(Icons.pie_chart_rounded),
+              icon: const Icon(Icons.show_chart_rounded),
+              selectedIcon: const Icon(Icons.ssid_chart_rounded),
               label: l10n.analytics,
             ),
             NavigationDestination(
@@ -213,9 +230,9 @@ class _HomeScreenState extends State<HomeScreen> {
               label: l10n.budgets,
             ),
             NavigationDestination(
-              icon: const Icon(Icons.autorenew_outlined),
-              selectedIcon: const Icon(Icons.autorenew_rounded),
-              label: l10n.subscriptions,
+              icon: _askIcon(24),
+              selectedIcon: _askIcon(26),
+              label: isAr ? 'اسأل' : 'Ask',
             ),
           ],
         ),

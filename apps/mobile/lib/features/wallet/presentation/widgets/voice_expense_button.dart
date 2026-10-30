@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:neo_cupertino/neo_cupertino.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
+import 'package:my_wallet/core/themes/app_icons.dart';
 import 'package:my_wallet/features/wallet/data/models/voice_expense_model.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
 
@@ -205,7 +206,7 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
                                   ),
                                 )
                               : Icon(
-                                  _isListening ? Icons.stop_rounded : Icons.mic_rounded,
+                                  _isListening ? AppIcons.stop(isIOS: Platform.isIOS) : AppIcons.mic(isIOS: Platform.isIOS),
                                   color: _isListening ? const Color(0xFFF43F5E) : Colors.white,
                                   size: 22,
                                 ),
@@ -254,7 +255,7 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
                                     ),
                                   )
                                 : Icon(
-                                    _isListening ? Icons.stop_rounded : Icons.mic_rounded,
+                                    _isListening ? AppIcons.stop(isIOS: Platform.isIOS) : AppIcons.mic(isIOS: Platform.isIOS),
                                     color: _isListening
                                         ? const Color(0xFFF43F5E)
                                         : (isDark ? Colors.white : Colors.black),
@@ -336,7 +337,7 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
                           ),
                         )
                       : Icon(
-                          _isListening ? Icons.stop_rounded : Icons.mic_rounded,
+                          _isListening ? AppIcons.stop(isIOS: Platform.isIOS) : AppIcons.mic(isIOS: Platform.isIOS),
                           color: _isListening
                               ? const Color(0xFFF43F5E)
                               : (isDark ? Colors.white : Colors.black),

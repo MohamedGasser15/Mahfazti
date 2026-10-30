@@ -1,13 +1,21 @@
 import 'package:dio/dio.dart';
 import 'package:my_wallet/core/constants/api_constants.dart';
+import 'package:my_wallet/core/constants/app_constants.dart';
 import 'package:my_wallet/core/services/api_service.dart';
+import 'package:my_wallet/core/services/mock_backend_engine.dart';
 import 'package:my_wallet/core/utils/api_error_handler.dart';
 import 'package:my_wallet/features/wallet/data/models/category_model.dart';
 
 class CategoryRepository {
   final ApiService _apiService = ApiService();
 
+  bool get _useMock => AppConstants.useMockBackend && !_apiService.hasTestingDio;
+
   Future<List<Category>> getAllCategories() async {
+    if (_useMock) {
+      return MockBackendEngine.instance.getCategories();
+    }
+
     try {
       final response = await _apiService.get(
         ApiEndpoints.categories,
@@ -21,6 +29,10 @@ class CategoryRepository {
   }
 
   Future<Category> createCategory(String nameAr, String nameEn) async {
+    if (_useMock) {
+      return MockBackendEngine.instance.createCategory(nameAr, nameEn);
+    }
+
     try {
       final response = await _apiService.post(
         ApiEndpoints.categories,
@@ -34,6 +46,10 @@ class CategoryRepository {
   }
 
   Future<Category> updateCategory(int id, String nameAr, String nameEn) async {
+    if (_useMock) {
+      return MockBackendEngine.instance.updateCategory(id, nameAr, nameEn);
+    }
+
     try {
       final response = await _apiService.put(
         '${ApiEndpoints.categoryById}/$id',
@@ -47,6 +63,10 @@ class CategoryRepository {
   }
 
   Future<void> deleteCategory(int id) async {
+    if (_useMock) {
+      return MockBackendEngine.instance.deleteCategory(id);
+    }
+
     try {
       await _apiService.delete(
         '${ApiEndpoints.categoryById}/$id',

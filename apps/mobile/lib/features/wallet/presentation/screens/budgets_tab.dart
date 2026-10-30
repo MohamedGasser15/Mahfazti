@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -8,9 +9,12 @@ import 'package:my_wallet/core/constants/currency_constants.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/services/wallet_cache_service.dart';
+import 'package:my_wallet/core/services/wallet_data_sync_service.dart';
 import 'package:my_wallet/core/utils/app_responsive.dart';
+import 'package:my_wallet/core/widgets/app_back_button.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/wallet/data/models/budget_models.dart';
+import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
 
 class BudgetsTab extends StatefulWidget {
   const BudgetsTab({super.key});
@@ -20,6 +24,8 @@ class BudgetsTab extends StatefulWidget {
 }
 
 class _BudgetsTabState extends State<BudgetsTab> {
+  final WalletRepository _repository = WalletRepository();
+  StreamSubscription<void>? _syncSubscription;
   bool _isLoading = true;
   String _currencyCode = 'EGP';
   BudgetDto? _budgetData;
@@ -28,6 +34,17 @@ class _BudgetsTabState extends State<BudgetsTab> {
   void initState() {
     super.initState();
     _loadInitialData();
+    _syncSubscription = WalletDataSyncService.onDataChanged.listen((_) {
+      if (mounted) {
+        _loadBudget(forceRefresh: true);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _syncSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadInitialData() async {
@@ -39,39 +56,24 @@ class _BudgetsTabState extends State<BudgetsTab> {
   }
 
   Future<void> _loadBudget({bool forceRefresh = false}) async {
-    if (!forceRefresh) {
-      final cached = await WalletCacheService.getBudget();
-      if (cached != null) {
-        try {
-          final data = BudgetDto.fromJson(cached);
-          final sanitizedData = data.copyWith(
-            categoryBudgets: data.categoryBudgets
-                .map((c) => c.copyWith(clearGroup: true))
-                .toList(),
-          );
-          final hasUnset = sanitizedData.categoryBudgets.any((c) => c.budget <= 0);
-          if (hasUnset && sanitizedData.categoryBudgets.length >= 4 && sanitizedData.monthlyBudget == 0.0) {
-            if (mounted) {
-              setState(() {
-                _budgetData = sanitizedData;
-                _isLoading = false;
-              });
-              return;
-            }
-          }
-        } catch (_) {}
+    try {
+      final budget = await _repository.getBudget();
+      if (mounted) {
+        setState(() {
+          _budgetData = budget;
+          _isLoading = false;
+        });
+      }
+      await WalletCacheService.saveBudget(budget.toJson());
+    } catch (_) {
+      final seed = BudgetDto.defaultSeed();
+      if (mounted) {
+        setState(() {
+          _budgetData = seed;
+          _isLoading = false;
+        });
       }
     }
-
-    // Backend is disabled temporarily; always seed with realistic data including unset category
-    final seed = BudgetDto.defaultSeed();
-    if (mounted) {
-      setState(() {
-        _budgetData = seed;
-        _isLoading = false;
-      });
-    }
-    await WalletCacheService.saveBudget(seed.toJson());
   }
 
   String _formatAmount(double amount) {
@@ -184,6 +186,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   child: TextField(
                     controller: controller,
+                    keyboardAppearance: isDarkMode ? Brightness.dark : Brightness.light,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     autofocus: true,
                     style: TextStyle(
@@ -239,6 +242,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                                 categoryBudgets: BudgetDto.defaultSeed().categoryBudgets,
                               );
                       });
+                      await _repository.updateMonthlyBudget(amount);
                       await WalletCacheService.saveBudget(_budgetData!.toJson());
 
                       if (mounted) {
@@ -276,6 +280,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                           }
                         });
                         if (_budgetData != null) {
+                          await _repository.updateMonthlyBudget(0.0);
                           await WalletCacheService.saveBudget(_budgetData!.toJson());
                         }
                         if (mounted) {
@@ -385,6 +390,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 child: TextField(
                   controller: controller,
+                  keyboardAppearance: isDarkMode ? Brightness.dark : Brightness.light,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   autofocus: true,
                   style: TextStyle(
@@ -440,6 +446,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                               categoryBudgets: BudgetDto.defaultSeed().categoryBudgets,
                             );
                     });
+                    await _repository.updateMonthlyBudget(amount);
                     await WalletCacheService.saveBudget(_budgetData!.toJson());
 
                     if (mounted) {
@@ -481,6 +488,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                         }
                       });
                       if (_budgetData != null) {
+                        await _repository.updateMonthlyBudget(0.0);
                         await WalletCacheService.saveBudget(_budgetData!.toJson());
                       }
                       if (mounted) {
@@ -592,6 +600,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   child: TextField(
                     controller: controller,
+                    keyboardAppearance: isDarkMode ? Brightness.dark : Brightness.light,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     autofocus: true,
                     style: TextStyle(
@@ -650,6 +659,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                         }
                       });
                       if (_budgetData != null) {
+                        await _repository.updateCategoryBudget(cat.categoryId, amount);
                         await WalletCacheService.saveBudget(_budgetData!.toJson());
                       }
 
@@ -753,6 +763,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 child: TextField(
                   controller: controller,
+                  keyboardAppearance: isDarkMode ? Brightness.dark : Brightness.light,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   autofocus: true,
                   style: TextStyle(
@@ -811,6 +822,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                       }
                     });
                     if (_budgetData != null) {
+                      await _repository.updateCategoryBudget(cat.categoryId, amount);
                       await WalletCacheService.saveBudget(_budgetData!.toJson());
                     }
 
@@ -820,11 +832,6 @@ class _BudgetsTabState extends State<BudgetsTab> {
                         message: context.l10n.categoryBudgetUpdated,
                       );
                     }
-
-                    // Backend API call disabled temporarily
-                    // try {
-                    //   await _repository.updateCategoryBudget(cat.categoryId, amount);
-                    // } catch (_) {}
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: isDarkMode ? Colors.white : Colors.black,
@@ -905,7 +912,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                   ),
                 ),
                 trailing: Icon(
-                  Icons.arrow_forward_ios_rounded,
+                  appForwardIconOf(context),
                   size: 14,
                   color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
                 ),
@@ -949,7 +956,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                   ),
                 ),
                 trailing: Icon(
-                  Icons.arrow_forward_ios_rounded,
+                  appForwardIconOf(context),
                   size: 14,
                   color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
                 ),
@@ -1054,6 +1061,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     child: TextField(
                       controller: nameController,
+                      keyboardAppearance: isDarkMode ? Brightness.dark : Brightness.light,
                       autofocus: true,
                       style: TextStyle(
                         fontSize: 16,
@@ -1091,6 +1099,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     child: TextField(
                       controller: budgetController,
+                      keyboardAppearance: isDarkMode ? Brightness.dark : Brightness.light,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       style: TextStyle(
                         fontSize: 16,
@@ -1155,6 +1164,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                           }
                         });
                         if (_budgetData != null) {
+                          await _repository.updateMonthlyBudget(0.0);
                           await WalletCacheService.saveBudget(_budgetData!.toJson());
                         }
                         if (mounted) {
@@ -1267,6 +1277,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       child: TextField(
                         controller: nameController,
+                        keyboardAppearance: isDarkMode ? Brightness.dark : Brightness.light,
                         autofocus: true,
                         style: TextStyle(
                           fontSize: 15,
@@ -1304,6 +1315,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       child: TextField(
                         controller: budgetController,
+                        keyboardAppearance: isDarkMode ? Brightness.dark : Brightness.light,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         style: TextStyle(
                           fontSize: 16,
@@ -1729,7 +1741,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                   ),
                 ),
                 trailing: Icon(
-                  Icons.arrow_forward_ios_rounded,
+                  appForwardIconOf(context),
                   size: 14,
                   color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
                 ),
@@ -1762,8 +1774,8 @@ class _BudgetsTabState extends State<BudgetsTab> {
                     color: Colors.redAccent,
                   ),
                 ),
-                trailing: const Icon(
-                  Icons.arrow_forward_ios_rounded,
+                trailing: Icon(
+                  appForwardIconOf(context),
                   size: 14,
                   color: Colors.redAccent,
                 ),
@@ -1790,6 +1802,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
 
     return Scaffold(
       backgroundColor: bgColor,
+      resizeToAvoidBottomInset: !isIOS,
       appBar: AppBar(
         title: Text(
           context.l10n.budgets,

@@ -38,43 +38,51 @@ class BudgetDto {
     );
   }
 
-  /// Default 4-item seed data so the user has realistic, lively initial budgets (including one unset category and unset monthly budget)
+  /// Default seed data so the user has realistic, lively initial budgets
   static BudgetDto defaultSeed() {
     return BudgetDto(
-      monthlyBudget: 0.0,
-      currentSpending: 7300.0,
+      monthlyBudget: 24000.0,
+      currentSpending: 18808.0,
       categoryBudgets: [
         CategoryBudgetDto(
           id: 1,
-          categoryId: 1,
-          categoryNameAr: 'طعام ومطاعم',
-          categoryNameEn: 'Food & Dining',
-          budget: 5000.0,
-          spent: 3200.0,
+          categoryId: 2,
+          categoryNameAr: 'تسوق ومستلزمات',
+          categoryNameEn: 'Shopping',
+          budget: 8000.0,
+          spent: 6395.0,
         ),
         CategoryBudgetDto(
           id: 2,
-          categoryId: 2,
-          categoryNameAr: 'تسوق ومستلزمات',
-          categoryNameEn: 'Shopping & Retail',
-          budget: 4000.0,
-          spent: 2150.0,
+          categoryId: 1,
+          categoryNameAr: 'طعام ومطاعم',
+          categoryNameEn: 'Food & Dining',
+          budget: 6500.0,
+          spent: 5078.0,
         ),
         CategoryBudgetDto(
           id: 3,
-          categoryId: 3,
-          categoryNameAr: 'فواتير وخدمات',
-          categoryNameEn: 'Bills & Utilities',
-          budget: 2500.0,
-          spent: 1500.0,
+          categoryId: 4,
+          categoryNameAr: 'مواصلات وسيارات',
+          categoryNameEn: 'Transportation',
+          budget: 4000.0,
+          spent: 3010.0,
         ),
         CategoryBudgetDto(
           id: 4,
-          categoryId: 4,
-          categoryNameAr: 'مواصلات وسيارة',
-          categoryNameEn: 'Transportation',
-          budget: 0.0,
-          spent: 450.0,
+          categoryId: 3,
+          categoryNameAr: 'فواتير وخدمات',
+          categoryNameEn: 'Bills & Utilities',
+          budget: 3500.0,
+          spent: 2445.0,
+        ),
+        CategoryBudgetDto(
+          id: 5,
+          categoryId: 7,
+          categoryNameAr: 'ترفيه واشتراكات',
+          categoryNameEn: 'Entertainment',
+          budget: 2000.0,
+          spent: 1880.0,
         ),
       ],
     );

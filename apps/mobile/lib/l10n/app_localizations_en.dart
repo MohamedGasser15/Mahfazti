@@ -57,7 +57,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get amountGreaterThanZero => 'Amount must be greater than 0';
 
   @override
-  String get analytics => 'Analytics';
+  String get analytics => 'Wealth';
+
+  @override
+  String get couldNotLoadAnalytics => 'Couldn\'t load analytics';
+
+  @override
+  String get previousPeriod => 'Previous period';
+
+  @override
+  String get savingsRate => 'Savings Rate';
+
+  @override
+  String get vsPreviousPeriod => 'vs previous period';
 
   @override
   String get any => 'Any';
@@ -1155,7 +1167,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorOccurred => 'An Error Occurred';
 
   @override
-  String get wallet => 'WALLET';
+  String get wallet => 'Wallet';
 
   @override
   String get insights => 'INSIGHTS';

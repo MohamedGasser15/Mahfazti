@@ -8,11 +8,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 import 'package:neo_cupertino/neo_cupertino.dart';
+import 'package:my_wallet/core/constants/app_constants.dart';
 import 'package:my_wallet/core/constants/currency_constants.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/hide_balance_service.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/services/wallet_cache_service.dart';
+import 'package:my_wallet/core/themes/app_surfaces.dart';
+import 'package:my_wallet/core/themes/app_icons.dart';
+import 'package:my_wallet/core/services/wallet_data_sync_service.dart';
+import 'package:my_wallet/core/widgets/app_back_button.dart';
 import 'package:my_wallet/core/utils/api_error_handler.dart';
 import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
@@ -22,15 +27,20 @@ import 'package:my_wallet/features/settings/presentation/screens/categories_mana
 import 'package:my_wallet/features/settings/presentation/screens/settings_screen.dart';
 import 'package:my_wallet/features/wallet/data/models/budget_models.dart';
 import 'package:my_wallet/features/wallet/data/models/category_model.dart';
+import 'package:my_wallet/features/wallet/data/models/mock_transactions_data.dart';
 import 'package:my_wallet/features/wallet/data/models/voice_expense_model.dart';
 import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
 import 'package:my_wallet/features/wallet/data/repositories/category_repository.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
-import 'package:my_wallet/features/wallet/presentation/screens/analytics_screen.dart';
+import 'package:my_wallet/features/wallet/presentation/screens/add_account_screen.dart';
+import 'package:my_wallet/features/wallet/presentation/screens/financial_analytics_screen.dart';
+import 'package:my_wallet/features/wallet/presentation/screens/spending_breakdown_screen.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/subscriptions_tab.dart';
+import 'package:my_wallet/features/wallet/presentation/screens/transactions_page.dart';
 import 'package:my_wallet/features/wallet/presentation/widgets/home_tab_models.dart';
 import 'package:my_wallet/features/wallet/presentation/widgets/voice_expense_button.dart';
 import 'package:my_wallet/features/wallet/presentation/utils/category_icon_helper.dart';
+import 'package:my_wallet/features/wallet/presentation/widgets/inferred_wallet_label.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -52,9 +62,10 @@ class HomeTab extends StatefulWidget {
 abstract class _HomeTabState extends State<HomeTab> {
   //#region Private Fields
   final WalletRepository _walletRepository = WalletRepository();
+  StreamSubscription<void>? _syncSubscription;
   bool _isLoading = true;
   WalletHomeData? _homeData;
-  BudgetDto? _budgetData;
+  BudgetDto? _budgetData = BudgetDto.defaultSeed();
   SubscriptionItem? _upcomingSubscription;
   List<SubscriptionItem> _subscriptions = [];
   String? _errorMessage;
@@ -78,30 +89,28 @@ abstract class _HomeTabState extends State<HomeTab> {
   final Map<String, double> _accountBalancesOverrides = {};
   final Map<String, String> _accountNamesOverrides = {};
   final Map<String, int> _accountIconsOverrides = {};
-  final ValueNotifier<double> _topScrollProgress = ValueNotifier<double>(0.0);
   //#endregion
 
   //#region Lifecycle
   @override
   void initState() {
     super.initState();
-    _mainScrollController.addListener(() {
-      if (!_mainScrollController.hasClients) return;
-      final progress = (_mainScrollController.offset / 35.0).clamp(0.0, 1.0);
-      if (_topScrollProgress.value != progress) {
-        _topScrollProgress.value = progress;
-      }
-    });
     _loadCurrency().then((_) {
       _loadHomeData();
     });
     _loadCategories();
     _loadAccountOverrides();
+    _syncSubscription = WalletDataSyncService.onDataChanged.listen((_) {
+      if (mounted) {
+        _loadHomeData(forceRefresh: true);
+        _loadCategories();
+      }
+    });
   }
 
   @override
   void dispose() {
-    _topScrollProgress.dispose();
+    _syncSubscription?.cancel();
     _mainScrollController.dispose();
     _getStartedPageController.dispose();
     _walletsScrollController.dispose();
@@ -139,9 +148,40 @@ abstract class _HomeTabState extends State<HomeTab> {
           if (val is int) _accountIconsOverrides[key] = val;
         });
       }
+
+      final customStr = prefs.getString('wallet_custom_accounts');
+      if (customStr != null) {
+        final list = jsonDecode(customStr) as List<dynamic>;
+        _customAccounts.clear();
+        for (final item in list) {
+          if (item is Map<String, dynamic>) {
+            _customAccounts.add(AccountItem.fromJson(item));
+          }
+        }
+      }
+      final hiddenStr = prefs.getString('wallet_hidden_insights');
+      if (hiddenStr != null) {
+        final list = jsonDecode(hiddenStr) as List<dynamic>;
+        _hiddenInsights
+          ..clear()
+          ..addAll(list.whereType<String>());
+      }
+
       if (mounted) setState(() {});
     } catch (e) {
       debugPrint('Error loading account overrides: $e');
+    }
+  }
+
+  Future<void> _saveHiddenInsights() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        'wallet_hidden_insights',
+        jsonEncode(_hiddenInsights.toList()),
+      );
+    } catch (e) {
+      debugPrint('Error saving hidden insights: $e');
     }
   }
 
@@ -151,6 +191,10 @@ abstract class _HomeTabState extends State<HomeTab> {
       await prefs.setString('wallet_override_balances', jsonEncode(_accountBalancesOverrides));
       await prefs.setString('wallet_override_names', jsonEncode(_accountNamesOverrides));
       await prefs.setString('wallet_override_icons', jsonEncode(_accountIconsOverrides));
+      await prefs.setString(
+        'wallet_custom_accounts',
+        jsonEncode(_customAccounts.map((a) => a.toJson()).toList()),
+      );
     } catch (e) {
       debugPrint('Error saving account overrides: $e');
     }
@@ -205,6 +249,9 @@ abstract class _HomeTabState extends State<HomeTab> {
     _saveAccountOverrides();
   }
 
+  /// Insight (bento) cards the user removed from the Home grid.
+  final Set<String> _hiddenInsights = <String>{};
+
   List<AccountItem> get _accounts {
     final balance = _homeData?.balance.totalBalance ?? 0.0;
     final income = _homeData?.balance.totalDeposits ?? 0.0;
@@ -219,7 +266,7 @@ abstract class _HomeTabState extends State<HomeTab> {
     final ewalletBalance = _accountBalancesOverrides['ewallet'] ?? defaultEwallet;
     final customTotal = _customAccounts.fold<double>(
       0.0,
-      (sum, a) => sum + (_accountBalancesOverrides[a.id] ?? a.balance),
+      (sum, a) => sum + (a.excludeFromTotal ? 0.0 : (_accountBalancesOverrides[a.id] ?? a.balance)),
     );
 
     final totalEffectiveBalance = _accountBalancesOverrides.isNotEmpty
@@ -271,7 +318,7 @@ abstract class _HomeTabState extends State<HomeTab> {
         icon: getAccountIcon('cash', Icons.payments_rounded),
         isMain: _mainAccountId == 'cash',
         accountNumber: context.l10n.cash,
-        currency: 'USD',
+        currency: 'EGP',
       ),
       AccountItem(
         id: 'ewallet',
@@ -285,18 +332,10 @@ abstract class _HomeTabState extends State<HomeTab> {
         accountNumber: '010 •••• 567',
         currency: 'EGP',
       ),
-      ..._customAccounts.map((a) => AccountItem(
-        id: a.id,
+      ..._customAccounts.map((a) => a.copyWith(
         name: _accountNamesOverrides[a.id] ?? a.name,
-        type: a.type,
         balance: _accountBalancesOverrides[a.id] ?? a.balance,
-        income: a.income,
-        expense: a.expense,
         icon: getAccountIcon(a.id, a.icon),
-        isAll: a.isAll,
-        isMain: a.isMain,
-        accountNumber: a.accountNumber,
-        currency: a.currency,
       )),
     ];
   }
@@ -372,7 +411,7 @@ abstract class _HomeTabState extends State<HomeTab> {
   Future<void> _loadCurrency() async {
     final code = await SharedPrefs.getCurrency();
     setState(() {
-      _currencyCode = code ?? 'USD';
+      _currencyCode = code ?? 'EGP';
     });
   }
 
@@ -394,20 +433,17 @@ abstract class _HomeTabState extends State<HomeTab> {
   Future<List<WalletTransaction>> _loadAllTransactions() async {
     try {
       final response = await _walletRepository.getTransactions(pageSize: 100);
-      return response.transactions;
+      if (response.transactions.isNotEmpty) {
+        return response.transactions;
+      }
+      return getRichSampleTransactions();
     } catch (e) {
-      final errorMsg = ApiErrorHandler.getErrorMessage(e);
-      if (!mounted) return [];
-      MessageService.showError(
-        context: context,
-        message: '${context.l10n.failedToLoadTransactions}: $errorMsg',
-      );
-      return [];
+      return getRichSampleTransactions();
     }
   }
 
   Future<void> _loadHomeData({bool forceRefresh = false}) async {
-    if (!forceRefresh) {
+    if (!forceRefresh && !AppConstants.useMockBackend) {
       final cached = await WalletCacheService.getHome();
       final cachedBudget = await WalletCacheService.getBudget();
       await _loadUpcomingSubscription();
@@ -419,7 +455,9 @@ abstract class _HomeTabState extends State<HomeTab> {
               : null;
           setState(() {
             _homeData = cachedData;
-            _budgetData = (parsedBudget != null && parsedBudget.monthlyBudget > 0) ? parsedBudget : null;
+            _budgetData = (parsedBudget != null && parsedBudget.monthlyBudget > 0)
+                ? parsedBudget
+                : BudgetDto.defaultSeed();
             _isLoading = false;
             _errorMessage = null;
           });
@@ -446,13 +484,6 @@ abstract class _HomeTabState extends State<HomeTab> {
       if (raw != null) {
         final decoded = jsonDecode(raw) as List;
         list = decoded.map((e) => SubscriptionItem.fromJson(e)).toList();
-      }
-      if (list.isEmpty) {
-        list = List.from(SubscriptionItem.defaultSeed());
-        await prefs.setString(
-          'user_subscriptions_list',
-          jsonEncode(list.map((e) => e.toJson()).toList()),
-        );
       }
       final now = DateTime.now();
       list.sort((a, b) {
@@ -488,7 +519,7 @@ abstract class _HomeTabState extends State<HomeTab> {
           _homeData = data;
           _budgetData = (fetchedBudget != null && fetchedBudget.monthlyBudget > 0)
               ? fetchedBudget
-              : null;
+              : BudgetDto.defaultSeed();
           if (!silent) _isLoading = false;
         });
       }
@@ -522,16 +553,23 @@ abstract class _HomeTabState extends State<HomeTab> {
 
   //#region Filter Helpers
   List<WalletTransaction> get _filteredTransactions {
-    final all = _homeData?.recentTransactions ?? [];
+    final serverTransactions = _homeData?.recentTransactions ?? [];
+    final sampleData = getRichSampleTransactions();
+    final all = [
+      ...serverTransactions,
+      ...sampleData
+          .where((s) => !serverTransactions.any((t) => t.id == s.id)),
+    ];
     if (_selectedAccountId == 'all') return all;
 
-    final accountsList = _accounts.where((a) => !a.isAll).map((a) => a.id).toList();
+    final accountsList =
+        _accounts.where((a) => !a.isAll).map((a) => a.id).toList();
     final index = accountsList.indexOf(_selectedAccountId);
     if (index == -1) return all;
 
     final total = accountsList.length;
     final filtered = all.where((t) => (t.id % total) == index).toList();
-    return filtered;
+    return filtered.isNotEmpty ? filtered : all;
   }
 
 
@@ -579,8 +617,6 @@ abstract class _HomeTabState extends State<HomeTab> {
   Widget _buildAutoTrackingBanner(bool isDarkMode);
   Widget _buildRecentTransactionsSection(bool isDarkMode);
   Widget _buildInsightsGridSection(bool isDarkMode, HideBalanceService hideService);
-  Widget _buildEmptyState(bool isDarkMode);
-  Widget _buildTransactionCard(WalletTransaction transaction, bool isDarkMode);
   void _showEditTransactionDialog(WalletTransaction transaction);
   void _showDeleteConfirmationDialog(WalletTransaction transaction);
   Widget _buildSkeletonLoading(bool isDarkMode);
@@ -611,128 +647,81 @@ abstract class _HomeTabState extends State<HomeTab> {
       ),
       child: Container(
         color: isDarkMode ? const Color(0xFF09090B) : Colors.white,
-        child: Stack(
-          children: [
-            NotificationListener<ScrollNotification>(
-              onNotification: (notification) {
-                if (notification.depth == 0) {
-                  final progress = (notification.metrics.pixels / 35.0).clamp(0.0, 1.0);
-                  if (_topScrollProgress.value != progress) {
-                    _topScrollProgress.value = progress;
-                  }
-                }
-                return false;
-              },
-              child: RefreshIndicator(
-                onRefresh: _refreshData,
-                color: Colors.white,
-                backgroundColor: isDarkMode ? const Color(0xFF26262E) : const Color(0xFF202026),
-                child: SingleChildScrollView(
-                  controller: _mainScrollController,
-                  clipBehavior: Clip.none,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: EdgeInsets.zero,
-                  child: Stack(
-                    clipBehavior: Clip.none,
+        child: RefreshIndicator(
+          onRefresh: _refreshData,
+          color: Colors.white,
+          backgroundColor: isDarkMode ? const Color(0xFF26262E) : const Color(0xFF202026),
+          child: SingleChildScrollView(
+            controller: _mainScrollController,
+            clipBehavior: Clip.none,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Top overscroll extension: matches top of hero gradient seamlessly
+                Positioned(
+                  top: -1000,
+                  left: -1000,
+                  right: -1000,
+                  height: 1000,
+                  child: Container(
+                    color: isDarkMode
+                        ? const Color(0xFF16161B)
+                        : const Color(0xFF141418),
+                  ),
+                ),
+                ResponsiveWrapper(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Top overscroll extension: matches top of hero gradient seamlessly
-                      Positioned(
-                        top: -1000,
-                        left: -1000,
-                        right: -1000,
-                        height: 1000,
-                        child: Container(
-                          color: isDarkMode
-                              ? const Color(0xFF16161B)
-                              : const Color(0xFF141418),
+                      // Say-Style Hero Section with Atmospheric Black Gradient / Shadow (Status bar down to actions)
+                      _buildSayHeroSection(isDarkMode, hideService),
+
+                      if (_homeData == null) ...[
+                        if (_isLoading)
+                          _buildSkeletonLoading(isDarkMode)
+                        else if (_errorMessage != null)
+                          _buildErrorWidget(isDarkMode)
+                        else
+                          const SizedBox.shrink(),
+                      ] else ...[
+                        // "Get Started / Auto-Tracking" Banner Card
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 320),
+                          curve: Curves.easeInOutCubic,
+                          child: (_showAutoTrackingBanner && _dismissedGetStartedCards.length < 4)
+                              ? Column(
+                                  children: [
+                                    _buildAutoTrackingBanner(isDarkMode),
+                                    const SizedBox(height: 20),
+                                  ],
+                                )
+                              : const SizedBox.shrink(),
                         ),
-                      ),
-                      ResponsiveWrapper(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Say-Style Hero Section with Atmospheric Black Gradient / Shadow (Status bar down to actions)
-                            _buildSayHeroSection(isDarkMode, hideService),
 
-                            if (_homeData == null) ...[
-                              if (_isLoading)
-                                _buildSkeletonLoading(isDarkMode)
-                              else if (_errorMessage != null)
-                                _buildErrorWidget(isDarkMode)
-                              else
-                                const SizedBox.shrink(),
-                            ] else ...[
-                              // "Get Started / Auto-Tracking" Banner Card
-                              AnimatedSize(
-                                duration: const Duration(milliseconds: 320),
-                                curve: Curves.easeInOutCubic,
-                                child: (_showAutoTrackingBanner && _dismissedGetStartedCards.length < 4)
-                                    ? Column(
-                                        children: [
-                                          _buildAutoTrackingBanner(isDarkMode),
-                                          const SizedBox(height: 20),
-                                        ],
-                                      )
-                                    : const SizedBox.shrink(),
-                              ),
+                        // Wallets Carousel (Displayed if user has multiple accounts/wallets)
+                        if (_accounts.where((a) => !a.isAll).length > 1) ...[
+                          _buildWalletsCarousel(isDarkMode, hideService),
+                          const SizedBox(height: 20),
+                        ],
 
-                              // Wallets Carousel (Displayed if user has multiple accounts/wallets)
-                              if (_accounts.where((a) => !a.isAll).length > 1) ...[
-                                _buildWalletsCarousel(isDarkMode, hideService),
-                                const SizedBox(height: 20),
-                              ],
+                        // Recent Transactions Section
+                        _buildRecentTransactionsSection(isDarkMode),
 
-                              // Recent Transactions Section
-                              _buildRecentTransactionsSection(isDarkMode),
+                        const SizedBox(height: 24),
 
-                              const SizedBox(height: 24),
+                        // Insights Grid Widgets Section
+                        _buildInsightsGridSection(isDarkMode, hideService),
 
-                              // Insights Grid Widgets Section
-                              _buildInsightsGridSection(isDarkMode, hideService),
-
-                              const SizedBox(height: 120),
-                            ],
-                          ],
-                        ),
-                      ),
+                        const SizedBox(height: 120),
+                      ],
                     ],
                   ),
                 ),
-              ),
+              ],
             ),
-
-            // Top Status Bar Liquid Glass Soft Edge Dock (iOS only)
-            // Matches Apple's .scrollEdgeEffectStyle(.soft) (Hard scroll edge: OFF)
-            if (Platform.isIOS)
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                height: MediaQuery.of(context).padding.top + 32,
-                child: AnimatedBuilder(
-                  animation: Listenable.merge([_mainScrollController, _topScrollProgress]),
-                  builder: (context, _) {
-                    final offset = _mainScrollController.hasClients
-                        ? _mainScrollController.offset
-                        : 0.0;
-                    final progress = _mainScrollController.hasClients
-                        ? (offset / 35.0).clamp(0.0, 1.0)
-                        : _topScrollProgress.value;
-                    if (progress <= 0.0) return const SizedBox.shrink();
-                    return IgnorePointer(
-                      child: Opacity(
-                        opacity: progress,
-                        child: const ProgressiveBlur(
-                          maxSigma: 4,
-                          direction: ProgressiveBlurDirection.topToBottom,
-                          falloff: 2.6,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-          ],
+          ),
         ),
       ),
     );
@@ -745,9 +734,10 @@ abstract class _HomeTabState extends State<HomeTab> {
     String prefix = '',
   }) {
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
-    final targetCode = currencyCode ?? _currencyCode ?? 'USD';
+    final targetCode = currencyCode ?? _currencyCode ?? 'EGP';
     final symbol = getCurrencySymbol(targetCode, isAr: isAr);
-    final formatter = NumberFormat('#,##0.00', 'en_US');
+    // Trailing zeros trimmed: 500.00 → 500, 500.50 → 500.5
+    final formatter = NumberFormat('#,##0.##', 'en_US');
     final formattedNum = formatter.format(amount.abs());
 
     String sign = prefix.trim();
@@ -766,25 +756,18 @@ abstract class _HomeTabState extends State<HomeTab> {
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();
-    final difference = now.difference(date);
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
-    final l10n = context.l10n;
+    final locale = isAr ? 'ar' : 'en_US';
 
-    if (difference.isNegative || difference.inMinutes < 1) {
-      return l10n.justNow;
-    } else if (difference.inMinutes < 60) {
-      return l10n.minutesAgoPlural(difference.inMinutes);
-    } else if (difference.inHours < 24 && date.day == now.day) {
-      return l10n.hoursAgoPlural(difference.inHours);
-    } else if (difference.inDays <= 1 || (now.day - date.day == 1 && difference.inHours < 48)) {
-      return l10n.yesterday;
-    } else if (difference.inDays < 30) {
-      return l10n.daysAgoPlural(difference.inDays);
-    } else if (difference.inDays < 60) {
-      return l10n.oneMonthAgo;
-    } else {
-      return DateFormat('d MMM', isAr ? 'ar' : 'en').format(date);
-    }
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(date.year, date.month, date.day);
+    final diffDays = today.difference(day).inDays;
+
+    if (diffDays <= 0) return isAr ? 'اليوم' : 'Today';
+    if (diffDays == 1) return isAr ? 'أمس' : 'Yesterday';
+
+    // Older: "Tue 3:40 AM"
+    return DateFormat('EEE, h:mm a', locale).format(date);
   }
 
   Future<T?> _showAdaptiveBottomSheet<T>({

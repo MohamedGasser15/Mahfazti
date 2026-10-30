@@ -57,7 +57,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get amountGreaterThanZero => 'يجب أن يكون المبلغ أكبر من صفر';
 
   @override
-  String get analytics => 'التحليلات';
+  String get analytics => 'الثروة';
+
+  @override
+  String get couldNotLoadAnalytics => 'تعذر تحميل التحليلات';
+
+  @override
+  String get previousPeriod => 'الفترة السابقة';
+
+  @override
+  String get savingsRate => 'نسبة التوفير';
+
+  @override
+  String get vsPreviousPeriod => 'مقارنة بالفترة السابقة';
 
   @override
   String get any => 'أي';

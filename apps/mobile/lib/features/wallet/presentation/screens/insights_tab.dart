@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:my_wallet/core/constants/currency_constants.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/wallet_cache_service.dart';
+import 'package:my_wallet/core/services/wallet_data_sync_service.dart';
 import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
@@ -17,10 +19,11 @@ class InsightsPage extends StatefulWidget {
 
 class _InsightsPageState extends State<InsightsPage> {
   final WalletRepository _repository = WalletRepository();
+  StreamSubscription<void>? _syncSubscription;
 
   bool _isLoading = true;
   String? _errorMessage;
-  String _currencyCode = 'USD';
+  String _currencyCode = 'EGP';
 
   double _totalExpenses = 0;
   double _totalIncome = 0;
@@ -34,15 +37,26 @@ class _InsightsPageState extends State<InsightsPage> {
   void initState() {
     super.initState();
     _init();
+    _syncSubscription = WalletDataSyncService.onDataChanged.listen((_) {
+      if (mounted) {
+        _loadData(forceRefresh: true);
+      }
+    });
   }
 
-Future<void> _init() async {
-  final code = await SharedPrefs.getCurrency();
-  if (mounted) {
-    setState(() => _currencyCode = code ?? 'USD');
-    await _loadData();
+  @override
+  void dispose() {
+    _syncSubscription?.cancel();
+    super.dispose();
   }
-}
+
+  Future<void> _init() async {
+    final code = await SharedPrefs.getCurrency();
+    if (mounted) {
+      setState(() => _currencyCode = code ?? 'EGP');
+      await _loadData();
+    }
+  }
 
 Future<void> _loadData({bool forceRefresh = false}) async {
   if (!forceRefresh) {

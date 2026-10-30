@@ -98,6 +98,24 @@ class SubscriptionItem {
         category: 'Fitness',
         icon: Icons.fitness_center_rounded,
       ),
+      SubscriptionItem(
+        id: 'sub_spotify',
+        title: 'Spotify Premium Family',
+        amount: 140.0,
+        billingCycle: 'monthly',
+        renewalDay: 20,
+        category: 'Entertainment',
+        icon: Icons.headphones_rounded,
+      ),
+      SubscriptionItem(
+        id: 'sub_shahid',
+        title: 'Shahid VIP',
+        amount: 110.0,
+        billingCycle: 'monthly',
+        renewalDay: 28,
+        category: 'Entertainment',
+        icon: Icons.live_tv_rounded,
+      ),
     ];
   }
 }
@@ -354,6 +372,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                         child: TextField(
                           controller: titleController,
+                          keyboardAppearance: isDarkMode ? Brightness.dark : Brightness.light,
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
@@ -396,6 +415,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                                   child: TextField(
                                     controller: amountController,
+                                    keyboardAppearance: isDarkMode ? Brightness.dark : Brightness.light,
                                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                     style: TextStyle(
                                       fontSize: 16,
@@ -438,6 +458,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                                   child: TextField(
                                     controller: dayController,
+                                    keyboardAppearance: isDarkMode ? Brightness.dark : Brightness.light,
                                     keyboardType: TextInputType.number,
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
@@ -728,6 +749,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     child: TextField(
                       controller: titleController,
+                      keyboardAppearance: isDarkMode ? Brightness.dark : Brightness.light,
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -762,6 +784,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                           child: TextField(
                             controller: amountController,
+                            keyboardAppearance: isDarkMode ? Brightness.dark : Brightness.light,
                             keyboardType:
                                 const TextInputType.numberWithOptions(decimal: true),
                             style: TextStyle(
@@ -808,6 +831,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                           child: TextField(
                             controller: dayController,
+                            keyboardAppearance: isDarkMode ? Brightness.dark : Brightness.light,
                             keyboardType: TextInputType.number,
                             style: TextStyle(
                               fontSize: 16,
@@ -1176,6 +1200,7 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
 
     return Scaffold(
       backgroundColor: bgColor,
+      resizeToAvoidBottomInset: !Platform.isIOS,
       appBar: AppBar(
         title: Text(
           context.l10n.subscriptionsAndBills,
