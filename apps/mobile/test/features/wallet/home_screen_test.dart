@@ -92,8 +92,8 @@ void main() {
     await tester.pump();
 
     final walletPos = tester.getCenter(find.text('المحفظة'));
-    final subsPos = tester.getCenter(find.text('الاشتراكات'));
-    // In RTL, Wallet (index 0) is on the right, Subscriptions (index 3) is on the left
-    expect(walletPos.dx, greaterThan(subsPos.dx));
+    final askPos = tester.getCenter(find.text('اسأل'));
+    // In RTL, Wallet (index 0) is on the right, Ask AI (index 3) is on the left
+    expect(walletPos.dx, greaterThan(askPos.dx));
   });
 }

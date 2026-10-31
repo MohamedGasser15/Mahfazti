@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:my_wallet/core/widgets/app_back_button.dart';
 import 'package:my_wallet/features/auth/presentation/screens/email_screen.dart';
 import 'package:my_wallet/l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -28,7 +29,7 @@ void main() {
     await tester.pumpWidget(createTestApp());
     await tester.pump(const Duration(milliseconds: 1500));
 
-    expect(find.byIcon(Icons.arrow_back_ios_rounded), findsWidgets);
+    expect(find.byType(AppGlassBackButton), findsOneWidget);
   });
 
   testWidgets('switches to register tab when tapped', (tester) async {

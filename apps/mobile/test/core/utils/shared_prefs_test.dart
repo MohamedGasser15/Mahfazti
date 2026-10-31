@@ -141,10 +141,10 @@ void main() {
     });
 
     group('currency', () {
-      test('getCurrency returns null by default', () async {
+      test('getCurrency returns default EGP when not set', () async {
         await SharedPrefs.init();
         final currency = await SharedPrefs.getCurrency();
-        expect(currency, isNull);
+        expect(currency, 'EGP');
       });
 
       test('setCurrency then getCurrency returns the value', () async {

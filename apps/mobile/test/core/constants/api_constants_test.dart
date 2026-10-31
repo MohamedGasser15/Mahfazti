@@ -28,6 +28,7 @@ void main() {
       ApiEndpoints.walletUpdateTransaction,
       ApiEndpoints.categories,
       ApiEndpoints.categoryById,
+      ApiEndpoints.banks,
       ApiEndpoints.profileGet,
       ApiEndpoints.profileUpdate,
       ApiEndpoints.changePassword,
@@ -123,6 +124,10 @@ void main() {
 
     test('categoryById has expected value', () {
       expect(ApiEndpoints.categoryById, 'api/Category/');
+    });
+
+    test('banks has expected value', () {
+      expect(ApiEndpoints.banks, 'api/banks');
     });
 
     test('profileGet has expected value', () {
