@@ -18,6 +18,8 @@ namespace Mahfazti.Infrastructure.Configurations
         {
             services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+            services.AddScoped<IEmailVerificationStore, EmailVerificationStore>();
+            services.AddScoped<IPasswordResetStore, PasswordResetStore>();
             return services;
         }
     }

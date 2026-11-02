@@ -24,4 +24,19 @@ appsettings.json
 appsettings.*.json
 !appsettings.Example.json
 !appsettings.example.json
+*firebase-adminsdk*.json
 
+
+# Build artifacts
+publish_output/
+apps/publish_output/
+.DS_Store
+**/.DS_Store
+
+# Firebase configuration with secrets
+**/google-services.json
+!**/google-services.example.json
+**/GoogleService-Info.plist
+!**/GoogleService-Info.example.plist
+**/firebase_options.dart
+!**/firebase_options.example.dart
