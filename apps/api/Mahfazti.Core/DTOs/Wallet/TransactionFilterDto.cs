@@ -1,7 +1,10 @@
-﻿namespace Mahfazti.Core.DTOs.Wallet
+using System;
+
+namespace Mahfazti.Core.DTOs.Wallet
 {
     public class TransactionFilterDto
     {
+        public int? AccountId { get; set; }
         public string? Type { get; set; }
         public int? CategoryId { get; set; }
         public DateTime? FromDate { get; set; }

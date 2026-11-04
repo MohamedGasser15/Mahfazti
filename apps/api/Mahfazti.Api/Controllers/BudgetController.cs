@@ -7,6 +7,7 @@ using System.Security.Claims;
 namespace Mahfazti.Api.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/[controller]")]
     public class BudgetController : ControllerBase
     {
@@ -24,10 +25,10 @@ namespace Mahfazti.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetBudget()
+        public async Task<IActionResult> GetBudget([FromQuery] int? month = null, [FromQuery] int? year = null)
         {
             var userId = GetUserId();
-            var result = await _budgetService.GetBudgetAsync(userId);
+            var result = await _budgetService.GetBudgetAsync(userId, month, year);
             return Ok(result);
         }
         [HttpPut("category")]

@@ -27,21 +27,38 @@ namespace Mahfazti.Core.Services
             _logger = logger;
         }
 
-        public async Task<BudgetDto> GetBudgetAsync(string userId)
+        public async Task<BudgetDto> GetBudgetAsync(string userId, int? month = null, int? year = null)
         {
             var now = DateTime.UtcNow;
-            var currentMonth = now.Month;
-            var currentYear = now.Year;
+            var currentMonth = (month.HasValue && month.Value >= 1 && month.Value <= 12) ? month.Value : now.Month;
+            var currentYear = (year.HasValue && year.Value >= 2000) ? year.Value : now.Year;
 
             var budgetEntity = await _budgetRepository.GetAsync(
                 filter: b => b.UserId == userId && b.Month == currentMonth && b.Year == currentYear,
                 isTracking: false
             );
 
-            decimal monthlyBudget = budgetEntity?.MonthlyBudget ?? 3000m;
+            // If user explicitly configured this month, use it.
+            // Otherwise, roll over their most recently configured monthly budget amount.
+            decimal monthlyBudget = 0m;
+            if (budgetEntity != null)
+            {
+                monthlyBudget = budgetEntity.MonthlyBudget;
+            }
+            else
+            {
+                var userBudgets = await _budgetRepository.GetAllAsync(
+                    filter: b => b.UserId == userId,
+                    orderBy: q => q.OrderByDescending(b => b.Year).ThenByDescending(b => b.Month),
+                    take: 1,
+                    isTracking: false
+                );
+                var latestBudget = userBudgets?.FirstOrDefault();
+                monthlyBudget = latestBudget?.MonthlyBudget ?? 0m;
+            }
 
-            var startOfMonth = new DateTime(currentYear, currentMonth, 1);
-            var endOfMonth = startOfMonth.AddMonths(1).AddDays(-1);
+            var startOfMonth = new DateTime(currentYear, currentMonth, 1, 0, 0, 0, DateTimeKind.Utc);
+            var endOfMonth = startOfMonth.AddMonths(1).AddTicks(-1);
 
             var transactions = await _transactionRepository.GetAllAsync(
                 filter: t => t.UserId == userId && !t.IsDeleted &&
@@ -66,6 +83,7 @@ namespace Mahfazti.Core.Services
                 .ToDictionary(x => x.CategoryId, x => x.Total);
 
             var allCategories = await _categoryRepository.GetAllAsync(
+                filter: c => (c.UserId == userId || c.UserId == null) && c.IsActive && c.Type != "Income",
                 orderBy: q => q.OrderBy(c => c.NameEn),
                 isTracking: false
             );
@@ -75,11 +93,11 @@ namespace Mahfazti.Core.Services
 
             if (userBudgetId.HasValue)
             {
-                categoryBudgets = await _categoryBudgetRepository.GetAllAsync(
+                categoryBudgets = (await _categoryBudgetRepository.GetAllAsync(
                     filter: cb => cb.UserBudgetId == userBudgetId.Value,
                     includeProperties: "Category",
                     isTracking: false
-                );
+                )) ?? new List<CategoryBudget>();
             }
 
             var categoryBudgetDtos = new List<CategoryBudgetDto>();
@@ -101,29 +119,15 @@ namespace Mahfazti.Core.Services
             }
             else
             {
-                var defaultBudgets = new Dictionary<string, decimal>
-                {
-                    ["Food"] = 500,
-                    ["Shopping"] = 400,
-                    ["Transportation"] = 200,
-                    ["Entertainment"] = 300,
-                    ["Bills"] = 800,
-                    ["Other"] = 800
-                };
-
                 foreach (var category in allCategories)
                 {
-                    decimal budgetAmount = defaultBudgets.ContainsKey(category.NameEn)
-                        ? defaultBudgets[category.NameEn]
-                        : 100;
-
                     categoryBudgetDtos.Add(new CategoryBudgetDto
                     {
                         Id = 0,
                         CategoryId = category.Id,
                         CategoryNameAr = category.NameAr,
                         CategoryNameEn = category.NameEn,
-                        BudgetAmount = budgetAmount,
+                        BudgetAmount = 0m,
                         Spent = expensesByCategory.ContainsKey(category.Id) ? expensesByCategory[category.Id] : 0
                     });
                 }

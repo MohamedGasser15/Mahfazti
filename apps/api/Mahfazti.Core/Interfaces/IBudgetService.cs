@@ -6,7 +6,7 @@ namespace Mahfazti.Core.Interfaces
     public interface IBudgetService
     {
         Task UpdateCategoryBudgetAsync(string userId, int categoryId, decimal budgetAmount);
-        Task<BudgetDto> GetBudgetAsync(string userId);
+        Task<BudgetDto> GetBudgetAsync(string userId, int? month = null, int? year = null);
         Task UpdateMonthlyBudgetAsync(string userId, decimal monthlyBudget);
         Task<UserBudget?> GetUserBudgetAsync(string userId, int month, int year);
     }

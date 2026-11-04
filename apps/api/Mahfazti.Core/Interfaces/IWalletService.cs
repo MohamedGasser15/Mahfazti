@@ -1,23 +1,28 @@
-﻿using Mahfazti.Core.DTOs.Wallet;
+using System;
+using System.Threading.Tasks;
+using Mahfazti.Core.DTOs.Wallet;
 
 namespace Mahfazti.Core.Interfaces
 {
     public interface IWalletService
     {
         // Home data
-        Task<WalletHomeDataDto> GetHomeDataAsync(string userId);
+        Task<WalletHomeDataDto> GetHomeDataAsync(string userId, int? accountId = null, DateTime? fromDate = null, DateTime? toDate = null);
 
         // Balance
-        Task<WalletBalanceDto> GetBalanceAsync(string userId);
+        Task<WalletBalanceDto> GetBalanceAsync(string userId, int? accountId = null);
 
         // Transactions
         Task<WalletTransactionDto?> GetTransactionByIdAsync(int id, string userId);
         Task<TransactionListResponseDto> GetTransactionsAsync(string userId, TransactionFilterDto filter);
         Task<WalletTransactionDto> AddTransactionAsync(string userId, AddTransactionDto dto);
         Task<bool> DeleteTransactionAsync(int id, string userId); // soft delete
-        Task<WalletTransactionDto> UpdateTransactionAsync(
-            int id, string userId, AddTransactionDto dto);
+        Task<WalletTransactionDto> UpdateTransactionAsync(int id, string userId, AddTransactionDto dto);
+        
+        // Transfers between accounts
+        Task<WalletTransactionDto> TransferAsync(string userId, TransferRequestDto dto);
+
         // Summary for analytics
-        Task<object> GetSummaryAsync(string userId, DateTime? fromDate, DateTime? toDate);
+        Task<object> GetSummaryAsync(string userId, DateTime? fromDate, DateTime? toDate, int? accountId = null);
     }
 }
