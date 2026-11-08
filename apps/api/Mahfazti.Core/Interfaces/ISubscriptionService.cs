@@ -18,6 +18,9 @@ namespace Mahfazti.Core.Interfaces
         // Subscriptions & Stats
         Task<ApiResponse<List<UserSubscriptionDto>>> GetSubscriptionsAsync(string? status = null, string? search = null);
         Task<ApiResponse<SubscriptionStatsDto>> GetSubscriptionStatsAsync();
+        Task<ApiResponse<UserSubscriptionDto>> VerifyIapSubscriptionAsync(int userId, VerifyIapSubscriptionDto dto);
+        Task<ApiResponse<UserSubscriptionDto?>> GetUserActiveSubscriptionAsync(int userId);
+        Task<ApiResponse<bool>> CancelUserSubscriptionAsync(int userId);
 
         // Payment Logs
         Task<ApiResponse<List<PaymentLogDto>>> GetPaymentLogsAsync(string? search = null, string? status = null);

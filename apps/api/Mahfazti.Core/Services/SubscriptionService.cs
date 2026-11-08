@@ -315,6 +315,139 @@ namespace Mahfazti.Core.Services
             }
         }
 
+        public async Task<ApiResponse<UserSubscriptionDto>> VerifyIapSubscriptionAsync(int userId, VerifyIapSubscriptionDto dto)
+        {
+            try
+            {
+                bool isYearly = dto.ProductId.Contains("yearly", StringComparison.OrdinalIgnoreCase);
+                string planId = isYearly ? "plan-pro-yearly" : "plan-pro-monthly";
+
+                var plan = await _planRepo.GetAsync(p => p.Id == planId);
+                decimal price = plan?.PriceEgp ?? (isYearly ? 699m : 89m);
+
+                var existingSubs = await _subRepo.GetAllAsync(
+                    filter: s => s.UserId == userId,
+                    isTracking: true
+                );
+
+                DateTime now = DateTime.UtcNow;
+                DateTime endDate = isYearly ? now.AddYears(1) : now.AddMonths(1);
+
+                var activeSub = existingSubs.FirstOrDefault(s => s.Status == "Active");
+                if (activeSub != null)
+                {
+                    activeSub.PlanId = planId;
+                    activeSub.Gateway = dto.Platform.ToLowerInvariant() == "android" ? "GooglePlay" : "StoreKit";
+                    activeSub.AmountPaidEgp = price;
+                    activeSub.StartDate = now;
+                    activeSub.EndDate = endDate;
+                    activeSub.AutoRenew = true;
+                    await _subRepo.UpdateAsync(activeSub);
+                }
+                else
+                {
+                    activeSub = new UserSubscription
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        UserId = userId,
+                        PlanId = planId,
+                        Status = "Active",
+                        Gateway = dto.Platform.ToLowerInvariant() == "android" ? "GooglePlay" : "StoreKit",
+                        AmountPaidEgp = price,
+                        StartDate = now,
+                        EndDate = endDate,
+                        AutoRenew = true,
+                        CreatedAt = now
+                    };
+                    await _subRepo.CreateAsync(activeSub);
+                }
+
+                await _subRepo.SaveAsync();
+
+                var log = new PaymentLog
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    InvoiceNumber = $"INV-IAP-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}",
+                    UserId = userId,
+                    UserEmail = string.Empty,
+                    PlanName = plan?.Name ?? (isYearly ? "Mahfazti Pro (Yearly)" : "Mahfazti Pro (Monthly)"),
+                    Amount = price,
+                    Currency = "EGP",
+                    Gateway = dto.Platform.ToLowerInvariant() == "android" ? "GooglePlay" : "StoreKit",
+                    Status = "Success",
+                    TransactionRef = dto.TransactionId ?? $"IAP_{DateTime.UtcNow.Ticks}",
+                    CreatedAt = now
+                };
+                await _paymentRepo.CreateAsync(log);
+                await _paymentRepo.SaveAsync();
+
+                var resultDto = MapSubToDto(activeSub);
+                return ApiResponse<UserSubscriptionDto>.SuccessResponse(resultDto, "Subscription activated successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error verifying in-app purchase subscription.");
+                return ApiResponse<UserSubscriptionDto>.FailResponse("Failed to verify in-app subscription.");
+            }
+        }
+
+        public async Task<ApiResponse<UserSubscriptionDto?>> GetUserActiveSubscriptionAsync(int userId)
+        {
+            try
+            {
+                var subs = await _subRepo.GetAllAsync(
+                    filter: s => s.UserId == userId && s.Status == "Active",
+                    includeProperties: "Plan"
+                );
+
+                var active = subs.OrderByDescending(s => s.EndDate).FirstOrDefault();
+                if (active == null)
+                {
+                    return ApiResponse<UserSubscriptionDto?>.SuccessResponse(null, "No active subscription found.");
+                }
+
+                return ApiResponse<UserSubscriptionDto?>.SuccessResponse(MapSubToDto(active));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user active subscription.");
+                return ApiResponse<UserSubscriptionDto?>.FailResponse("Failed to retrieve subscription.");
+            }
+        }
+
+        public async Task<ApiResponse<bool>> CancelUserSubscriptionAsync(int userId)
+        {
+            try
+            {
+                var subs = await _subRepo.GetAllAsync(
+                    filter: s => s.UserId == userId && s.Status == "Active",
+                    isTracking: true
+                );
+
+                if (!subs.Any())
+                {
+                    return ApiResponse<bool>.SuccessResponse(true, "No active subscription to cancel.");
+                }
+
+                foreach (var sub in subs)
+                {
+                    sub.Status = "Canceled";
+                    sub.AutoRenew = false;
+                    await _subRepo.UpdateAsync(sub);
+                }
+
+                await _subRepo.SaveAsync();
+                _logger.LogInformation("Canceled {Count} active subscriptions for user {UserId}", subs.Count, userId);
+
+                return ApiResponse<bool>.SuccessResponse(true, "Subscription canceled successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error canceling subscription for user {UserId}", userId);
+                return ApiResponse<bool>.FailResponse("Failed to cancel subscription.");
+            }
+        }
+
         #endregion
 
         #region Payment Logs

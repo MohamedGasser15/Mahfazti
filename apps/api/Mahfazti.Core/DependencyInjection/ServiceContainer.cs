@@ -21,10 +21,14 @@ namespace Mahfazti.Core.DependencyInjection
             services.AddScoped<IEmailTemplateService, EmailTemplateService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IAccountService, AccountService>();
             services.AddScoped<IWalletService, WalletService>();
             services.AddScoped<IBudgetService, BudgetService>();
             services.AddScoped<ICategoryService, CategoryService>();
+            services.AddScoped<ICategoryGroupService, CategoryGroupService>();
+            services.AddScoped<IRecurringBillService, RecurringBillService>();
             services.AddScoped<IVoiceExpenseService, VoiceExpenseService>();
+            services.AddHttpClient<IAiFinancialService, AiFinancialService>();
             services.AddScoped<IProfileService, ProfileService>();
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IExternalLoginService, ExternalLoginService>();
