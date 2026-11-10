@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using System.Security.Cryptography;
 using Mahfazti.Core.Common;
 using Mahfazti.Core.Constants;
 using Mahfazti.Core.DTOs.Auth;
@@ -14,38 +15,55 @@ namespace Mahfazti.Core.Services
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<ApplicationRole> _roleManager;
-        private readonly IMemoryCache _cache;
+        private readonly IMemoryCache? _cache;
+        private readonly IPasswordResetStore _passwordResetStore;
         private readonly IEmailSender _emailSender;
         private readonly IEmailTemplateService _emailTemplateService;
         private readonly ILogger<UserService> _logger;
+        private readonly IAccountService _accountService;
+        private readonly IEmailVerificationStore _emailVerificationStore;
 
         public UserService(
             UserManager<ApplicationUser> userManager,
             RoleManager<ApplicationRole> roleManager,
-            IMemoryCache cache,
+            IPasswordResetStore passwordResetStore,
             IEmailSender emailSender,
             IEmailTemplateService emailTemplateService,
-            ILogger<UserService> logger)
+            IAccountService accountService,
+            IEmailVerificationStore emailVerificationStore,
+            ILogger<UserService> logger,
+            IMemoryCache? cache = null)
         {
             _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
             _roleManager = roleManager ?? throw new ArgumentNullException(nameof(roleManager));
-            _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+            _passwordResetStore = passwordResetStore ?? throw new ArgumentNullException(nameof(passwordResetStore));
             _emailSender = emailSender ?? throw new ArgumentNullException(nameof(emailSender));
             _emailTemplateService = emailTemplateService ?? throw new ArgumentNullException(nameof(emailTemplateService));
+            _accountService = accountService ?? throw new ArgumentNullException(nameof(accountService));
+            _emailVerificationStore = emailVerificationStore ?? throw new ArgumentNullException(nameof(emailVerificationStore));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _cache = cache;
         }
 
         public async Task<ApiResponse<object>> ForgotPasswordAsync(string email)
         {
             try
             {
-                _logger.LogInformation("Forgot password request for email: {Email}", email);
+                _logger.LogInformation("Forgot password request initiated");
+
+                if (!await _passwordResetStore.CanSendCodeAsync(email, TimeSpan.FromSeconds(60)))
+                {
+                    return ApiResponse<object>.SuccessResponse(
+                        new object(),
+                        "إذا كان البريد الإلكتروني مسجلاً لدينا، فسيتم إرسال رمز التحقق"
+                    );
+                }
 
                 var user = await _userManager.FindByEmailAsync(email);
                 if (user == null)
                 {
                     // For security reasons, do not reveal whether the email exists
-                    _logger.LogWarning("Forgot password attempt for non-existent email: {Email}", email);
+                    _logger.LogWarning("Forgot password attempt for non-existent email");
                     return ApiResponse<object>.SuccessResponse(
                         new object(),
                         "إذا كان البريد الإلكتروني مسجلاً لدينا، فسيتم إرسال رمز التحقق"
@@ -53,7 +71,7 @@ namespace Mahfazti.Core.Services
                 }
 
                 var resetCode = GenerateRandomCode();
-                _cache.Set($"passwordReset:{email}", resetCode, TimeSpan.FromMinutes(10));
+                await _passwordResetStore.SaveResetCodeAsync(email, resetCode);
 
                 var emailBody = _emailTemplateService.GeneratePasswordResetEmail(resetCode, user.PreferredLanguage ?? "ar");
                 await _emailSender.SendEmailAsync(
@@ -62,7 +80,7 @@ namespace Mahfazti.Core.Services
                     emailBody
                 );
 
-                _logger.LogInformation("Password reset code sent to email: {Email}", email);
+                _logger.LogInformation("Password reset code sent to email");
                 return ApiResponse<object>.SuccessResponse(
                     new object(),
                     "إذا كان البريد الإلكتروني مسجلاً لدينا، فسيتم إرسال رمز التحقق"
@@ -70,11 +88,8 @@ namespace Mahfazti.Core.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing forgot password for: {Email}", email);
-                return ApiResponse<object>.FailResponse(
-                    "حدث خطأ أثناء معالجة طلبك",
-                    new List<string> { ex.Message }
-                );
+                _logger.LogError(ex, "Error processing forgot password request");
+                return ApiResponse<object>.FailResponse("حدث خطأ أثناء معالجة طلبك");
             }
         }
 
@@ -112,10 +127,7 @@ namespace Mahfazti.Core.Services
 
                 var token = await _userManager.GeneratePasswordResetTokenAsync(user);
                 var encodedToken = System.Web.HttpUtility.UrlEncode(token);
-                var defaultBaseUrl = "https://mahfazti-six.vercel.app/reset-password";
-                var baseUrl = (!string.IsNullOrWhiteSpace(clientUrl) && !clientUrl.Contains("localhost", StringComparison.OrdinalIgnoreCase))
-                    ? clientUrl.TrimEnd('/')
-                    : defaultBaseUrl;
+                var baseUrl = SanitizeAdminResetBaseUrl(clientUrl);
                 var resetLink = $"{baseUrl}?email={Uri.EscapeDataString(email)}&token={encodedToken}";
 
                 var isEn = (user.PreferredLanguage ?? "ar").Equals("en", StringComparison.OrdinalIgnoreCase);
@@ -167,10 +179,10 @@ namespace Mahfazti.Core.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing admin forgot password for: {Email}", email);
+                _logger.LogError(ex, "Error processing admin forgot password");
                 return ApiResponse<object>.FailResponse(
                     "حدث خطأ أثناء معالجة طلب استعادة كلمة المرور",
-                    new List<string> { ex.Message }
+                    new List<string> { "An error occurred while processing the request" }
                 );
             }
         }
@@ -179,9 +191,10 @@ namespace Mahfazti.Core.Services
         {
             try
             {
-                _logger.LogInformation("Password reset code verification for email: {Email}", email);
+                _logger.LogInformation("Password reset code verification attempt");
 
-                if (!_cache.TryGetValue($"passwordReset:{email}", out string? cachedCode))
+                var result = await _passwordResetStore.VerifyResetCodeAsync(email, code);
+                if (result.Status == ResetCodeVerificationStatus.Expired)
                 {
                     return ApiResponse<object>.FailResponse(
                         "انتهت صلاحية الكود أو غير موجود",
@@ -189,7 +202,15 @@ namespace Mahfazti.Core.Services
                     );
                 }
 
-                if (cachedCode != code)
+                if (result.Status == ResetCodeVerificationStatus.TooManyAttempts)
+                {
+                    return ApiResponse<object>.FailResponse(
+                        "تم تجاوز الحد الأقصى للمحاولات الخاطئة. يرجى طلب رمز جديد.",
+                        new List<string> { "Too many attempts" }
+                    );
+                }
+
+                if (result.Status == ResetCodeVerificationStatus.Invalid)
                 {
                     return ApiResponse<object>.FailResponse(
                         "الكود غير صحيح",
@@ -197,17 +218,17 @@ namespace Mahfazti.Core.Services
                     );
                 }
 
-                _cache.Set($"passwordResetVerified:{email}", true, TimeSpan.FromMinutes(10));
-                _cache.Remove($"passwordReset:{email}");
-
-                return ApiResponse<object>.SuccessResponse(new object(), "تم التحقق من الكود بنجاح");
+                return ApiResponse<object>.SuccessResponse(
+                    new { resetToken = result.ResetToken },
+                    "تم التحقق من الكود بنجاح"
+                );
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error verifying password reset code for: {Email}", email);
+                _logger.LogError(ex, "Error verifying password reset code");
                 return ApiResponse<object>.FailResponse(
                     "حدث خطأ أثناء التحقق من الكود",
-                    new List<string> { ex.Message }
+                    new List<string> { "An error occurred while verifying the code" }
                 );
             }
         }
@@ -216,13 +237,13 @@ namespace Mahfazti.Core.Services
         {
             try
             {
-                _logger.LogInformation("Password reset attempt for email: {Email}", dto.Email);
+                _logger.LogInformation("Password reset execution attempt");
 
-                if (!_cache.TryGetValue($"passwordResetVerified:{dto.Email}", out _))
+                if (!await _passwordResetStore.ValidateResetTokenAsync(dto.Email, dto.ResetToken))
                 {
                     return ApiResponse<object>.FailResponse(
-                        "يجب التحقق من الكود أولاً",
-                        new List<string> { "Code not verified" }
+                        "رمز التحقق غير صالح أو انتهت صلاحيته. يرجى إعادة طلب رمز جديد.",
+                        new List<string> { "Invalid or expired reset token" }
                     );
                 }
 
@@ -240,7 +261,7 @@ namespace Mahfazti.Core.Services
 
                 if (result.Succeeded)
                 {
-                    _cache.Remove($"passwordResetVerified:{dto.Email}");
+                    await _passwordResetStore.DeleteAsync(dto.Email);
 
                     var emailBody = _emailTemplateService.GeneratePasswordResetConfirmationEmail(user.PreferredLanguage ?? "ar");
                     await _emailSender.SendEmailAsync(
@@ -249,20 +270,20 @@ namespace Mahfazti.Core.Services
                         emailBody
                     );
 
-                    _logger.LogInformation("Password reset successful for email: {Email}", dto.Email);
+                    _logger.LogInformation("Password reset successful for user {UserId}", user.Id);
                     return ApiResponse<object>.SuccessResponse(new object(), "تم تغيير كلمة المرور بنجاح");
                 }
 
                 var errors = result.Errors.Select(e => e.Description).ToList();
-                _logger.LogWarning("Password reset failed for email {Email}: {Errors}", dto.Email, string.Join(", ", errors));
+                _logger.LogWarning("Password reset failed: {Errors}", string.Join(", ", errors));
                 return ApiResponse<object>.FailResponse("فشل تغيير كلمة المرور", errors);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error resetting password for: {Email}", dto.Email);
+                _logger.LogError(ex, "Error resetting password");
                 return ApiResponse<object>.FailResponse(
                     "حدث خطأ أثناء إعادة تعيين كلمة المرور",
-                    new List<string> { ex.Message }
+                    new List<string> { "An error occurred while resetting password" }
                 );
             }
         }
@@ -321,10 +342,10 @@ namespace Mahfazti.Core.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error resetting admin password for: {Email}", dto.Email);
+                _logger.LogError(ex, "Error resetting admin password");
                 return ApiResponse<object>.FailResponse(
                     "حدث خطأ أثناء إعادة تعيين كلمة المرور",
-                    new List<string> { ex.Message }
+                    new List<string> { "An error occurred while resetting the password" }
                 );
             }
         }
@@ -341,8 +362,16 @@ namespace Mahfazti.Core.Services
                     );
                 }
 
-                var code = GenerateRandomCode();
-                _cache.Set($"verify:{email}", code, TimeSpan.FromMinutes(10));
+                if (!await _emailVerificationStore.CanSendCodeAsync(email, TimeSpan.FromSeconds(60)))
+                {
+                    return ApiResponse<object>.FailResponse(
+                        "يرجى الانتظار دقيقة واحدة قبل طلب رمز جديد",
+                        new List<string> { "Rate limit exceeded" }
+                    );
+                }
+
+                var code = RandomNumberGenerator.GetInt32(100000, 1000000).ToString("D6");
+                await _emailVerificationStore.SaveCodeAsync(email, code);
 
                 var emailBody = _emailTemplateService.GenerateVerificationEmail(code, language);
                 await _emailSender.SendEmailAsync(
@@ -355,11 +384,12 @@ namespace Mahfazti.Core.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error sending verification code to: {Email}", email);
-                return ApiResponse<object>.FailResponse(
-                    "حدث خطأ غير متوقع أثناء إرسال كود التحقق",
-                    new List<string> { ex.Message }
+                _logger.LogError(ex, "Error sending verification code");
+                var response = ApiResponse<object>.FailResponse(
+                    "حدث خطأ غير متوقع أثناء إرسال كود التحقق"
                 );
+                response.StatusCode = System.Net.HttpStatusCode.InternalServerError;
+                return response;
             }
         }
 
@@ -367,7 +397,8 @@ namespace Mahfazti.Core.Services
         {
             try
             {
-                if (!_cache.TryGetValue($"verify:{email}", out string? cachedCode))
+                var result = await _emailVerificationStore.VerifyCodeAsync(email, code);
+                if (result == EmailCodeVerificationResult.Expired)
                 {
                     return ApiResponse<object>.FailResponse(
                         "انتهت صلاحية الكود أو غير موجود",
@@ -375,7 +406,7 @@ namespace Mahfazti.Core.Services
                     );
                 }
 
-                if (cachedCode != code)
+                if (result == EmailCodeVerificationResult.Invalid)
                 {
                     return ApiResponse<object>.FailResponse(
                         "الكود غير صحيح",
@@ -383,18 +414,14 @@ namespace Mahfazti.Core.Services
                     );
                 }
 
-                _cache.Set($"emailConfirmed:{email}", true, TimeSpan.FromMinutes(30));
-                _cache.Remove($"verify:{email}");
-
                 return ApiResponse<object>.SuccessResponse(new object(), "تم تأكيد البريد الإلكتروني بنجاح");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error verifying email code for: {Email}", email);
-                return ApiResponse<object>.FailResponse(
-                    "حدث خطأ غير متوقع أثناء التحقق من الكود",
-                    new List<string> { ex.Message }
-                );
+                var response = ApiResponse<object>.FailResponse("حدث خطأ غير متوقع أثناء التحقق من الكود");
+                response.StatusCode = System.Net.HttpStatusCode.InternalServerError;
+                return response;
             }
         }
 
@@ -402,7 +429,7 @@ namespace Mahfazti.Core.Services
         {
             try
             {
-                if (!_cache.TryGetValue($"emailConfirmed:{request.Email}", out _))
+                if (!await _emailVerificationStore.IsVerifiedAsync(request.Email))
                 {
                     return ApiResponse<object>.FailResponse(
                         "يجب تأكيد البريد الإلكتروني أولاً قبل التسجيل.",
@@ -437,7 +464,16 @@ namespace Mahfazti.Core.Services
                     );
                 }
 
-                _cache.Remove($"emailConfirmed:{request.Email}");
+                await EnsureDefaultWalletAsync(user);
+
+                try
+                {
+                    await _emailVerificationStore.DeleteAsync(request.Email);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Could not clear email verification after registration for: {Email}", request.Email);
+                }
 
                 var userDto = new UserDTO
                 {
@@ -528,6 +564,23 @@ namespace Mahfazti.Core.Services
             }
         }
 
+        private async Task EnsureDefaultWalletAsync(ApplicationUser user)
+        {
+            try
+            {
+                await _accountService.EnsureDefaultAccountAsync(
+                    user.Id.ToString(),
+                    user.Currency ?? "EGP",
+                    user.PreferredLanguage);
+            }
+            catch (Exception ex)
+            {
+                // The Accounts endpoint also repairs missing defaults, so a wallet provisioning
+                // failure should not leave an otherwise valid registration unusable.
+                _logger.LogError(ex, "Could not provision default wallet for user {UserId}", user.Id);
+            }
+        }
+
         private async Task<bool> IsEmailExistsAsync(string email)
         {
             var user = await _userManager.FindByEmailAsync(email);
@@ -550,7 +603,43 @@ namespace Mahfazti.Core.Services
             }
         }
 
-        private static string GenerateRandomCode() => new Random().Next(100000, 999999).ToString();
+        private static string GenerateRandomCode() =>
+            RandomNumberGenerator.GetInt32(100000, 1000000).ToString("D6");
+
+        private static string SanitizeAdminResetBaseUrl(string? clientUrl)
+        {
+            const string defaultBaseUrl = "https://mahfazti-six.vercel.app/reset-password";
+            if (string.IsNullOrWhiteSpace(clientUrl))
+                return defaultBaseUrl;
+
+            if (!Uri.TryCreate(clientUrl, UriKind.Absolute, out var uri))
+                return defaultBaseUrl;
+
+            var isHttps = uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+            var isLocalhost = uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+                              uri.Host.Equals("127.0.0.1", StringComparison.Ordinal);
+
+            var allowedHosts = new[]
+            {
+                "mahfazti-six.vercel.app",
+                "mahfazti.vercel.app",
+                "admin.mahfazti.com"
+            };
+
+            var isAllowedHost = allowedHosts.Any(h => uri.Host.Equals(h, StringComparison.OrdinalIgnoreCase));
+
+            if (isAllowedHost && isHttps)
+            {
+                return $"{uri.Scheme}://{uri.Authority}/reset-password";
+            }
+
+            if (isLocalhost)
+            {
+                return $"{uri.Scheme}://{uri.Authority}/reset-password";
+            }
+
+            return defaultBaseUrl;
+        }
 
         #endregion
     }

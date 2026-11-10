@@ -22,6 +22,195 @@ namespace Mahfazti.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Mahfazti.Core.Entities.Account", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AccountNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal?>("AnnualYieldRate")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<bool>("AutoAddInstapayFee")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("AutoEstimateValue")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("AutoUpdateMetalPrice")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("Balance")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("BillingDay")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CardNumbersJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("CreditLimit")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<int?>("DueDay")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("ExcludeFromTotal")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("IconCode")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("InitialBalance")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("InstitutionId")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<string>("InvestmentPlatform")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsMain")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("MetalKarat")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("MetalPurchaseDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("MetalPurchasePricePerGram")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("MetalWeightGrams")
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<decimal?>("MinPaymentPercentage")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("NotificationMethod")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("PropertyCategory")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<bool>("ReceiveAtmWithdrawals")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("TargetSavingsGoal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("TotalInvestedAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InstitutionId");
+
+                    b.ToTable("Accounts");
+                });
+
+            modelBuilder.Entity("Mahfazti.Core.Entities.AiConversation", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AiConversations");
+                });
+
+            modelBuilder.Entity("Mahfazti.Core.Entities.AiMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ConversationId")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId");
+
+                    b.ToTable("AiMessages");
+                });
+
             modelBuilder.Entity("Mahfazti.Core.Entities.ApplicationRole", b =>
                 {
                     b.Property<int>("Id")
@@ -222,32 +411,52 @@ namespace Mahfazti.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("ColorHex")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("GroupId")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
                     b.Property<string>("Icon")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<string>("NameAr")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("NameEn")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Type")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("GroupId");
 
                     b.ToTable("Categories");
                 });
@@ -319,6 +528,34 @@ namespace Mahfazti.Infrastructure.Migrations
                     b.ToTable("Currencies");
                 });
 
+            modelBuilder.Entity("Mahfazti.Core.Entities.EmailVerification", b =>
+                {
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("FailedAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("LastSentAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("VerifiedUntilUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Email");
+
+                    b.ToTable("EmailVerifications");
+                });
+
             modelBuilder.Entity("Mahfazti.Core.Entities.FinancialInstitution", b =>
                 {
                     b.Property<string>("Id")
@@ -378,6 +615,38 @@ namespace Mahfazti.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("FinancialInstitutions");
+                });
+
+            modelBuilder.Entity("Mahfazti.Core.Entities.PasswordResetVerification", b =>
+                {
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("FailedAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("LastSentAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ResetTokenExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ResetTokenHash")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.HasKey("Email");
+
+                    b.ToTable("PasswordResetVerifications");
                 });
 
             modelBuilder.Entity("Mahfazti.Core.Entities.PaymentLog", b =>
@@ -605,6 +874,152 @@ namespace Mahfazti.Infrastructure.Migrations
                     b.ToTable("UserBudgets");
                 });
 
+            modelBuilder.Entity("Mahfazti.Core.Entities.UserCategoryGroup", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<int>("ColorValue")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IconIndex")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("UserCategoryGroups");
+                });
+
+            modelBuilder.Entity("Mahfazti.Core.Entities.UserPreference", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AppLockPinHash")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DismissedCardsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsBalanceHidden")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsBiometricEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("NotificationsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("ShowAutoTrackingBanner")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("UserPreferences");
+                });
+
+            modelBuilder.Entity("Mahfazti.Core.Entities.UserRecurringBill", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AccountId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("AutoRecordTransaction")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("BillingCycle")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int?>("CategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<int>("IconCode")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("NextDueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("RenewalDay")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("CategoryId");
+
+                    b.ToTable("UserRecurringBills");
+                });
+
             modelBuilder.Entity("Mahfazti.Core.Entities.UserSubscription", b =>
                 {
                     b.Property<string>("Id")
@@ -659,6 +1074,9 @@ namespace Mahfazti.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("AccountId")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
 
@@ -668,8 +1086,17 @@ namespace Mahfazti.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
                     b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<decimal>("ExchangeRate")
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
@@ -677,22 +1104,42 @@ namespace Mahfazti.Infrastructure.Migrations
                     b.Property<bool>("IsRecurring")
                         .HasColumnType("bit");
 
+                    b.Property<string>("ReceiptImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("RecurringBillId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("RecurringEndDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("RecurringInterval")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Tags")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int?>("ToAccountId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("TransactionDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal>("TransferFee")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("Type")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -703,7 +1150,13 @@ namespace Mahfazti.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AccountId");
+
                     b.HasIndex("CategoryId");
+
+                    b.HasIndex("RecurringBillId");
+
+                    b.HasIndex("ToAccountId");
 
                     b.ToTable("WalletTransactions");
                 });
@@ -811,6 +1264,27 @@ namespace Mahfazti.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("Mahfazti.Core.Entities.Account", b =>
+                {
+                    b.HasOne("Mahfazti.Core.Entities.FinancialInstitution", "Institution")
+                        .WithMany()
+                        .HasForeignKey("InstitutionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Institution");
+                });
+
+            modelBuilder.Entity("Mahfazti.Core.Entities.AiMessage", b =>
+                {
+                    b.HasOne("Mahfazti.Core.Entities.AiConversation", "Conversation")
+                        .WithMany("Messages")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Conversation");
+                });
+
             modelBuilder.Entity("Mahfazti.Core.Entities.AuditLog", b =>
                 {
                     b.HasOne("Mahfazti.Core.Entities.ApplicationUser", "Admin")
@@ -819,6 +1293,16 @@ namespace Mahfazti.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Admin");
+                });
+
+            modelBuilder.Entity("Mahfazti.Core.Entities.Category", b =>
+                {
+                    b.HasOne("Mahfazti.Core.Entities.UserCategoryGroup", "Group")
+                        .WithMany("Categories")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Group");
                 });
 
             modelBuilder.Entity("Mahfazti.Core.Entities.CategoryBudget", b =>
@@ -860,6 +1344,23 @@ namespace Mahfazti.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Mahfazti.Core.Entities.UserRecurringBill", b =>
+                {
+                    b.HasOne("Mahfazti.Core.Entities.Account", "Account")
+                        .WithMany("RecurringBills")
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Mahfazti.Core.Entities.Category", "Category")
+                        .WithMany("RecurringBills")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Account");
+
+                    b.Navigation("Category");
+                });
+
             modelBuilder.Entity("Mahfazti.Core.Entities.UserSubscription", b =>
                 {
                     b.HasOne("Mahfazti.Core.Entities.PricingPlan", "Plan")
@@ -879,12 +1380,33 @@ namespace Mahfazti.Infrastructure.Migrations
 
             modelBuilder.Entity("Mahfazti.Core.Entities.WalletTransaction", b =>
                 {
+                    b.HasOne("Mahfazti.Core.Entities.Account", "Account")
+                        .WithMany("Transactions")
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Mahfazti.Core.Entities.Category", "Category")
                         .WithMany("Transactions")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("Mahfazti.Core.Entities.UserRecurringBill", "RecurringBill")
+                        .WithMany()
+                        .HasForeignKey("RecurringBillId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Mahfazti.Core.Entities.Account", "ToAccount")
+                        .WithMany("TransfersIn")
+                        .HasForeignKey("ToAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Account");
+
                     b.Navigation("Category");
+
+                    b.Navigation("RecurringBill");
+
+                    b.Navigation("ToAccount");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>
@@ -938,6 +1460,20 @@ namespace Mahfazti.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Mahfazti.Core.Entities.Account", b =>
+                {
+                    b.Navigation("RecurringBills");
+
+                    b.Navigation("Transactions");
+
+                    b.Navigation("TransfersIn");
+                });
+
+            modelBuilder.Entity("Mahfazti.Core.Entities.AiConversation", b =>
+                {
+                    b.Navigation("Messages");
+                });
+
             modelBuilder.Entity("Mahfazti.Core.Entities.ApplicationUser", b =>
                 {
                     b.Navigation("RefreshTokens");
@@ -945,7 +1481,14 @@ namespace Mahfazti.Infrastructure.Migrations
 
             modelBuilder.Entity("Mahfazti.Core.Entities.Category", b =>
                 {
+                    b.Navigation("RecurringBills");
+
                     b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("Mahfazti.Core.Entities.UserCategoryGroup", b =>
+                {
+                    b.Navigation("Categories");
                 });
 #pragma warning restore 612, 618
         }

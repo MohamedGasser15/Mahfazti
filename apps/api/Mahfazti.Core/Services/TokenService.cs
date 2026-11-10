@@ -78,7 +78,7 @@ namespace Mahfazti.Core.Services
                 claims.AddRange(userClaims);
 
                 var expiryStr = _config["Jwt:AccessTokenExpiryMinutes"] ?? _config["JWT:AccessTokenExpiryMinutes"];
-                var accessTokenExpiryMinutes = int.TryParse(expiryStr, out var m) ? m : 10080; // default 7 days
+                var accessTokenExpiryMinutes = int.TryParse(expiryStr, out var m) && m > 0 ? m : 15; // Secure default: 15 minutes (was 7 days)
 
                 var tokenDescriptor = new SecurityTokenDescriptor
                 {

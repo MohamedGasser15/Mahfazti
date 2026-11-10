@@ -2,6 +2,9 @@ using System.Globalization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Mahfazti.Core.Common;
@@ -14,24 +17,30 @@ namespace Mahfazti.Api.Controllers
     /// Controller for handling authentication operations including login, registration, and token management.
     /// All endpoints use the unified ApiResponse{T} format.
     /// </summary>
-    [Route("api/[controller]")]
+    [Route("api/auth")]
     [ApiController]
     public class AuthController : ControllerBase
     {
         private readonly IUserService _userService;
         private readonly IAuthService _authService;
         private readonly IExternalLoginService _externalLoginService;
+        private readonly IConfiguration _configuration;
+        private readonly IWebHostEnvironment _env;
         private readonly ILogger<AuthController> _logger;
 
         public AuthController(
             IAuthService authService,
             IUserService userService,
             IExternalLoginService externalLoginService,
+            IConfiguration configuration,
+            IWebHostEnvironment env,
             ILogger<AuthController> logger)
         {
             _authService = authService ?? throw new ArgumentNullException(nameof(authService));
             _userService = userService ?? throw new ArgumentNullException(nameof(userService));
             _externalLoginService = externalLoginService ?? throw new ArgumentNullException(nameof(externalLoginService));
+            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+            _env = env ?? throw new ArgumentNullException(nameof(env));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -40,7 +49,8 @@ namespace Mahfazti.Api.Controllers
         /// <summary>
         /// Authenticates a user and returns access and refresh tokens.
         /// </summary>
-        [HttpPost("Login")]
+        [HttpPost("login")]
+        [EnableRateLimiting("auth-login")]
         [ProducesResponseType(typeof(ApiResponse<LoginResponseDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
@@ -85,7 +95,9 @@ namespace Mahfazti.Api.Controllers
         /// <summary>
         /// Initiates the forgot password process.
         /// </summary>
+        [HttpPost("password-reset-codes")]
         [HttpPost("forgot-password")]
+        [EnableRateLimiting("auth-strict")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
@@ -93,7 +105,7 @@ namespace Mahfazti.Api.Controllers
         {
             try
             {
-                _logger.LogInformation("Forgot password request for email: {Email}", dto?.Email);
+                _logger.LogInformation("Forgot password request for email");
 
                 if (!ModelState.IsValid)
                 {
@@ -120,6 +132,7 @@ namespace Mahfazti.Api.Controllers
         /// Rejects non-admin users with 403 Forbidden.
         /// </summary>
         [HttpPost("admin/forgot-password")]
+        [EnableRateLimiting("auth-admin")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
@@ -128,7 +141,7 @@ namespace Mahfazti.Api.Controllers
         {
             try
             {
-                _logger.LogInformation("Admin forgot password request for email: {Email}", dto?.Email);
+                _logger.LogInformation("Admin forgot password request initiated");
 
                 if (!ModelState.IsValid)
                 {
@@ -137,9 +150,20 @@ namespace Mahfazti.Api.Controllers
                 }
 
                 var origin = Request.Headers.Origin.ToString();
-                var clientUrl = (!string.IsNullOrWhiteSpace(origin) && !origin.Contains("localhost", StringComparison.OrdinalIgnoreCase))
-                    ? $"{origin.TrimEnd('/')}/reset-password"
-                    : "https://mahfazti-six.vercel.app/reset-password";
+                var allowedOrigins = _configuration.GetSection("AdminPortal:AllowedOrigins").Get<string[]>() ??
+                    new[] { "https://mahfazti-six.vercel.app", "https://mahfazti.vercel.app", "https://admin.mahfazti.com" };
+
+                string clientUrl = "https://mahfazti-six.vercel.app/reset-password";
+                if (!string.IsNullOrWhiteSpace(origin) && Uri.TryCreate(origin, UriKind.Absolute, out var originUri))
+                {
+                    var isAllowed = allowedOrigins.Any(ao => Uri.TryCreate(ao, UriKind.Absolute, out var allowedUri) &&
+                                                             allowedUri.Host.Equals(originUri.Host, StringComparison.OrdinalIgnoreCase) &&
+                                                             (!_env.IsProduction() || originUri.Scheme == Uri.UriSchemeHttps));
+                    if (isAllowed)
+                    {
+                        clientUrl = $"{originUri.Scheme}://{originUri.Authority}/reset-password";
+                    }
+                }
 
                 var response = await _userService.AdminForgotPasswordAsync(dto!.Email, clientUrl);
                 return StatusCode((int)response.StatusCode, response);
@@ -159,6 +183,7 @@ namespace Mahfazti.Api.Controllers
         /// Resets the administrator password using the security token sent to their email.
         /// </summary>
         [HttpPost("admin/reset-password")]
+        [EnableRateLimiting("auth-admin")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
@@ -192,7 +217,9 @@ namespace Mahfazti.Api.Controllers
         /// <summary>
         /// Verifies the password reset code.
         /// </summary>
+        [HttpPost("password-reset-codes/verify")]
         [HttpPost("verify-reset-code")]
+        [EnableRateLimiting("auth-strict")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
@@ -200,7 +227,7 @@ namespace Mahfazti.Api.Controllers
         {
             try
             {
-                _logger.LogInformation("Reset code verification for email: {Email}", dto?.Email);
+                _logger.LogInformation("Reset code verification attempt");
 
                 if (!ModelState.IsValid)
                 {
@@ -225,7 +252,9 @@ namespace Mahfazti.Api.Controllers
         /// <summary>
         /// Resets the user's password.
         /// </summary>
+        [HttpPost("password-reset")]
         [HttpPost("reset-password")]
+        [EnableRateLimiting("auth-strict")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
@@ -233,7 +262,7 @@ namespace Mahfazti.Api.Controllers
         {
             try
             {
-                _logger.LogInformation("Password reset for email: {Email}", dto?.Email);
+                _logger.LogInformation("Password reset execution attempt");
 
                 if (!ModelState.IsValid)
                 {
@@ -258,6 +287,7 @@ namespace Mahfazti.Api.Controllers
         /// <summary>
         /// Refreshes an access token using a valid refresh token.
         /// </summary>
+        [HttpPost("token/refresh")]
         [HttpPost("refresh")]
         [ProducesResponseType(typeof(ApiResponse<TokenResponseDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
@@ -360,7 +390,7 @@ namespace Mahfazti.Api.Controllers
         /// <summary>
         /// Registers a new user.
         /// </summary>
-        [HttpPost("Register")]
+        [HttpPost("register")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
@@ -409,7 +439,9 @@ namespace Mahfazti.Api.Controllers
         /// <summary>
         /// Verifies a user's email using a verification code.
         /// </summary>
+        [HttpPost("registration-codes/verify")]
         [HttpPost("verify-email")]
+        [EnableRateLimiting("auth-strict")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
@@ -417,7 +449,7 @@ namespace Mahfazti.Api.Controllers
         {
             try
             {
-                _logger.LogInformation("Email verification attempt for email: {Email}", dto?.Email);
+                _logger.LogInformation("Email verification attempt initiated");
 
                 if (!ModelState.IsValid)
                 {
@@ -442,7 +474,9 @@ namespace Mahfazti.Api.Controllers
         /// <summary>
         /// Sends a verification code to the specified email.
         /// </summary>
+        [HttpPost("registration-codes")]
         [HttpPost("send-code")]
+        [EnableRateLimiting("auth-send-code")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
@@ -450,7 +484,7 @@ namespace Mahfazti.Api.Controllers
         {
             try
             {
-                _logger.LogInformation("Send verification code request for email: {Email}", dto?.Email);
+                _logger.LogInformation("Send verification code request initiated");
 
                 if (!ModelState.IsValid)
                 {
@@ -488,6 +522,7 @@ namespace Mahfazti.Api.Controllers
         #region User Profile & Currency
 
         [HttpGet("check-email")]
+        [EnableRateLimiting("auth-check-email")]
         public async Task<IActionResult> CheckEmail([FromQuery] string email)
         {
             try
@@ -502,19 +537,35 @@ namespace Mahfazti.Api.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(ApiResponse<object>.FailResponse("An error occurred", new List<string> { ex.Message }));
+                _logger.LogError(ex, "Error checking email status");
+                return BadRequest(ApiResponse<object>.FailResponse("An error occurred while checking email status"));
             }
         }
 
+        /// <summary>
+        /// Backward-compatibility legacy alias for setting currency.
+        /// Clients should migrate to PUT /api/profile/currency.
+        /// </summary>
         [Authorize]
         [HttpPost("set-currency")]
         public async Task<IActionResult> SetCurrency([FromBody] SetCurrencyDto dto)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) 
+                         ?? User.FindFirstValue("sub");
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(ApiResponse<object>.FailResponse("المستخدم غير مسجل"));
+            }
+
             var result = await _authService.SetUserCurrencyAsync(userId, dto.Currency);
             return StatusCode((int)result.StatusCode, result);
         }
 
+        /// <summary>
+        /// Backward-compatibility legacy alias for setting language.
+        /// Clients should migrate to PUT /api/profile/language.
+        /// </summary>
         [Authorize]
         [HttpPost("set-language")]
         public async Task<IActionResult> SetLanguage([FromBody] SetLanguageDto dto)
@@ -659,9 +710,15 @@ namespace Mahfazti.Api.Controllers
                 return Ok(ApiResponse<object>.SuccessResponse(new
                 {
                     email = result.Email,
+                    currency = result.Currency ?? "EGP",
                     isNewUser = result.IsNewUser,
                     hasPassword = result.HasPassword,
-                    token = result.Token
+                    token = result.Token,
+                    user = new
+                    {
+                        email = result.Email,
+                        currency = result.Currency ?? "EGP"
+                    }
                 }, result.Message ?? "Google login successful"));
             }
             catch (Exception ex)
@@ -705,9 +762,15 @@ namespace Mahfazti.Api.Controllers
                 return Ok(ApiResponse<object>.SuccessResponse(new
                 {
                     email = result.Email,
+                    currency = result.Currency ?? "EGP",
                     isNewUser = result.IsNewUser,
                     hasPassword = result.HasPassword,
-                    token = result.Token
+                    token = result.Token,
+                    user = new
+                    {
+                        email = result.Email,
+                        currency = result.Currency ?? "EGP"
+                    }
                 }, result.Message ?? "Facebook login successful"));
             }
             catch (Exception ex)
@@ -719,6 +782,90 @@ namespace Mahfazti.Api.Controllers
                     Detail = "An error occurred while processing Facebook login."
                 });
             }
+        }
+
+        /// <summary>
+        /// Web OAuth callback bridge for Facebook Login on mobile.
+        /// Receives the OAuth redirect with the token fragment/query and redirects to the app custom URL scheme.
+        /// </summary>
+        [HttpGet("facebook-callback")]
+        [AllowAnonymous]
+        public IActionResult FacebookCallback()
+        {
+            var html = @"<!DOCTYPE html>
+<html lang=""ar"" dir=""rtl"">
+<head>
+    <meta charset=""utf-8"" />
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
+    <title>جاري تسجيل الدخول...</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        .card {
+            background: white;
+            padding: 32px 24px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            max-width: 380px;
+            width: 100%;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #0284c7;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        h2 { font-size: 20px; margin: 0 0 8px 0; }
+        p { font-size: 14px; color: #64748b; margin: 0 0 20px 0; }
+        .btn {
+            display: inline-block;
+            background: #0284c7;
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+    </style>
+    <script>
+        (function() {
+            var hash = window.location.hash || '';
+            var search = window.location.search || '';
+            var target = 'mahfazti://oauth-callback' + (hash || search);
+            window.location.href = target;
+            window.addEventListener('DOMContentLoaded', function() {
+                var btn = document.getElementById('manual-btn');
+                if (btn) btn.href = target;
+            });
+        })();
+    </script>
+</head>
+<body>
+    <div class=""card"">
+        <div class=""spinner""></div>
+        <h2>جاري العودة لتطبيق محفظتي</h2>
+        <p>يرجى الانتظار، سيتم تحويلك تلقائياً...</p>
+        <a id=""manual-btn"" class=""btn"" href=""mahfazti://oauth-callback"">اضغط هنا إذا لم يتم التحويل</a>
+    </div>
+</body>
+</html>";
+            return Content(html, "text/html");
         }
 
         #endregion

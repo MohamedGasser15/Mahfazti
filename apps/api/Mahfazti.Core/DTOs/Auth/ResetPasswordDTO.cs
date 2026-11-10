@@ -18,5 +18,10 @@ namespace Mahfazti.Core.DTOs.Auth
         [DataType(DataType.Password)]
         [Compare("NewPassword", ErrorMessage = "كلمة المرور وتأكيدها غير متطابقين")]
         public string ConfirmPassword { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Single-use cryptographic reset proof issued upon verifying OTP.
+        /// </summary>
+        public string? ResetToken { get; set; }
     }
 }

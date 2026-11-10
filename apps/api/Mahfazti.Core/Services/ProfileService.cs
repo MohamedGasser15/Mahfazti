@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Mahfazti.Core.Common;
 using Mahfazti.Core.DTOs.Profile;
 using Mahfazti.Core.Interfaces;
 using Mahfazti.Core.Entities;
@@ -56,6 +57,85 @@ namespace Mahfazti.Core.Services
 
             var result = await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
             return result.Succeeded;
+        }
+
+        public async Task<bool> RegisterFcmTokenAsync(string userId, string fcmToken, string? platform = null)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return false;
+
+            var result = await _userManager.SetAuthenticationTokenAsync(user, "Firebase", "FcmToken", fcmToken);
+            if (platform != null)
+            {
+                await _userManager.SetAuthenticationTokenAsync(user, "Firebase", "Platform", platform);
+            }
+            return result.Succeeded;
+        }
+
+        public async Task<string?> GetFcmTokenAsync(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return null;
+
+            return await _userManager.GetAuthenticationTokenAsync(user, "Firebase", "FcmToken");
+        }
+
+        public async Task<ApiResponse<object>> SetUserCurrencyAsync(string userId, string currency)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return ApiResponse<object>.FailResponse("المستخدم غير موجود");
+                }
+
+                user.Currency = currency;
+                var result = await _userManager.UpdateAsync(user);
+
+                if (!result.Succeeded)
+                {
+                    return ApiResponse<object>.FailResponse(
+                        "فشل تحديث العملة",
+                        result.Errors.Select(e => e.Description).ToList()
+                    );
+                }
+
+                return ApiResponse<object>.SuccessResponse(new object(), "تم تحديث العملة بنجاح");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<object>.FailResponse("حدث خطأ أثناء تحديث العملة", new List<string> { ex.Message });
+            }
+        }
+
+        public async Task<ApiResponse<object>> SetUserLanguageAsync(string userId, string language)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return ApiResponse<object>.FailResponse("المستخدم غير موجود");
+                }
+
+                user.PreferredLanguage = language;
+                var result = await _userManager.UpdateAsync(user);
+
+                if (!result.Succeeded)
+                {
+                    return ApiResponse<object>.FailResponse(
+                        "فشل تحديث اللغة المفضلة",
+                        result.Errors.Select(e => e.Description).ToList()
+                    );
+                }
+
+                return ApiResponse<object>.SuccessResponse(new object(), "تم تحديث اللغة المفضلة بنجاح");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<object>.FailResponse("حدث خطأ أثناء تحديث اللغة المفضلة", new List<string> { ex.Message });
+            }
         }
     }
 }

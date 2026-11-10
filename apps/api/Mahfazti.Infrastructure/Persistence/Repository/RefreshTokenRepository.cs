@@ -1,5 +1,8 @@
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 using Mahfazti.Core.Entities;
 using Mahfazti.Core.Interfaces;
 using Mahfazti.Infrastructure.Data;
@@ -7,7 +10,7 @@ using Mahfazti.Infrastructure.Data;
 namespace Mahfazti.Infrastructure.Persistence.Repository
 {
     /// <summary>
-    /// Repository implementation for managing refresh tokens in the database.
+    /// Repository implementation for managing refresh tokens in the database with secure SHA-256 hashing.
     /// </summary>
     public class RefreshTokenRepository : IRefreshTokenRepository
     {
@@ -41,7 +44,7 @@ namespace Mahfazti.Infrastructure.Persistence.Repository
                 var token = new RefreshToken
                 {
                     UserId = parsedUserId,
-                    Token = refreshToken,
+                    Token = HashToken(refreshToken),
                     Expiry = expiry,
                     CreatedAt = DateTime.UtcNow,
                     IsRevoked = false
@@ -71,9 +74,11 @@ namespace Mahfazti.Infrastructure.Persistence.Repository
 
                 _logger.LogInformation("Validating refresh token for user {UserId}", userId);
 
+                var tokenHash = HashToken(refreshToken);
+
                 var token = await _context.RefreshTokens
                     .Where(rt => rt.UserId == parsedUserId &&
-                                 rt.Token == refreshToken &&
+                                 (rt.Token == tokenHash || rt.Token == refreshToken) &&
                                  rt.Expiry > DateTime.UtcNow &&
                                  !rt.IsRevoked)
                     .FirstOrDefaultAsync();
@@ -102,19 +107,26 @@ namespace Mahfazti.Infrastructure.Persistence.Repository
 
                 _logger.LogInformation("Updating refresh token for user {UserId}", userId);
 
+                var oldHash = HashToken(oldRefreshToken);
+
                 var oldToken = await _context.RefreshTokens
-                    .Where(rt => rt.UserId == parsedUserId && rt.Token == oldRefreshToken)
+                    .Where(rt => rt.UserId == parsedUserId && (rt.Token == oldHash || rt.Token == oldRefreshToken))
                     .FirstOrDefaultAsync();
 
-                if (oldToken != null)
+                if (oldToken == null || oldToken.IsRevoked)
                 {
-                    oldToken.IsRevoked = true;
+                    _logger.LogWarning("Potential token reuse or invalid token detected for user {UserId}. Revoking all sessions.", userId);
+                    await RevokeAllRefreshTokensAsync(userId);
+                    throw new SecurityTokenException("Invalid refresh token. All user sessions have been terminated.");
                 }
+
+                // Atomic rotation: revoke old, insert new in one transaction
+                oldToken.IsRevoked = true;
 
                 var newToken = new RefreshToken
                 {
                     UserId = parsedUserId,
-                    Token = newRefreshToken,
+                    Token = HashToken(newRefreshToken),
                     Expiry = newExpiry,
                     CreatedAt = DateTime.UtcNow,
                     IsRevoked = false
@@ -144,8 +156,10 @@ namespace Mahfazti.Infrastructure.Persistence.Repository
 
                 _logger.LogInformation("Revoking refresh token for user {UserId}", userId);
 
+                var tokenHash = HashToken(refreshToken);
+
                 var token = await _context.RefreshTokens
-                    .Where(rt => rt.UserId == parsedUserId && rt.Token == refreshToken)
+                    .Where(rt => rt.UserId == parsedUserId && (rt.Token == tokenHash || rt.Token == refreshToken))
                     .FirstOrDefaultAsync();
 
                 if (token != null)
@@ -194,6 +208,12 @@ namespace Mahfazti.Infrastructure.Persistence.Repository
                 _logger.LogError(ex, "Unexpected error occurred while revoking all refresh tokens for user {UserId}", userId);
                 throw;
             }
+        }
+
+        private static string HashToken(string token)
+        {
+            var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(token));
+            return Convert.ToHexString(bytes);
         }
     }
 }

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Mahfazti.Core.Common;
@@ -16,6 +17,7 @@ namespace Mahfazti.Core.Services
         private readonly IRefreshTokenRepository _refreshTokenRepository;
         private readonly IEmailSender _emailSender;
         private readonly IEmailTemplateService _emailTemplateService;
+        private readonly IServiceScopeFactory? _scopeFactory;
         private readonly ILogger<AuthService> _logger;
 
         public AuthService(
@@ -24,7 +26,8 @@ namespace Mahfazti.Core.Services
             IRefreshTokenRepository refreshTokenRepository,
             IEmailSender emailSender,
             IEmailTemplateService emailTemplateService,
-            ILogger<AuthService> logger)
+            ILogger<AuthService> logger,
+            IServiceScopeFactory? scopeFactory = null)
         {
             _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
             _tokenService = tokenService ?? throw new ArgumentNullException(nameof(tokenService));
@@ -32,6 +35,7 @@ namespace Mahfazti.Core.Services
             _emailSender = emailSender ?? throw new ArgumentNullException(nameof(emailSender));
             _emailTemplateService = emailTemplateService ?? throw new ArgumentNullException(nameof(emailTemplateService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _scopeFactory = scopeFactory;
         }
 
         #region Authentication Methods
@@ -139,23 +143,48 @@ namespace Mahfazti.Core.Services
                     CreatedAt = user.CreatedAt
                 };
 
-                // Send login notification email asynchronously
+                // Send login notification email asynchronously using an isolated service scope
+                var emailTarget = user.Email;
+                var lang = user.PreferredLanguage ?? "ar";
+                var userId = user.Id;
+
                 _ = Task.Run(async () =>
                 {
                     try
                     {
-                        var emailBody = _emailTemplateService.GenerateLoginEmail(
-                            user, null, null, DateTime.Now, null, user.PreferredLanguage ?? "ar"
-                        );
-                        await _emailSender.SendEmailAsync(
-                            user.Email!,
-                            _emailTemplateService.GetLocalizedText("EmailSubjectLoginVerification", user.PreferredLanguage ?? "ar"),
-                            emailBody
-                        );
+                        IEmailSender sender;
+                        IEmailTemplateService templateService;
+
+                        if (_scopeFactory != null)
+                        {
+                            using var scope = _scopeFactory.CreateScope();
+                            sender = scope.ServiceProvider.GetRequiredService<IEmailSender>();
+                            templateService = scope.ServiceProvider.GetRequiredService<IEmailTemplateService>();
+
+                            var emailBody = templateService.GenerateLoginEmail(
+                                user, null, null, DateTime.UtcNow, null, lang
+                            );
+                            await sender.SendEmailAsync(
+                                emailTarget!,
+                                templateService.GetLocalizedText("EmailSubjectLoginVerification", lang),
+                                emailBody
+                            );
+                        }
+                        else
+                        {
+                            var emailBody = _emailTemplateService.GenerateLoginEmail(
+                                user, null, null, DateTime.UtcNow, null, lang
+                            );
+                            await _emailSender.SendEmailAsync(
+                                emailTarget!,
+                                _emailTemplateService.GetLocalizedText("EmailSubjectLoginVerification", lang),
+                                emailBody
+                            );
+                        }
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "Failed to send login notification email to user {UserId}", user.Id);
+                        _logger.LogWarning(ex, "Failed to send login notification email to user {UserId}", userId);
                     }
                 });
 

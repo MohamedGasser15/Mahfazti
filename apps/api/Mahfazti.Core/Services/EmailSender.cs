@@ -13,6 +13,7 @@ namespace Mahfazti.Core.Services
         private readonly int _port;
         private readonly string _username;
         private readonly string _password;
+        private readonly bool _checkCertificateRevocation;
 
         public EmailSender(IConfiguration config)
         {
@@ -20,6 +21,7 @@ namespace Mahfazti.Core.Services
             _port = config.GetValue<int>("GoogleSMTP:Port");
             _username = config["GoogleSMTP:Username"] ?? "";
             _password = config["GoogleSMTP:Password"] ?? "";
+            _checkCertificateRevocation = config.GetValue("GoogleSMTP:CheckCertificateRevocation", true);
         }
 
         public async Task SendEmailAsync(string email, string subject, string htmlMessage)
@@ -39,7 +41,10 @@ namespace Mahfazti.Core.Services
                 Text = htmlMessage
             };
 
-            using var client = new SmtpClient();
+            using var client = new SmtpClient
+            {
+                CheckCertificateRevocation = _checkCertificateRevocation
+            };
 
             // Connect to Google's SMTP server
             await client.ConnectAsync(_host, _port, MailKit.Security.SecureSocketOptions.StartTls);

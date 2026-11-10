@@ -27,19 +27,22 @@ namespace Mahfazti.Core.Services
         private readonly ILogger<ExternalLoginService> _logger;
         private readonly ITokenService _tokenService;
         private readonly IConfiguration _configuration;
+        private readonly IAccountService _accountService;
 
         public ExternalLoginService(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<ExternalLoginService> logger,
             ITokenService tokenService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IAccountService accountService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _tokenService = tokenService;
             _configuration = configuration;
+            _accountService = accountService;
         }
 
         public AuthenticationProperties ConfigureExternalAuthProperties(string provider, string redirectUrl)
@@ -161,6 +164,7 @@ namespace Mahfazti.Core.Services
                 {
                     await _userManager.AddToRoleAsync(newUser, Roles.User);
                     await _userManager.AddLoginAsync(newUser, info);
+                    await EnsureDefaultWalletAsync(newUser);
                     var newToken = await _tokenService.GenerateAccessToken(newUser);
                     return new ExternalLoginCallbackResultDTO
                     {
@@ -233,6 +237,8 @@ namespace Mahfazti.Core.Services
                     return new ExternalLoginCallbackResultDTO { Message = "Adding external login failed" };
                 }
 
+                await EnsureDefaultWalletAsync(user);
+
                 await _userManager.UpdateAsync(user);
 
                 _logger.LogInformation("External user confirmed and created successfully for email: {Email}", model.Email);
@@ -262,13 +268,41 @@ namespace Mahfazti.Core.Services
 
             try
             {
+                var audiences = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 var googleClientId = _configuration["Authentication:Google:ClientId"];
-                var settings = new GoogleJsonWebSignature.ValidationSettings();
+                if (!string.IsNullOrWhiteSpace(googleClientId) && !googleClientId.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase))
+                    audiences.Add(googleClientId);
 
-                if (!string.IsNullOrEmpty(googleClientId) && googleClientId != "YOUR_GOOGLE_CLIENT_ID")
-                    settings.Audience = new[] { googleClientId, "342149506296-3hd76r4tbhk0385lmmu50bivnh4u8dc2.apps.googleusercontent.com" };
+                var serverClientId = _configuration["Authentication:Google:ServerClientId"];
+                if (!string.IsNullOrWhiteSpace(serverClientId) && !serverClientId.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase))
+                    audiences.Add(serverClientId);
+
+                var mobileClients = new[]
+                {
+                    "45964007233-vr2d10oiv0454k0kku15mfjdnnd9dqan.apps.googleusercontent.com",
+                    "45964007233-jjso2nsuiq04dnqg1l7cc0bdi9he7gl0.apps.googleusercontent.com"
+                };
+                foreach (var mc in mobileClients) audiences.Add(mc);
+
+                if (audiences.Count == 0)
+                {
+                    _logger.LogError("Google authentication error: No valid Google client IDs configured");
+                    return new ExternalLoginCallbackResultDTO { Message = "Google authentication configuration error." };
+                }
+
+                var settings = new GoogleJsonWebSignature.ValidationSettings
+                {
+                    Audience = audiences.ToList()
+                };
 
                 var payload = await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
+
+                if (!string.Equals(payload.Issuer, "https://accounts.google.com", StringComparison.Ordinal) &&
+                    !string.Equals(payload.Issuer, "accounts.google.com", StringComparison.Ordinal))
+                {
+                    _logger.LogWarning("Invalid Google token issuer: {Issuer}", payload.Issuer);
+                    return new ExternalLoginCallbackResultDTO { Message = "Invalid Google token issuer." };
+                }
 
                 var email = payload.Email;
                 var name = payload.Name ?? email;
@@ -283,6 +317,7 @@ namespace Mahfazti.Core.Services
                     {
                         IsNewUser = false,
                         Email = user.Email,
+                        Currency = user.Currency ?? "EGP",
                         Message = "Logged in successfully via Google",
                         Token = token,
                         HasPassword = hasPassword
@@ -299,6 +334,7 @@ namespace Mahfazti.Core.Services
                     {
                         IsNewUser = false,
                         Email = existingUser.Email,
+                        Currency = existingUser.Currency ?? "EGP",
                         Message = "Linked and logged in successfully via Google",
                         Token = existingToken,
                         HasPassword = hasPassword
@@ -310,7 +346,8 @@ namespace Mahfazti.Core.Services
                     FullName = name,
                     Email = email,
                     UserName = email,
-                    EmailConfirmed = true
+                    EmailConfirmed = true,
+                    Currency = "EGP"
                 };
 
                 var createResult = await _userManager.CreateAsync(newUser);
@@ -319,12 +356,14 @@ namespace Mahfazti.Core.Services
 
                 await _userManager.AddToRoleAsync(newUser, Roles.User);
                 await _userManager.AddLoginAsync(newUser, new UserLoginInfo("Google", providerKey, "Google"));
+                await EnsureDefaultWalletAsync(newUser);
 
                 var newToken = await _tokenService.GenerateAccessToken(newUser);
                 return new ExternalLoginCallbackResultDTO
                 {
                     IsNewUser = false,
                     Email = newUser.Email,
+                    Currency = newUser.Currency ?? "EGP",
                     Message = "Account created and logged in successfully via Google",
                     Token = newToken,
                     HasPassword = false
@@ -345,30 +384,95 @@ namespace Mahfazti.Core.Services
             try
             {
                 var appId = _configuration["Authentication:Facebook:AppId"];
+                string? fbId = null;
+                string? fbEmail = null;
+                string? fbName = null;
 
-                var discoveryDocument = await _facebookConfigManager.GetConfigurationAsync();
-                var tokenHandler = new JwtSecurityTokenHandler();
-
-                var validationParameters = new TokenValidationParameters
+                // 1. Try JWT validation if token has JWT structure
+                if (accessToken.Contains('.'))
                 {
-                    ValidateIssuer = true,
-                    ValidIssuer = "https://www.facebook.com",
-                    ValidateAudience = true,
-                    ValidAudience = appId,
-                    ValidateLifetime = true,
-                    IssuerSigningKeys = discoveryDocument.SigningKeys,
-                    NameClaimType = "name",
-                    RoleClaimType = "role"
-                };
+                    try
+                    {
+                        var discoveryDocument = await _facebookConfigManager.GetConfigurationAsync();
+                        var tokenHandler = new JwtSecurityTokenHandler();
 
-                var principal = tokenHandler.ValidateToken(accessToken, validationParameters, out var validatedToken);
+                        var validationParameters = new TokenValidationParameters
+                        {
+                            ValidateIssuer = true,
+                            ValidIssuer = "https://www.facebook.com",
+                            ValidateAudience = true,
+                            ValidAudience = appId,
+                            ValidateLifetime = true,
+                            IssuerSigningKeys = discoveryDocument.SigningKeys,
+                            NameClaimType = "name",
+                            RoleClaimType = "role"
+                        };
 
-                var fbId = principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                           ?? principal.FindFirst("sub")?.Value;
-                var fbEmail = principal.FindFirst("email")?.Value
-                              ?? principal.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
-                var fbName = principal.FindFirst("name")?.Value
-                             ?? principal.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+                        var principal = tokenHandler.ValidateToken(accessToken, validationParameters, out var validatedToken);
+
+                        fbId = principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                               ?? principal.FindFirst("sub")?.Value;
+                        fbEmail = principal.FindFirst("email")?.Value
+                                  ?? principal.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+                        fbName = principal.FindFirst("name")?.Value
+                                 ?? principal.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "JWT validation failed for Facebook token, attempting Graph API fallback");
+                    }
+                }
+
+                // 2. Fallback to Facebook Graph API verification for standard OAuth access tokens
+                if (string.IsNullOrEmpty(fbId))
+                {
+                    using var httpClient = new System.Net.Http.HttpClient();
+
+                    // Security check: Verify token was issued specifically for Mahfazti's AppId
+                    if (!string.IsNullOrWhiteSpace(appId) && !appId.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var appUrl = $"https://graph.facebook.com/app?access_token={Uri.EscapeDataString(accessToken)}";
+                        var appResponse = await httpClient.GetAsync(appUrl);
+                        if (!appResponse.IsSuccessStatusCode)
+                        {
+                            _logger.LogWarning("Facebook app introspection failed with status: {StatusCode}", appResponse.StatusCode);
+                            return new ExternalLoginCallbackResultDTO { Message = "Invalid Facebook token." };
+                        }
+
+                        var appContent = await appResponse.Content.ReadAsStringAsync();
+                        using var appDoc = System.Text.Json.JsonDocument.Parse(appContent);
+                        if (!appDoc.RootElement.TryGetProperty("id", out var appIdProp) ||
+                            !string.Equals(appIdProp.GetString(), appId, StringComparison.OrdinalIgnoreCase))
+                        {
+                            _logger.LogWarning("Facebook token was issued for foreign application ID");
+                            return new ExternalLoginCallbackResultDTO { Message = "Facebook token does not match application." };
+                        }
+                    }
+
+                    var graphUrl = $"https://graph.facebook.com/me?fields=id,name,email&access_token={Uri.EscapeDataString(accessToken)}";
+                    var response = await httpClient.GetAsync(graphUrl);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var content = await response.Content.ReadAsStringAsync();
+                        using var doc = System.Text.Json.JsonDocument.Parse(content);
+                        if (doc.RootElement.TryGetProperty("id", out var idProp))
+                        {
+                            fbId = idProp.GetString();
+                        }
+                        if (doc.RootElement.TryGetProperty("name", out var nameProp))
+                        {
+                            fbName = nameProp.GetString();
+                        }
+                        if (doc.RootElement.TryGetProperty("email", out var emailProp))
+                        {
+                            fbEmail = emailProp.GetString();
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogError("Facebook Graph API verification failed with status: {StatusCode}", response.StatusCode);
+                    }
+                }
 
                 if (string.IsNullOrEmpty(fbId))
                     return new ExternalLoginCallbackResultDTO { Message = "Failed to retrieve Facebook user info." };
@@ -386,6 +490,7 @@ namespace Mahfazti.Core.Services
                     {
                         IsNewUser = false,
                         Email = user.Email,
+                        Currency = user.Currency ?? "EGP",
                         Message = "Logged in successfully via Facebook",
                         Token = token,
                         HasPassword = hasPassword
@@ -412,6 +517,7 @@ namespace Mahfazti.Core.Services
                         {
                             IsNewUser = false,
                             Email = existingUser.Email,
+                            Currency = existingUser.Currency ?? "EGP",
                             Message = "Linked and logged in successfully via Facebook",
                             Token = existingToken,
                             HasPassword = hasPassword
@@ -424,7 +530,8 @@ namespace Mahfazti.Core.Services
                     FullName = name ?? email ?? "Facebook User",
                     Email = email,
                     UserName = email ?? $"fb_{providerKey}",
-                    EmailConfirmed = email != null
+                    EmailConfirmed = email != null,
+                    Currency = "EGP"
                 };
 
                 var createResult = await _userManager.CreateAsync(newUser);
@@ -437,12 +544,14 @@ namespace Mahfazti.Core.Services
 
                 await _userManager.AddToRoleAsync(newUser, Roles.User);
                 await _userManager.AddLoginAsync(newUser, new UserLoginInfo("Facebook", providerKey, "Facebook"));
+                await EnsureDefaultWalletAsync(newUser);
 
                 var newToken = await _tokenService.GenerateAccessToken(newUser);
                 return new ExternalLoginCallbackResultDTO
                 {
                     IsNewUser = false,
                     Email = newUser.Email,
+                    Currency = newUser.Currency ?? "EGP",
                     Message = "Account created and logged in successfully via Facebook",
                     Token = newToken,
                     HasPassword = false
@@ -457,6 +566,21 @@ namespace Mahfazti.Core.Services
             {
                 _logger.LogError(ex, "Facebook login error");
                 return new ExternalLoginCallbackResultDTO { Message = "Facebook login failed." };
+            }
+        }
+
+        private async Task EnsureDefaultWalletAsync(ApplicationUser user)
+        {
+            try
+            {
+                await _accountService.EnsureDefaultAccountAsync(
+                    user.Id.ToString(),
+                    user.Currency ?? "EGP",
+                    user.PreferredLanguage);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Could not provision default wallet for external user {UserId}", user.Id);
             }
         }
     }
