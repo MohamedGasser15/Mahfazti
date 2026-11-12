@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/themes/app_colors.dart';
 import 'package:my_wallet/core/themes/app_text_styles.dart';
+import 'package:my_wallet/core/widgets/app_progress_indicator.dart';
 
 class AppEmptyState extends StatelessWidget {
   final String message;
@@ -32,11 +33,7 @@ class AppEmptyState extends StatelessWidget {
                 color: AppColors.gray200,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                icon,
-                size: 44,
-                color: AppColors.gray400,
-              ),
+              child: Icon(icon, size: 44, color: AppColors.gray400),
             ),
             const SizedBox(height: 24),
             Text(
@@ -87,21 +84,11 @@ class AppLoadingMore extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(
-            width: 18,
-            height: 18,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.5,
-              color: AppColors.primaryBlack,
-            ),
-          ),
+          const AppProgressIndicator(size: 18, color: AppColors.primaryBlack),
           const SizedBox(width: 12),
           Text(
             context.l10n.loading,
-            style: const TextStyle(
-              color: AppColors.gray500,
-              fontSize: 14,
-            ),
+            style: const TextStyle(color: AppColors.gray500, fontSize: 14),
           ),
         ],
       ),
@@ -124,7 +111,9 @@ _ErrorType _classifyError(String message) {
       s.contains('no address associated with hostname')) {
     return _ErrorType.network;
   }
-  if (s.contains('servererror') || s.contains('server error') || s.contains('500')) {
+  if (s.contains('servererror') ||
+      s.contains('server error') ||
+      s.contains('500')) {
     return _ErrorType.server;
   }
   return _ErrorType.generic;
@@ -181,10 +170,7 @@ class AppErrorState extends StatelessWidget {
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: AppColors.gray200,
-                width: 1,
-              ),
+              border: Border.all(color: AppColors.gray200, width: 1),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.04),

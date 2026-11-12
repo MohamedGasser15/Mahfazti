@@ -4,7 +4,7 @@ import 'package:my_wallet/features/wallet/data/repositories/category_repository.
 
 class WatchService {
   static const _channel = MethodChannel('com.mahfazti.watch/connector');
-  
+
   static final WalletRepository _walletRepo = WalletRepository();
   static final CategoryRepository _categoryRepo = CategoryRepository();
 
@@ -14,17 +14,17 @@ class WatchService {
   }
 
   // ── استقبال calls من الـ Native (AppDelegate) ──
-static Future<dynamic> _handleMethodCall(MethodCall call) async {
+  static Future<dynamic> _handleMethodCall(MethodCall call) async {
     switch (call.method) {
-      case 'getHomeData':        // ✅ نفس الـ action اللي Watch بيبعته
+      case 'getHomeData': // ✅ نفس الـ action اللي Watch بيبعته
         return await _getHomeData();
-      case 'parseVoice':         // ✅ نفس الـ action
+      case 'parseVoice': // ✅ نفس الـ action
         final args = call.arguments as Map<dynamic, dynamic>;
         return await _parseVoice(
           args['text'] as String? ?? '',
           args['language'] as String? ?? 'en',
         );
-      case 'addTransaction':     // ✅ نفس الـ action
+      case 'addTransaction': // ✅ نفس الـ action
         final args = call.arguments as Map<dynamic, dynamic>;
         return await _addTransaction(
           (args['amount'] as num?)?.toDouble() ?? 0,
@@ -34,7 +34,8 @@ static Future<dynamic> _handleMethodCall(MethodCall call) async {
       default:
         throw PlatformException(code: 'NOT_IMPLEMENTED');
     }
-}
+  }
+
   // ── جيب البيانات من الـ API وبعتها للـ Watch ──
   static Future<Map<String, dynamic>> _getHomeData() async {
     try {
@@ -45,14 +46,19 @@ static Future<dynamic> _handleMethodCall(MethodCall call) async {
         'totalBalance': data.balance.totalBalance,
         'totalDeposits': data.balance.totalDeposits,
         'totalWithdrawals': data.balance.totalWithdrawals,
-        'recentTransactions': data.recentTransactions.take(5).map((t) => {
-          'id': t.id,
-          'title': t.title,
-          'amount': t.amount,
-          'type': t.type,
-          'categoryNameEn': t.categoryNameEn ?? '',
-          'categoryNameAr': t.categoryNameAr ?? '',
-        }).toList(),
+        'recentTransactions': data.recentTransactions
+            .take(5)
+            .map(
+              (t) => {
+                'id': t.id,
+                'title': t.title,
+                'amount': t.amount,
+                'type': t.type,
+                'categoryNameEn': t.categoryNameEn ?? '',
+                'categoryNameAr': t.categoryNameAr ?? '',
+              },
+            )
+            .toList(),
       };
     } catch (e) {
       return {
@@ -71,10 +77,7 @@ static Future<dynamic> _handleMethodCall(MethodCall call) async {
     String language,
   ) async {
     try {
-      final result = await _walletRepo.parseVoiceText(
-        text,
-        language: language,
-      );
+      final result = await _walletRepo.parseVoiceText(text, language: language);
 
       return {
         'amount': result.amount,
@@ -85,10 +88,7 @@ static Future<dynamic> _handleMethodCall(MethodCall call) async {
         'isSuccess': result.isSuccess,
       };
     } catch (e) {
-      return {
-        'isSuccess': false,
-        'error': e.toString(),
-      };
+      return {'isSuccess': false, 'error': e.toString()};
     }
   }
 

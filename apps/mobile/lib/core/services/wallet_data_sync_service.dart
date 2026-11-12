@@ -5,7 +5,8 @@ import 'dart:async';
 class WalletDataSyncService {
   WalletDataSyncService._();
 
-  static final StreamController<void> _controller = StreamController<void>.broadcast();
+  static final StreamController<void> _controller =
+      StreamController<void>.broadcast();
 
   /// Stream that emits whenever transactions, balances, or categories are mutated.
   static Stream<void> get onDataChanged => _controller.stream;

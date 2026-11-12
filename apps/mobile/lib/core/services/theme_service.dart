@@ -8,7 +8,9 @@ class ThemeService {
   static const String dark = 'dark';
   static const String system = 'system';
 
-  static ValueNotifier<ThemeMode> themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.system);
+  static ValueNotifier<ThemeMode> themeNotifier = ValueNotifier<ThemeMode>(
+    ThemeMode.system,
+  );
 
   static Future<void> init() async {
     final savedTheme = await getSavedTheme();

@@ -13,7 +13,7 @@ class CustomTextField extends StatelessWidget {
   final void Function(String)? onChanged;
   final int? maxLines;
   final bool enabled;
-  
+
   const CustomTextField({
     super.key,
     required this.controller,
@@ -28,7 +28,7 @@ class CustomTextField extends StatelessWidget {
     this.maxLines = 1,
     this.enabled = true,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);

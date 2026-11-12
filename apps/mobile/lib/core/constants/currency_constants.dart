@@ -136,7 +136,16 @@ const List<AppCurrency> kAllCurrencies = [
     flag: '🇬🇧',
     symbol: '£',
     symbolAr: '£',
-    keywords: ['بريطانيا', 'إنجلترا', 'إسترليني', 'uk', 'britain', 'pound', 'sterling', 'gbp'],
+    keywords: [
+      'بريطانيا',
+      'إنجلترا',
+      'إسترليني',
+      'uk',
+      'britain',
+      'pound',
+      'sterling',
+      'gbp',
+    ],
   ),
   AppCurrency(
     code: 'CAD',

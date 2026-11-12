@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:my_wallet/features/auth/presentation/screens/currency_selection_screen.dart';
-import 'package:my_wallet/features/auth/presentation/screens/email_screen.dart';
+import 'package:my_wallet/features/auth/presentation/screens/auth_screen.dart';
+import 'package:my_wallet/features/auth/presentation/screens/login_screen.dart';
+import 'package:my_wallet/features/auth/presentation/screens/register_screen.dart';
 import 'package:my_wallet/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:my_wallet/features/settings/presentation/screens/categories_management_screen.dart';
 import 'package:my_wallet/features/splash/presentation/screens/splash_screen.dart';
@@ -39,15 +41,26 @@ class AppRoutes {
       case onboarding:
         return MaterialPageRoute(
           settings: settings,
-          builder: (context) => OnboardingScreen(onLocaleChanged: onLocaleChanged),
+          builder: (context) =>
+              OnboardingScreen(onLocaleChanged: onLocaleChanged),
         );
 
       case email:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (context) => const AuthScreen(),
+        );
+
       case login:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (context) => const LoginScreen(),
+        );
+
       case register:
         return MaterialPageRoute(
           settings: settings,
-          builder: (context) => const EmailScreen(),
+          builder: (context) => const RegisterScreen(),
         );
 
       case currencySelection:
@@ -88,4 +101,3 @@ class AppRoutes {
     }
   }
 }
-

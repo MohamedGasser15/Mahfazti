@@ -1,5 +1,6 @@
 // core/widgets/custom_button.dart
 import 'package:flutter/material.dart';
+import 'package:my_wallet/core/widgets/app_progress_indicator.dart';
 
 class CustomButton extends StatelessWidget {
   final String text;
@@ -10,7 +11,7 @@ class CustomButton extends StatelessWidget {
   final Color? textColor;
   final double? width;
   final double height;
-  
+
   const CustomButton({
     super.key,
     required this.text,
@@ -22,11 +23,11 @@ class CustomButton extends StatelessWidget {
     this.width,
     this.height = 56,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return SizedBox(
       width: width ?? double.infinity,
       height: height,
@@ -41,21 +42,16 @@ class CustomButton extends StatelessWidget {
           elevation: 0,
         ),
         child: isLoading
-    ? SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: textColor ?? theme.colorScheme.onPrimary,
-        ),
-      )
-    : Text(
-        text,
-        style: theme.textTheme.bodyLarge?.copyWith(
-          fontWeight: FontWeight.w600,
-          color: textColor ?? theme.colorScheme.onPrimary,
-        ),
-      ),
+            ? AppProgressIndicator.small(
+                color: textColor ?? theme.colorScheme.onPrimary,
+              )
+            : Text(
+                text,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: textColor ?? theme.colorScheme.onPrimary,
+                ),
+              ),
       ),
     );
   }

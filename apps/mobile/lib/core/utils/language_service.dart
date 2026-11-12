@@ -11,7 +11,9 @@ class LanguageService {
   static const Locale english = Locale('en', 'US');
 
   // ValueNotifier for tracking app language changes
-  static final ValueNotifier<Locale> localeNotifier = ValueNotifier<Locale>(english);
+  static final ValueNotifier<Locale> localeNotifier = ValueNotifier<Locale>(
+    english,
+  );
 
   static Future<void> init() async {
     final savedLocale = await getSavedLocale();
@@ -48,11 +50,9 @@ class LanguageService {
       final token = SharedPrefs.authToken;
       if (token != null && token.isNotEmpty) {
         try {
-          await ApiService().post(
-            ApiEndpoints.setLanguage,
-            {'language': locale.languageCode},
-            requiresAuth: true,
-          );
+          await ApiService().put(ApiEndpoints.setLanguage, {
+            'language': locale.languageCode,
+          }, requiresAuth: true);
         } catch (e) {
           debugPrint('Failed to sync preferred language to server: $e');
         }

@@ -49,6 +49,7 @@ class _AppModalObserver extends NavigatorObserver {
             });
           }
         }
+
         anim.addStatusListener(listener);
       } else {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -79,28 +80,33 @@ class _AppModalObserver extends NavigatorObserver {
 }
 
 class NavigationService {
-  static final GlobalKey<NavigatorState> navigatorKey = 
+  static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
-  
-  static final ValueNotifier<bool> isModalOpenNotifier = ValueNotifier<bool>(false);
+
+  static final ValueNotifier<bool> isModalOpenNotifier = ValueNotifier<bool>(
+    false,
+  );
   static final NavigatorObserver modalObserver = _AppModalObserver();
 
   static BuildContext? get context => navigatorKey.currentContext;
-  
+
   static Future<dynamic> navigateTo(String routeName, {Object? arguments}) {
     return navigatorKey.currentState!.pushNamed(
       routeName,
       arguments: arguments,
     );
   }
-  
-  static Future<dynamic> navigateReplacement(String routeName, {Object? arguments}) {
+
+  static Future<dynamic> navigateReplacement(
+    String routeName, {
+    Object? arguments,
+  }) {
     return navigatorKey.currentState!.pushReplacementNamed(
       routeName,
       arguments: arguments,
     );
   }
-  
+
   static Future<dynamic> navigateAndRemoveUntil(
     String routeName, {
     Object? arguments,
@@ -111,7 +117,7 @@ class NavigationService {
       arguments: arguments,
     );
   }
-  
+
   static void goBack([dynamic result]) {
     return navigatorKey.currentState!.pop(result);
   }

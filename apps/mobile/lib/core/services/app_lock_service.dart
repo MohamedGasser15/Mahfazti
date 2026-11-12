@@ -25,7 +25,10 @@ class AppLockService extends ChangeNotifier {
   }
 
   /// Toggle App Lock setting with mandatory biometric/passcode verification
-  Future<bool> setAppLock(bool enable, {required String localizedReason}) async {
+  Future<bool> setAppLock(
+    bool enable, {
+    required String localizedReason,
+  }) async {
     // Check if device supports lock
     final isAvailable = await BiometricService.isDeviceLockAvailable();
     if (!isAvailable) {

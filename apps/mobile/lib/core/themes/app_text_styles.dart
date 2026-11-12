@@ -7,13 +7,13 @@ class AppTextStyles {
 
   static String get fontFamily =>
       LanguageService.localeNotifier.value.languageCode == 'ar'
-          ? 'Cairo'
-          : 'Inter';
+      ? 'Cairo'
+      : 'Inter';
 
   static List<String> get fontFamilyFallback =>
       LanguageService.localeNotifier.value.languageCode == 'ar'
-          ? const ['Inter']
-          : const ['Cairo'];
+      ? const ['Inter']
+      : const ['Cairo'];
 
   static TextStyle body({
     double size = 14,
@@ -22,13 +22,13 @@ class AppTextStyles {
     double? height,
     String? customFontFamily,
   }) => TextStyle(
-        fontFamily: customFontFamily ?? fontFamily,
-        fontFamilyFallback: fontFamilyFallback,
-        fontSize: size,
-        fontWeight: weight,
-        color: color,
-        height: height,
-      );
+    fontFamily: customFontFamily ?? fontFamily,
+    fontFamilyFallback: fontFamilyFallback,
+    fontSize: size,
+    fontWeight: weight,
+    color: color,
+    height: height,
+  );
 
   static TextStyle heading({
     double size = 18,
@@ -36,12 +36,12 @@ class AppTextStyles {
     FontWeight weight = FontWeight.bold,
     String? customFontFamily,
   }) => TextStyle(
-        fontFamily: customFontFamily ?? fontFamily,
-        fontFamilyFallback: fontFamilyFallback,
-        fontSize: size,
-        fontWeight: weight,
-        color: color,
-      );
+    fontFamily: customFontFamily ?? fontFamily,
+    fontFamilyFallback: fontFamilyFallback,
+    fontSize: size,
+    fontWeight: weight,
+    color: color,
+  );
 
   static TextStyle label({
     double size = 12,
@@ -49,12 +49,12 @@ class AppTextStyles {
     Color? color,
     String? customFontFamily,
   }) => TextStyle(
-        fontFamily: customFontFamily ?? fontFamily,
-        fontFamilyFallback: fontFamilyFallback,
-        fontSize: size,
-        fontWeight: weight,
-        color: color,
-      );
+    fontFamily: customFontFamily ?? fontFamily,
+    fontFamilyFallback: fontFamilyFallback,
+    fontSize: size,
+    fontWeight: weight,
+    color: color,
+  );
 
   static TextStyle button({
     double size = 15,
@@ -62,34 +62,34 @@ class AppTextStyles {
     FontWeight weight = FontWeight.bold,
     String? customFontFamily,
   }) => TextStyle(
-        fontFamily: customFontFamily ?? fontFamily,
-        fontFamilyFallback: fontFamilyFallback,
-        fontSize: size,
-        fontWeight: weight,
-        color: color,
-      );
+    fontFamily: customFontFamily ?? fontFamily,
+    fontFamilyFallback: fontFamilyFallback,
+    fontSize: size,
+    fontWeight: weight,
+    color: color,
+  );
 
   static TextStyle fieldLabel({
     Color color = AppColors.primaryBlack,
     double size = 14,
     String? customFontFamily,
   }) => TextStyle(
-        fontFamily: customFontFamily ?? fontFamily,
-        fontFamilyFallback: fontFamilyFallback,
-        fontSize: size,
-        fontWeight: FontWeight.w600,
-        color: color,
-      );
+    fontFamily: customFontFamily ?? fontFamily,
+    fontFamilyFallback: fontFamilyFallback,
+    fontSize: size,
+    fontWeight: FontWeight.w600,
+    color: color,
+  );
 
   static TextStyle fieldHint({
     Color color = AppColors.error,
     double size = 13,
     String? customFontFamily,
   }) => TextStyle(
-        fontFamily: customFontFamily ?? fontFamily,
-        fontFamilyFallback: fontFamilyFallback,
-        color: color,
-        fontSize: size,
-        fontWeight: FontWeight.w500,
-      );
+    fontFamily: customFontFamily ?? fontFamily,
+    fontFamilyFallback: fontFamilyFallback,
+    color: color,
+    fontSize: size,
+    fontWeight: FontWeight.w500,
+  );
 }

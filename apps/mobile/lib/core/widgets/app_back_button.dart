@@ -34,24 +34,24 @@ IconData appStepperIcon({
 }) {
   final pointRight = forward != isRtl;
   if (isIOS) {
-    return pointRight ? CupertinoIcons.chevron_right : CupertinoIcons.chevron_left;
+    return pointRight
+        ? CupertinoIcons.chevron_right
+        : CupertinoIcons.chevron_left;
   }
-  return pointRight
-      ? Icons.chevron_right_rounded
-      : Icons.chevron_left_rounded;
+  return pointRight ? Icons.chevron_right_rounded : Icons.chevron_left_rounded;
 }
 
 /// Context-aware convenience wrappers — they resolve both the platform and
 /// the text direction, so call sites stay one-liners.
 IconData appBackIconOf(BuildContext context) => appBackIcon(
-      isIOS: Platform.isIOS,
-      isRtl: Directionality.of(context) == TextDirection.rtl,
-    );
+  isIOS: Platform.isIOS,
+  isRtl: Directionality.of(context) == TextDirection.rtl,
+);
 
 IconData appForwardIconOf(BuildContext context) => appForwardIcon(
-      isIOS: Platform.isIOS,
-      isRtl: Directionality.of(context) == TextDirection.rtl,
-    );
+  isIOS: Platform.isIOS,
+  isRtl: Directionality.of(context) == TextDirection.rtl,
+);
 
 IconData appStepperIconOf(BuildContext context, {required bool forward}) =>
     appStepperIcon(
@@ -76,7 +76,8 @@ class AppGlassBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = isDarkMode ?? (Theme.of(context).brightness == Brightness.dark);
+    final dark =
+        isDarkMode ?? (Theme.of(context).brightness == Brightness.dark);
     final isIOS = Platform.isIOS;
     final isRtl = Directionality.of(context) == TextDirection.rtl;
     final effectiveIcon = icon ?? appBackIcon(isIOS: isIOS, isRtl: isRtl);
@@ -141,7 +142,9 @@ class AppGlassBackButton extends StatelessWidget {
       );
     }
 
-    final borderColor = dark ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
+    final borderColor = dark
+        ? const Color(0xFF27272A)
+        : const Color(0xFFE4E4E7);
     final iconBgColor = dark ? const Color(0xFF141418) : Colors.white;
 
     return Center(

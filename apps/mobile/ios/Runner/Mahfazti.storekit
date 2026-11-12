@@ -1,0 +1,162 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : ""
+      }
+    ]
+  },
+  "identifier" : "E2B789A1",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_billingIssuesEnabled" : false,
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ],
+    "_timeRate" : 0
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21400001",
+      "localizations" : [
+        {
+          "description" : "Unlock all premium Mahfazti features",
+          "displayName" : "Mahfazti Premium",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "افتح كافة مميزات محفظتي بريميوم",
+          "displayName" : "محفظتي بريميوم",
+          "locale" : "ar"
+        }
+      ],
+      "name" : "Mahfazti Premium",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "2.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "64400001",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Monthly access to unlimited wallets & AI",
+              "displayName" : "Mahfazti Premium Monthly",
+              "locale" : "en_US"
+            },
+            {
+              "description" : "اشتراك شهري للمحافظ اللامحدودة والذكاء الاصطناعي",
+              "displayName" : "محفظتي بريميوم شهري",
+              "locale" : "ar"
+            }
+          ],
+          "productID" : "mahfazti_premium_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Mahfazti Premium Monthly",
+          "subscriptionGroupID" : "21400001",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "24.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "64400002",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Yearly access to unlimited wallets & AI (Save 30%)",
+              "displayName" : "Mahfazti Premium Yearly",
+              "locale" : "en_US"
+            },
+            {
+              "description" : "اشتراك سنوي لكافة ميزات المحفظة والذكاء الاصطناعي (خصم 30%)",
+              "displayName" : "محفظتي بريميوم سنوي",
+              "locale" : "ar"
+            }
+          ],
+          "productID" : "mahfazti_premium_yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Mahfazti Premium Yearly",
+          "subscriptionGroupID" : "21400001",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

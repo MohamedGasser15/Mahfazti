@@ -53,8 +53,9 @@ class SkeletonBox extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: isDark ? Colors.grey[900] : Colors.white,
-        borderRadius:
-            shape == BoxShape.circle ? null : BorderRadius.circular(borderRadius),
+        borderRadius: shape == BoxShape.circle
+            ? null
+            : BorderRadius.circular(borderRadius),
         shape: shape,
       ),
     );

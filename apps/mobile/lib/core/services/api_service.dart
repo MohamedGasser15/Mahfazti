@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:my_wallet/core/constants/api_constants.dart';
@@ -13,6 +14,11 @@ class ApiService {
 
   late Dio _dio;
   bool _hasTestingDio = false;
+  Future<bool>? _refreshFuture;
+  bool _isLoggingOut = false;
+
+  @visibleForTesting
+  Dio? refreshDioForTesting;
 
   bool get hasTestingDio => _hasTestingDio;
 
@@ -22,15 +28,16 @@ class ApiService {
     _hasTestingDio = true;
   }
 
+  @visibleForTesting
+  Dio get dio => _dio;
+
   ApiService._internal() {
     _dio = Dio(
       BaseOptions(
         baseUrl: AppConstants.baseUrl,
         connectTimeout: const Duration(seconds: 30),
         receiveTimeout: const Duration(seconds: 30),
-        headers: {
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
+        headers: {'Content-Type': 'application/json; charset=UTF-8'},
       ),
     );
 
@@ -43,7 +50,9 @@ class ApiService {
           final requiresAuth = options.extra['requiresAuth'] == true;
           if (requiresAuth) {
             final token = SharedPrefs.authToken;
-            if (token != null && token.isNotEmpty) {
+            if (token != null &&
+                token.isNotEmpty &&
+                !options.headers.containsKey('Authorization')) {
               options.headers['Authorization'] = 'Bearer $token';
             }
           }
@@ -53,66 +62,55 @@ class ApiService {
           if (error.response?.statusCode == 401) {
             final requiresAuth =
                 error.requestOptions.extra['requiresAuth'] == true;
+            final skipAuthRefresh =
+                error.requestOptions.extra['skipAuthRefresh'] == true;
             final isRetry = error.requestOptions.extra['isRetry'] == true;
             final path = error.requestOptions.path;
-            final isAuthEndpoint = path.contains(ApiEndpoints.login) ||
+            final isAuthEndpoint =
+                path.contains(ApiEndpoints.login) ||
+                path.contains('Login') ||
                 path.contains(ApiEndpoints.verifyEmail) ||
+                path.contains('verify-email') ||
                 path.contains(ApiEndpoints.sendCode) ||
-                path.contains(ApiEndpoints.refresh);
+                path.contains('send-code') ||
+                path.contains(ApiEndpoints.refresh) ||
+                path.contains('api/Auth/refresh') ||
+                path.contains(ApiEndpoints.forgotPassword) ||
+                path.contains('forgot-password') ||
+                path.contains(ApiEndpoints.verifyResetCode) ||
+                path.contains('verify-reset-code') ||
+                path.contains(ApiEndpoints.resetPassword) ||
+                path.contains('reset-password') ||
+                path.contains(ApiEndpoints.checkEmail);
 
-            if (requiresAuth && !isAuthEndpoint && !isRetry) {
-              final token = SharedPrefs.authToken;
-              final refreshToken = SharedPrefs.refreshToken;
+            if (requiresAuth &&
+                !skipAuthRefresh &&
+                !isAuthEndpoint &&
+                !isRetry) {
+              final refreshSuccess = await _refreshTokenSynchronized();
 
-              if (token != null && refreshToken != null) {
-                try {
-                  final refreshDio =
-                      Dio(BaseOptions(baseUrl: AppConstants.baseUrl));
-                  final refreshRes = await refreshDio.post(
-                    ApiEndpoints.refresh,
-                    data: {
-                      'accessToken': token,
-                      'refreshToken': refreshToken,
-                    },
-                  );
+              if (refreshSuccess) {
+                final newAccess = SharedPrefs.authToken;
+                if (newAccess != null && newAccess.isNotEmpty) {
+                  try {
+                    // Retry original request once with new token
+                    final options = error.requestOptions;
+                    options.headers['Authorization'] = 'Bearer $newAccess';
+                    options.extra['isRetry'] = true;
 
-                  if (refreshRes.statusCode == 200 &&
-                      refreshRes.data != null) {
-                    final data = refreshRes.data;
-                    final payload = data['data'];
-                    if (payload != null) {
-                      final newAccess = payload['accessToken'] as String?;
-                      final newRefresh = payload['refreshToken'] as String?;
-                      if (newAccess != null && newAccess.isNotEmpty) {
-                        await SharedPrefs.setAuthToken(newAccess);
-                        if (newRefresh != null && newRefresh.isNotEmpty) {
-                          await SharedPrefs.setRefreshToken(newRefresh);
-                        }
-
-                        // Retry original request with new token
-                        final options = error.requestOptions;
-                        options.headers['Authorization'] = 'Bearer $newAccess';
-                        options.extra['isRetry'] = true;
-
-                        final clonedResponse = await _dio.fetch(options);
-                        return handler.resolve(clonedResponse);
-                      }
+                    final clonedResponse = await _dio.fetch(options);
+                    return handler.resolve(clonedResponse);
+                  } catch (retryError) {
+                    if (retryError is DioException) {
+                      return handler.next(retryError);
                     }
+                    return handler.next(error);
                   }
-                } catch (_) {
-                  // Refresh token failed or expired
                 }
               }
 
-              // Clear session and navigate to login
-              await SharedPrefs.removeAuthToken();
-              await SharedPrefs.removeRefreshToken();
-              await SharedPrefs.removeUserData();
-              await WalletCacheService.invalidateAll();
-
-              if (NavigationService.context != null) {
-                NavigationService.navigateAndRemoveUntil(AppRoutes.email);
-              }
+              // Refresh failed or no new token: clear session once and redirect
+              await _handleAuthFailure();
             }
           }
 
@@ -125,16 +123,28 @@ class ApiService {
     if (kDebugMode) {
       _dio.interceptors.add(
         LogInterceptor(
-          requestBody: true,
-          responseBody: true,
-          requestHeader: true,
+          // API traffic contains credentials and financial data; keep the
+          // debug log to request/response metadata only.
+          requestBody: false,
+          responseBody: false,
+          requestHeader: false,
+          responseHeader: false,
         ),
       );
     }
   }
 
-  Options _authOptions(bool requiresAuth) {
-    return Options(extra: {'requiresAuth': requiresAuth});
+  Options _authOptions(
+    bool requiresAuth, {
+    bool skipAuthRefresh = false,
+    String? authorizationToken,
+  }) {
+    return Options(
+      headers: authorizationToken == null || authorizationToken.isEmpty
+          ? null
+          : {'Authorization': 'Bearer $authorizationToken'},
+      extra: {'requiresAuth': requiresAuth, 'skipAuthRefresh': skipAuthRefresh},
+    );
   }
 
   Future<Response> get(
@@ -153,11 +163,17 @@ class ApiService {
     String endpoint,
     dynamic body, {
     bool requiresAuth = false,
+    bool skipAuthRefresh = false,
+    String? authorizationToken,
   }) async {
     return await _dio.post(
       endpoint,
       data: body,
-      options: _authOptions(requiresAuth),
+      options: _authOptions(
+        requiresAuth,
+        skipAuthRefresh: skipAuthRefresh,
+        authorizationToken: authorizationToken,
+      ),
     );
   }
 
@@ -191,10 +207,7 @@ class ApiService {
     final data = response.data;
 
     if (data == null) {
-      return {
-        'success': false,
-        'message': 'Empty response from server',
-      };
+      return {'success': false, 'message': 'Empty response from server'};
     }
 
     if (data is Map<String, dynamic>) {
@@ -205,9 +218,79 @@ class ApiService {
       };
     }
 
-    return {
-      'success': false,
-      'message': data.toString(),
-    };
+    return {'success': false, 'message': data.toString()};
+  }
+
+  Future<bool> _refreshTokenSynchronized() {
+    if (_refreshFuture != null) {
+      return _refreshFuture!;
+    }
+
+    final completer = Completer<bool>();
+    _refreshFuture = completer.future;
+
+    () async {
+      try {
+        final token = SharedPrefs.authToken;
+        final refreshToken = SharedPrefs.refreshToken;
+
+        if (token == null || refreshToken == null) {
+          completer.complete(false);
+          return;
+        }
+
+        final refreshDio =
+            refreshDioForTesting ??
+            Dio(BaseOptions(baseUrl: AppConstants.baseUrl));
+        final refreshRes = await refreshDio.post(
+          ApiEndpoints.refresh,
+          data: {'accessToken': token, 'refreshToken': refreshToken},
+        );
+
+        if (refreshRes.statusCode == 200 && refreshRes.data != null) {
+          final data = refreshRes.data;
+          final payload = data['data'];
+          if (payload != null) {
+            final newAccess = payload['accessToken'] as String?;
+            final newRefresh = payload['refreshToken'] as String?;
+            if (newAccess != null && newAccess.isNotEmpty) {
+              await SharedPrefs.setAuthToken(newAccess);
+              if (newRefresh != null && newRefresh.isNotEmpty) {
+                await SharedPrefs.setRefreshToken(newRefresh);
+              }
+              completer.complete(true);
+              return;
+            }
+          }
+        }
+        completer.complete(false);
+      } catch (_) {
+        completer.complete(false);
+      } finally {
+        Future.microtask(() {
+          _refreshFuture = null;
+        });
+      }
+    }();
+
+    return _refreshFuture!;
+  }
+
+  Future<void> _handleAuthFailure() async {
+    if (_isLoggingOut) return;
+    _isLoggingOut = true;
+
+    try {
+      await SharedPrefs.removeAuthToken();
+      await SharedPrefs.removeRefreshToken();
+      await SharedPrefs.removeUserData();
+      await WalletCacheService.invalidateAll();
+
+      if (NavigationService.context != null) {
+        NavigationService.navigateAndRemoveUntil(AppRoutes.email);
+      }
+    } finally {
+      _isLoggingOut = false;
+    }
   }
 }

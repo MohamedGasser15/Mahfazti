@@ -31,8 +31,7 @@ class AppSurfaces {
       boxShadow: withShadow
           ? [
               BoxShadow(
-                color: Colors.black
-                    .withValues(alpha: isDarkMode ? 0.25 : 0.03),
+                color: Colors.black.withValues(alpha: isDarkMode ? 0.25 : 0.03),
                 blurRadius: 14,
                 offset: const Offset(0, 4),
               ),

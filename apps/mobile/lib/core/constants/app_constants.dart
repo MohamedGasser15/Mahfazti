@@ -1,12 +1,24 @@
+import 'dart:io' show Platform;
+
 class AppConstants {
   static const String appName = 'محفظتي';
   static const String appVersion = '1.0.0';
+
+  /// Whether code is currently running inside flutter test runner
+  static bool get isTestingEnvironment {
+    try {
+      return Platform.environment.containsKey('FLUTTER_TEST') ||
+          Platform.resolvedExecutable.contains('flutter_tester');
+    } catch (_) {
+      return false;
+    }
+  }
+
   static const String baseUrl = 'https://mahfazati.runasp.net/';
 
-  /// When true, the app uses the in-memory + local storage Mock Backend Engine
-  /// for wallets, transactions, summaries, and categories.
-  /// Set to false when connecting to the real ASP.NET Core backend.
-  static const bool useMockBackend = true;
+  /// When true, uses the mock backend engine.
+  /// Set to false to use the live ASP.NET Core API!
+  static const bool useMockBackend = false;
 
   // Storage Keys
   static const String isFirstTimeKey = 'isFirstTime';

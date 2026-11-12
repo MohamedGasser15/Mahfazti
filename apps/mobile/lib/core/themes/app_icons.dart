@@ -36,8 +36,9 @@ class AppIcons {
   static IconData add({required bool isIOS}) =>
       isIOS ? CupertinoIcons.add : Icons.add_rounded;
 
-  static IconData scan({required bool isIOS}) =>
-      isIOS ? CupertinoIcons.doc_text_viewfinder : Icons.document_scanner_rounded;
+  static IconData scan({required bool isIOS}) => isIOS
+      ? CupertinoIcons.doc_text_viewfinder
+      : Icons.document_scanner_rounded;
 
   static IconData more({required bool isIOS}) =>
       isIOS ? CupertinoIcons.ellipsis : Icons.more_horiz_rounded;
@@ -52,14 +53,17 @@ class AppIcons {
 
   static IconData appearance({required bool isDark, required bool isIOS}) =>
       isIOS
-          ? (isDark ? CupertinoIcons.moon : CupertinoIcons.sun_max)
-          : (isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined);
+      ? (isDark ? CupertinoIcons.moon : CupertinoIcons.sun_max)
+      : (isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined);
 
   static IconData currency({required bool isIOS}) =>
       isIOS ? CupertinoIcons.money_dollar_circle : Icons.payments_outlined;
 
   static IconData categories({required bool isIOS}) =>
       isIOS ? CupertinoIcons.square_grid_2x2 : Icons.category_outlined;
+
+  static IconData plans({required bool isIOS}) =>
+      isIOS ? CupertinoIcons.star_circle_fill : Icons.workspace_premium_rounded;
 
   static IconData profile({required bool isIOS}) =>
       isIOS ? CupertinoIcons.person : Icons.person_outline_rounded;
@@ -108,9 +112,8 @@ class AppIcons {
   static IconData sendUp({required bool isIOS}) =>
       isIOS ? CupertinoIcons.arrow_up : Icons.arrow_upward_rounded;
 
-  static IconData arrowUpRight({required bool isIOS}) => isIOS
-      ? CupertinoIcons.arrow_up_right
-      : Icons.north_east_rounded;
+  static IconData arrowUpRight({required bool isIOS}) =>
+      isIOS ? CupertinoIcons.arrow_up_right : Icons.north_east_rounded;
 
   static IconData copy({required bool isIOS}) =>
       isIOS ? CupertinoIcons.doc_on_doc : Icons.copy_rounded;

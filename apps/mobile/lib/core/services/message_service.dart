@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:neo_cupertino/neo_cupertino.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/themes/app_colors.dart';
-import 'package:my_wallet/core/themes/app_text_styles.dart';
 
 class MessageService {
   static OverlayEntry? _currentEntry;
@@ -78,6 +79,36 @@ class MessageService {
     );
   }
 
+  static void _showToast({
+    required BuildContext context,
+    required String message,
+    required IconData icon,
+    required Color accentColor,
+  }) {
+    _dismiss();
+    HapticFeedback.selectionClick();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final localizedMessage = localizeMessage(
+      context: context,
+      rawMessage: message,
+    );
+    final isRtl = context.isArabic;
+    final overlay = Overlay.of(context, rootOverlay: true);
+    late final OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (_) => _ToastWidget(
+        message: localizedMessage,
+        icon: icon,
+        accentColor: accentColor,
+        isDark: isDark,
+        isRtl: isRtl,
+        onDismiss: _dismiss,
+      ),
+    );
+    _currentEntry = entry;
+    overlay.insert(entry);
+  }
+
   static void showError({
     required BuildContext context,
     required String message,
@@ -126,26 +157,12 @@ class MessageService {
     required Color backgroundColor,
     required IconData icon,
   }) {
-    _dismiss();
-
-    final overlay = Overlay.of(context);
-    final isArabic = context.isArabic;
-    final localizedMsg = localizeMessage(context: context, rawMessage: message);
-
-    late final OverlayEntry entry;
-
-    entry = OverlayEntry(
-      builder: (overlayContext) => _MessageSnackBarWidget(
-        message: localizedMsg,
-        backgroundColor: backgroundColor,
-        icon: icon,
-        isRtl: isArabic,
-        onDismiss: _dismiss,
-      ),
+    _showToast(
+      context: context,
+      message: message,
+      icon: icon,
+      accentColor: backgroundColor,
     );
-
-    _currentEntry = entry;
-    overlay.insert(entry);
   }
 
   static void _dismiss() {
@@ -162,7 +179,13 @@ class MessageService {
 
     // 1. Clean technical prefixes like 'Exception: ', 'DioException: ', 'FormatException: '
     String cleaned = rawMessage
-        .replaceAll(RegExp(r'^(Exception|DioException|FormatException|SocketException):\s*', caseSensitive: false), '')
+        .replaceAll(
+          RegExp(
+            r'^(Exception|DioException|FormatException|SocketException):\s*',
+            caseSensitive: false,
+          ),
+          '',
+        )
         .replaceAll(RegExp(r'\[\s*\d+\s*\]'), '')
         .trim();
 
@@ -178,7 +201,8 @@ class MessageService {
           lower.contains('bad credentials')) {
         return 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
       }
-      if (lower.contains('user not found') || lower.contains('user does not exist')) {
+      if (lower.contains('user not found') ||
+          lower.contains('user does not exist')) {
         return 'المستخدم غير موجود';
       }
       if (lower.contains('duplicate email') ||
@@ -187,7 +211,8 @@ class MessageService {
           lower.contains('email is already taken')) {
         return 'هذا البريد الإلكتروني مستخدم مسبقاً';
       }
-      if (lower.contains('duplicate full name') || lower.contains('duplicate username')) {
+      if (lower.contains('duplicate full name') ||
+          lower.contains('duplicate username')) {
         return 'اسم المستخدم مستخدم مسبقاً';
       }
       if (lower.contains('email not confirmed')) {
@@ -281,7 +306,8 @@ class MessageService {
       if (lower.contains('password reset successfully')) {
         return 'تمت إعادة تعيين كلمة المرور بنجاح! يمكنك الآن تسجيل الدخول';
       }
-      if (lower.contains('cannot open url') || lower.contains('could not launch')) {
+      if (lower.contains('cannot open url') ||
+          lower.contains('could not launch')) {
         return 'تعذر فتح الرابط';
       }
       if (lower.contains('feature coming soon')) {
@@ -303,19 +329,22 @@ class MessageService {
       if (cleaned.contains('البريد الإلكتروني غير مؤكد')) {
         return 'Email is not confirmed';
       }
-      if (cleaned.contains('فشل إنشاء المستخدم') || cleaned.contains('فشل التسجيل')) {
+      if (cleaned.contains('فشل إنشاء المستخدم') ||
+          cleaned.contains('فشل التسجيل')) {
         return 'Failed to create user. Please try again.';
       }
       if (cleaned.contains('فشل تسجيل الدخول')) {
         return 'Login failed. Please check your credentials.';
       }
-      if (cleaned.contains('رمز التحقق غير صحيح') || cleaned.contains('رمز غير صحيح')) {
+      if (cleaned.contains('رمز التحقق غير صحيح') ||
+          cleaned.contains('رمز غير صحيح')) {
         return 'Invalid verification code';
       }
       if (cleaned.contains('رمز إعادة التعيين غير صالح')) {
         return 'Invalid reset code';
       }
-      if (cleaned.contains('فشل إرسال رمز التحقق') || cleaned.contains('فشل إرسال الرمز')) {
+      if (cleaned.contains('فشل إرسال رمز التحقق') ||
+          cleaned.contains('فشل إرسال الرمز')) {
         return 'Failed to send verification code';
       }
       if (cleaned.contains('فشل إعادة تعيين رمز المرور') ||
@@ -399,158 +428,136 @@ class MessageService {
   }
 }
 
-class _MessageSnackBarWidget extends StatefulWidget {
+class _ToastWidget extends StatefulWidget {
   final String message;
-  final Color backgroundColor;
   final IconData icon;
+  final Color accentColor;
+  final bool isDark;
   final bool isRtl;
   final VoidCallback onDismiss;
 
-  const _MessageSnackBarWidget({
+  const _ToastWidget({
     required this.message,
-    required this.backgroundColor,
     required this.icon,
+    required this.accentColor,
+    required this.isDark,
     required this.isRtl,
     required this.onDismiss,
   });
 
   @override
-  State<_MessageSnackBarWidget> createState() => _MessageSnackBarWidgetState();
+  State<_ToastWidget> createState() => _ToastWidgetState();
 }
 
-class _MessageSnackBarWidgetState extends State<_MessageSnackBarWidget>
+class _ToastWidgetState extends State<_ToastWidget>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<Offset> _slideAnimation;
-  late final Animation<double> _fadeAnimation;
-  Timer? _autoDismissTimer;
+  late final Animation<Offset> _slide;
+  late final Animation<double> _fade;
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 450),
-      reverseDuration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 320),
+      reverseDuration: const Duration(milliseconds: 220),
     );
-
-    _slideAnimation =
-        Tween<Offset>(begin: const Offset(0, -1.5), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _controller,
-            curve: Curves.easeOutBack,
-            reverseCurve: Curves.easeInCubic,
-          ),
-        );
-
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-
+    final curved = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    );
+    _slide = Tween<Offset>(
+      begin: const Offset(0, -0.35),
+      end: Offset.zero,
+    ).animate(curved);
+    _fade = Tween<double>(begin: 0, end: 1).animate(curved);
     _controller.forward();
-
-    _autoDismissTimer = Timer(const Duration(seconds: 4), () {
-      if (mounted) _handleDismiss();
-    });
+    _timer = Timer(const Duration(seconds: 3), _handleDismiss);
   }
 
   Future<void> _handleDismiss() async {
-    _autoDismissTimer?.cancel();
-    if (mounted) {
-      await _controller.reverse();
-    }
+    _timer?.cancel();
+    if (mounted) await _controller.reverse();
     widget.onDismiss();
   }
 
   @override
   void dispose() {
-    _autoDismissTimer?.cancel();
+    _timer?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final topPadding = MediaQuery.of(context).viewPadding.top + 12;
-
+    const toastRadius = BorderRadius.all(Radius.circular(18));
+    final background = widget.isDark
+        ? const Color(0xFF242428).withValues(alpha: 0.94)
+        : const Color(0xFFF8F8FA).withValues(alpha: 0.96);
     return Positioned(
-      top: topPadding,
-      left: 20,
-      right: 20,
+      top: MediaQuery.of(context).viewPadding.top + 8,
+      left: 16,
+      right: 16,
       child: FadeTransition(
-        opacity: _fadeAnimation,
+        opacity: _fade,
         child: SlideTransition(
-          position: _slideAnimation,
-          child: Material(
-            color: Colors.transparent,
-            child: Directionality(
-              textDirection:
-                  widget.isRtl ? TextDirection.rtl : TextDirection.ltr,
-              child: GestureDetector(
-                onTap: _handleDismiss,
+          position: _slide,
+          child: GestureDetector(
+            onTap: _handleDismiss,
+            child: ClipRRect(
+              borderRadius: toastRadius,
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
+                    horizontal: 15,
+                    vertical: 13,
                   ),
                   decoration: BoxDecoration(
-                    color: widget.backgroundColor,
-                    borderRadius: BorderRadius.circular(18),
+                    color: background,
+                    borderRadius: toastRadius,
+                    border: Border.all(
+                      color: widget.isDark
+                          ? Colors.white.withValues(alpha: 0.10)
+                          : Colors.black.withValues(alpha: 0.06),
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: widget.backgroundColor.withValues(alpha: 0.35),
-                        blurRadius: 20,
+                        color: Colors.black.withValues(
+                          alpha: widget.isDark ? 0.25 : 0.10,
+                        ),
+                        blurRadius: 22,
                         offset: const Offset(0, 8),
-                        spreadRadius: 2,
-                      ),
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(widget.icon, color: Colors.white, size: 22),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          widget.message,
-                          style: AppTextStyles.body(
-                            color: Colors.white,
-                            size: 15,
-                            weight: FontWeight.w600,
-                            height: 1.4,
+                  child: Directionality(
+                    textDirection: widget.isRtl
+                        ? TextDirection.rtl
+                        : TextDirection.ltr,
+                    child: Row(
+                      children: [
+                        Icon(widget.icon, color: widget.accentColor, size: 22),
+                        const SizedBox(width: 11),
+                        Expanded(
+                          child: Text(
+                            widget.message,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: widget.isDark
+                                  ? Colors.white
+                                  : const Color(0xFF1C1C1E),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              decoration: TextDecoration.none,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: _handleDismiss,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.close_rounded,
-                            color: Colors.white,
-                            size: 16,
-                          ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

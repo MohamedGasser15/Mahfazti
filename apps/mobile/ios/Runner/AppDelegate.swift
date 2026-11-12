@@ -1,7 +1,6 @@
 import Flutter
 import UIKit
 import WatchConnectivity
-import FBSDKCoreKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, WCSessionDelegate {
@@ -13,9 +12,9 @@ import FBSDKCoreKit
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
         
-print("🚀🚀🚀 APP DELEGATE STARTED 🚀🚀🚀")  // ← ضيف ده
+        print("🚀🚀🚀 APP DELEGATE STARTED 🚀🚀🚀")
     
-    GeneratedPluginRegistrant.register(with: self)
+        GeneratedPluginRegistrant.register(with: self)
         
         if WCSession.isSupported() {
             WCSession.default.delegate = self
@@ -24,11 +23,6 @@ print("🚀🚀🚀 APP DELEGATE STARTED 🚀🚀🚀")  // ← ضيف ده
         
         // ✅ استنى الـ UI يتجهز بـ timer
         setupFlutterChannelWhenReady()
-        
-        ApplicationDelegate.shared.application(
-            application,
-            didFinishLaunchingWithOptions: launchOptions
-        )
 
         return super.application(application, didFinishLaunchingWithOptions: launchOptions)
     }
@@ -38,12 +32,6 @@ print("🚀🚀🚀 APP DELEGATE STARTED 🚀🚀🚀")  // ← ضيف ده
         open url: URL,
         options: [UIApplication.OpenURLOptionsKey: Any] = [:]
     ) -> Bool {
-        ApplicationDelegate.shared.application(
-            app,
-            open: url,
-            sourceApplication: options[UIApplication.OpenURLOptionsKey.sourceApplication] as? String,
-            annotation: options[UIApplication.OpenURLOptionsKey.annotation]
-        )
         return super.application(app, open: url, options: options)
     }
     

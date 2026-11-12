@@ -1,4 +1,5 @@
 // core/themes/app_theme.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:my_wallet/core/utils/language_service.dart';
 import 'app_colors.dart';
@@ -22,12 +23,16 @@ class AppTheme {
   static ThemeData getLightTheme([Locale? locale]) {
     final font = getFontFamily(locale);
     final fallback = getFontFamilyFallback(locale);
+    final isIOS = defaultTargetPlatform == TargetPlatform.iOS;
 
     return ThemeData(
       useMaterial3: true,
       fontFamily: font,
       fontFamilyFallback: fallback,
       brightness: Brightness.light,
+      splashFactory: isIOS ? NoSplash.splashFactory : null,
+      splashColor: isIOS ? Colors.transparent : null,
+      highlightColor: isIOS ? Colors.black.withValues(alpha: 0.04) : null,
       scaffoldBackgroundColor: AppColors.primaryWhite,
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.primaryWhite,
@@ -105,17 +110,11 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: AppColors.gray400,
-            width: 1.0,
-          ),
+          borderSide: const BorderSide(color: AppColors.gray400, width: 1.0),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: AppColors.accentRed,
-            width: 1.2,
-          ),
+          borderSide: const BorderSide(color: AppColors.accentRed, width: 1.2),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
@@ -176,16 +175,20 @@ class AppTheme {
       ),
     );
   }
-  
+
   static ThemeData getDarkTheme([Locale? locale]) {
     final font = getFontFamily(locale);
     final fallback = getFontFamilyFallback(locale);
+    final isIOS = defaultTargetPlatform == TargetPlatform.iOS;
 
     return ThemeData(
       useMaterial3: true,
       fontFamily: font,
       fontFamilyFallback: fallback,
       brightness: Brightness.dark,
+      splashFactory: isIOS ? NoSplash.splashFactory : null,
+      splashColor: isIOS ? Colors.transparent : null,
+      highlightColor: isIOS ? Colors.white.withValues(alpha: 0.05) : null,
       scaffoldBackgroundColor: AppColors.primaryBlack,
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.primaryBlack,
@@ -263,17 +266,11 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: AppColors.gray600,
-            width: 1.0,
-          ),
+          borderSide: const BorderSide(color: AppColors.gray600, width: 1.0),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: AppColors.accentRed,
-            width: 1.2,
-          ),
+          borderSide: const BorderSide(color: AppColors.accentRed, width: 1.2),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,

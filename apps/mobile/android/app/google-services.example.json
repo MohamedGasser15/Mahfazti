@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "45964007233",
+    "project_id": "mahfazti-b3c28",
+    "storage_bucket": "mahfazti-b3c28.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:45964007233:android:167bf650ebbfd001b633c0",
+        "android_client_info": {
+          "package_name": "com.mahfazti.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "45964007233-3pn2i0h0mt71f51jj2i07r6a0lidoo00.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "YOUR_API_KEY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "45964007233-3pn2i0h0mt71f51jj2i07r6a0lidoo00.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "45964007233-vr2d10oiv0454k0kku15mfjdnnd9dqan.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.mahfazti.wallet"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

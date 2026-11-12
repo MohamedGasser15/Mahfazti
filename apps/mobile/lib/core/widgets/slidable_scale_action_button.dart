@@ -54,7 +54,9 @@ class SlidableScaleActionButton extends StatelessWidget {
         }
 
         // 4. Opacity: gentle atmospheric fade-in from distance
-        final opacity = Curves.easeInCubic.transform(normalized.clamp(0.0, 1.0));
+        final opacity = Curves.easeInCubic.transform(
+          normalized.clamp(0.0, 1.0),
+        );
 
         // 5. Subtle depth shift along Y axis (floats up slightly into place)
         final translateY = (1.0 - normalized.clamp(0.0, 1.0)) * 6.0;
@@ -94,16 +96,9 @@ class SlidableScaleActionButton extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            border: Border.all(
-              color: borderColor,
-              width: 0.8,
-            ),
+            border: Border.all(color: borderColor, width: 0.8),
           ),
-          child: Icon(
-            icon,
-            size: iconSize,
-            color: Colors.white,
-          ),
+          child: Icon(icon, size: iconSize, color: Colors.white),
         ),
         const SizedBox(height: 5),
         Text(

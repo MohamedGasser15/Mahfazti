@@ -12,23 +12,19 @@ class AppResponsive {
   static double fontScale(BuildContext context) =>
       isTablet(context) ? 1.15 : 1.0;
 
-  static EdgeInsets screenPadding(BuildContext context) =>
-      isTablet(context)
-          ? const EdgeInsets.symmetric(horizontal: 60, vertical: 24)
-          : const EdgeInsets.symmetric(horizontal: 20, vertical: 16);
+  static EdgeInsets screenPadding(BuildContext context) => isTablet(context)
+      ? const EdgeInsets.symmetric(horizontal: 60, vertical: 24)
+      : const EdgeInsets.symmetric(horizontal: 20, vertical: 16);
 
   static EdgeInsets horizontalPadding(BuildContext context) =>
-      EdgeInsets.symmetric(
-        horizontal: isTablet(context) ? 60 : 20,
-      );
+      EdgeInsets.symmetric(horizontal: isTablet(context) ? 60 : 20);
 
   static double bottomNavHeight(BuildContext context) =>
       isTablet(context) ? 100 : 80;
 
-  static double cardWidth(BuildContext context) =>
-      isTablet(context)
-          ? MediaQuery.sizeOf(context).width * 0.65
-          : MediaQuery.sizeOf(context).width * 0.92;
+  static double cardWidth(BuildContext context) => isTablet(context)
+      ? MediaQuery.sizeOf(context).width * 0.65
+      : MediaQuery.sizeOf(context).width * 0.92;
 
   static double dialogWidth(BuildContext context) =>
       isTablet(context) ? 500 : MediaQuery.sizeOf(context).width * 0.92;
@@ -61,10 +57,7 @@ class ResponsiveWrapper extends StatelessWidget {
     );
 
     if (padding != null) {
-      content = Padding(
-        padding: padding!,
-        child: content,
-      );
+      content = Padding(padding: padding!, child: content);
     }
 
     return content;

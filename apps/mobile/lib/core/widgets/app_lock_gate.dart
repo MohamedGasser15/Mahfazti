@@ -30,7 +30,8 @@ class _AppLockGateState extends State<AppLockGate> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final service = Provider.of<AppLockService>(context, listen: false);
 
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
       service.onAppPaused();
     } else if (state == AppLifecycleState.resumed) {
       service.onAppResumed(localizedReason: context.l10n.appLockPrompt);
@@ -41,7 +42,8 @@ class _AppLockGateState extends State<AppLockGate> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return Consumer<AppLockService>(
       builder: (context, appLockService, _) {
-        final shouldLock = appLockService.isEnabled &&
+        final shouldLock =
+            appLockService.isEnabled &&
             appLockService.isLocked &&
             SharedPrefs.authToken != null;
 
@@ -77,11 +79,17 @@ class _AppLockScreenState extends State<AppLockScreen> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDarkMode ? const Color(0xFF09090B) : const Color(0xFFF8F8FA);
+    final bgColor = isDarkMode
+        ? const Color(0xFF09090B)
+        : const Color(0xFFF8F8FA);
     final cardBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
-    final borderColor = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
+    final borderColor = isDarkMode
+        ? const Color(0xFF27272A)
+        : const Color(0xFFE4E4E7);
     final titleColor = isDarkMode ? Colors.white : const Color(0xFF09090B);
-    final subColor = isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
+    final subColor = isDarkMode
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF71717A);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -99,7 +107,9 @@ class _AppLockScreenState extends State<AppLockScreen> {
                   padding: const EdgeInsets.all(3.5),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                    color: isDarkMode
+                        ? const Color(0xFF27272A)
+                        : const Color(0xFFE4E4E7),
                     boxShadow: isDarkMode
                         ? null
                         : [
@@ -146,11 +156,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
                 Text(
                   context.l10n.appLockLockedMessage,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.5,
-                    color: subColor,
-                  ),
+                  style: TextStyle(fontSize: 14, height: 1.5, color: subColor),
                 ),
 
                 const Spacer(flex: 3),
@@ -161,12 +167,21 @@ class _AppLockScreenState extends State<AppLockScreen> {
                   height: 52,
                   child: ElevatedButton(
                     onPressed: () {
-                      final service = Provider.of<AppLockService>(context, listen: false);
-                      service.unlock(localizedReason: context.l10n.appLockPrompt);
+                      final service = Provider.of<AppLockService>(
+                        context,
+                        listen: false,
+                      );
+                      service.unlock(
+                        localizedReason: context.l10n.appLockPrompt,
+                      );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
-                      foregroundColor: isDarkMode ? const Color(0xFF09090B) : Colors.white,
+                      backgroundColor: isDarkMode
+                          ? Colors.white
+                          : const Color(0xFF09090B),
+                      foregroundColor: isDarkMode
+                          ? const Color(0xFF09090B)
+                          : Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
@@ -175,10 +190,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(
-                          Icons.fingerprint_rounded,
-                          size: 22,
-                        ),
+                        const Icon(Icons.fingerprint_rounded, size: 22),
                         const SizedBox(width: 10),
                         Text(
                           context.l10n.appLockUnlock,

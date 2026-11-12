@@ -1,9 +1,13 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:my_wallet/core/constants/app_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SharedPrefs {
   static late SharedPreferences _prefs;
+  static final ValueNotifier<String> currencyNotifier = ValueNotifier<String>(
+    'EGP',
+  );
   static const FlutterSecureStorage _secure = FlutterSecureStorage();
 
   static String? _authToken;
@@ -12,6 +16,8 @@ class SharedPrefs {
 
   static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
+    currencyNotifier.value =
+        _prefs.getString(AppConstants.selectedCurrencyKey) ?? 'EGP';
     _authToken = await _secure.read(key: AppConstants.authTokenKey);
     _refreshToken = await _secure.read(key: AppConstants.refreshTokenKey);
     _userData = await _secure.read(key: AppConstants.userDataKey);
@@ -68,6 +74,9 @@ class SharedPrefs {
 
   static Future<void> setCurrency(String currency) async {
     await _prefs.setString(AppConstants.selectedCurrencyKey, currency);
+    if (currencyNotifier.value != currency) {
+      currencyNotifier.value = currency;
+    }
   }
 
   // User Data (stored securely)

@@ -12,6 +12,9 @@ import 'package:my_wallet/core/utils/navigation_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/core/widgets/app_lock_gate.dart';
 import 'package:neo_cupertino/neo_cupertino.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:my_wallet/firebase_options.dart';
+import 'package:my_wallet/core/services/push_notification_service.dart';
 import 'package:my_wallet/features/splash/presentation/screens/splash_screen.dart';
 import 'package:my_wallet/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
@@ -24,23 +27,35 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.dark,
-    systemNavigationBarColor: Colors.black,
-    systemNavigationBarIconBrightness: Brightness.light,
-  ));
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.black,
+      systemNavigationBarIconBrightness: Brightness.light,
+    ),
+  );
 
   WatchService.initialize();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    await PushNotificationService().initialize();
+  } catch (e) {
+    debugPrint('Firebase initialization failed: $e');
+  }
   await SharedPrefs.init();
   await ThemeService.init();
   await LanguageService.init();
   await LiquidGlassWidgets.initialize();
 
-  runApp(LiquidGlassWidgets.wrap(
-    brightnessResolver: Theme.maybeBrightnessOf,
-    child: const MyWalletApp(),
-  ));
+  runApp(
+    LiquidGlassWidgets.wrap(
+      brightnessResolver: Theme.maybeBrightnessOf,
+      child: const MyWalletApp(),
+    ),
+  );
 }
 
 class MyWalletApp extends StatefulWidget {
@@ -112,10 +127,7 @@ class _MyWalletAppState extends State<MyWalletApp> {
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
-            supportedLocales: const [
-              Locale('en', 'US'),
-              Locale('ar', 'SA'),
-            ],
+            supportedLocales: const [Locale('en', 'US'), Locale('ar', 'SA')],
             theme: AppTheme.getLightTheme(_currentLocale),
             darkTheme: AppTheme.getDarkTheme(_currentLocale),
             themeMode: themeMode,
@@ -128,6 +140,8 @@ class _MyWalletAppState extends State<MyWalletApp> {
                 child: MediaQuery(
                   data: MediaQuery.of(context).copyWith(
                     textScaler: const TextScaler.linear(1.0),
+                    // Use Flutter's edit menu to avoid overlapping iOS system menus.
+                    supportsShowingSystemContextMenu: false,
                   ),
                   child: AppLockGate(child: child!),
                 ),

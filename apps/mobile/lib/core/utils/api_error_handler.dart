@@ -17,11 +17,14 @@ class ApiErrorHandler {
           final responseData = error.response?.data;
           if (responseData != null) {
             if (responseData is Map) {
-              if (responseData.containsKey('message') && responseData['message'] != null) {
+              if (responseData.containsKey('message') &&
+                  responseData['message'] != null) {
                 msg = responseData['message'].toString();
-              } else if (responseData.containsKey('error') && responseData['error'] != null) {
+              } else if (responseData.containsKey('error') &&
+                  responseData['error'] != null) {
                 msg = responseData['error'].toString();
-              } else if (responseData.containsKey('errors') && responseData['errors'] != null) {
+              } else if (responseData.containsKey('errors') &&
+                  responseData['errors'] != null) {
                 final errors = responseData['errors'];
                 if (errors is Map && errors.isNotEmpty) {
                   final firstVal = errors.values.first;
@@ -33,10 +36,12 @@ class ApiErrorHandler {
                 } else if (errors is List && errors.isNotEmpty) {
                   msg = errors.first.toString();
                 } else {
-                  msg = 'Server error (${error.response?.statusCode ?? 'unknown'})';
+                  msg =
+                      'Server error (${error.response?.statusCode ?? 'unknown'})';
                 }
               } else {
-                msg = 'Server error (${error.response?.statusCode ?? 'unknown'})';
+                msg =
+                    'Server error (${error.response?.statusCode ?? 'unknown'})';
               }
             } else if (responseData is String && responseData.isNotEmpty) {
               msg = responseData;
