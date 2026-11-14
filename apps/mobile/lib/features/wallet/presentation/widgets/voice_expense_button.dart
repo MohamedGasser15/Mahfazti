@@ -4,6 +4,7 @@ import 'package:neo_cupertino/neo_cupertino.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/themes/app_icons.dart';
+import 'package:my_wallet/core/widgets/app_progress_indicator.dart';
 import 'package:my_wallet/features/wallet/data/models/voice_expense_model.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
 
@@ -128,7 +129,11 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
     _hasProcessed = true;
     await _speech.stop();
 
-    if (mounted) setState(() { _isListening = false; _isProcessing = true; });
+    if (mounted)
+      setState(() {
+        _isListening = false;
+        _isProcessing = true;
+      });
 
     if (_recognizedText.isNotEmpty) {
       try {
@@ -136,22 +141,23 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
           _recognizedText,
           language: _isArabic ? 'ar' : 'en',
         );
-        widget.onResult(VoiceExpenseResult(
-          amount: result.amount,
-          transactionType: result.transactionType,
-          categoryId: result.categoryId,
-          categoryNameAr: result.categoryNameAr,
-          categoryNameEn: result.categoryNameEn,
-          title: result.title,
-          note: null,
-          isSuccess: result.isSuccess,
-          errorMessage: result.errorMessage,
-        ));
+        widget.onResult(
+          VoiceExpenseResult(
+            amount: result.amount,
+            transactionType: result.transactionType,
+            categoryId: result.categoryId,
+            categoryNameAr: result.categoryNameAr,
+            categoryNameEn: result.categoryNameEn,
+            title: result.title,
+            note: null,
+            isSuccess: result.isSuccess,
+            errorMessage: result.errorMessage,
+          ),
+        );
       } catch (e) {
-        widget.onResult(VoiceExpenseResult(
-          isSuccess: false,
-          errorMessage: serverErrorMsg,
-        ));
+        widget.onResult(
+          VoiceExpenseResult(isSuccess: false, errorMessage: serverErrorMsg),
+        );
       }
     }
 
@@ -191,23 +197,24 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
                           glassColor: _isListening
                               ? const Color(0xFFF43F5E).withValues(alpha: 0.28)
                               : (isDark
-                                  ? Colors.white.withValues(alpha: 0.18)
-                                  : Colors.white.withValues(alpha: 0.22)),
+                                    ? Colors.white.withValues(alpha: 0.18)
+                                    : Colors.white.withValues(alpha: 0.22)),
                         ),
-                        glowColor: _isListening ? const Color(0xFFF43F5E) : null,
+                        glowColor: _isListening
+                            ? const Color(0xFFF43F5E)
+                            : null,
                         child: Center(
                           child: _isProcessing
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
+                              ? const AppProgressIndicator.small(
+                                  color: Colors.white,
                                 )
                               : Icon(
-                                  _isListening ? AppIcons.stop(isIOS: Platform.isIOS) : AppIcons.mic(isIOS: Platform.isIOS),
-                                  color: _isListening ? const Color(0xFFF43F5E) : Colors.white,
+                                  _isListening
+                                      ? AppIcons.stop(isIOS: Platform.isIOS)
+                                      : AppIcons.mic(isIOS: Platform.isIOS),
+                                  color: _isListening
+                                      ? const Color(0xFFF43F5E)
+                                      : Colors.white,
                                   size: 22,
                                 ),
                         ),
@@ -225,19 +232,27 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
                           height: 52,
                           decoration: BoxDecoration(
                             color: _isListening
-                                ? const Color(0xFFF43F5E).withValues(alpha: 0.22)
-                                : (isDark ? const Color(0xFF18181B) : const Color(0xFFF4F4F5)),
+                                ? const Color(
+                                    0xFFF43F5E,
+                                  ).withValues(alpha: 0.22)
+                                : (isDark
+                                      ? const Color(0xFF18181B)
+                                      : const Color(0xFFF4F4F5)),
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: _isListening
                                   ? const Color(0xFFF43F5E)
-                                  : (isDark ? const Color(0xFF27272A) : const Color(0xFFE4E4E7)),
+                                  : (isDark
+                                        ? const Color(0xFF27272A)
+                                        : const Color(0xFFE4E4E7)),
                               width: _isListening ? 1.5 : 1.0,
                             ),
                             boxShadow: _isListening
                                 ? [
                                     BoxShadow(
-                                      color: const Color(0xFFF43F5E).withValues(alpha: 0.25 * _pulseController.value),
+                                      color: const Color(0xFFF43F5E).withValues(
+                                        alpha: 0.25 * _pulseController.value,
+                                      ),
                                       blurRadius: 10,
                                       spreadRadius: 2,
                                     ),
@@ -246,19 +261,18 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
                           ),
                           child: Center(
                             child: _isProcessing
-                                ? SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: isDark ? Colors.white : Colors.black,
-                                    ),
+                                ? AppProgressIndicator.small(
+                                    color: isDark ? Colors.white : Colors.black,
                                   )
                                 : Icon(
-                                    _isListening ? AppIcons.stop(isIOS: Platform.isIOS) : AppIcons.mic(isIOS: Platform.isIOS),
+                                    _isListening
+                                        ? AppIcons.stop(isIOS: Platform.isIOS)
+                                        : AppIcons.mic(isIOS: Platform.isIOS),
                                     color: _isListening
                                         ? const Color(0xFFF43F5E)
-                                        : (isDark ? Colors.white : Colors.black),
+                                        : (isDark
+                                              ? Colors.white
+                                              : Colors.black),
                                     size: 22,
                                   ),
                           ),
@@ -267,17 +281,17 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
                     ),
               const SizedBox(height: 6),
               Text(
-                _isListening
-                    ? context.l10n.listening
-                    : context.l10n.voice,
+                _isListening ? context.l10n.listening : context.l10n.voice,
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: widget.isInHero ? FontWeight.w700 : FontWeight.w600,
+                  fontWeight: widget.isInHero
+                      ? FontWeight.w700
+                      : FontWeight.w600,
                   color: _isListening
                       ? const Color(0xFFF43F5E)
                       : (widget.isInHero
-                          ? Colors.white
-                          : (isDark ? Colors.grey[400] : Colors.grey[600])),
+                            ? Colors.white
+                            : (isDark ? Colors.grey[400] : Colors.grey[600])),
                   shadows: (widget.isInHero && !isDark && !_isListening)
                       ? [
                           Shadow(
@@ -305,18 +319,24 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
               decoration: BoxDecoration(
                 color: _isListening
                     ? const Color(0xFFF43F5E).withValues(alpha: 0.18)
-                    : (isDark ? const Color(0xFF18181B) : const Color(0xFFF4F4F5)),
+                    : (isDark
+                          ? const Color(0xFF18181B)
+                          : const Color(0xFFF4F4F5)),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: _isListening
                       ? const Color(0xFFF43F5E)
-                      : (isDark ? const Color(0xFF27272A) : const Color(0xFFE4E4E7)),
+                      : (isDark
+                            ? const Color(0xFF27272A)
+                            : const Color(0xFFE4E4E7)),
                   width: _isListening ? 1.5 : 1.0,
                 ),
                 boxShadow: _isListening
                     ? [
                         BoxShadow(
-                          color: const Color(0xFFF43F5E).withValues(alpha: 0.25 * _pulseController.value),
+                          color: const Color(
+                            0xFFF43F5E,
+                          ).withValues(alpha: 0.25 * _pulseController.value),
                           blurRadius: 10,
                           spreadRadius: 2,
                         ),
@@ -328,16 +348,15 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _isProcessing
-                      ? SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: isDark ? Colors.white : Colors.black,
-                          ),
+                      ? AppProgressIndicator(
+                          size: 16,
+                          strokeWidth: 2,
+                          color: isDark ? Colors.white : Colors.black,
                         )
                       : Icon(
-                          _isListening ? AppIcons.stop(isIOS: Platform.isIOS) : AppIcons.mic(isIOS: Platform.isIOS),
+                          _isListening
+                              ? AppIcons.stop(isIOS: Platform.isIOS)
+                              : AppIcons.mic(isIOS: Platform.isIOS),
                           color: _isListening
                               ? const Color(0xFFF43F5E)
                               : (isDark ? Colors.white : Colors.black),
@@ -366,9 +385,14 @@ class _VoiceExpenseButtonState extends State<VoiceExpenseButton>
                     behavior: HitTestBehavior.opaque,
                     onTap: _toggleLanguage,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                        color: isDark
+                            ? const Color(0xFF27272A)
+                            : const Color(0xFFE4E4E7),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(

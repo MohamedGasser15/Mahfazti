@@ -37,15 +37,11 @@ class ProfileRepository {
       throw Exception('New passwords do not match');
     }
 
-    final response = await _apiService.post(
-      ApiEndpoints.changePassword,
-      {
-        'currentPassword': currentPassword,
-        'newPassword': newPassword,
-        'confirmPassword': confirmPassword,
-      },
-      requiresAuth: true,
-    );
+    final response = await _apiService.post(ApiEndpoints.changePassword, {
+      'currentPassword': currentPassword,
+      'newPassword': newPassword,
+      'confirmPassword': confirmPassword,
+    }, requiresAuth: true);
 
     bool success = false;
     if (response.data is bool) {
@@ -64,7 +60,10 @@ class ProfileRepository {
     }
 
     await SharedPrefs.setString(AppConstants.userPasswordKey, newPassword);
-    await SharedPrefs.setSecureString(AppConstants.userPasswordKey, newPassword);
+    await SharedPrefs.setSecureString(
+      AppConstants.userPasswordKey,
+      newPassword,
+    );
   }
 
   Future<UserProfile?> getCachedProfile() async {
@@ -82,16 +81,12 @@ class ProfileRepository {
     String? preferredLanguage,
     String? profileImage,
   }) async {
-    final response = await _apiService.put(
-      ApiEndpoints.profileUpdate,
-      {
-        'fullName': fullName,
-        'userName': userName,
-        'phoneNumber': phoneNumber,
-        if (preferredLanguage != null) 'preferredLanguage': preferredLanguage,
-      },
-      requiresAuth: true,
-    );
+    final response = await _apiService.put(ApiEndpoints.profileUpdate, {
+      'fullName': fullName,
+      'userName': userName,
+      'phoneNumber': phoneNumber,
+      if (preferredLanguage != null) 'preferredLanguage': preferredLanguage,
+    }, requiresAuth: true);
     final data = response.data as Map<String, dynamic>;
     final updated = UserProfile.fromJson(data);
 
@@ -110,5 +105,28 @@ class ProfileRepository {
     await SharedPrefs.setUserData(jsonEncode(currentUserData));
 
     return updated;
+  }
+
+  /// Update user preferred currency on backend
+  Future<void> updateCurrency(String currency) async {
+    final response = await _apiService.put(ApiEndpoints.setCurrency, {
+      'currency': currency,
+    }, requiresAuth: true);
+    final data = _apiService.handleResponse(response);
+    if (data['success'] != true) {
+      throw Exception(data['message'] ?? 'Failed to set currency');
+    }
+    await SharedPrefs.setCurrency(currency);
+  }
+
+  /// Update user preferred language on backend
+  Future<void> updateLanguage(String language) async {
+    final response = await _apiService.put(ApiEndpoints.setLanguage, {
+      'language': language,
+    }, requiresAuth: true);
+    final data = _apiService.handleResponse(response);
+    if (data['success'] != true) {
+      throw Exception(data['message'] ?? 'Failed to set language');
+    }
   }
 }

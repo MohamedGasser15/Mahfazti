@@ -20,6 +20,7 @@ import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/navigation_service.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/core/widgets/app_back_button.dart';
+import 'package:my_wallet/core/widgets/app_progress_indicator.dart';
 import 'package:my_wallet/core/widgets/app_shimmer.dart';
 import 'package:my_wallet/core/widgets/app_states.dart';
 import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
@@ -71,16 +72,14 @@ class _GroupedListItem {
   final int count;
   final WalletTransaction? transaction;
 
-  const _GroupedListItem.header({
-    required this.headerTitle,
-    this.count = 0,
-  })  : isHeader = true,
-        transaction = null;
+  const _GroupedListItem.header({required this.headerTitle, this.count = 0})
+    : isHeader = true,
+      transaction = null;
 
   const _GroupedListItem.transaction(this.transaction)
-      : isHeader = false,
-        headerTitle = null,
-        count = 0;
+    : isHeader = false,
+      headerTitle = null,
+      count = 0;
 }
 
 /// One date bucket (Today / Yesterday / This Week …) with its transactions.
@@ -120,6 +119,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
   @override
   void initState() {
     super.initState();
+    SharedPrefs.currencyNotifier.addListener(_onCurrencyPreferenceChanged);
     if (widget.initialTransactions != null &&
         widget.initialTransactions!.isNotEmpty) {
       _transactions = List.from(widget.initialTransactions!);
@@ -143,12 +143,18 @@ class _TransactionsPageState extends State<TransactionsPage> {
 
   @override
   void dispose() {
+    SharedPrefs.currencyNotifier.removeListener(_onCurrencyPreferenceChanged);
     _syncSubscription?.cancel();
     _scrollController.dispose();
     _searchFocusNode.dispose();
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onCurrencyPreferenceChanged() {
+    if (mounted)
+      setState(() => _currencyCode = SharedPrefs.currencyNotifier.value);
   }
 
   // ================== Helper Methods ==================
@@ -179,8 +185,10 @@ class _TransactionsPageState extends State<TransactionsPage> {
 
   // ================== Data Loading ==================
 
-  Future<void> _loadTransactions(
-      {int page = 1, bool forceRefresh = false}) async {
+  Future<void> _loadTransactions({
+    int page = 1,
+    bool forceRefresh = false,
+  }) async {
     if (!mounted) return;
 
     if (page > 1) {
@@ -190,8 +198,9 @@ class _TransactionsPageState extends State<TransactionsPage> {
 
     if (!forceRefresh && !AppConstants.useMockBackend) {
       final cacheKey = _getCacheKey();
-      final cached =
-          await WalletCacheService.getTransactions(filterKey: cacheKey);
+      final cached = await WalletCacheService.getTransactions(
+        filterKey: cacheKey,
+      );
       if (cached != null) {
         try {
           final transactionsJson = cached['transactions'] as List;
@@ -248,8 +257,10 @@ class _TransactionsPageState extends State<TransactionsPage> {
           'totalPages': response.totalPages,
           'currentPage': response.page,
         };
-        await WalletCacheService.saveTransactions(cacheData,
-            filterKey: cacheKey);
+        await WalletCacheService.saveTransactions(
+          cacheData,
+          filterKey: cacheKey,
+        );
       }
 
       setState(() {
@@ -303,8 +314,9 @@ class _TransactionsPageState extends State<TransactionsPage> {
           _isLoadingMore = false;
         });
         MessageService.showError(
-            context: context,
-            message: context.l10n.failedToLoadMore(e.toString()));
+          context: context,
+          message: context.l10n.failedToLoadMore(e.toString()),
+        );
       }
     }
   }
@@ -331,11 +343,13 @@ class _TransactionsPageState extends State<TransactionsPage> {
 
   void _applySort() {
     if (_sortBy == 'newest') {
-      _filteredTransactions
-          .sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
+      _filteredTransactions.sort(
+        (a, b) => b.transactionDate.compareTo(a.transactionDate),
+      );
     } else if (_sortBy == 'oldest') {
-      _filteredTransactions
-          .sort((a, b) => a.transactionDate.compareTo(b.transactionDate));
+      _filteredTransactions.sort(
+        (a, b) => a.transactionDate.compareTo(b.transactionDate),
+      );
     } else if (_sortBy == 'highest') {
       _filteredTransactions.sort((a, b) => b.amount.compareTo(a.amount));
     }
@@ -623,10 +637,12 @@ class _TransactionsPageState extends State<TransactionsPage> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        backgroundColor:
-                            isDarkMode ? Colors.white : Colors.black,
-                        foregroundColor:
-                            isDarkMode ? Colors.black : Colors.white,
+                        backgroundColor: isDarkMode
+                            ? Colors.white
+                            : Colors.black,
+                        foregroundColor: isDarkMode
+                            ? Colors.black
+                            : Colors.white,
                       ),
                       child: Text(
                         context.l10n.apply,
@@ -670,8 +686,9 @@ class _TransactionsPageState extends State<TransactionsPage> {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final isIOS = Platform.isIOS;
-    final bgColor =
-        isDarkMode ? const Color(0xFF09090B) : const Color(0xFFF8F8FA);
+    final bgColor = isDarkMode
+        ? const Color(0xFF09090B)
+        : const Color(0xFFF8F8FA);
     final hasActiveDateFilter = _fromDate != null || _toDate != null;
 
     return Scaffold(
@@ -689,16 +706,18 @@ class _TransactionsPageState extends State<TransactionsPage> {
         title: AnimatedBuilder(
           animation: _scrollController,
           builder: (context, child) {
-            final offset =
-                _scrollController.hasClients ? _scrollController.offset : 0.0;
+            final offset = _scrollController.hasClients
+                ? _scrollController.offset
+                : 0.0;
             final isAr = Localizations.localeOf(context).languageCode == 'ar';
             final progress = ((offset - 16.0) / 38.0).clamp(0.0, 1.0);
             if (progress <= 0.0) return const SizedBox.shrink();
             final curve = Curves.easeOutCubic.transform(progress);
 
             // Travels in from the left along the continuous diagonal trajectory
-            final incomingX =
-                isAr ? (1.0 - curve) * 60.0 : -(1.0 - curve) * 60.0;
+            final incomingX = isAr
+                ? (1.0 - curve) * 60.0
+                : -(1.0 - curve) * 60.0;
             final incomingY = (1.0 - curve) * 12.0;
             final incomingScale = 0.85 + 0.15 * curve;
 
@@ -714,7 +733,9 @@ class _TransactionsPageState extends State<TransactionsPage> {
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.3,
-                      color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                      color: isDarkMode
+                          ? Colors.white
+                          : const Color(0xFF09090B),
                     ),
                   ),
                 ),
@@ -725,8 +746,9 @@ class _TransactionsPageState extends State<TransactionsPage> {
         flexibleSpace: AnimatedBuilder(
           animation: _scrollController,
           builder: (context, child) {
-            final offset =
-                _scrollController.hasClients ? _scrollController.offset : 0.0;
+            final offset = _scrollController.hasClients
+                ? _scrollController.offset
+                : 0.0;
             final progress = ((offset - 10.0) / 35.0).clamp(0.0, 1.0);
             if (progress <= 0.0) return const SizedBox.shrink();
             return ClipRect(
@@ -736,10 +758,11 @@ class _TransactionsPageState extends State<TransactionsPage> {
                   sigmaY: 20.0 * progress,
                 ),
                 child: Container(
-                  color: (isDarkMode
-                          ? const Color(0xFF09090B)
-                          : const Color(0xFFF8F8FA))
-                      .withValues(alpha: 0.82 * progress),
+                  color:
+                      (isDarkMode
+                              ? const Color(0xFF09090B)
+                              : const Color(0xFFF8F8FA))
+                          .withValues(alpha: 0.82 * progress),
                 ),
               ),
             );
@@ -823,8 +846,9 @@ class _TransactionsPageState extends State<TransactionsPage> {
         AnimatedBuilder(
           animation: _scrollController,
           builder: (context, child) {
-            final offset =
-                _scrollController.hasClients ? _scrollController.offset : 0.0;
+            final offset = _scrollController.hasClients
+                ? _scrollController.offset
+                : 0.0;
             final t = (offset / 55.0).clamp(0.0, 1.0);
             final curve = Curves.easeOutCubic.transform(t);
             final deltaX = isAr ? -curve * 90.0 : curve * 90.0;
@@ -837,10 +861,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
               child: Transform.scale(
                 scale: scale,
                 alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
-                child: Opacity(
-                  opacity: opacity,
-                  child: child,
-                ),
+                child: Opacity(opacity: opacity, child: child),
               ),
             );
           },
@@ -898,7 +919,9 @@ class _TransactionsPageState extends State<TransactionsPage> {
   // ================== Account & Category Header Widgets ==================
 
   List<IosContextMenuItem> _getDateActions(
-      bool isAr, bool hasActiveDateFilter) {
+    bool isAr,
+    bool hasActiveDateFilter,
+  ) {
     return [
       IosContextMenuAction(
         id: 'date_today',
@@ -1065,7 +1088,10 @@ class _TransactionsPageState extends State<TransactionsPage> {
   }
 
   Widget _buildDateSelector(
-      bool isDarkMode, bool isAr, bool hasActiveDateFilter) {
+    bool isDarkMode,
+    bool isAr,
+    bool hasActiveDateFilter,
+  ) {
     final now = DateTime.now();
     String dateText;
     if (hasActiveDateFilter && _fromDate != null && _toDate != null) {
@@ -1104,8 +1130,8 @@ class _TransactionsPageState extends State<TransactionsPage> {
                   color: hasActiveDateFilter
                       ? const Color(0xFF3B82F6)
                       : (isDarkMode
-                          ? Colors.white.withValues(alpha: 0.45)
-                          : const Color(0xFF8E8E93)),
+                            ? Colors.white.withValues(alpha: 0.45)
+                            : const Color(0xFF8E8E93)),
                 ),
                 const SizedBox(width: 5),
                 Text(
@@ -1117,8 +1143,8 @@ class _TransactionsPageState extends State<TransactionsPage> {
                     color: hasActiveDateFilter
                         ? const Color(0xFF3B82F6)
                         : (isDarkMode
-                            ? Colors.white.withValues(alpha: 0.5)
-                            : const Color(0xFF71717A)),
+                              ? Colors.white.withValues(alpha: 0.5)
+                              : const Color(0xFF71717A)),
                   ),
                 ),
               ],
@@ -1277,7 +1303,8 @@ class _TransactionsPageState extends State<TransactionsPage> {
 
           final cat = categories[index - 1];
           final title = isAr ? cat.nameAr : cat.nameEn;
-          final isSelected = _selectedCategory == cat.nameEn ||
+          final isSelected =
+              _selectedCategory == cat.nameEn ||
               _selectedCategory == cat.nameAr;
 
           return _buildCategoryChip(
@@ -1321,15 +1348,15 @@ class _TransactionsPageState extends State<TransactionsPage> {
           color: isSelected
               ? (isDarkMode ? Colors.white : const Color(0xFF09090B))
               : (isDarkMode
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : Colors.black.withValues(alpha: 0.04)),
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.black.withValues(alpha: 0.04)),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected
                 ? Colors.transparent
                 : (isDarkMode
-                    ? Colors.white.withValues(alpha: 0.10)
-                    : Colors.black.withValues(alpha: 0.06)),
+                      ? Colors.white.withValues(alpha: 0.10)
+                      : Colors.black.withValues(alpha: 0.06)),
             width: 0.8,
           ),
           boxShadow: isSelected
@@ -1370,11 +1397,11 @@ class _TransactionsPageState extends State<TransactionsPage> {
                         size: 14.5,
                         color: isSelected
                             ? (isDarkMode
-                                ? const Color(0xFF09090B)
-                                : Colors.white)
+                                  ? const Color(0xFF09090B)
+                                  : Colors.white)
                             : (isDarkMode
-                                ? Colors.white.withValues(alpha: 0.75)
-                                : const Color(0xFF52525B)),
+                                  ? Colors.white.withValues(alpha: 0.75)
+                                  : const Color(0xFF52525B)),
                       ),
                     ),
                   ),
@@ -1390,8 +1417,8 @@ class _TransactionsPageState extends State<TransactionsPage> {
                 color: isSelected
                     ? (isDarkMode ? const Color(0xFF09090B) : Colors.white)
                     : (isDarkMode
-                        ? Colors.white.withValues(alpha: 0.85)
-                        : const Color(0xFF27272A)),
+                          ? Colors.white.withValues(alpha: 0.85)
+                          : const Color(0xFF27272A)),
               ),
             ),
           ],
@@ -1565,8 +1592,11 @@ class _TransactionsPageState extends State<TransactionsPage> {
   bool get _isThisWeekActive {
     if (_fromDate == null || _toDate == null) return false;
     final now = DateTime.now();
-    final startOfWeek =
-        DateTime(now.year, now.month, now.day - (now.weekday - 1));
+    final startOfWeek = DateTime(
+      now.year,
+      now.month,
+      now.day - (now.weekday - 1),
+    );
     return _fromDate!.year == startOfWeek.year &&
         _fromDate!.month == startOfWeek.month &&
         _fromDate!.day == startOfWeek.day;
@@ -1596,7 +1626,9 @@ class _TransactionsPageState extends State<TransactionsPage> {
   // ================== Top Actions (iOS & Android) ==================
 
   IconData _getTransactionCupertinoIcon(
-      WalletTransaction transaction, bool isIOS) {
+    WalletTransaction transaction,
+    bool isIOS,
+  ) {
     if (!isIOS) return transaction.icon;
 
     final cat = (transaction.categoryNameEn ?? '').toLowerCase();
@@ -2038,8 +2070,11 @@ class _TransactionsPageState extends State<TransactionsPage> {
         _loadTransactions(page: 1, forceRefresh: true);
         break;
       case 'date_this_week':
-        final startOfWeek =
-            DateTime(now.year, now.month, now.day - (now.weekday - 1));
+        final startOfWeek = DateTime(
+          now.year,
+          now.month,
+          now.day - (now.weekday - 1),
+        );
         setState(() {
           _fromDate = startOfWeek;
           _toDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
@@ -2098,8 +2133,9 @@ class _TransactionsPageState extends State<TransactionsPage> {
 
   Widget _buildAndroidSearchBar(bool isDarkMode) {
     final cardBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
-    final borderColor =
-        isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
+    final borderColor = isDarkMode
+        ? const Color(0xFF27272A)
+        : const Color(0xFFE4E4E7);
 
     return Container(
       height: 48,
@@ -2109,9 +2145,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
         border: Border.all(color: borderColor, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(
-              alpha: isDarkMode ? 0.35 : 0.06,
-            ),
+            color: Colors.black.withValues(alpha: isDarkMode ? 0.35 : 0.06),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -2132,7 +2166,9 @@ class _TransactionsPageState extends State<TransactionsPage> {
             child: TextField(
               controller: _searchController,
               focusNode: _searchFocusNode,
-              keyboardAppearance: isDarkMode ? Brightness.dark : Brightness.light,
+              keyboardAppearance: isDarkMode
+                  ? Brightness.dark
+                  : Brightness.light,
               decoration: InputDecoration(
                 hintText: context.l10n.searchTransactions,
                 hintStyle: TextStyle(
@@ -2231,8 +2267,9 @@ class _TransactionsPageState extends State<TransactionsPage> {
     bool isDarkMode, {
     required bool isFirst,
   }) {
-    final borderColor =
-        isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
+    final borderColor = isDarkMode
+        ? const Color(0xFF27272A)
+        : const Color(0xFFE4E4E7);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -2291,10 +2328,9 @@ class _TransactionsPageState extends State<TransactionsPage> {
 
     final items = <_GroupedListItem>[];
     map.forEach((title, txList) {
-      items.add(_GroupedListItem.header(
-        headerTitle: title,
-        count: txList.length,
-      ));
+      items.add(
+        _GroupedListItem.header(headerTitle: title, count: txList.length),
+      );
       for (final tx in txList) {
         items.add(_GroupedListItem.transaction(tx));
       }
@@ -2375,9 +2411,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
           parent: AlwaysScrollableScrollPhysics(),
         ),
         slivers: [
-          CupertinoSliverRefreshControl(
-            onRefresh: _refreshData,
-          ),
+          CupertinoSliverRefreshControl(onRefresh: _refreshData),
           SliverToBoxAdapter(
             child: _buildScrollableHeader(
               isDarkMode: isDarkMode,
@@ -2388,10 +2422,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
           if (_isLoading)
             SliverToBoxAdapter(child: _buildShimmerLoading())
           else if (_errorMessage != null)
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: _buildErrorState(),
-            )
+            SliverFillRemaining(hasScrollBody: false, child: _buildErrorState())
           else if (_filteredTransactions.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
@@ -2408,25 +2439,20 @@ class _TransactionsPageState extends State<TransactionsPage> {
             SliverPadding(
               padding: EdgeInsets.fromLTRB(20, 4, 20, listBottom),
               sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    if (index < sections.length) {
-                      return _buildSectionBlock(
-                        sections[index],
-                        isDarkMode,
-                        isFirst: index == 0,
-                      );
-                    } else {
-                      return const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Center(
-                          child: CupertinoActivityIndicator(),
-                        ),
-                      );
-                    }
-                  },
-                  childCount: sections.length + (_isLoadingMore ? 1 : 0),
-                ),
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  if (index < sections.length) {
+                    return _buildSectionBlock(
+                      sections[index],
+                      isDarkMode,
+                      isFirst: index == 0,
+                    );
+                  } else {
+                    return const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Center(child: CupertinoActivityIndicator()),
+                    );
+                  }
+                }, childCount: sections.length + (_isLoadingMore ? 1 : 0)),
               ),
             ),
         ],
@@ -2503,12 +2529,11 @@ class _TransactionsPageState extends State<TransactionsPage> {
                       } else {
                         return const Padding(
                           padding: EdgeInsets.all(16),
-                          child: Center(child: CircularProgressIndicator()),
+                          child: Center(child: AppProgressIndicator()),
                         );
                       }
                     },
-                    childCount: groupedItems.length +
-                        (_isLoadingMore ? 1 : 0),
+                    childCount: groupedItems.length + (_isLoadingMore ? 1 : 0),
                   ),
                 ),
               ),
@@ -2529,7 +2554,8 @@ class _TransactionsPageState extends State<TransactionsPage> {
     final isIOS = Platform.isIOS;
     final isIncome = transaction.isDeposit;
     final locale = Localizations.localeOf(context).languageCode;
-    final categoryName = locale == 'ar'
+    final isAr = locale == 'ar';
+    final categoryName = isAr
         ? (transaction.categoryNameAr ?? transaction.categoryNameEn ?? '')
         : (transaction.categoryNameEn ?? transaction.categoryNameAr ?? '');
 
@@ -2550,7 +2576,9 @@ class _TransactionsPageState extends State<TransactionsPage> {
               },
               backgroundColor: const Color(0xFFEF4444),
               foregroundColor: Colors.white,
-              borderRadius: grouped ? BorderRadius.zero : BorderRadius.circular(18),
+              borderRadius: grouped
+                  ? BorderRadius.zero
+                  : BorderRadius.circular(18),
               padding: EdgeInsets.zero,
               child: const Icon(
                 CupertinoIcons.trash_fill,
@@ -2565,148 +2593,309 @@ class _TransactionsPageState extends State<TransactionsPage> {
           decoration: grouped
               ? null
               : isGlass
-                  ? BoxDecoration(
-                      color: isDarkMode
-                          ? Colors.white.withValues(alpha: 0.07)
-                          : Colors.white.withValues(alpha: 0.55),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: isDarkMode
-                            ? Colors.white.withValues(alpha: 0.12)
-                            : Colors.white.withValues(alpha: 0.85),
-                        width: 0.8,
+              ? BoxDecoration(
+                  color: isDarkMode
+                      ? Colors.white.withValues(alpha: 0.07)
+                      : Colors.white.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: isDarkMode
+                        ? Colors.white.withValues(alpha: 0.12)
+                        : Colors.white.withValues(alpha: 0.85),
+                    width: 0.8,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(
+                        alpha: isDarkMode ? 0.25 : 0.04,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black
-                              .withValues(alpha: isDarkMode ? 0.25 : 0.04),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    )
-                  : AppSurfaces.cardDecoration(
-                      isDarkMode: isDarkMode,
-                      radius: 18,
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
                     ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: grouped ? BorderRadius.zero : BorderRadius.circular(18),
-              onTap: () async {
-                HapticFeedback.selectionClick();
-                final edit = widget.onEditTransaction;
-                if (edit == null) return;
-                await edit(transaction);
-                if (!mounted) return;
-                await _refreshData();
-              },
-              onLongPress: () {
-                _showDeleteDialog(transaction);
-              },
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Row(
-                  children: [
-                    // Category Mono Icon Container
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: isDarkMode
-                            ? const Color(0xFF27272A)
-                            : const Color(0xFFE4E4E7),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Icon(
-                        _getTransactionCupertinoIcon(transaction, isIOS),
-                        color: isDarkMode ? Colors.white : Colors.black,
-                        size: 20,
-                      ),
+                  ],
+                )
+              : AppSurfaces.cardDecoration(isDarkMode: isDarkMode, radius: 18),
+          child: isIOS
+              ? IosHoldContextMenu(
+                  borderRadius: grouped
+                      ? BorderRadius.zero
+                      : BorderRadius.circular(18),
+                  onTap: () async {
+                    HapticFeedback.selectionClick();
+                    final edit = widget.onEditTransaction;
+                    if (edit == null) return;
+                    await edit(transaction);
+                    if (!mounted) return;
+                    await _refreshData();
+                  },
+                  actions: [
+                    IosContextMenuAction(
+                      id: 'edit',
+                      title: isAr ? 'تعديل المعاملة' : 'Edit Transaction',
+                      iconSystemName: 'pencil',
                     ),
-                    const SizedBox(width: 14),
-
-                    // Title & Category/Date info
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            transaction.title,
-                            style: TextStyle(
-                              fontSize: 15.5,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -0.2,
-                              color: isDarkMode ? Colors.white : Colors.black,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                    IosContextMenuAction(
+                      id: 'copy',
+                      title: isAr ? 'نسخ المبلغ' : 'Copy Amount',
+                      iconSystemName: 'doc.on.doc',
+                    ),
+                    IosContextMenuAction(
+                      id: 'delete',
+                      title: isAr ? 'حذف المعاملة' : 'Delete Transaction',
+                      iconSystemName: 'trash',
+                      destructive: true,
+                    ),
+                  ],
+                  onSelected: (actionId) async {
+                    switch (actionId) {
+                      case 'edit':
+                        final edit = widget.onEditTransaction;
+                        if (edit == null) return;
+                        await edit(transaction);
+                        if (!mounted) return;
+                        await _refreshData();
+                        break;
+                      case 'copy':
+                        HapticFeedback.selectionClick();
+                        final amountStr = transaction.amount % 1 == 0
+                            ? transaction.amount.toInt().toString()
+                            : transaction.amount.toStringAsFixed(2);
+                        Clipboard.setData(ClipboardData(text: amountStr));
+                        break;
+                      case 'delete':
+                        _showDeleteDialog(transaction);
+                        break;
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        // Category Mono Icon Container
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: isDarkMode
+                                ? const Color(0xFF27272A)
+                                : const Color(0xFFE4E4E7),
+                            borderRadius: BorderRadius.circular(14),
                           ),
-                          if (categoryName.isNotEmpty) ...[
-                            const SizedBox(height: 4),
+                          child: Icon(
+                            _getTransactionCupertinoIcon(transaction, isIOS),
+                            color: isDarkMode ? Colors.white : Colors.black,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+
+                        // Title & Category/Date info
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                transaction.title,
+                                style: TextStyle(
+                                  fontSize: 15.5,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.2,
+                                  color: isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (categoryName.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  categoryName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: isDarkMode
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 3),
+                              InferredWalletLabel(
+                                transaction: transaction,
+                                isDarkMode: isDarkMode,
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(width: 10),
+
+                        // Amount · Date (date sits under the price)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
                             Text(
-                              categoryName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              '${isIncome ? '+' : '-'}${_formatAmount(transaction.amount)}',
+                              textDirection: ui.TextDirection.ltr,
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 16.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.4,
+                                color: isIncome
+                                    ? (isDarkMode
+                                          ? const Color(0xFF10B981)
+                                          : const Color(0xFF059669))
+                                    : (isDarkMode
+                                          ? Colors.white
+                                          : const Color(0xFF18181B)),
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              _formatDate(transaction.transactionDate, context),
+                              style: TextStyle(
+                                fontSize: 11,
                                 fontWeight: FontWeight.w500,
                                 color: isDarkMode
-                                    ? Colors.grey[400]
-                                    : Colors.grey[600],
+                                    ? Colors.white.withValues(alpha: 0.5)
+                                    : Colors.black.withValues(alpha: 0.5),
                               ),
                             ),
                           ],
-                          const SizedBox(height: 3),
-                          InferredWalletLabel(
-                            transaction: transaction,
-                            isDarkMode: isDarkMode,
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: grouped
+                        ? BorderRadius.zero
+                        : BorderRadius.circular(18),
+                    onTap: () async {
+                      HapticFeedback.selectionClick();
+                      final edit = widget.onEditTransaction;
+                      if (edit == null) return;
+                      await edit(transaction);
+                      if (!mounted) return;
+                      await _refreshData();
+                    },
+                    onLongPress: () {
+                      _showDeleteDialog(transaction);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
+                        children: [
+                          // Category Mono Icon Container
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: isDarkMode
+                                  ? const Color(0xFF27272A)
+                                  : const Color(0xFFE4E4E7),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Icon(
+                              _getTransactionCupertinoIcon(transaction, isIOS),
+                              color: isDarkMode ? Colors.white : Colors.black,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+
+                          // Title & Category/Date info
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  transaction.title,
+                                  style: TextStyle(
+                                    fontSize: 15.5,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -0.2,
+                                    color: isDarkMode
+                                        ? Colors.white
+                                        : Colors.black,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (categoryName.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    categoryName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: isDarkMode
+                                          ? Colors.grey[400]
+                                          : Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 3),
+                                InferredWalletLabel(
+                                  transaction: transaction,
+                                  isDarkMode: isDarkMode,
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(width: 10),
+
+                          // Amount · Date (date sits under the price)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '${isIncome ? '+' : '-'}${_formatAmount(transaction.amount)}',
+                                textDirection: ui.TextDirection.ltr,
+                                style: TextStyle(
+                                  fontSize: 16.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.4,
+                                  color: isIncome
+                                      ? (isDarkMode
+                                            ? const Color(0xFF10B981)
+                                            : const Color(0xFF059669))
+                                      : (isDarkMode
+                                            ? Colors.white
+                                            : const Color(0xFF18181B)),
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                _formatDate(
+                                  transaction.transactionDate,
+                                  context,
+                                ),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDarkMode
+                                      ? Colors.white.withValues(alpha: 0.5)
+                                      : Colors.black.withValues(alpha: 0.5),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
-
-                    const SizedBox(width: 10),
-
-                    // Amount · Date (date sits under the price)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '${isIncome ? '+' : '-'}${_formatAmount(transaction.amount)}',
-                          textDirection: ui.TextDirection.ltr,
-                          style: TextStyle(
-                            fontSize: 16.5,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.4,
-                            color: isIncome
-                                ? (isDarkMode
-                                    ? const Color(0xFF10B981)
-                                    : const Color(0xFF059669))
-                                : (isDarkMode
-                                    ? Colors.white
-                                    : const Color(0xFF18181B)),
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          _formatDate(transaction.transactionDate, context),
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: isDarkMode
-                                ? Colors.white.withValues(alpha: 0.5)
-                                : Colors.black.withValues(alpha: 0.5),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          ),
         ),
       ),
     );
@@ -2755,9 +2944,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
       );
     }
 
-    return AppEmptyState(
-      message: context.l10n.noTransactions,
-    );
+    return AppEmptyState(message: context.l10n.noTransactions);
   }
 
   void _showDeleteDialog(WalletTransaction transaction) {
@@ -2791,8 +2978,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
                 if (mounted) {
                   MessageService.showError(
                     context: context,
-                    message:
-                        context.l10n.failedToDeleteWithError(e.toString()),
+                    message: context.l10n.failedToDeleteWithError(e.toString()),
                   );
                 }
               }
@@ -2807,8 +2993,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor:
-            isDarkMode ? const Color(0xFF18181B) : Colors.white,
+        backgroundColor: isDarkMode ? const Color(0xFF18181B) : Colors.white,
         title: Text(
           context.l10n.deleteTransaction,
           style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
@@ -2816,7 +3001,8 @@ class _TransactionsPageState extends State<TransactionsPage> {
         content: Text(
           context.l10n.confirmDeleteTransaction(transaction.title),
           style: TextStyle(
-              color: isDarkMode ? Colors.grey[300] : Colors.grey[700]),
+            color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+          ),
         ),
         actions: [
           TextButton(
@@ -2824,7 +3010,8 @@ class _TransactionsPageState extends State<TransactionsPage> {
             child: Text(
               context.l10n.cancel,
               style: TextStyle(
-                  color: isDarkMode ? Colors.grey[300] : Colors.grey[700]),
+                color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+              ),
             ),
           ),
           TextButton(
@@ -2843,8 +3030,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
                 if (context.mounted) {
                   MessageService.showError(
                     context: context,
-                    message:
-                        context.l10n.failedToDeleteWithError(e.toString()),
+                    message: context.l10n.failedToDeleteWithError(e.toString()),
                   );
                 }
               }
@@ -2867,7 +3053,8 @@ class _TransactionsPageState extends State<TransactionsPage> {
     final locale = isAr ? 'ar' : 'en_US';
 
     final isToday = transactionDate == today;
-    final isYesterday = transactionDate == today.subtract(const Duration(days: 1));
+    final isYesterday =
+        transactionDate == today.subtract(const Duration(days: 1));
 
     // Rows under the "Today" / "Yesterday" section headers only need the time.
     if (isToday || isYesterday) {

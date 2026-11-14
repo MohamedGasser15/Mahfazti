@@ -6,11 +6,7 @@ import 'package:my_wallet/core/widgets/app_back_button.dart';
 import 'package:my_wallet/features/wallet/data/repositories/bank_repository.dart';
 
 /// Categories of supported financial institutions
-enum BankCategory {
-  egyptian,
-  fintech,
-  international,
-}
+enum BankCategory { egyptian, fintech, international }
 
 /// Model representing a bank, neo-bank, or fintech app with bilingual names and logo asset.
 class EgyptianBank {
@@ -38,7 +34,8 @@ class EgyptianBank {
     this.category = BankCategory.egyptian,
   });
 
-  String get effectiveLogoUrl => (logoUrl != null &&
+  String get effectiveLogoUrl =>
+      (logoUrl != null &&
           logoUrl!.isNotEmpty &&
           !logoUrl!.contains('google.com/s2/favicons'))
       ? logoUrl!
@@ -2070,11 +2067,7 @@ class BankPickerScreen extends StatefulWidget {
   final String? initialBank;
   final bool autoSync;
 
-  const BankPickerScreen({
-    super.key,
-    this.initialBank,
-    this.autoSync = true,
-  });
+  const BankPickerScreen({super.key, this.initialBank, this.autoSync = true});
 
   /// Convenient helper to push this screen with native platform transitions.
   static Future<String?> open(
@@ -2086,20 +2079,16 @@ class BankPickerScreen extends StatefulWidget {
       return Navigator.push<String>(
         context,
         CupertinoPageRoute(
-          builder: (_) => BankPickerScreen(
-            initialBank: initialBank,
-            autoSync: autoSync,
-          ),
+          builder: (_) =>
+              BankPickerScreen(initialBank: initialBank, autoSync: autoSync),
         ),
       );
     } else {
       return Navigator.push<String>(
         context,
         MaterialPageRoute(
-          builder: (_) => BankPickerScreen(
-            initialBank: initialBank,
-            autoSync: autoSync,
-          ),
+          builder: (_) =>
+              BankPickerScreen(initialBank: initialBank, autoSync: autoSync),
         ),
       );
     }
@@ -2113,7 +2102,8 @@ class _BankPickerScreenState extends State<BankPickerScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   String _searchQuery = '';
-  String _selectedCategory = 'all'; // 'all', 'popular', 'egyptian', 'fintech', 'international'
+  String _selectedCategory =
+      'all'; // 'all', 'popular', 'egyptian', 'fintech', 'international'
   late String? _selectedBankName;
   late List<EgyptianBank> _banks;
 
@@ -2156,24 +2146,31 @@ class _BankPickerScreenState extends State<BankPickerScreen> {
     final isAr = Directionality.of(context) == TextDirection.rtl;
     final safeAreaBottom = MediaQuery.paddingOf(context).bottom;
 
-    final bgColor = isDarkMode ? const Color(0xFF09090B) : const Color(0xFFF8F8FA);
+    final bgColor = isDarkMode
+        ? const Color(0xFF09090B)
+        : const Color(0xFFF8F8FA);
     final cardBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
     final borderColor = isDarkMode
         ? Colors.white.withValues(alpha: 0.10)
         : const Color(0xFFE4E4E7);
-    final primaryTextColor = isDarkMode ? Colors.white : const Color(0xFF09090B);
-    final secondaryTextColor =
-        isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
+    final primaryTextColor = isDarkMode
+        ? Colors.white
+        : const Color(0xFF09090B);
+    final secondaryTextColor = isDarkMode
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF71717A);
 
     final List<_BankSectionItem> sectionItems = [];
 
     if (_searchQuery.isNotEmpty) {
       final matching = _banks.where((b) => b.matches(_searchQuery)).toList();
       if (matching.isNotEmpty) {
-        sectionItems.add(_BankSectionItem.header(
-          isAr ? 'نتائج البحث' : 'Search Results',
-          matching.length,
-        ));
+        sectionItems.add(
+          _BankSectionItem.header(
+            isAr ? 'نتائج البحث' : 'Search Results',
+            matching.length,
+          ),
+        );
         for (final b in matching) {
           sectionItems.add(_BankSectionItem.bank(b));
         }
@@ -2222,44 +2219,54 @@ class _BankPickerScreenState extends State<BankPickerScreen> {
           .where((b) => b.category == BankCategory.fintech && !b.isPopular)
           .toList();
       final international = _banks
-          .where((b) => b.category == BankCategory.international && !b.isPopular)
+          .where(
+            (b) => b.category == BankCategory.international && !b.isPopular,
+          )
           .toList();
 
       if (popular.isNotEmpty) {
-        sectionItems.add(_BankSectionItem.header(
-          isAr ? 'الأكثر استخداماً' : 'Most Popular',
-          popular.length,
-        ));
+        sectionItems.add(
+          _BankSectionItem.header(
+            isAr ? 'الأكثر استخداماً' : 'Most Popular',
+            popular.length,
+          ),
+        );
         for (final b in popular) {
           sectionItems.add(_BankSectionItem.bank(b));
         }
       }
 
       if (egyptian.isNotEmpty) {
-        sectionItems.add(_BankSectionItem.header(
-          isAr ? 'البنوك المحلية' : 'Local Egyptian Banks',
-          egyptian.length,
-        ));
+        sectionItems.add(
+          _BankSectionItem.header(
+            isAr ? 'البنوك المحلية' : 'Local Egyptian Banks',
+            egyptian.length,
+          ),
+        );
         for (final b in egyptian) {
           sectionItems.add(_BankSectionItem.bank(b));
         }
       }
 
       if (fintech.isNotEmpty) {
-        sectionItems.add(_BankSectionItem.header(
-          isAr ? 'تطبيقات ومحافظ رقمية' : 'Fintech & Digital Wallets',
-          fintech.length,
-        ));
+        sectionItems.add(
+          _BankSectionItem.header(
+            isAr ? 'تطبيقات ومحافظ رقمية' : 'Fintech & Digital Wallets',
+            fintech.length,
+          ),
+        );
         for (final b in fintech) {
           sectionItems.add(_BankSectionItem.bank(b));
         }
       }
 
       if (international.isNotEmpty) {
-        sectionItems.add(_BankSectionItem.header(
-          isAr ? 'بنوك حول العالم' : 'Banks Around the World',
-          international.length,
-        ));
+        sectionItems.add(
+          _BankSectionItem.header(
+            isAr ? 'بنوك حول العالم' : 'Banks Around the World',
+            international.length,
+          ),
+        );
         for (final b in international) {
           sectionItems.add(_BankSectionItem.bank(b));
         }
@@ -2294,20 +2301,36 @@ class _BankPickerScreenState extends State<BankPickerScreen> {
             const SizedBox(height: 4),
 
             // Search Bar (identical to CurrencyPickerScreen)
-            _buildSearchBar(isDarkMode, isAr, cardBg, borderColor, secondaryTextColor),
+            _buildSearchBar(
+              isDarkMode,
+              isAr,
+              cardBg,
+              borderColor,
+              secondaryTextColor,
+            ),
 
             const SizedBox(height: 10),
 
             // Category Filter Chips
             if (_searchQuery.isEmpty) ...[
-              _buildCategoryChips(isDarkMode, isAr, primaryTextColor, secondaryTextColor),
+              _buildCategoryChips(
+                isDarkMode,
+                isAr,
+                primaryTextColor,
+                secondaryTextColor,
+              ),
               const SizedBox(height: 8),
             ],
 
             // Unified Smooth Banks List
             Expanded(
               child: sectionItems.isEmpty
-                  ? _buildEmptyState(isDarkMode, isAr, primaryTextColor, secondaryTextColor)
+                  ? _buildEmptyState(
+                      isDarkMode,
+                      isAr,
+                      primaryTextColor,
+                      secondaryTextColor,
+                    )
                   : ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(
                         parent: BouncingScrollPhysics(),
@@ -2379,11 +2402,7 @@ class _BankPickerScreenState extends State<BankPickerScreen> {
     Color secondaryTextColor,
   ) {
     final categories = [
-      {
-        'id': 'all',
-        'label': isAr ? 'الكل' : 'All',
-        'icon': Icons.apps_rounded,
-      },
+      {'id': 'all', 'label': isAr ? 'الكل' : 'All', 'icon': Icons.apps_rounded},
       {
         'id': 'popular',
         'label': isAr ? 'الأكثر طلباً' : 'Popular',
@@ -2435,15 +2454,15 @@ class _BankPickerScreenState extends State<BankPickerScreen> {
                   color: isSelected
                       ? (isDarkMode ? Colors.white : Colors.black)
                       : (isDarkMode
-                          ? Colors.white.withValues(alpha: 0.08)
-                          : Colors.black.withValues(alpha: 0.05)),
+                            ? Colors.white.withValues(alpha: 0.08)
+                            : Colors.black.withValues(alpha: 0.05)),
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
                     color: isSelected
                         ? Colors.transparent
                         : (isDarkMode
-                            ? Colors.white.withValues(alpha: 0.08)
-                            : Colors.black.withValues(alpha: 0.05)),
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : Colors.black.withValues(alpha: 0.05)),
                     width: 0.8,
                   ),
                 ),
@@ -2462,8 +2481,9 @@ class _BankPickerScreenState extends State<BankPickerScreen> {
                       cat['label'] as String,
                       style: TextStyle(
                         fontSize: 12.5,
-                        fontWeight:
-                            isSelected ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                         color: isSelected
                             ? (isDarkMode ? Colors.black : Colors.white)
                             : secondaryTextColor,
@@ -2564,8 +2584,10 @@ class _BankPickerScreenState extends State<BankPickerScreen> {
               size: 20,
               color: secondaryTextColor,
             ),
-            prefixIconConstraints:
-                const BoxConstraints(minWidth: 40, minHeight: 40),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 40,
+              minHeight: 40,
+            ),
             suffixIcon: _searchController.text.isNotEmpty
                 ? GestureDetector(
                     onTap: () {
@@ -2579,8 +2601,10 @@ class _BankPickerScreenState extends State<BankPickerScreen> {
                     ),
                   )
                 : null,
-            suffixIconConstraints:
-                const BoxConstraints(minWidth: 36, minHeight: 40),
+            suffixIconConstraints: const BoxConstraints(
+              minWidth: 36,
+              minHeight: 40,
+            ),
             hintText: isAr
                 ? 'ابحث باسم البنك أو التطبيق...'
                 : 'Search by bank or app name...',
@@ -2613,9 +2637,7 @@ class _BankPickerScreenState extends State<BankPickerScreen> {
         color: cardBg,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isSelected
-              ? const Color(0xFF007AFF)
-              : borderColor,
+          color: isSelected ? const Color(0xFF007AFF) : borderColor,
           width: isSelected ? 1.6 : 0.8,
         ),
         boxShadow: [
@@ -2696,9 +2718,7 @@ class _BankPickerScreenState extends State<BankPickerScreen> {
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: isDarkMode
-            ? Colors.white.withValues(alpha: 0.08)
-            : Colors.white,
+        color: isDarkMode ? Colors.white.withValues(alpha: 0.08) : Colors.white,
         borderRadius: BorderRadius.circular(13),
         border: Border.all(
           color: isDarkMode
@@ -2735,7 +2755,9 @@ class _BankPickerScreenState extends State<BankPickerScreen> {
 
   Widget _buildInitialFallback(EgyptianBank bank, Color primaryTextColor) {
     final initial = bank.shortName.isNotEmpty
-        ? (bank.shortName.length <= 4 ? bank.shortName : bank.shortName.substring(0, 3))
+        ? (bank.shortName.length <= 4
+              ? bank.shortName
+              : bank.shortName.substring(0, 3))
         : (bank.nameAr.isNotEmpty ? bank.nameAr.substring(0, 1) : '?');
     return Center(
       child: Text(
@@ -2784,10 +2806,7 @@ class _BankPickerScreenState extends State<BankPickerScreen> {
               isAr
                   ? 'جرب البحث باسم البنك أو التطبيق بالعربي أو بالإنجليزي'
                   : 'Try searching with bank or app name in Arabic or English',
-              style: TextStyle(
-                fontSize: 13,
-                color: secondaryTextColor,
-              ),
+              style: TextStyle(fontSize: 13, color: secondaryTextColor),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -2818,9 +2837,7 @@ class _BankSectionItem {
   final EgyptianBank? bank;
 
   _BankSectionItem.header(this.headerTitle, this.headerCount) : bank = null;
-  _BankSectionItem.bank(this.bank)
-      : headerTitle = null,
-        headerCount = null;
+  _BankSectionItem.bank(this.bank) : headerTitle = null, headerCount = null;
 
   bool get isHeader => headerTitle != null;
 }

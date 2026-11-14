@@ -30,8 +30,9 @@ class BankRepository {
 
       if (response.statusCode == 200 && response.data != null) {
         final dynamic body = response.data;
-        final dynamic dataList =
-            body is Map<String, dynamic> ? body['data'] : body;
+        final dynamic dataList = body is Map<String, dynamic>
+            ? body['data']
+            : body;
 
         if (dataList is List && dataList.isNotEmpty) {
           final fetched = dataList.map((item) {
@@ -45,7 +46,9 @@ class BankRepository {
 
             final website = map['website']?.toString();
             var logoUrl = map['logoUrl']?.toString();
-            if (logoUrl == null || logoUrl.isEmpty || logoUrl.contains('google.com/s2/favicons')) {
+            if (logoUrl == null ||
+                logoUrl.isEmpty ||
+                logoUrl.contains('google.com/s2/favicons')) {
               logoUrl = 'https://mahfazati.runasp.net/images/banks/$id.png';
             }
 

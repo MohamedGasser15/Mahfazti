@@ -11,16 +11,34 @@ import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
 class WalletRepository {
   final ApiService _apiService = ApiService();
 
-  bool get _useMock => AppConstants.useMockBackend && !_apiService.hasTestingDio;
+  bool get _useMock =>
+      (AppConstants.useMockBackend || AppConstants.isTestingEnvironment) &&
+      !_apiService.hasTestingDio;
 
-  Future<WalletHomeData> getHomeData() async {
+  Future<WalletHomeData> getHomeData({
+    int? accountId,
+    DateTime? fromDate,
+    DateTime? toDate,
+  }) async {
     if (_useMock) {
       return MockBackendEngine.instance.getHomeData();
     }
 
     try {
+      final queryParams = <String, dynamic>{};
+      if (accountId != null) {
+        queryParams['accountId'] = accountId;
+      }
+      if (fromDate != null) {
+        queryParams['fromDate'] = fromDate.toUtc().toIso8601String();
+      }
+      if (toDate != null) {
+        queryParams['toDate'] = toDate.toUtc().toIso8601String();
+      }
+
       final response = await _apiService.get(
         ApiEndpoints.walletHome,
+        queryParams: queryParams.isNotEmpty ? queryParams : null,
         requiresAuth: true,
       );
       return WalletHomeData.fromJson(response.data);
@@ -56,6 +74,7 @@ class WalletRepository {
     DateTime? toDate,
     String? type,
     int? categoryId,
+    int? accountId,
     String? searchQuery,
   }) async {
     if (_useMock) {
@@ -71,10 +90,7 @@ class WalletRepository {
     }
 
     try {
-      final queryParams = <String, dynamic>{
-        'page': page,
-        'pageSize': pageSize,
-      };
+      final queryParams = <String, dynamic>{'page': page, 'pageSize': pageSize};
 
       if (fromDate != null) {
         queryParams['fromDate'] = fromDate.toIso8601String();
@@ -87,6 +103,9 @@ class WalletRepository {
       }
       if (categoryId != null) {
         queryParams['categoryId'] = categoryId;
+      }
+      if (accountId != null) {
+        queryParams['accountId'] = accountId;
       }
 
       final response = await _apiService.get(
@@ -109,7 +128,14 @@ class WalletRepository {
     required double amount,
     required String type,
     required int categoryId,
+    int? accountId,
+    int? toAccountId,
+    double? transferFee,
+    String? currency,
     DateTime? transactionDate,
+    String? receiptImageUrl,
+    int? recurringBillId,
+    String? tags,
     bool isRecurring = false,
   }) async {
     if (_useMock) {
@@ -136,6 +162,27 @@ class WalletRepository {
       if (description != null && description.isNotEmpty) {
         body['description'] = description;
       }
+      if (accountId != null) {
+        body['accountId'] = accountId;
+      }
+      if (toAccountId != null) {
+        body['toAccountId'] = toAccountId;
+      }
+      if (transferFee != null) {
+        body['transferFee'] = transferFee;
+      }
+      if (currency != null) {
+        body['currency'] = currency;
+      }
+      if (receiptImageUrl != null) {
+        body['receiptImageUrl'] = receiptImageUrl;
+      }
+      if (recurringBillId != null) {
+        body['recurringBillId'] = recurringBillId;
+      }
+      if (tags != null) {
+        body['tags'] = tags;
+      }
       if (transactionDate != null) {
         body['transactionDate'] = transactionDate.toUtc().toIso8601String();
       }
@@ -161,7 +208,14 @@ class WalletRepository {
     required double amount,
     required String type,
     required int categoryId,
+    int? accountId,
+    int? toAccountId,
+    double? transferFee,
+    String? currency,
     DateTime? transactionDate,
+    String? receiptImageUrl,
+    int? recurringBillId,
+    String? tags,
     bool isRecurring = false,
     String? recurringInterval,
     DateTime? recurringEndDate,
@@ -190,6 +244,27 @@ class WalletRepository {
       if (description != null && description.isNotEmpty) {
         body['description'] = description;
       }
+      if (accountId != null) {
+        body['accountId'] = accountId;
+      }
+      if (toAccountId != null) {
+        body['toAccountId'] = toAccountId;
+      }
+      if (transferFee != null) {
+        body['transferFee'] = transferFee;
+      }
+      if (currency != null) {
+        body['currency'] = currency;
+      }
+      if (receiptImageUrl != null) {
+        body['receiptImageUrl'] = receiptImageUrl;
+      }
+      if (recurringBillId != null) {
+        body['recurringBillId'] = recurringBillId;
+      }
+      if (tags != null) {
+        body['tags'] = tags;
+      }
       if (transactionDate != null) {
         body['transactionDate'] = transactionDate.toIso8601String();
       }
@@ -214,13 +289,49 @@ class WalletRepository {
     }
   }
 
-  Future<VoiceExpenseResult> parseVoiceText(String text, {String language = 'ar'}) async {
+  Future<bool> transferFunds({
+    required int fromAccountId,
+    required int toAccountId,
+    required double amount,
+    double transferFee = 0.0,
+    String? notes,
+  }) async {
+    if (_useMock) return true;
+
     try {
-      final response = await _apiService.post(
-        ApiEndpoints.walletVoiceParse,
-        {'text': text, 'language': language},
+      final body = <String, dynamic>{
+        'fromAccountId': fromAccountId,
+        'toAccountId': toAccountId,
+        'amount': amount,
+        'transferFee': transferFee,
+      };
+      if (notes != null && notes.isNotEmpty) {
+        body['notes'] = notes;
+      }
+
+      await _apiService.post(
+        ApiEndpoints.walletTransfer,
+        body,
         requiresAuth: true,
       );
+
+      return true;
+    } on DioException catch (e) {
+      throw Exception(ApiErrorHandler.getErrorMessage(e));
+    } catch (e) {
+      throw Exception('Failed to transfer funds: $e');
+    }
+  }
+
+  Future<VoiceExpenseResult> parseVoiceText(
+    String text, {
+    String language = 'ar',
+  }) async {
+    try {
+      final response = await _apiService.post(ApiEndpoints.walletVoiceParse, {
+        'text': text,
+        'language': language,
+      }, requiresAuth: true);
       return VoiceExpenseResult.fromJson(response.data);
     } on DioException catch (e) {
       throw Exception(ApiErrorHandler.getErrorMessage(e));
@@ -254,14 +365,19 @@ class WalletRepository {
     }
   }
 
-  Future<BudgetDto> getBudget() async {
+  Future<BudgetDto> getBudget({int? month, int? year}) async {
     if (_useMock) {
       return MockBackendEngine.instance.getBudget();
     }
 
     try {
+      final queryParams = <String, dynamic>{};
+      if (month != null) queryParams['month'] = month;
+      if (year != null) queryParams['year'] = year;
+
       final response = await _apiService.get(
         ApiEndpoints.budget,
+        queryParams: queryParams.isNotEmpty ? queryParams : null,
         requiresAuth: true,
       );
       return BudgetDto.fromJson(response.data);
@@ -278,11 +394,9 @@ class WalletRepository {
     }
 
     try {
-      await _apiService.put(
-        ApiEndpoints.budget,
-        {'monthlyBudget': monthlyBudget},
-        requiresAuth: true,
-      );
+      await _apiService.put(ApiEndpoints.budget, {
+        'monthlyBudget': monthlyBudget,
+      }, requiresAuth: true);
     } on DioException catch (e) {
       throw Exception(ApiErrorHandler.getErrorMessage(e));
     } catch (e) {
@@ -292,15 +406,17 @@ class WalletRepository {
 
   Future<void> updateCategoryBudget(int categoryId, double budget) async {
     if (_useMock) {
-      return MockBackendEngine.instance.updateCategoryBudget(categoryId, budget);
+      return MockBackendEngine.instance.updateCategoryBudget(
+        categoryId,
+        budget,
+      );
     }
 
     try {
-      await _apiService.put(
-        ApiEndpoints.budgetCategory,
-        {'categoryId': categoryId, 'budget': budget},
-        requiresAuth: true,
-      );
+      await _apiService.put(ApiEndpoints.budgetCategory, {
+        'categoryId': categoryId,
+        'budget': budget,
+      }, requiresAuth: true);
     } on DioException catch (e) {
       throw Exception(ApiErrorHandler.getErrorMessage(e));
     } catch (e) {
@@ -311,9 +427,14 @@ class WalletRepository {
   Future<WalletSummary> getSummary({
     required DateTime fromDate,
     required DateTime toDate,
+    int? accountId,
   }) async {
     if (_useMock) {
-      return MockBackendEngine.instance.getSummary(fromDate: fromDate, toDate: toDate);
+      return MockBackendEngine.instance.getSummary(
+        fromDate: fromDate,
+        toDate: toDate,
+        accountId: accountId,
+      );
     }
 
     try {
@@ -322,6 +443,7 @@ class WalletRepository {
         queryParams: {
           'fromDate': fromDate.toIso8601String(),
           'toDate': toDate.toIso8601String(),
+          if (accountId != null) 'accountId': accountId,
         },
         requiresAuth: true,
       );

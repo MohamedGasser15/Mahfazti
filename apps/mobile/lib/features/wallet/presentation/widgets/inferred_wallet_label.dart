@@ -21,8 +21,9 @@ class InferredWalletLabel extends StatelessWidget {
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final wallet = inferTransactionWallet(transaction);
     // Neutral tone — wallets are told apart by their glyph, not by color.
-    final color =
-        isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
+    final color = isDarkMode
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF71717A);
 
     return Row(
       mainAxisSize: MainAxisSize.min,

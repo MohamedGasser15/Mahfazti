@@ -19,7 +19,8 @@ InferredWallet inferTransactionWallet(WalletTransaction transaction) {
       keys.any((key) => categoryEn.contains(key) || categoryAr.contains(key));
 
   // Bank account: salary, income, investments, bonuses, bank transfers.
-  final looksLikeBank = categoryHas([
+  final looksLikeBank =
+      categoryHas([
         'salary',
         'income',
         'invest',
@@ -37,13 +38,8 @@ InferredWallet inferTransactionWallet(WalletTransaction transaction) {
   if (looksLikeBank) return InferredWallet.banqueMisr;
 
   // Digital wallet: bills, telecom/internet, freelance income.
-  final looksLikeEWallet = categoryHas([
-        'bill',
-        'utilit',
-        'freelance',
-        'فواتير',
-        'إنترنت',
-      ]) ||
+  final looksLikeEWallet =
+      categoryHas(['bill', 'utilit', 'freelance', 'فواتير', 'إنترنت']) ||
       title.contains('إنترنت') ||
       title.contains('فودافون') ||
       title.contains('netflix') ||
@@ -56,10 +52,7 @@ InferredWallet inferTransactionWallet(WalletTransaction transaction) {
   return InferredWallet.cashWallet;
 }
 
-String inferredWalletName(
-  WalletTransaction transaction, {
-  required bool isAr,
-}) {
+String inferredWalletName(WalletTransaction transaction, {required bool isAr}) {
   switch (inferTransactionWallet(transaction)) {
     case InferredWallet.banqueMisr:
       return isAr ? 'بنك مصر' : 'Banque Misr';

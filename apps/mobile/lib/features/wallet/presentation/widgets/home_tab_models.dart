@@ -6,16 +6,14 @@ class TransactionFilter {
   final TransactionType type;
   final String label;
 
-  TransactionFilter({
-    required this.type,
-    required this.label,
-  });
+  TransactionFilter({required this.type, required this.label});
 }
 
 class AccountItem {
   final String id;
   final String name;
-  final String type; // 'all', 'cash', 'bank', 'ewallet', 'savings', 'credit_card', 'investment', 'gold', 'silver', 'certificate'
+  final String
+  type; // 'all', 'cash', 'bank', 'ewallet', 'savings', 'credit_card', 'investment', 'gold', 'silver', 'certificate'
   final double balance;
   final double income;
   final double expense;
@@ -42,15 +40,18 @@ class AccountItem {
   final DateTime? metalPurchaseDate;
   final double? metalCurrentPricePerGram;
   final bool autoUpdateMetalPrice;
-  final String? propertyCategory; // 'fund', 'apartment', 'car', 'business', 'other'
+  final String?
+  propertyCategory; // 'fund', 'apartment', 'car', 'business', 'other'
   final double? annualYieldRate; // e.g. 22.5% for money market funds
   final bool autoEstimateValue; // true if auto-adjusting value
   final double? estimateRateYearly; // e.g. 10.0%
   final String? estimateDirection; // 'up' or 'down'
   final String? reminderFrequency; // 'monthly', '3_months', '6_months', 'never'
   final String? note;
-  final double? totalInvestedAmount; // Cost basis for stocks/crypto to compute P&L
-  final String? investmentPlatform; // e.g. 'egx', 'us_stocks', 'crypto', 'other'
+  final double?
+  totalInvestedAmount; // Cost basis for stocks/crypto to compute P&L
+  final String?
+  investmentPlatform; // e.g. 'egx', 'us_stocks', 'crypto', 'other'
 
   const AccountItem({
     required this.id,
@@ -155,13 +156,16 @@ class AccountItem {
       minPaymentPercentage: minPaymentPercentage ?? this.minPaymentPercentage,
       availableBalance: availableBalance ?? this.availableBalance,
       excludeFromTotal: excludeFromTotal ?? this.excludeFromTotal,
-      receiveAtmWithdrawals: receiveAtmWithdrawals ?? this.receiveAtmWithdrawals,
+      receiveAtmWithdrawals:
+          receiveAtmWithdrawals ?? this.receiveAtmWithdrawals,
       autoAddInstapayFee: autoAddInstapayFee ?? this.autoAddInstapayFee,
       metalKarat: metalKarat ?? this.metalKarat,
       metalWeightGrams: metalWeightGrams ?? this.metalWeightGrams,
-      metalPurchasePricePerGram: metalPurchasePricePerGram ?? this.metalPurchasePricePerGram,
+      metalPurchasePricePerGram:
+          metalPurchasePricePerGram ?? this.metalPurchasePricePerGram,
       metalPurchaseDate: metalPurchaseDate ?? this.metalPurchaseDate,
-      metalCurrentPricePerGram: metalCurrentPricePerGram ?? this.metalCurrentPricePerGram,
+      metalCurrentPricePerGram:
+          metalCurrentPricePerGram ?? this.metalCurrentPricePerGram,
       autoUpdateMetalPrice: autoUpdateMetalPrice ?? this.autoUpdateMetalPrice,
       propertyCategory: propertyCategory ?? this.propertyCategory,
       annualYieldRate: annualYieldRate ?? this.annualYieldRate,
@@ -194,16 +198,20 @@ class AccountItem {
     if (creditLimit != null) 'creditLimit': creditLimit,
     if (billingDay != null) 'billingDay': billingDay,
     if (dueDay != null) 'dueDay': dueDay,
-    if (minPaymentPercentage != null) 'minPaymentPercentage': minPaymentPercentage,
+    if (minPaymentPercentage != null)
+      'minPaymentPercentage': minPaymentPercentage,
     if (availableBalance != null) 'availableBalance': availableBalance,
     if (excludeFromTotal) 'excludeFromTotal': excludeFromTotal,
     if (receiveAtmWithdrawals) 'receiveAtmWithdrawals': receiveAtmWithdrawals,
     if (autoAddInstapayFee) 'autoAddInstapayFee': autoAddInstapayFee,
     if (metalKarat != null) 'metalKarat': metalKarat,
     if (metalWeightGrams != null) 'metalWeightGrams': metalWeightGrams,
-    if (metalPurchasePricePerGram != null) 'metalPurchasePricePerGram': metalPurchasePricePerGram,
-    if (metalPurchaseDate != null) 'metalPurchaseDate': metalPurchaseDate!.toIso8601String(),
-    if (metalCurrentPricePerGram != null) 'metalCurrentPricePerGram': metalCurrentPricePerGram,
+    if (metalPurchasePricePerGram != null)
+      'metalPurchasePricePerGram': metalPurchasePricePerGram,
+    if (metalPurchaseDate != null)
+      'metalPurchaseDate': metalPurchaseDate!.toIso8601String(),
+    if (metalCurrentPricePerGram != null)
+      'metalCurrentPricePerGram': metalCurrentPricePerGram,
     if (!autoUpdateMetalPrice) 'autoUpdateMetalPrice': autoUpdateMetalPrice,
     if (propertyCategory != null) 'propertyCategory': propertyCategory,
     if (annualYieldRate != null) 'annualYieldRate': annualYieldRate,
@@ -217,7 +225,10 @@ class AccountItem {
   };
 
   factory AccountItem.fromJson(Map<String, dynamic> json) {
-    final codePoint = json['icon'] as int? ?? Icons.account_balance_rounded.codePoint;
+    final codePoint =
+        (json['icon'] as num?)?.toInt() ??
+        (json['iconCode'] as num?)?.toInt() ??
+        Icons.account_balance_rounded.codePoint;
     IconData resolvedIcon = Icons.account_balance_rounded;
     for (final icon in kAvailableAccountIcons) {
       if (icon.codePoint == codePoint) {
@@ -225,9 +236,28 @@ class AccountItem {
         break;
       }
     }
+
+    List<String>? cards;
+    if (json['cardNumbers'] is List) {
+      cards = (json['cardNumbers'] as List).map((e) => e.toString()).toList();
+    } else if (json['cardNumbersJson'] is String &&
+        (json['cardNumbersJson'] as String).isNotEmpty) {
+      try {
+        final decoded = (json['cardNumbersJson'] as String)
+            .replaceAll('[', '')
+            .replaceAll(']', '')
+            .replaceAll('"', '');
+        cards = decoded
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+      } catch (_) {}
+    }
+
     return AccountItem(
-      id: json['id'] as String,
-      name: json['name'] as String,
+      id: json['id']?.toString() ?? '',
+      name: json['name'] as String? ?? '',
       type: json['type'] as String? ?? 'bank',
       balance: (json['balance'] as num?)?.toDouble() ?? 0.0,
       income: (json['income'] as num?)?.toDouble() ?? 0.0,
@@ -237,10 +267,11 @@ class AccountItem {
       isMain: json['isMain'] as bool? ?? false,
       accountNumber: json['accountNumber'] as String?,
       currency: json['currency'] as String? ?? 'EGP',
-      bankName: json['bankName'] as String?,
+      bankName:
+          json['bankName'] as String? ?? json['institutionNameAr'] as String?,
       provider: json['provider'] as String?,
       notificationMethod: json['notificationMethod'] as String?,
-      cardNumbers: (json['cardNumbers'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
+      cardNumbers: cards,
       creditLimit: (json['creditLimit'] as num?)?.toDouble(),
       billingDay: json['billingDay'] as int?,
       dueDay: json['dueDay'] as int?,
@@ -251,9 +282,13 @@ class AccountItem {
       autoAddInstapayFee: json['autoAddInstapayFee'] as bool? ?? false,
       metalKarat: json['metalKarat'] as String?,
       metalWeightGrams: (json['metalWeightGrams'] as num?)?.toDouble(),
-      metalPurchasePricePerGram: (json['metalPurchasePricePerGram'] as num?)?.toDouble(),
-      metalPurchaseDate: json['metalPurchaseDate'] != null ? DateTime.tryParse(json['metalPurchaseDate'] as String) : null,
-      metalCurrentPricePerGram: (json['metalCurrentPricePerGram'] as num?)?.toDouble(),
+      metalPurchasePricePerGram: (json['metalPurchasePricePerGram'] as num?)
+          ?.toDouble(),
+      metalPurchaseDate: json['metalPurchaseDate'] != null
+          ? DateTime.tryParse(json['metalPurchaseDate'] as String)
+          : null,
+      metalCurrentPricePerGram: (json['metalCurrentPricePerGram'] as num?)
+          ?.toDouble(),
       autoUpdateMetalPrice: json['autoUpdateMetalPrice'] as bool? ?? true,
       propertyCategory: json['propertyCategory'] as String?,
       annualYieldRate: (json['annualYieldRate'] as num?)?.toDouble(),
@@ -352,4 +387,3 @@ const List<IconData> kAvailableAccountIcons = [
   Icons.stars_rounded,
   Icons.auto_awesome_rounded,
 ];
-

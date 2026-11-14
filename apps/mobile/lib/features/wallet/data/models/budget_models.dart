@@ -13,7 +13,8 @@ class BudgetDto {
     return BudgetDto(
       monthlyBudget: (json['monthlyBudget'] as num?)?.toDouble() ?? 0.0,
       currentSpending: (json['currentSpending'] as num?)?.toDouble() ?? 0.0,
-      categoryBudgets: (json['categoryBudgets'] as List?)
+      categoryBudgets:
+          (json['categoryBudgets'] as List?)
               ?.map((e) => CategoryBudgetDto.fromJson(e))
               .toList() ??
           [],
@@ -21,10 +22,10 @@ class BudgetDto {
   }
 
   Map<String, dynamic> toJson() => {
-        'monthlyBudget': monthlyBudget,
-        'currentSpending': currentSpending,
-        'categoryBudgets': categoryBudgets.map((e) => e.toJson()).toList(),
-      };
+    'monthlyBudget': monthlyBudget,
+    'currentSpending': currentSpending,
+    'categoryBudgets': categoryBudgets.map((e) => e.toJson()).toList(),
+  };
 
   BudgetDto copyWith({
     double? monthlyBudget,
@@ -38,53 +39,12 @@ class BudgetDto {
     );
   }
 
-  /// Default seed data so the user has realistic, lively initial budgets
+  /// Default empty budget when user has not configured any budget yet.
   static BudgetDto defaultSeed() {
     return BudgetDto(
-      monthlyBudget: 24000.0,
-      currentSpending: 18808.0,
-      categoryBudgets: [
-        CategoryBudgetDto(
-          id: 1,
-          categoryId: 2,
-          categoryNameAr: 'تسوق ومستلزمات',
-          categoryNameEn: 'Shopping',
-          budget: 8000.0,
-          spent: 6395.0,
-        ),
-        CategoryBudgetDto(
-          id: 2,
-          categoryId: 1,
-          categoryNameAr: 'طعام ومطاعم',
-          categoryNameEn: 'Food & Dining',
-          budget: 6500.0,
-          spent: 5078.0,
-        ),
-        CategoryBudgetDto(
-          id: 3,
-          categoryId: 4,
-          categoryNameAr: 'مواصلات وسيارات',
-          categoryNameEn: 'Transportation',
-          budget: 4000.0,
-          spent: 3010.0,
-        ),
-        CategoryBudgetDto(
-          id: 4,
-          categoryId: 3,
-          categoryNameAr: 'فواتير وخدمات',
-          categoryNameEn: 'Bills & Utilities',
-          budget: 3500.0,
-          spent: 2445.0,
-        ),
-        CategoryBudgetDto(
-          id: 5,
-          categoryId: 7,
-          categoryNameAr: 'ترفيه واشتراكات',
-          categoryNameEn: 'Entertainment',
-          budget: 2000.0,
-          spent: 1880.0,
-        ),
-      ],
+      monthlyBudget: 0.0,
+      currentSpending: 0.0,
+      categoryBudgets: const [],
     );
   }
 }
@@ -114,7 +74,8 @@ class CategoryBudgetDto {
       categoryId: json['categoryId'] ?? 0,
       categoryNameAr: json['categoryNameAr'] ?? '',
       categoryNameEn: json['categoryNameEn'] ?? '',
-      budget: (json['budgetAmount'] as num?)?.toDouble() ??
+      budget:
+          (json['budgetAmount'] as num?)?.toDouble() ??
           (json['budget'] as num?)?.toDouble() ??
           0.0,
       spent: (json['spent'] as num?)?.toDouble() ?? 0.0,
@@ -123,15 +84,15 @@ class CategoryBudgetDto {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'categoryId': categoryId,
-        'categoryNameAr': categoryNameAr,
-        'categoryNameEn': categoryNameEn,
-        'budgetAmount': budget,
-        'budget': budget,
-        'spent': spent,
-        if (groupName != null) 'groupName': groupName,
-      };
+    'id': id,
+    'categoryId': categoryId,
+    'categoryNameAr': categoryNameAr,
+    'categoryNameEn': categoryNameEn,
+    'budgetAmount': budget,
+    'budget': budget,
+    'spent': spent,
+    if (groupName != null) 'groupName': groupName,
+  };
 
   CategoryBudgetDto copyWith({
     int? id,

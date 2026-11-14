@@ -10,32 +10,24 @@ import 'package:my_wallet/core/widgets/app_back_button.dart';
 class CurrencyPickerScreen extends StatefulWidget {
   final String? initialCurrency;
 
-  const CurrencyPickerScreen({
-    super.key,
-    this.initialCurrency,
-  });
+  const CurrencyPickerScreen({super.key, this.initialCurrency});
 
   /// Convenient helper to push this screen with native platform transitions.
-  static Future<String?> open(
-    BuildContext context, {
-    String? initialCurrency,
-  }) {
+  static Future<String?> open(BuildContext context, {String? initialCurrency}) {
     if (Platform.isIOS) {
       return Navigator.push<String>(
         context,
         CupertinoPageRoute(
-          builder: (_) => CurrencyPickerScreen(
-            initialCurrency: initialCurrency,
-          ),
+          builder: (_) =>
+              CurrencyPickerScreen(initialCurrency: initialCurrency),
         ),
       );
     } else {
       return Navigator.push<String>(
         context,
         MaterialPageRoute(
-          builder: (_) => CurrencyPickerScreen(
-            initialCurrency: initialCurrency,
-          ),
+          builder: (_) =>
+              CurrencyPickerScreen(initialCurrency: initialCurrency),
         ),
       );
     }
@@ -76,14 +68,19 @@ class _CurrencyPickerScreenState extends State<CurrencyPickerScreen> {
     final isAr = Directionality.of(context) == TextDirection.rtl;
     final safeAreaBottom = MediaQuery.paddingOf(context).bottom;
 
-    final bgColor = isDarkMode ? const Color(0xFF09090B) : const Color(0xFFF8F8FA);
+    final bgColor = isDarkMode
+        ? const Color(0xFF09090B)
+        : const Color(0xFFF8F8FA);
     final cardBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
     final borderColor = isDarkMode
         ? Colors.white.withValues(alpha: 0.10)
         : const Color(0xFFE4E4E7);
-    final primaryTextColor = isDarkMode ? Colors.white : const Color(0xFF09090B);
-    final secondaryTextColor =
-        isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
+    final primaryTextColor = isDarkMode
+        ? Colors.white
+        : const Color(0xFF09090B);
+    final secondaryTextColor = isDarkMode
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF71717A);
 
     final filteredCurrencies = kAllCurrencies
         .where((c) => c.matches(_searchQuery))
@@ -117,14 +114,25 @@ class _CurrencyPickerScreenState extends State<CurrencyPickerScreen> {
             const SizedBox(height: 4),
 
             // Search Bar
-            _buildSearchBar(isDarkMode, isAr, cardBg, borderColor, secondaryTextColor),
+            _buildSearchBar(
+              isDarkMode,
+              isAr,
+              cardBg,
+              borderColor,
+              secondaryTextColor,
+            ),
 
             const SizedBox(height: 12),
 
             // Currencies List
             Expanded(
               child: filteredCurrencies.isEmpty
-                  ? _buildEmptyState(isDarkMode, isAr, primaryTextColor, secondaryTextColor)
+                  ? _buildEmptyState(
+                      isDarkMode,
+                      isAr,
+                      primaryTextColor,
+                      secondaryTextColor,
+                    )
                   : ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(
                         parent: BouncingScrollPhysics(),
@@ -209,8 +217,10 @@ class _CurrencyPickerScreenState extends State<CurrencyPickerScreen> {
               size: 20,
               color: secondaryTextColor,
             ),
-            prefixIconConstraints:
-                const BoxConstraints(minWidth: 40, minHeight: 40),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 40,
+              minHeight: 40,
+            ),
             suffixIcon: _searchController.text.isNotEmpty
                 ? GestureDetector(
                     onTap: () {
@@ -224,8 +234,10 @@ class _CurrencyPickerScreenState extends State<CurrencyPickerScreen> {
                     ),
                   )
                 : null,
-            suffixIconConstraints:
-                const BoxConstraints(minWidth: 36, minHeight: 40),
+            suffixIconConstraints: const BoxConstraints(
+              minWidth: 36,
+              minHeight: 40,
+            ),
             hintText: isAr
                 ? 'بحث بالاسم، الكود، أو الرمز (مثال: EGP, دولار)...'
                 : 'Search by name, code, or symbol (e.g. EGP, USD)...',
@@ -270,8 +282,8 @@ class _CurrencyPickerScreenState extends State<CurrencyPickerScreen> {
           decoration: BoxDecoration(
             color: isSelected
                 ? (isDarkMode
-                    ? Colors.white.withValues(alpha: 0.10)
-                    : Colors.black.withValues(alpha: 0.05))
+                      ? Colors.white.withValues(alpha: 0.10)
+                      : Colors.black.withValues(alpha: 0.05))
                 : cardBg,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
@@ -352,7 +364,10 @@ class _CurrencyPickerScreenState extends State<CurrencyPickerScreen> {
 
               // 3. Currency Symbol Badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: isDarkMode
                       ? Colors.white.withValues(alpha: 0.08)
@@ -415,7 +430,9 @@ class _CurrencyPickerScreenState extends State<CurrencyPickerScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              isAr ? 'لم يتم العثور على عملة مطابقة' : 'No matching currencies found',
+              isAr
+                  ? 'لم يتم العثور على عملة مطابقة'
+                  : 'No matching currencies found',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
@@ -440,7 +457,10 @@ class _CurrencyPickerScreenState extends State<CurrencyPickerScreen> {
                 setState(() => _searchQuery = '');
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: isDarkMode
                       ? Colors.white.withValues(alpha: 0.10)

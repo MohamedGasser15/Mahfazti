@@ -6,10 +6,7 @@ class CategoryMeta {
   final IconData icon;
   final Color color;
 
-  const CategoryMeta({
-    required this.icon,
-    required this.color,
-  });
+  const CategoryMeta({required this.icon, required this.color});
 }
 
 class CategoryIconHelper {
@@ -30,12 +27,16 @@ class CategoryIconHelper {
     if (icon == Icons.receipt_long_rounded) return CupertinoIcons.doc_text;
     if (icon == Icons.directions_car_rounded) return CupertinoIcons.car_fill;
     if (icon == Icons.medical_services_rounded) return CupertinoIcons.bandage;
-    if (icon == Icons.payments_rounded) return CupertinoIcons.money_dollar_circle;
+    if (icon == Icons.payments_rounded)
+      return CupertinoIcons.money_dollar_circle;
     if (icon == Icons.school_rounded) return CupertinoIcons.book_fill;
-    if (icon == Icons.sports_esports_rounded) return CupertinoIcons.gamecontroller;
-    if (icon == Icons.local_grocery_store_rounded) return CupertinoIcons.cart_fill;
+    if (icon == Icons.sports_esports_rounded)
+      return CupertinoIcons.gamecontroller;
+    if (icon == Icons.local_grocery_store_rounded)
+      return CupertinoIcons.cart_fill;
     if (icon == Icons.flight_takeoff_rounded) return CupertinoIcons.airplane;
-    if (icon == Icons.subscriptions_rounded) return CupertinoIcons.arrow_2_circlepath;
+    if (icon == Icons.subscriptions_rounded)
+      return CupertinoIcons.arrow_2_circlepath;
     if (icon == Icons.trending_up_rounded) return CupertinoIcons.graph_square;
     if (icon == Icons.card_giftcard_rounded) return CupertinoIcons.gift_fill;
     if (icon == Icons.home_rounded) return CupertinoIcons.house_fill;
@@ -365,6 +366,5 @@ class CategoryIconHelper {
   static IconData getIcon(int? catId, String? name) =>
       getMeta(catId, name).icon;
 
-  static Color getColor(int? catId, String? name) =>
-      getMeta(catId, name).color;
+  static Color getColor(int? catId, String? name) => getMeta(catId, name).color;
 }

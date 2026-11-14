@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -18,6 +19,7 @@ import 'package:my_wallet/core/themes/app_surfaces.dart';
 import 'package:my_wallet/core/themes/app_icons.dart';
 import 'package:my_wallet/core/services/wallet_data_sync_service.dart';
 import 'package:my_wallet/core/widgets/app_back_button.dart';
+import 'package:my_wallet/core/widgets/app_progress_indicator.dart';
 import 'package:my_wallet/core/utils/api_error_handler.dart';
 import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
@@ -27,7 +29,7 @@ import 'package:my_wallet/features/settings/presentation/screens/categories_mana
 import 'package:my_wallet/features/settings/presentation/screens/settings_screen.dart';
 import 'package:my_wallet/features/wallet/data/models/budget_models.dart';
 import 'package:my_wallet/features/wallet/data/models/category_model.dart';
-import 'package:my_wallet/features/wallet/data/models/mock_transactions_data.dart';
+import 'package:my_wallet/features/wallet/data/repositories/account_repository.dart';
 import 'package:my_wallet/features/wallet/data/models/voice_expense_model.dart';
 import 'package:my_wallet/features/wallet/data/models/wallet_models.dart';
 import 'package:my_wallet/features/wallet/data/repositories/category_repository.dart';
@@ -50,16 +52,17 @@ part '../widgets/home_tab_widgets.dart';
 class HomeTab extends StatefulWidget {
   final ValueChanged<int>? onNavigateToTab;
 
-  const HomeTab({
-    super.key,
-    this.onNavigateToTab,
-  });
+  const HomeTab({super.key, this.onNavigateToTab});
 
   @override
   State<HomeTab> createState() => _HomeTabConcrete();
 }
 
-abstract class _HomeTabState extends State<HomeTab> {
+abstract class _HomeTabState extends State<HomeTab>
+    with AutomaticKeepAliveClientMixin<HomeTab> {
+  @override
+  bool get wantKeepAlive => true;
+
   //#region Private Fields
   final WalletRepository _walletRepository = WalletRepository();
   StreamSubscription<void>? _syncSubscription;
@@ -73,17 +76,28 @@ abstract class _HomeTabState extends State<HomeTab> {
   List<Category> _categories = [];
   String? _currencyCode;
 
-  String _selectedAccountId = 'bank';
-  String _mainAccountId = 'bank';
+  String _selectedAccountId = 'all';
   final List<AccountItem> _customAccounts = [];
+  double _heroPeriodSpent = 0;
+  double _heroTodaySpent = 0;
   DateTime _startDate = DateTime(DateTime.now().year, DateTime.now().month, 1);
-  DateTime _endDate = DateTime(DateTime.now().year, DateTime.now().month + 1, 0);
+  DateTime _endDate = DateTime(
+    DateTime.now().year,
+    DateTime.now().month + 1,
+    0,
+    23,
+    59,
+    59,
+    999,
+  );
   bool _showAutoTrackingBanner = true;
   int _getStartedCardIndex = 0;
   final Set<String> _dismissedGetStartedCards = <String>{};
   String? _animatingDismissCardId;
   bool _isDismissingCard = false;
-  PageController _getStartedPageController = PageController(viewportFraction: 0.90);
+  PageController _getStartedPageController = PageController(
+    viewportFraction: 0.90,
+  );
   final ScrollController _walletsScrollController = ScrollController();
   final ScrollController _mainScrollController = ScrollController();
   final Map<String, double> _accountBalancesOverrides = {};
@@ -95,6 +109,7 @@ abstract class _HomeTabState extends State<HomeTab> {
   @override
   void initState() {
     super.initState();
+    SharedPrefs.currencyNotifier.addListener(_onCurrencyPreferenceChanged);
     _loadCurrency().then((_) {
       _loadHomeData();
     });
@@ -110,11 +125,18 @@ abstract class _HomeTabState extends State<HomeTab> {
 
   @override
   void dispose() {
+    SharedPrefs.currencyNotifier.removeListener(_onCurrencyPreferenceChanged);
     _syncSubscription?.cancel();
     _mainScrollController.dispose();
     _getStartedPageController.dispose();
     _walletsScrollController.dispose();
     super.dispose();
+  }
+
+  void _onCurrencyPreferenceChanged() {
+    if (mounted) {
+      setState(() => _currencyCode = SharedPrefs.currencyNotifier.value);
+    }
   }
   //#endregion
 
@@ -159,6 +181,20 @@ abstract class _HomeTabState extends State<HomeTab> {
           }
         }
       }
+
+      // Sync with Accounts API
+      try {
+        final apiAccounts = await AccountRepository().getAccounts();
+        _customAccounts.clear();
+        _customAccounts.addAll(apiAccounts);
+        if (apiAccounts.isNotEmpty &&
+            _selectedAccountId != 'all' &&
+            !apiAccounts.any((a) => a.id == _selectedAccountId)) {
+          _selectedAccountId = apiAccounts
+              .firstWhere((a) => a.isMain, orElse: () => apiAccounts.first)
+              .id;
+        }
+      } catch (_) {}
       final hiddenStr = prefs.getString('wallet_hidden_insights');
       if (hiddenStr != null) {
         final list = jsonDecode(hiddenStr) as List<dynamic>;
@@ -167,7 +203,10 @@ abstract class _HomeTabState extends State<HomeTab> {
           ..addAll(list.whereType<String>());
       }
 
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {});
+        _refreshHeroSpend();
+      }
     } catch (e) {
       debugPrint('Error loading account overrides: $e');
     }
@@ -188,9 +227,18 @@ abstract class _HomeTabState extends State<HomeTab> {
   Future<void> _saveAccountOverrides() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('wallet_override_balances', jsonEncode(_accountBalancesOverrides));
-      await prefs.setString('wallet_override_names', jsonEncode(_accountNamesOverrides));
-      await prefs.setString('wallet_override_icons', jsonEncode(_accountIconsOverrides));
+      await prefs.setString(
+        'wallet_override_balances',
+        jsonEncode(_accountBalancesOverrides),
+      );
+      await prefs.setString(
+        'wallet_override_names',
+        jsonEncode(_accountNamesOverrides),
+      );
+      await prefs.setString(
+        'wallet_override_icons',
+        jsonEncode(_accountIconsOverrides),
+      );
       await prefs.setString(
         'wallet_custom_accounts',
         jsonEncode(_customAccounts.map((a) => a.toJson()).toList()),
@@ -206,7 +254,7 @@ abstract class _HomeTabState extends State<HomeTab> {
       final customIndex = _customAccounts.indexWhere((a) => a.id == id);
       if (customIndex != -1) {
         final old = _customAccounts[customIndex];
-        _customAccounts[customIndex] = AccountItem(
+        final updated = AccountItem(
           id: old.id,
           name: old.name,
           type: old.type,
@@ -218,35 +266,70 @@ abstract class _HomeTabState extends State<HomeTab> {
           isMain: old.isMain,
           accountNumber: old.accountNumber,
           currency: old.currency,
+          provider: old.provider,
+          bankName: old.bankName,
+          notificationMethod: old.notificationMethod,
+          cardNumbers: old.cardNumbers,
+          creditLimit: old.creditLimit,
+          billingDay: old.billingDay,
+          dueDay: old.dueDay,
+          minPaymentPercentage: old.minPaymentPercentage,
+          availableBalance: old.availableBalance,
+          excludeFromTotal: old.excludeFromTotal,
+          receiveAtmWithdrawals: old.receiveAtmWithdrawals,
+          autoAddInstapayFee: old.autoAddInstapayFee,
+          metalKarat: old.metalKarat,
+          metalWeightGrams: old.metalWeightGrams,
+          metalPurchasePricePerGram: old.metalPurchasePricePerGram,
+          metalPurchaseDate: old.metalPurchaseDate,
+          metalCurrentPricePerGram: old.metalCurrentPricePerGram,
+          autoUpdateMetalPrice: old.autoUpdateMetalPrice,
+          propertyCategory: old.propertyCategory,
+          annualYieldRate: old.annualYieldRate,
+          autoEstimateValue: old.autoEstimateValue,
+          estimateRateYearly: old.estimateRateYearly,
+          estimateDirection: old.estimateDirection,
+          reminderFrequency: old.reminderFrequency,
+          note: old.note,
+          totalInvestedAmount: old.totalInvestedAmount,
+          investmentPlatform: old.investmentPlatform,
         );
+        _customAccounts[customIndex] = updated;
+        AccountRepository().updateAccount(updated);
       }
     });
     _saveAccountOverrides();
   }
 
-  void _updateAccountDetails(String id, String newName, IconData newIcon) {
+  Future<void> _updateAccountDetails(
+    String id,
+    String newName,
+    IconData newIcon,
+  ) async {
+    final customIndex = _customAccounts.indexWhere(
+      (account) => account.id == id,
+    );
+    if (customIndex == -1) {
+      setState(() {
+        _accountNamesOverrides[id] = newName;
+        _accountIconsOverrides[id] = newIcon.codePoint;
+      });
+      await _saveAccountOverrides();
+      return;
+    }
+
+    final updated = _customAccounts[customIndex].copyWith(
+      name: newName,
+      icon: newIcon,
+    );
+    final saved = await AccountRepository().updateAccount(updated);
+    if (!mounted) return;
     setState(() {
-      _accountNamesOverrides[id] = newName;
-      _accountIconsOverrides[id] = newIcon.codePoint;
-      final customIndex = _customAccounts.indexWhere((a) => a.id == id);
-      if (customIndex != -1) {
-        final old = _customAccounts[customIndex];
-        _customAccounts[customIndex] = AccountItem(
-          id: old.id,
-          name: newName,
-          type: old.type,
-          balance: old.balance,
-          income: old.income,
-          expense: old.expense,
-          icon: newIcon,
-          isAll: old.isAll,
-          isMain: old.isMain,
-          accountNumber: old.accountNumber,
-          currency: old.currency,
-        );
-      }
+      _customAccounts[customIndex] = saved;
+      _accountNamesOverrides.remove(id);
+      _accountIconsOverrides.remove(id);
     });
-    _saveAccountOverrides();
+    await _saveAccountOverrides();
   }
 
   /// Insight (bento) cards the user removed from the Home grid.
@@ -257,21 +340,16 @@ abstract class _HomeTabState extends State<HomeTab> {
     final income = _homeData?.balance.totalDeposits ?? 0.0;
     final expense = _homeData?.balance.totalWithdrawals ?? 0.0;
 
-    final defaultBank = balance * 0.62;
-    final defaultCash = balance * 0.18;
-    final defaultEwallet = balance * 0.20;
-
-    final bankBalance = _accountBalancesOverrides['bank'] ?? defaultBank;
-    final cashBalance = _accountBalancesOverrides['cash'] ?? defaultCash;
-    final ewalletBalance = _accountBalancesOverrides['ewallet'] ?? defaultEwallet;
     final customTotal = _customAccounts.fold<double>(
       0.0,
-      (sum, a) => sum + (a.excludeFromTotal ? 0.0 : (_accountBalancesOverrides[a.id] ?? a.balance)),
+      (sum, a) =>
+          sum +
+          (a.excludeFromTotal
+              ? 0.0
+              : (_accountBalancesOverrides[a.id] ?? a.balance)),
     );
 
-    final totalEffectiveBalance = _accountBalancesOverrides.isNotEmpty
-        ? (bankBalance + cashBalance + ewalletBalance + customTotal)
-        : balance;
+    final totalEffectiveBalance = _homeData != null ? balance : customTotal;
 
     IconData getAccountIcon(String id, IconData fallback) {
       final codePoint = _accountIconsOverrides[id];
@@ -283,6 +361,35 @@ abstract class _HomeTabState extends State<HomeTab> {
       return fallback;
     }
 
+    final currency = _currencyCode ?? 'EGP';
+
+    if (_customAccounts.isEmpty) {
+      return [
+        AccountItem(
+          id: 'all',
+          name: context.l10n.allAccounts,
+          type: 'all',
+          balance: totalEffectiveBalance,
+          income: income,
+          expense: expense,
+          icon: Icons.account_balance_wallet_rounded,
+          isAll: true,
+          currency: currency,
+        ),
+      ];
+    }
+
+    final hasMainAccount = _customAccounts.any((account) => account.isMain);
+    final userAccounts = _customAccounts.asMap().entries.map((entry) {
+      final account = entry.value;
+      return account.copyWith(
+        name: _accountNamesOverrides[account.id] ?? account.name,
+        balance: _accountBalancesOverrides[account.id] ?? account.balance,
+        icon: getAccountIcon(account.id, account.icon),
+        isMain: account.isMain || (!hasMainAccount && entry.key == 0),
+      );
+    }).toList();
+
     return [
       AccountItem(
         id: 'all',
@@ -293,56 +400,18 @@ abstract class _HomeTabState extends State<HomeTab> {
         expense: expense,
         icon: Icons.account_balance_wallet_rounded,
         isAll: true,
-        isMain: _mainAccountId == 'all',
-        currency: _currencyCode ?? 'EGP',
+        isMain: false,
+        currency: currency,
       ),
-      AccountItem(
-        id: 'bank',
-        name: _accountNamesOverrides['bank'] ?? context.l10n.banqueMisr,
-        type: 'bank',
-        balance: bankBalance,
-        income: income * 0.8,
-        expense: expense * 0.45,
-        icon: getAccountIcon('bank', Icons.account_balance_rounded),
-        isMain: _mainAccountId == 'bank',
-        accountNumber: '•••• 8920',
-        currency: 'EGP',
-      ),
-      AccountItem(
-        id: 'cash',
-        name: _accountNamesOverrides['cash'] ?? context.l10n.cashWallet,
-        type: 'cash',
-        balance: cashBalance,
-        income: income * 0.1,
-        expense: expense * 0.35,
-        icon: getAccountIcon('cash', Icons.payments_rounded),
-        isMain: _mainAccountId == 'cash',
-        accountNumber: context.l10n.cash,
-        currency: 'EGP',
-      ),
-      AccountItem(
-        id: 'ewallet',
-        name: _accountNamesOverrides['ewallet'] ?? context.l10n.vodafoneCash,
-        type: 'ewallet',
-        balance: ewalletBalance,
-        income: income * 0.1,
-        expense: expense * 0.2,
-        icon: getAccountIcon('ewallet', Icons.phone_iphone_rounded),
-        isMain: _mainAccountId == 'ewallet',
-        accountNumber: '010 •••• 567',
-        currency: 'EGP',
-      ),
-      ..._customAccounts.map((a) => a.copyWith(
-        name: _accountNamesOverrides[a.id] ?? a.name,
-        balance: _accountBalancesOverrides[a.id] ?? a.balance,
-        icon: getAccountIcon(a.id, a.icon),
-      )),
+      ...userAccounts,
     ];
   }
 
   List<AccountItem> get _walletsCarouselList {
-    final list = _accounts.where((a) => !a.isAll).toList();
+    final list = _accounts.toList();
     list.sort((a, b) {
+      if (a.isAll && !b.isAll) return -1;
+      if (!a.isAll && b.isAll) return 1;
       if (a.isMain && !b.isMain) return -1;
       if (!a.isMain && b.isMain) return 1;
       return 0;
@@ -377,6 +446,62 @@ abstract class _HomeTabState extends State<HomeTab> {
 
   double _heroDragDistance = 0.0;
   bool _heroSlideFromLeft = false;
+  int _heroSpendRequestId = 0;
+
+  bool get _heroPeriodIncludesToday {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final start = DateTime(_startDate.year, _startDate.month, _startDate.day);
+    final end = DateTime(_endDate.year, _endDate.month, _endDate.day);
+    return !today.isBefore(start) && !today.isAfter(end);
+  }
+
+  Future<void> _refreshHeroSpend() async {
+    final requestId = ++_heroSpendRequestId;
+    final selectedId = _selectedAccountId == 'all'
+        ? null
+        : int.tryParse(_selectedAccountId);
+    final includesToday = _heroPeriodIncludesToday;
+    final periodRequest = _walletRepository.getHomeData(
+      accountId: selectedId,
+      fromDate: _startDate,
+      toDate: _endDate,
+    );
+
+    Future<WalletHomeData>? todayRequest;
+    if (includesToday) {
+      final now = DateTime.now();
+      final todayStart = DateTime(now.year, now.month, now.day);
+      final todayEnd = todayStart
+          .add(const Duration(days: 1))
+          .subtract(const Duration(microseconds: 1));
+      todayRequest = _walletRepository.getHomeData(
+        accountId: selectedId,
+        fromDate: todayStart,
+        toDate: todayEnd,
+      );
+    }
+
+    try {
+      final periodData = await periodRequest;
+      if (!mounted || requestId != _heroSpendRequestId) return;
+      setState(() {
+        _heroPeriodSpent = periodData.balance.totalWithdrawals;
+        if (!includesToday) _heroTodaySpent = 0;
+      });
+    } catch (_) {
+      // Keep the last successful period total while offline.
+    }
+
+    if (todayRequest == null) return;
+    try {
+      final todayData = await todayRequest;
+      if (!mounted || requestId != _heroSpendRequestId) return;
+      setState(() => _heroTodaySpent = todayData.balance.totalWithdrawals);
+    } catch (_) {
+      // Keep the last successful today's total while offline.
+    }
+  }
 
   void _switchToNextAccount({bool isRtl = false}) {
     final accounts = _accounts;
@@ -389,6 +514,7 @@ abstract class _HomeTabState extends State<HomeTab> {
       _heroSlideFromLeft = isRtl;
       _selectedAccountId = accounts[nextIndex].id;
     });
+    _refreshHeroSpend();
     _syncWalletsCarouselToSelected();
   }
 
@@ -403,6 +529,7 @@ abstract class _HomeTabState extends State<HomeTab> {
       _heroSlideFromLeft = !isRtl;
       _selectedAccountId = accounts[prevIndex].id;
     });
+    _refreshHeroSpend();
     _syncWalletsCarouselToSelected();
   }
   //#endregion
@@ -433,17 +560,22 @@ abstract class _HomeTabState extends State<HomeTab> {
   Future<List<WalletTransaction>> _loadAllTransactions() async {
     try {
       final response = await _walletRepository.getTransactions(pageSize: 100);
-      if (response.transactions.isNotEmpty) {
-        return response.transactions;
-      }
-      return getRichSampleTransactions();
+      return response.transactions;
     } catch (e) {
-      return getRichSampleTransactions();
+      return [];
     }
   }
 
   Future<void> _loadHomeData({bool forceRefresh = false}) async {
-    if (!forceRefresh && !AppConstants.useMockBackend) {
+    final now = DateTime.now();
+    final isCurrentMonth =
+        _startDate.year == now.year &&
+        _startDate.month == now.month &&
+        _startDate.day == 1 &&
+        _endDate.year == now.year &&
+        _endDate.month == now.month;
+
+    if (!forceRefresh && isCurrentMonth && !AppConstants.useMockBackend) {
       final cached = await WalletCacheService.getHome();
       final cachedBudget = await WalletCacheService.getBudget();
       await _loadUpcomingSubscription();
@@ -455,12 +587,14 @@ abstract class _HomeTabState extends State<HomeTab> {
               : null;
           setState(() {
             _homeData = cachedData;
-            _budgetData = (parsedBudget != null && parsedBudget.monthlyBudget > 0)
+            _budgetData =
+                (parsedBudget != null && parsedBudget.monthlyBudget > 0)
                 ? parsedBudget
                 : BudgetDto.defaultSeed();
             _isLoading = false;
             _errorMessage = null;
           });
+          _refreshHeroSpend();
           _refreshInBackground();
           return;
         } catch (e) {
@@ -504,24 +638,41 @@ abstract class _HomeTabState extends State<HomeTab> {
 
   Future<void> _fetchHomeFromApi({bool silent = false}) async {
     try {
-      final data = await _walletRepository.getHomeData();
+      final data = await _walletRepository.getHomeData(
+        fromDate: _startDate,
+        toDate: _endDate,
+      );
       final cacheMap = data.toJson();
-      await WalletCacheService.saveHome(cacheMap);
+      final now = DateTime.now();
+      final isCurrentMonth =
+          _startDate.year == now.year &&
+          _startDate.month == now.month &&
+          _startDate.day == 1 &&
+          _endDate.year == now.year &&
+          _endDate.month == now.month;
+      if (isCurrentMonth) {
+        await WalletCacheService.saveHome(cacheMap);
+      }
 
       BudgetDto? fetchedBudget;
       try {
-        fetchedBudget = await _walletRepository.getBudget();
+        fetchedBudget = await _walletRepository.getBudget(
+          month: _startDate.month,
+          year: _startDate.year,
+        );
       } catch (_) {}
       await _loadUpcomingSubscription();
 
       if (mounted) {
         setState(() {
           _homeData = data;
-          _budgetData = (fetchedBudget != null && fetchedBudget.monthlyBudget > 0)
+          _budgetData =
+              (fetchedBudget != null && fetchedBudget.monthlyBudget > 0)
               ? fetchedBudget
               : BudgetDto.defaultSeed();
           if (!silent) _isLoading = false;
         });
+        _refreshHeroSpend();
       }
     } catch (e) {
       final errorMsg = ApiErrorHandler.getErrorMessage(e);
@@ -554,24 +705,19 @@ abstract class _HomeTabState extends State<HomeTab> {
   //#region Filter Helpers
   List<WalletTransaction> get _filteredTransactions {
     final serverTransactions = _homeData?.recentTransactions ?? [];
-    final sampleData = getRichSampleTransactions();
-    final all = [
-      ...serverTransactions,
-      ...sampleData
-          .where((s) => !serverTransactions.any((t) => t.id == s.id)),
-    ];
-    if (_selectedAccountId == 'all') return all;
+    if (_selectedAccountId == 'all') return serverTransactions;
 
-    final accountsList =
-        _accounts.where((a) => !a.isAll).map((a) => a.id).toList();
-    final index = accountsList.indexOf(_selectedAccountId);
-    if (index == -1) return all;
-
-    final total = accountsList.length;
-    final filtered = all.where((t) => (t.id % total) == index).toList();
-    return filtered.isNotEmpty ? filtered : all;
+    final selectedAccId = int.tryParse(_selectedAccountId);
+    if (selectedAccId != null) {
+      return serverTransactions
+          .where(
+            (t) =>
+                t.accountId == selectedAccId || t.toAccountId == selectedAccId,
+          )
+          .toList();
+    }
+    return serverTransactions;
   }
-
 
   String get _formattedDateRange {
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
@@ -616,7 +762,10 @@ abstract class _HomeTabState extends State<HomeTab> {
   Widget _buildWalletsCarousel(bool isDarkMode, HideBalanceService hideService);
   Widget _buildAutoTrackingBanner(bool isDarkMode);
   Widget _buildRecentTransactionsSection(bool isDarkMode);
-  Widget _buildInsightsGridSection(bool isDarkMode, HideBalanceService hideService);
+  Widget _buildInsightsGridSection(
+    bool isDarkMode,
+    HideBalanceService hideService,
+  );
   void _showEditTransactionDialog(WalletTransaction transaction);
   void _showDeleteConfirmationDialog(WalletTransaction transaction);
   Widget _buildSkeletonLoading(bool isDarkMode);
@@ -636,8 +785,77 @@ abstract class _HomeTabState extends State<HomeTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final hideService = Provider.of<HideBalanceService>(context);
+    final topPadding = MediaQuery.paddingOf(context).top;
+
+    final homeContent = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        if (!Platform.isIOS)
+          // Top overscroll extension: matches top of hero gradient seamlessly
+          Positioned(
+            top: -1000,
+            left: -1000,
+            right: -1000,
+            height: 1000,
+            child: Container(
+              color: isDarkMode
+                  ? const Color(0xFF16161B)
+                  : const Color(0xFF141418),
+            ),
+          ),
+        ResponsiveWrapper(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Say-Style Hero Section with Atmospheric Black Gradient / Shadow (Status bar down to actions)
+              _buildSayHeroSection(isDarkMode, hideService),
+
+              if (_homeData == null) ...[
+                if (_isLoading)
+                  _buildSkeletonLoading(isDarkMode)
+                else if (_errorMessage != null)
+                  _buildErrorWidget(isDarkMode)
+                else
+                  const SizedBox.shrink(),
+              ] else ...[
+                // "Get Started / Auto-Tracking" Banner Card
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 320),
+                  curve: Curves.easeInOutCubic,
+                  child:
+                      (_showAutoTrackingBanner &&
+                          _dismissedGetStartedCards.length < 4)
+                      ? Column(
+                          children: [
+                            _buildAutoTrackingBanner(isDarkMode),
+                            const SizedBox(height: 20),
+                          ],
+                        )
+                      : const SizedBox.shrink(),
+                ),
+
+                // Wallets Carousel (Always visible, showing Main Account + Add button)
+                _buildWalletsCarousel(isDarkMode, hideService),
+                const SizedBox(height: 20),
+
+                // Recent Transactions Section
+                _buildRecentTransactionsSection(isDarkMode),
+
+                const SizedBox(height: 24),
+
+                // Insights Grid Widgets Section
+                _buildInsightsGridSection(isDarkMode, hideService),
+
+                const SizedBox(height: 120),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -647,82 +865,118 @@ abstract class _HomeTabState extends State<HomeTab> {
       ),
       child: Container(
         color: isDarkMode ? const Color(0xFF09090B) : Colors.white,
-        child: RefreshIndicator(
-          onRefresh: _refreshData,
-          color: Colors.white,
-          backgroundColor: isDarkMode ? const Color(0xFF26262E) : const Color(0xFF202026),
-          child: SingleChildScrollView(
-            controller: _mainScrollController,
-            clipBehavior: Clip.none,
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.zero,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                // Top overscroll extension: matches top of hero gradient seamlessly
-                Positioned(
-                  top: -1000,
-                  left: -1000,
-                  right: -1000,
-                  height: 1000,
-                  child: Container(
-                    color: isDarkMode
-                        ? const Color(0xFF16161B)
-                        : const Color(0xFF141418),
-                  ),
+        child: Platform.isIOS
+            ? CustomScrollView(
+                controller: _mainScrollController,
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
                 ),
-                ResponsiveWrapper(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Say-Style Hero Section with Atmospheric Black Gradient / Shadow (Status bar down to actions)
-                      _buildSayHeroSection(isDarkMode, hideService),
+                slivers: [
+                  CupertinoSliverRefreshControl(
+                    onRefresh: _refreshData,
+                    refreshTriggerPullDistance: topPadding > 0
+                        ? topPadding + 75
+                        : 100.0,
+                    refreshIndicatorExtent: topPadding > 0
+                        ? topPadding + 45
+                        : 60.0,
+                    builder:
+                        (
+                          BuildContext context,
+                          RefreshIndicatorMode refreshState,
+                          double pulledExtent,
+                          double refreshTriggerPullDistance,
+                          double refreshIndicatorExtent,
+                        ) {
+                          if (refreshState == RefreshIndicatorMode.inactive ||
+                              pulledExtent <= 0) {
+                            return const SizedBox.shrink();
+                          }
 
-                      if (_homeData == null) ...[
-                        if (_isLoading)
-                          _buildSkeletonLoading(isDarkMode)
-                        else if (_errorMessage != null)
-                          _buildErrorWidget(isDarkMode)
-                        else
-                          const SizedBox.shrink(),
-                      ] else ...[
-                        // "Get Started / Auto-Tracking" Banner Card
-                        AnimatedSize(
-                          duration: const Duration(milliseconds: 320),
-                          curve: Curves.easeInOutCubic,
-                          child: (_showAutoTrackingBanner && _dismissedGetStartedCards.length < 4)
-                              ? Column(
-                                  children: [
-                                    _buildAutoTrackingBanner(isDarkMode),
-                                    const SizedBox(height: 20),
-                                  ],
-                                )
-                              : const SizedBox.shrink(),
-                        ),
+                          final percentage =
+                              (pulledExtent / refreshTriggerPullDistance).clamp(
+                                0.0,
+                                1.0,
+                              );
 
-                        // Wallets Carousel (Displayed if user has multiple accounts/wallets)
-                        if (_accounts.where((a) => !a.isAll).length > 1) ...[
-                          _buildWalletsCarousel(isDarkMode, hideService),
-                          const SizedBox(height: 20),
-                        ],
+                          Widget indicator;
+                          switch (refreshState) {
+                            case RefreshIndicatorMode.drag:
+                              indicator = Opacity(
+                                opacity: Interval(
+                                  0.0,
+                                  0.4,
+                                  curve: Curves.easeInOut,
+                                ).transform(percentage),
+                                child:
+                                    CupertinoActivityIndicator.partiallyRevealed(
+                                      radius: 13,
+                                      progress: percentage,
+                                      color: Colors.white,
+                                    ),
+                              );
+                              break;
+                            case RefreshIndicatorMode.armed:
+                            case RefreshIndicatorMode.refresh:
+                              indicator = const CupertinoActivityIndicator(
+                                radius: 13,
+                                color: Colors.white,
+                              );
+                              break;
+                            case RefreshIndicatorMode.done:
+                              indicator = CupertinoActivityIndicator(
+                                radius: 13 * percentage,
+                                color: Colors.white,
+                              );
+                              break;
+                            case RefreshIndicatorMode.inactive:
+                              indicator = const SizedBox.shrink();
+                              break;
+                          }
 
-                        // Recent Transactions Section
-                        _buildRecentTransactionsSection(isDarkMode),
+                          final heroBgColor = isDarkMode
+                              ? const Color(0xFF16161B)
+                              : const Color(0xFF141418);
 
-                        const SizedBox(height: 24),
-
-                        // Insights Grid Widgets Section
-                        _buildInsightsGridSection(isDarkMode, hideService),
-
-                        const SizedBox(height: 120),
-                      ],
-                    ],
+                          return Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Positioned(
+                                top: -400,
+                                left: -200,
+                                right: -200,
+                                // Slightly overlap the hero to hide a hairline
+                                // seam at the refresh sliver boundary.
+                                bottom: -4,
+                                child: Container(color: heroBgColor),
+                              ),
+                              Positioned(
+                                top: topPadding > 0 ? topPadding + 8 : 16,
+                                left: 0,
+                                right: 0,
+                                child: Center(child: indicator),
+                              ),
+                            ],
+                          );
+                        },
                   ),
+                  SliverToBoxAdapter(child: homeContent),
+                ],
+              )
+            : RefreshIndicator(
+                onRefresh: _refreshData,
+                color: Colors.white,
+                backgroundColor: isDarkMode
+                    ? const Color(0xFF26262E)
+                    : const Color(0xFF202026),
+                child: SingleChildScrollView(
+                  controller: _mainScrollController,
+                  clipBehavior: Clip.none,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero,
+                  child: homeContent,
                 ),
-              ],
-            ),
-          ),
-        ),
+              ),
       ),
     );
   }
@@ -771,7 +1025,12 @@ abstract class _HomeTabState extends State<HomeTab> {
   }
 
   Future<T?> _showAdaptiveBottomSheet<T>({
-    required Widget Function(BuildContext context, bool isGlass, GlassModalSheetController? controller) builder,
+    required Widget Function(
+      BuildContext context,
+      bool isGlass,
+      GlassModalSheetController? controller,
+    )
+    builder,
     bool isScrollControlled = true,
     bool showDragHandle = true,
     bool dismissible = true,
@@ -785,7 +1044,10 @@ abstract class _HomeTabState extends State<HomeTab> {
     double halfSize = 0.69,
     double fullSize = 0.88,
     GlassSheetState initialState = GlassSheetState.half,
-    Set<GlassSheetDetent> detents = const {GlassSheetDetent.medium, GlassSheetDetent.large},
+    Set<GlassSheetDetent> detents = const {
+      GlassSheetDetent.medium,
+      GlassSheetDetent.large,
+    },
     GlassModalSheetController? controller,
     List<FocusNode>? focusNodes,
     ValueChanged<GlassSheetState>? onStateChanged,
@@ -851,9 +1113,12 @@ abstract class _HomeTabState extends State<HomeTab> {
           }
           onStateChanged?.call(state);
         },
-        builder: (ctx) => Material(
-          type: MaterialType.transparency,
-          child: builder(ctx, true, sheetController),
+        builder: (ctx) => Directionality(
+          textDirection: Directionality.of(context),
+          child: Material(
+            type: MaterialType.transparency,
+            child: builder(ctx, true, sheetController),
+          ),
         ),
       );
     } else {
@@ -863,7 +1128,10 @@ abstract class _HomeTabState extends State<HomeTab> {
         isScrollControlled: isScrollControlled,
         enableDrag: enableDrag,
         backgroundColor: Colors.transparent,
-        builder: (ctx) => builder(ctx, false, null),
+        builder: (ctx) => Directionality(
+          textDirection: Directionality.of(context),
+          child: builder(ctx, false, null),
+        ),
       );
     }
   }
@@ -883,7 +1151,8 @@ class AdaptiveSheetFocusScope extends StatefulWidget {
   });
 
   @override
-  State<AdaptiveSheetFocusScope> createState() => _AdaptiveSheetFocusScopeState();
+  State<AdaptiveSheetFocusScope> createState() =>
+      _AdaptiveSheetFocusScopeState();
 }
 
 class _AdaptiveSheetFocusScopeState extends State<AdaptiveSheetFocusScope>
@@ -952,4 +1221,5 @@ class _AdaptiveSheetFocusScopeState extends State<AdaptiveSheetFocusScope>
   }
 }
 
-class _HomeTabConcrete extends _HomeTabState with _HomeTabDialogs, _HomeTabWidgets {}
+class _HomeTabConcrete extends _HomeTabState
+    with _HomeTabDialogs, _HomeTabWidgets {}

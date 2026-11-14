@@ -10,6 +10,7 @@ import 'package:my_wallet/core/constants/currency_constants.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/widgets/app_back_button.dart';
 import 'package:my_wallet/core/widgets/app_icon_picker_modal.dart';
+import 'package:my_wallet/core/widgets/app_progress_indicator.dart';
 import 'package:my_wallet/features/wallet/data/repositories/bank_repository.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/bank_picker_screen.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/currency_picker_screen.dart';
@@ -17,15 +18,15 @@ import 'package:my_wallet/features/wallet/presentation/widgets/home_tab_models.d
 
 /// Navigation steps for the Add Account wizard
 enum AddAccountStep {
-  selectType,             // Step 1: Type selection
+  selectType, // Step 1: Type selection
   selectPropertyCategory, // If Investment/Property: pick MMF, Apartment, Car, etc.
-  fundAnnualYield,        // For MMF: what does it pay a year
-  assetValueChange,       // For Apartment/Car/Business/Other: does value change on its own
+  fundAnnualYield, // For MMF: what does it pay a year
+  assetValueChange, // For Apartment/Car/Business/Other: does value change on its own
   selectStocksCryptoPlatform, // For Stocks & Crypto: pick EGX, US, Crypto, Other
-  selectEWallet,          // If E-Wallet: pick Vodafone, Orange, Etisalat, WE, Other
-  selectNotifyMethod,     // If Debit/Credit: SMS vs Notification
-  enterSmsCardNumbers,    // If SMS: enter card digits + examples + skip
-  details,                // Final details form
+  selectEWallet, // If E-Wallet: pick Vodafone, Orange, Etisalat, WE, Other
+  selectNotifyMethod, // If Debit/Credit: SMS vs Notification
+  enterSmsCardNumbers, // If SMS: enter card digits + examples + skip
+  details, // Final details form
 }
 
 /// Property and investment categories
@@ -307,59 +308,140 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     if (clean.isEmpty) return null;
 
     // Gold / Jewelry
-    if (clean.contains('ذهب') || clean.contains('gold') || clean.contains('سبيك') || clean.contains('عيار')) {
+    if (clean.contains('ذهب') ||
+        clean.contains('gold') ||
+        clean.contains('سبيك') ||
+        clean.contains('عيار')) {
       return Icons.diamond_outlined;
     }
     // Silver / Bullion
-    if (clean.contains('فضة') || clean.contains('فضه') || clean.contains('silver')) {
+    if (clean.contains('فضة') ||
+        clean.contains('فضه') ||
+        clean.contains('silver')) {
       return Icons.circle_outlined;
     }
     // Bank Certificate / Deposit
-    if (clean.contains('شهادة') || clean.contains('شهاده') || clean.contains('وديعة') || clean.contains('وديعه') || clean.contains('certificate') || clean.contains('cd')) {
+    if (clean.contains('شهادة') ||
+        clean.contains('شهاده') ||
+        clean.contains('وديعة') ||
+        clean.contains('وديعه') ||
+        clean.contains('certificate') ||
+        clean.contains('cd')) {
       return Icons.verified_outlined;
     }
     // Car / Vehicle / Fuel
-    if (clean.contains('عرب') || clean.contains('سيار') || clean.contains('car') || clean.contains('بنزين') || clean.contains('أوبر') || clean.contains('uber')) {
+    if (clean.contains('عرب') ||
+        clean.contains('سيار') ||
+        clean.contains('car') ||
+        clean.contains('بنزين') ||
+        clean.contains('أوبر') ||
+        clean.contains('uber')) {
       return Icons.directions_car_rounded;
     }
     // Home / Apartment / Rent / Real Estate
-    if (clean.contains('بيت') || clean.contains('شقة') || clean.contains('منزل') || clean.contains('home') || clean.contains('إيجار') || clean.contains('عقار')) {
+    if (clean.contains('بيت') ||
+        clean.contains('شقة') ||
+        clean.contains('منزل') ||
+        clean.contains('home') ||
+        clean.contains('إيجار') ||
+        clean.contains('عقار')) {
       return Icons.home_rounded;
     }
     // Travel / Flight / Vacation
-    if (clean.contains('سفر') || clean.contains('رحل') || clean.contains('طيران') || clean.contains('travel') || clean.contains('flight') || clean.contains('مصيف') || clean.contains('تذاكر')) {
+    if (clean.contains('سفر') ||
+        clean.contains('رحل') ||
+        clean.contains('طيران') ||
+        clean.contains('travel') ||
+        clean.contains('flight') ||
+        clean.contains('مصيف') ||
+        clean.contains('تذاكر')) {
       return Icons.flight_takeoff_rounded;
     }
     // Savings / Gam'eya / Emergency
-    if (clean.contains('جمعية') || clean.contains('حصالة') || clean.contains('تحويش') || clean.contains('توفير') || clean.contains('savings')) {
+    if (clean.contains('جمعية') ||
+        clean.contains('حصالة') ||
+        clean.contains('تحويش') ||
+        clean.contains('توفير') ||
+        clean.contains('savings')) {
       return Icons.savings_rounded;
     }
     // Emergency / Safety / Protection
-    if (clean.contains('طوارئ') || clean.contains('أمان') || clean.contains('حماية') || clean.contains('emergency') || clean.contains('تأمين')) {
+    if (clean.contains('طوارئ') ||
+        clean.contains('أمان') ||
+        clean.contains('حماية') ||
+        clean.contains('emergency') ||
+        clean.contains('تأمين')) {
       return Icons.shield_outlined;
     }
     // Stocks / Trading / Crypto / Funds / Thndr
-    if (clean.contains('أسهم') || clean.contains('بورصة') || clean.contains('ثندر') || clean.contains('thndr') || clean.contains('تداول') || clean.contains('صندوق') || clean.contains('crypto') || clean.contains('بيتكوين') || clean.contains('استثمار') || clean.contains('أرباح')) {
+    if (clean.contains('أسهم') ||
+        clean.contains('بورصة') ||
+        clean.contains('ثندر') ||
+        clean.contains('thndr') ||
+        clean.contains('تداول') ||
+        clean.contains('صندوق') ||
+        clean.contains('crypto') ||
+        clean.contains('بيتكوين') ||
+        clean.contains('استثمار') ||
+        clean.contains('أرباح')) {
       return Icons.trending_up_rounded;
     }
     // Cash / Pocket / Wallet
-    if (clean.contains('كاش') || clean.contains('نقدي') || clean.contains('جيب') || clean.contains('cash') || clean.contains('درج') || clean.contains('فكة')) {
+    if (clean.contains('كاش') ||
+        clean.contains('نقدي') ||
+        clean.contains('جيب') ||
+        clean.contains('cash') ||
+        clean.contains('درج') ||
+        clean.contains('فكة')) {
       return Icons.payments_outlined;
     }
     // Mobile Wallets / InstaPay / Telda
-    if (clean.contains('فودافون') || clean.contains('vodafone') || clean.contains('أورانج') || clean.contains('orange') || clean.contains('اتصالات') || clean.contains('etisalat') || clean.contains('we pay') || clean.contains('وي باي') || clean.contains('إنستاباي') || clean.contains('instapay') || clean.contains('تيلدا') || clean.contains('telda') || clean.contains('كلافر')) {
+    if (clean.contains('فودافون') ||
+        clean.contains('vodafone') ||
+        clean.contains('أورانج') ||
+        clean.contains('orange') ||
+        clean.contains('اتصالات') ||
+        clean.contains('etisalat') ||
+        clean.contains('we pay') ||
+        clean.contains('وي باي') ||
+        clean.contains('إنستاباي') ||
+        clean.contains('instapay') ||
+        clean.contains('تيلدا') ||
+        clean.contains('telda') ||
+        clean.contains('كلافر')) {
       return Icons.smartphone_outlined;
     }
     // Credit Card / Shopping Card
-    if (clean.contains('كريدت') || clean.contains('credit') || clean.contains('مشتريات') || clean.contains('فيزا') || clean.contains('تيتانيوم') || clean.contains('بلاتينيوم') || clean.contains('gold card')) {
+    if (clean.contains('كريدت') ||
+        clean.contains('credit') ||
+        clean.contains('مشتريات') ||
+        clean.contains('فيزا') ||
+        clean.contains('تيتانيوم') ||
+        clean.contains('بلاتينيوم') ||
+        clean.contains('gold card')) {
       return Icons.credit_card_rounded;
     }
     // Bank Account / Debit
-    if (clean.contains('بنك') || clean.contains('bank') || clean.contains('cib') || clean.contains('أهلي') || clean.contains('nbe') || clean.contains('مصر') || clean.contains('qnb') || clean.contains('hsbc') || clean.contains('إسكندرية') || clean.contains('حساب جاري') || clean.contains('حساب توفير')) {
+    if (clean.contains('بنك') ||
+        clean.contains('bank') ||
+        clean.contains('cib') ||
+        clean.contains('أهلي') ||
+        clean.contains('nbe') ||
+        clean.contains('مصر') ||
+        clean.contains('qnb') ||
+        clean.contains('hsbc') ||
+        clean.contains('إسكندرية') ||
+        clean.contains('حساب جاري') ||
+        clean.contains('حساب توفير')) {
       return Icons.account_balance_rounded;
     }
     // Shopping / Grocery
-    if (clean.contains('شراء') || clean.contains('تسوق') || clean.contains('shop') || clean.contains('سوق') || clean.contains('كارفور') || clean.contains('هايبر')) {
+    if (clean.contains('شراء') ||
+        clean.contains('تسوق') ||
+        clean.contains('shop') ||
+        clean.contains('سوق') ||
+        clean.contains('كارفور') ||
+        clean.contains('هايبر')) {
       return Icons.shopping_bag_outlined;
     }
     // Gift
@@ -367,27 +449,58 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
       return Icons.card_giftcard_rounded;
     }
     // Gym / Sports
-    if (clean.contains('جيم') || clean.contains('gym') || clean.contains('رياضة') || clean.contains('تمرين')) {
+    if (clean.contains('جيم') ||
+        clean.contains('gym') ||
+        clean.contains('رياضة') ||
+        clean.contains('تمرين')) {
       return Icons.fitness_center_rounded;
     }
     // Food / Restaurant / Cafe
-    if (clean.contains('مطعم') || clean.contains('أكل') || clean.contains('طعام') || clean.contains('food') || clean.contains('كافيه') || clean.contains('قهوة') || clean.contains('cafe') || clean.contains('coffee')) {
+    if (clean.contains('مطعم') ||
+        clean.contains('أكل') ||
+        clean.contains('طعام') ||
+        clean.contains('food') ||
+        clean.contains('كافيه') ||
+        clean.contains('قهوة') ||
+        clean.contains('cafe') ||
+        clean.contains('coffee')) {
       return Icons.restaurant_rounded;
     }
     // Medical / Pharmacy / Health
-    if (clean.contains('صيدلية') || clean.contains('دواء') || clean.contains('دكتور') || clean.contains('علاج') || clean.contains('مستشفى') || clean.contains('health') || clean.contains('medical')) {
+    if (clean.contains('صيدلية') ||
+        clean.contains('دواء') ||
+        clean.contains('دكتور') ||
+        clean.contains('علاج') ||
+        clean.contains('مستشفى') ||
+        clean.contains('health') ||
+        clean.contains('medical')) {
       return Icons.medical_services_rounded;
     }
     // School / Education
-    if (clean.contains('مدرسة') || clean.contains('جامعة') || clean.contains('كورس') || clean.contains('تعليم') || clean.contains('دراسة') || clean.contains('school')) {
+    if (clean.contains('مدرسة') ||
+        clean.contains('جامعة') ||
+        clean.contains('كورس') ||
+        clean.contains('تعليم') ||
+        clean.contains('دراسة') ||
+        clean.contains('school')) {
       return Icons.school_rounded;
     }
     // Salary / Work
-    if (clean.contains('راتب') || clean.contains('مرتب') || clean.contains('شغل') || clean.contains('عمل') || clean.contains('وظيفة') || clean.contains('salary')) {
+    if (clean.contains('راتب') ||
+        clean.contains('مرتب') ||
+        clean.contains('شغل') ||
+        clean.contains('عمل') ||
+        clean.contains('وظيفة') ||
+        clean.contains('salary')) {
       return Icons.work_rounded;
     }
     // Bills / Electricity / Utilities
-    if (clean.contains('كهرباء') || clean.contains('غاز') || clean.contains('مياه') || clean.contains('فاتورة') || clean.contains('نور') || clean.contains('bills')) {
+    if (clean.contains('كهرباء') ||
+        clean.contains('غاز') ||
+        clean.contains('مياه') ||
+        clean.contains('فاتورة') ||
+        clean.contains('نور') ||
+        clean.contains('bills')) {
       return Icons.lightbulb_rounded;
     }
 
@@ -414,7 +527,8 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
   // Debit & Credit notification & SMS state
   String? _selectedNotifyMethod; // 'sms' or 'notification'
   final List<String> _smsCardNumbers = [];
-  final TextEditingController _smsNumberInputController = TextEditingController();
+  final TextEditingController _smsNumberInputController =
+      TextEditingController();
   final FocusNode _smsNumberFocusNode = FocusNode();
   bool _showSmsExamples = false;
 
@@ -429,13 +543,15 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
   final TextEditingController _creditLimitController = TextEditingController();
   final TextEditingController _billingDayController = TextEditingController();
   final TextEditingController _dueDayController = TextEditingController();
-  final TextEditingController _availableBalanceController = TextEditingController();
+  final TextEditingController _availableBalanceController =
+      TextEditingController();
   final TextEditingController _minPaymentController = TextEditingController();
   final TextEditingController _extraFieldController = TextEditingController();
 
   // Precious Metals (Gold & Silver)
   final TextEditingController _metalWeightController = TextEditingController();
-  final TextEditingController _metalPurchasePriceController = TextEditingController();
+  final TextEditingController _metalPurchasePriceController =
+      TextEditingController();
   final FocusNode _metalWeightFocusNode = FocusNode();
   final FocusNode _metalPurchasePriceFocusNode = FocusNode();
   String _selectedMetalKarat = '21';
@@ -445,12 +561,14 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
   // Property & Investment wizard state
   PropertyCategory? _selectedPropertyCategory;
   String? _selectedStocksPlatform;
-  final TextEditingController _investedAmountController = TextEditingController();
+  final TextEditingController _investedAmountController =
+      TextEditingController();
   final FocusNode _investedAmountFocusNode = FocusNode();
   final TextEditingController _fundYieldController = TextEditingController();
   final FocusNode _fundYieldFocusNode = FocusNode();
   bool _autoEstimateValue = false; // false = update myself, true = yes about X%
-  String _reminderPeriod = 'monthly'; // 'monthly', '3_months', '6_months', 'never'
+  String _reminderPeriod =
+      'monthly'; // 'monthly', '3_months', '6_months', 'never'
   final TextEditingController _estimateRateController = TextEditingController();
   final FocusNode _estimateRateFocusNode = FocusNode();
   String _estimateDirection = 'up'; // 'up' or 'down'
@@ -474,17 +592,18 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
 
   bool _isSubmitting = false;
 
-  AccountTypeDefinition get _selectedType =>
-      kAccountTypeDefinitions.firstWhere(
-        (t) => t.id == _selectedTypeId,
-        orElse: () => kAccountTypeDefinitions.first,
-      );
+  AccountTypeDefinition get _selectedType => kAccountTypeDefinitions.firstWhere(
+    (t) => t.id == _selectedTypeId,
+    orElse: () => kAccountTypeDefinitions.first,
+  );
 
   @override
   void initState() {
     super.initState();
     _selectedIcon = kAccountTypeDefinitions.first.icon;
-    _selectedCurrency = widget.currencyCode.isNotEmpty ? widget.currencyCode : 'EGP';
+    _selectedCurrency = widget.currencyCode.isNotEmpty
+        ? widget.currencyCode
+        : 'EGP';
 
     _nameFocusNode.addListener(_onFocusChange);
     _balanceFocusNode.addListener(_onFocusChange);
@@ -650,7 +769,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
         setState(() {
           _selectedIcon = CupertinoIcons.graph_circle_fill;
           _autoGuessReason = isAr ? 'أسهم وعملات رقمية' : 'Stocks & Crypto';
-          _nameController.text = isAr ? 'محفظة استثمارية' : 'Investment Portfolio';
+          _nameController.text = isAr
+              ? 'محفظة استثمارية'
+              : 'Investment Portfolio';
         });
         _pushStep(AddAccountStep.selectStocksCryptoPlatform);
         break;
@@ -732,7 +853,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     final text = _smsNumberInputController.text.trim();
     if (text.isEmpty) return;
     final digits = text.replaceAll(RegExp(r'\D'), '');
-    final cardNumber = digits.length > 4 ? digits.substring(digits.length - 4) : digits;
+    final cardNumber = digits.length > 4
+        ? digits.substring(digits.length - 4)
+        : digits;
     if (cardNumber.isEmpty) return;
 
     HapticFeedback.lightImpact();
@@ -756,7 +879,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     final remaining = _smsNumberInputController.text.trim();
     if (remaining.isNotEmpty) {
       final digits = remaining.replaceAll(RegExp(r'\D'), '');
-      final cardNumber = digits.length > 4 ? digits.substring(digits.length - 4) : digits;
+      final cardNumber = digits.length > 4
+          ? digits.substring(digits.length - 4)
+          : digits;
       if (cardNumber.isNotEmpty && !_smsCardNumbers.contains(cardNumber)) {
         _smsCardNumbers.add(cardNumber);
         _smsNumberInputController.clear();
@@ -876,13 +1001,16 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
 
     final initialBalance =
         double.tryParse(_balanceController.text.trim().replaceAll(',', '')) ??
-            0.0;
-    final creditLimit =
-        double.tryParse(_creditLimitController.text.trim().replaceAll(',', ''));
-    final availableBalance =
-        double.tryParse(_availableBalanceController.text.trim().replaceAll(',', ''));
-    final minPayment =
-        double.tryParse(_minPaymentController.text.trim().replaceAll('%', '').trim());
+        0.0;
+    final creditLimit = double.tryParse(
+      _creditLimitController.text.trim().replaceAll(',', ''),
+    );
+    final availableBalance = double.tryParse(
+      _availableBalanceController.text.trim().replaceAll(',', ''),
+    );
+    final minPayment = double.tryParse(
+      _minPaymentController.text.trim().replaceAll('%', '').trim(),
+    );
 
     final billingDayParsed = int.tryParse(_billingDayController.text.trim());
     final dueDayParsed = int.tryParse(_dueDayController.text.trim());
@@ -897,36 +1025,56 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     final newId = 'custom_${DateTime.now().millisecondsSinceEpoch}';
 
     final isMetal = _selectedTypeId == 'gold' || _selectedTypeId == 'silver';
-    final metalWeight = double.tryParse(_metalWeightController.text.trim().replaceAll(',', ''));
-    final metalPurchasePrice = double.tryParse(_metalPurchasePriceController.text.trim().replaceAll(',', ''));
+    final metalWeight = double.tryParse(
+      _metalWeightController.text.trim().replaceAll(',', ''),
+    );
+    final metalPurchasePrice = double.tryParse(
+      _metalPurchasePriceController.text.trim().replaceAll(',', ''),
+    );
     final metalTodayPrice = isMetal
-        ? _getTodayMetalPrice(_selectedTypeId, _selectedMetalKarat, _selectedCurrency)
+        ? _getTodayMetalPrice(
+            _selectedTypeId,
+            _selectedMetalKarat,
+            _selectedCurrency,
+          )
         : null;
-    final metalEstimatedValue = (metalWeight != null && metalWeight > 0 && metalTodayPrice != null)
+    final metalEstimatedValue =
+        (metalWeight != null && metalWeight > 0 && metalTodayPrice != null)
         ? (metalWeight * metalTodayPrice)
-        : ((metalWeight != null && metalPurchasePrice != null) ? (metalWeight * metalPurchasePrice) : 0.0);
+        : ((metalWeight != null && metalPurchasePrice != null)
+              ? (metalWeight * metalPurchasePrice)
+              : 0.0);
 
     final finalBalance = _selectedTypeId == 'credit_card'
         ? (availableBalance ?? initialBalance)
         : (isMetal ? metalEstimatedValue : initialBalance);
 
-    final propertyCatStr = _selectedPropertyCategory == PropertyCategory.stocksCrypto
+    final propertyCatStr =
+        _selectedPropertyCategory == PropertyCategory.stocksCrypto
         ? 'stocks_crypto'
         : (_selectedPropertyCategory == PropertyCategory.moneyMarketFund
-            ? 'fund'
-            : (_selectedPropertyCategory == PropertyCategory.apartment
-                ? 'apartment'
-                : (_selectedPropertyCategory == PropertyCategory.car
-                    ? 'car'
-                    : (_selectedPropertyCategory == PropertyCategory.business
-                        ? 'business'
-                        : (_selectedPropertyCategory == PropertyCategory.somethingElse
-                            ? 'other'
-                            : null)))));
+              ? 'fund'
+              : (_selectedPropertyCategory == PropertyCategory.apartment
+                    ? 'apartment'
+                    : (_selectedPropertyCategory == PropertyCategory.car
+                          ? 'car'
+                          : (_selectedPropertyCategory ==
+                                    PropertyCategory.business
+                                ? 'business'
+                                : (_selectedPropertyCategory ==
+                                          PropertyCategory.somethingElse
+                                      ? 'other'
+                                      : null)))));
 
-    final double? fundYield = double.tryParse(_fundYieldController.text.trim().replaceAll(',', ''));
-    final double? estimateRate = double.tryParse(_estimateRateController.text.trim().replaceAll(',', ''));
-    final double? totalInvested = double.tryParse(_investedAmountController.text.trim().replaceAll(',', ''));
+    final double? fundYield = double.tryParse(
+      _fundYieldController.text.trim().replaceAll(',', ''),
+    );
+    final double? estimateRate = double.tryParse(
+      _estimateRateController.text.trim().replaceAll(',', ''),
+    );
+    final double? totalInvested = double.tryParse(
+      _investedAmountController.text.trim().replaceAll(',', ''),
+    );
     final String? noteText = _noteController.text.trim().isNotEmpty
         ? _noteController.text.trim()
         : null;
@@ -942,14 +1090,17 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
       bankName: _selectedBank,
       provider: _selectedEWallet,
       notificationMethod: _selectedNotifyMethod,
-      cardNumbers: _smsCardNumbers.isNotEmpty ? List.from(_smsCardNumbers) : null,
+      cardNumbers: _smsCardNumbers.isNotEmpty
+          ? List.from(_smsCardNumbers)
+          : null,
       creditLimit: creditLimit,
       billingDay: _selectedTypeId == 'credit_card' ? billingDay : null,
       dueDay: _selectedTypeId == 'credit_card' ? dueDay : null,
       minPaymentPercentage: minPayment,
       availableBalance: availableBalance,
       excludeFromTotal: _excludeFromTotal,
-      receiveAtmWithdrawals: _selectedTypeId == 'cash' && _receiveAtmWithdrawals,
+      receiveAtmWithdrawals:
+          _selectedTypeId == 'cash' && _receiveAtmWithdrawals,
       autoAddInstapayFee: _selectedTypeId == 'bank' && _autoAddInstapayFee,
       metalKarat: isMetal ? _selectedMetalKarat : null,
       metalWeightGrams: isMetal ? metalWeight : null,
@@ -964,8 +1115,14 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
       estimateDirection: _estimateDirection,
       reminderFrequency: _reminderPeriod,
       note: noteText,
-      totalInvestedAmount: _selectedPropertyCategory == PropertyCategory.stocksCrypto ? totalInvested : null,
-      investmentPlatform: _selectedPropertyCategory == PropertyCategory.stocksCrypto ? _selectedStocksPlatform : null,
+      totalInvestedAmount:
+          _selectedPropertyCategory == PropertyCategory.stocksCrypto
+          ? totalInvested
+          : null,
+      investmentPlatform:
+          _selectedPropertyCategory == PropertyCategory.stocksCrypto
+          ? _selectedStocksPlatform
+          : null,
     );
 
     Navigator.of(context).pop(newAccount);
@@ -975,8 +1132,11 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
-    final isIOS = Platform.isIOS || Theme.of(context).platform == TargetPlatform.iOS;
-    final bgColor = isDarkMode ? const Color(0xFF09090B) : const Color(0xFFF8F8FA);
+    final isIOS =
+        Platform.isIOS || Theme.of(context).platform == TargetPlatform.iOS;
+    final bgColor = isDarkMode
+        ? const Color(0xFF09090B)
+        : const Color(0xFFF8F8FA);
 
     final stepCounter = '${_stepHistory.length}/${_calculateTotalSteps()}';
 
@@ -1000,9 +1160,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
             scrolledUnderElevation: 0,
             toolbarHeight: 68,
             leadingWidth: 62,
-            leading: AppGlassBackButton(
-              onPressed: _onBackTapped,
-            ),
+            leading: AppGlassBackButton(onPressed: _onBackTapped),
             centerTitle: true,
             title: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1018,16 +1176,22 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                         style: TextStyle(
                           fontSize: 16.5,
                           fontWeight: FontWeight.w800,
-                          color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                          color: isDarkMode
+                              ? Colors.white
+                              : const Color(0xFF09090B),
                           letterSpacing: -0.3,
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
-                        color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                        color: (isDarkMode ? Colors.white : Colors.black)
+                            .withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -1035,7 +1199,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                         style: TextStyle(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w800,
-                          color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                          color: isDarkMode
+                              ? const Color(0xFFA1A1AA)
+                              : const Color(0xFF71717A),
                         ),
                       ),
                     ),
@@ -1047,26 +1213,23 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                   style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w500,
-                    color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                    color: isDarkMode
+                        ? const Color(0xFFA1A1AA)
+                        : const Color(0xFF71717A),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
-            actions: const [
-              SizedBox(width: 62),
-            ],
+            actions: const [SizedBox(width: 62)],
           ),
           body: AnimatedSwitcher(
             duration: const Duration(milliseconds: 240),
             switchInCurve: Curves.easeOutCubic,
             switchOutCurve: Curves.easeInCubic,
             transitionBuilder: (child, animation) {
-              return FadeTransition(
-                opacity: animation,
-                child: child,
-              );
+              return FadeTransition(opacity: animation, child: child);
             },
             child: KeyedSubtree(
               key: ValueKey(_currentStep),
@@ -1105,10 +1268,12 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
   // STEP 1: ACCOUNT TYPE SELECTION VIEW
   // ==========================================
   Widget _buildTypeSelectionView(bool isDarkMode, bool isAr) {
-    final spendTypes =
-        kAccountTypeDefinitions.where((t) => t.section == 'spend').toList();
-    final ownTypes =
-        kAccountTypeDefinitions.where((t) => t.section == 'own').toList();
+    final spendTypes = kAccountTypeDefinitions
+        .where((t) => t.section == 'spend')
+        .toList();
+    final ownTypes = kAccountTypeDefinitions
+        .where((t) => t.section == 'own')
+        .toList();
 
     final spendSection = [
       Padding(
@@ -1118,7 +1283,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
           style: TextStyle(
             fontSize: 11.5,
             fontWeight: FontWeight.w800,
-            color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+            color: isDarkMode
+                ? const Color(0xFFA1A1AA)
+                : const Color(0xFF71717A),
             letterSpacing: 0.6,
           ),
         ),
@@ -1134,7 +1301,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
           style: TextStyle(
             fontSize: 11.5,
             fontWeight: FontWeight.w800,
-            color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+            color: isDarkMode
+                ? const Color(0xFFA1A1AA)
+                : const Color(0xFF71717A),
             letterSpacing: 0.6,
           ),
         ),
@@ -1143,16 +1312,8 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     ];
 
     final children = widget.thingsYouOwnFirst
-        ? [
-            ...ownSection,
-            const SizedBox(height: 12),
-            ...spendSection,
-          ]
-        : [
-            ...spendSection,
-            const SizedBox(height: 12),
-            ...ownSection,
-          ];
+        ? [...ownSection, const SizedBox(height: 12), ...spendSection]
+        : [...spendSection, const SizedBox(height: 12), ...ownSection];
 
     return ListView(
       physics: const BouncingScrollPhysics(),
@@ -1181,8 +1342,12 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
         child: InkWell(
           onTap: () => _onTypeSelected(typeDef),
           borderRadius: BorderRadius.circular(16),
-          splashColor: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.05),
-          highlightColor: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.03),
+          splashColor: (isDarkMode ? Colors.white : Colors.black).withValues(
+            alpha: 0.05,
+          ),
+          highlightColor: (isDarkMode ? Colors.white : Colors.black).withValues(
+            alpha: 0.03,
+          ),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
             decoration: BoxDecoration(
@@ -1191,7 +1356,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
               border: Border.all(color: borderColor, width: 1),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: isDarkMode ? 0.16 : 0.03),
+                  color: Colors.black.withValues(
+                    alpha: isDarkMode ? 0.16 : 0.03,
+                  ),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -1233,7 +1400,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                         style: TextStyle(
                           fontSize: 15.5,
                           fontWeight: FontWeight.w700,
-                          color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                          color: isDarkMode
+                              ? Colors.white
+                              : const Color(0xFF09090B),
                           letterSpacing: -0.2,
                         ),
                       ),
@@ -1355,14 +1524,19 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
               onTap: () => _onPropertyCategorySelected(cat, isAr),
               borderRadius: BorderRadius.circular(16),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 13,
+                ),
                 decoration: BoxDecoration(
                   color: cardBgColor,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: borderColor, width: 1),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: isDarkMode ? 0.16 : 0.03),
+                      color: Colors.black.withValues(
+                        alpha: isDarkMode ? 0.16 : 0.03,
+                      ),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -1390,7 +1564,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           icon,
                           size: 20,
                           color: isSoon
-                              ? (isDarkMode ? const Color(0xFF71717A) : const Color(0xFFA1A1AA))
+                              ? (isDarkMode
+                                    ? const Color(0xFF71717A)
+                                    : const Color(0xFFA1A1AA))
                               : (isDarkMode ? Colors.white : Colors.black),
                         ),
                       ),
@@ -1410,8 +1586,12 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                                     fontSize: 15,
                                     fontWeight: FontWeight.w700,
                                     color: isSoon
-                                        ? (isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A))
-                                        : (isDarkMode ? Colors.white : const Color(0xFF09090B)),
+                                        ? (isDarkMode
+                                              ? const Color(0xFFA1A1AA)
+                                              : const Color(0xFF71717A))
+                                        : (isDarkMode
+                                              ? Colors.white
+                                              : const Color(0xFF09090B)),
                                     letterSpacing: -0.2,
                                   ),
                                 ),
@@ -1419,10 +1599,16 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                               if (badge != null) ...[
                                 const SizedBox(width: 8),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 7,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: (isDarkMode ? Colors.white : Colors.black)
-                                        .withValues(alpha: 0.08),
+                                    color:
+                                        (isDarkMode
+                                                ? Colors.white
+                                                : Colors.black)
+                                            .withValues(alpha: 0.08),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
@@ -1560,14 +1746,19 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
               },
               borderRadius: BorderRadius.circular(16),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 13,
+                ),
                 decoration: BoxDecoration(
                   color: cardBgColor,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: borderColor, width: 1),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: isDarkMode ? 0.16 : 0.03),
+                      color: Colors.black.withValues(
+                        alpha: isDarkMode ? 0.16 : 0.03,
+                      ),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -1609,7 +1800,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
-                              color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                              color: isDarkMode
+                                  ? Colors.white
+                                  : const Color(0xFF09090B),
                               letterSpacing: -0.2,
                             ),
                           ),
@@ -1662,10 +1855,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
       height: 22,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(
-          color: borderColor,
-          width: isSelected ? 2.0 : 1.5,
-        ),
+        border: Border.all(color: borderColor, width: isSelected ? 2.0 : 1.5),
         color: Colors.transparent,
       ),
       child: isSelected
@@ -1730,7 +1920,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                   fontSize: 14,
                   fontWeight: FontWeight.w400,
                   height: 1.35,
-                  color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                  color: isDarkMode
+                      ? const Color(0xFFA1A1AA)
+                      : const Color(0xFF71717A),
                 ),
               ),
             ),
@@ -1742,7 +1934,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 border: Border.all(color: borderColor, width: 1),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.03),
+                    color: Colors.black.withValues(
+                      alpha: isDarkMode ? 0.2 : 0.03,
+                    ),
                     blurRadius: 10,
                     offset: const Offset(0, 3),
                   ),
@@ -1754,7 +1948,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     width: 58,
                     height: 38,
                     decoration: BoxDecoration(
-                      color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF2F2F7),
+                      color: isDarkMode
+                          ? const Color(0xFF27272A)
+                          : const Color(0xFFF2F2F7),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     alignment: Alignment.center,
@@ -1762,7 +1958,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       controller: _fundYieldController,
                       focusNode: _fundYieldFocusNode,
                       autofocus: true,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 17,
@@ -1783,7 +1981,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                         hintStyle: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w700,
-                          color: isDarkMode ? const Color(0xFF52525B) : const Color(0xFFC7C7CC),
+                          color: isDarkMode
+                              ? const Color(0xFF52525B)
+                              : const Color(0xFFC7C7CC),
                         ),
                       ),
                       onChanged: (_) => setState(() {}),
@@ -1878,7 +2078,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
             Padding(
               padding: const EdgeInsets.only(bottom: 6),
               child: Text(
-                isAr ? 'هل تتغير قيمته تلقائياً؟' : 'Does its value change on its own?',
+                isAr
+                    ? 'هل تتغير قيمته تلقائياً؟'
+                    : 'Does its value change on its own?',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
@@ -1897,7 +2099,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                   height: 1.4,
-                  color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                  color: isDarkMode
+                      ? const Color(0xFFA1A1AA)
+                      : const Color(0xFF71717A),
                 ),
               ),
             ),
@@ -1915,13 +2119,12 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 decoration: BoxDecoration(
                   color: cardBgColor,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: borderColor,
-                    width: 1,
-                  ),
+                  border: Border.all(color: borderColor, width: 1),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.03),
+                      color: Colors.black.withValues(
+                        alpha: isDarkMode ? 0.2 : 0.03,
+                      ),
                       blurRadius: 10,
                       offset: const Offset(0, 3),
                     ),
@@ -1940,11 +2143,15 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                isAr ? 'لا، سأقوم بتحديثه بنفسي' : "No, I'll update it myself",
+                                isAr
+                                    ? 'لا، سأقوم بتحديثه بنفسي'
+                                    : "No, I'll update it myself",
                                 style: TextStyle(
                                   fontSize: 15.5,
                                   fontWeight: FontWeight.w800,
-                                  color: isDarkMode ? Colors.white : Colors.black,
+                                  color: isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
                                 ),
                               ),
                               const SizedBox(height: 3),
@@ -1955,7 +2162,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
-                                  color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                                  color: isDarkMode
+                                      ? const Color(0xFFA1A1AA)
+                                      : const Color(0xFF71717A),
                                 ),
                               ),
                             ],
@@ -1989,13 +2198,12 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 decoration: BoxDecoration(
                   color: cardBgColor,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: borderColor,
-                    width: 1,
-                  ),
+                  border: Border.all(color: borderColor, width: 1),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.03),
+                      color: Colors.black.withValues(
+                        alpha: isDarkMode ? 0.2 : 0.03,
+                      ),
                       blurRadius: 10,
                       offset: const Offset(0, 3),
                     ),
@@ -2022,21 +2230,27 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           width: 58,
                           height: 38,
                           decoration: BoxDecoration(
-                            color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF2F2F7),
+                            color: isDarkMode
+                                ? const Color(0xFF27272A)
+                                : const Color(0xFFF2F2F7),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           alignment: Alignment.center,
                           child: TextField(
                             controller: _estimateRateController,
                             focusNode: _estimateRateFocusNode,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w700,
                               color: isDarkMode ? Colors.white : Colors.black,
                             ),
-                            cursorColor: isDarkMode ? Colors.white : Colors.black,
+                            cursorColor: isDarkMode
+                                ? Colors.white
+                                : Colors.black,
                             decoration: InputDecoration(
                               isDense: true,
                               contentPadding: EdgeInsets.zero,
@@ -2050,7 +2264,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                               hintStyle: TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w700,
-                                color: isDarkMode ? const Color(0xFF52525B) : const Color(0xFFC7C7CC),
+                                color: isDarkMode
+                                    ? const Color(0xFF52525B)
+                                    : const Color(0xFFC7C7CC),
                               ),
                             ),
                             onTap: () {
@@ -2150,17 +2366,13 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
           HapticFeedback.selectionClick();
           setState(() => _reminderPeriod = periods[idx]['id']!);
         },
-        segments: periods
-            .map((p) => GlassSegment(label: p['label']!))
-            .toList(),
+        segments: periods.map((p) => GlassSegment(label: p['label']!)).toList(),
         height: 38,
         useOwnLayer: true,
         backgroundColor: isDarkMode
             ? Colors.white.withValues(alpha: 0.08)
             : Colors.black.withValues(alpha: 0.06),
-        indicatorColor: isDarkMode
-            ? const Color(0xFF27272A)
-            : Colors.white,
+        indicatorColor: isDarkMode ? const Color(0xFF27272A) : Colors.white,
         selectedTextStyle: TextStyle(
           fontSize: 12.5,
           fontWeight: FontWeight.w700,
@@ -2212,7 +2424,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: isDarkMode ? 0.35 : 0.08),
+                        color: Colors.black.withValues(
+                          alpha: isDarkMode ? 0.35 : 0.08,
+                        ),
                         blurRadius: 5,
                         offset: const Offset(0, 1.5),
                       ),
@@ -2237,12 +2451,14 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           duration: const Duration(milliseconds: 180),
                           style: TextStyle(
                             fontSize: 12,
-                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
                             color: isSelected
                                 ? (isDarkMode ? Colors.white : Colors.black)
                                 : (isDarkMode
-                                    ? Colors.white.withValues(alpha: 0.6)
-                                    : Colors.black.withValues(alpha: 0.55)),
+                                      ? Colors.white.withValues(alpha: 0.6)
+                                      : Colors.black.withValues(alpha: 0.55)),
                             fontFamily: isAr ? 'Cairo' : null,
                           ),
                           child: Text(p['label']!),
@@ -2275,17 +2491,13 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
           HapticFeedback.selectionClick();
           setState(() => _estimateDirection = dirs[idx]['id']!);
         },
-        segments: dirs
-            .map((d) => GlassSegment(label: d['label']!))
-            .toList(),
+        segments: dirs.map((d) => GlassSegment(label: d['label']!)).toList(),
         height: 38,
         useOwnLayer: true,
         backgroundColor: isDarkMode
             ? Colors.white.withValues(alpha: 0.08)
             : Colors.black.withValues(alpha: 0.06),
-        indicatorColor: isDarkMode
-            ? const Color(0xFF27272A)
-            : Colors.white,
+        indicatorColor: isDarkMode ? const Color(0xFF27272A) : Colors.white,
         selectedTextStyle: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w700,
@@ -2337,7 +2549,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: isDarkMode ? 0.35 : 0.08),
+                        color: Colors.black.withValues(
+                          alpha: isDarkMode ? 0.35 : 0.08,
+                        ),
                         blurRadius: 5,
                         offset: const Offset(0, 1.5),
                       ),
@@ -2362,12 +2576,14 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           duration: const Duration(milliseconds: 180),
                           style: TextStyle(
                             fontSize: 12.5,
-                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
                             color: isSelected
                                 ? (isDarkMode ? Colors.white : Colors.black)
                                 : (isDarkMode
-                                    ? Colors.white.withValues(alpha: 0.6)
-                                    : Colors.black.withValues(alpha: 0.55)),
+                                      ? Colors.white.withValues(alpha: 0.6)
+                                      : Colors.black.withValues(alpha: 0.55)),
                             fontFamily: isAr ? 'Cairo' : null,
                           ),
                           child: Text(d['label']!),
@@ -2409,15 +2625,15 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
         'crypto': isAr ? 'العملات الرقمية (Crypto)' : 'Crypto',
         'other': isAr ? 'محفظة استثمارية' : 'Investment Portfolio',
       };
-      final pLabel = platformLabels[_selectedStocksPlatform] ?? (isAr ? 'محفظة استثمارية' : 'Portfolio');
+      final pLabel =
+          platformLabels[_selectedStocksPlatform] ??
+          (isAr ? 'محفظة استثمارية' : 'Portfolio');
       icon = _selectedStocksPlatform == 'crypto'
           ? CupertinoIcons.bitcoin
           : (_selectedStocksPlatform == 'us_stocks'
-              ? CupertinoIcons.globe
-              : CupertinoIcons.chart_bar_alt_fill);
-      label = isAr
-          ? '$pLabel · تتبع أرباح وخسائر'
-          : '$pLabel · Portfolio P&L';
+                ? CupertinoIcons.globe
+                : CupertinoIcons.chart_bar_alt_fill);
+      label = isAr ? '$pLabel · تتبع أرباح وخسائر' : '$pLabel · Portfolio P&L';
     } else if (_selectedPropertyCategory == PropertyCategory.moneyMarketFund) {
       icon = CupertinoIcons.chart_pie_fill;
       final rate = _fundYieldController.text.trim();
@@ -2426,7 +2642,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
           : 'Money Market Fund · ${rate.isNotEmpty ? rate : "20"}% a year yield';
     } else {
       if (_autoEstimateValue) {
-        icon = _estimateDirection == 'up' ? CupertinoIcons.arrow_up_right : CupertinoIcons.arrow_down_right;
+        icon = _estimateDirection == 'up'
+            ? CupertinoIcons.arrow_up_right
+            : CupertinoIcons.arrow_down_right;
         final rate = _estimateRateController.text.trim();
         final sign = _estimateDirection == 'up' ? '+' : '-';
         label = isAr
@@ -2473,7 +2691,10 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
 
   (double diff, double pct)? _calculatePnL() {
     final worthStr = _balanceController.text.trim().replaceAll(',', '');
-    final investedStr = _investedAmountController.text.trim().replaceAll(',', '');
+    final investedStr = _investedAmountController.text.trim().replaceAll(
+      ',',
+      '',
+    );
     final worth = double.tryParse(worthStr);
     final invested = double.tryParse(investedStr);
     if (worth == null || invested == null || invested <= 0) {
@@ -2492,8 +2713,12 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     final pct = pnl.$2;
     final isPositive = diff >= 0;
 
-    final gainColor = isDarkMode ? const Color(0xFF4ADE80) : const Color(0xFF16A34A);
-    final lossColor = isDarkMode ? const Color(0xFFF87171) : const Color(0xFFDC2626);
+    final gainColor = isDarkMode
+        ? const Color(0xFF4ADE80)
+        : const Color(0xFF16A34A);
+    final lossColor = isDarkMode
+        ? const Color(0xFFF87171)
+        : const Color(0xFFDC2626);
     final statusColor = isPositive ? gainColor : lossColor;
 
     final formattedDiff = NumberFormat('#,##0.00').format(diff.abs());
@@ -2514,7 +2739,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
       child: Row(
         children: [
           Icon(
-            isPositive ? CupertinoIcons.arrow_up_right : CupertinoIcons.arrow_down_right,
+            isPositive
+                ? CupertinoIcons.arrow_up_right
+                : CupertinoIcons.arrow_down_right,
             size: 16,
             color: statusColor,
           ),
@@ -2526,7 +2753,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
             style: TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
-              color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+              color: isDarkMode
+                  ? const Color(0xFFE4E4E7)
+                  : const Color(0xFF27272A),
             ),
           ),
           Text(
@@ -2574,10 +2803,15 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 onTap: () => _onEWalletSelected(w),
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? (isDarkMode ? const Color(0xFF1E1E24) : const Color(0xFFF4F4F6))
+                        ? (isDarkMode
+                              ? const Color(0xFF1E1E24)
+                              : const Color(0xFFF4F4F6))
                         : cardBgColor,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
@@ -2621,7 +2855,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       Icon(
                         appForwardIconOf(context),
                         size: 15,
-                        color: isDarkMode ? const Color(0xFF71717A) : const Color(0xFFD4D4D8),
+                        color: isDarkMode
+                            ? const Color(0xFF71717A)
+                            : const Color(0xFFD4D4D8),
                       ),
                     ],
                   ),
@@ -2664,7 +2900,8 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                      color: (isDarkMode ? Colors.white : Colors.black)
+                          .withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
@@ -2697,7 +2934,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w400,
-                  color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                  color: isDarkMode
+                      ? const Color(0xFFA1A1AA)
+                      : const Color(0xFF71717A),
                   height: 1.35,
                 ),
               ),
@@ -2720,7 +2959,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 border: Border.all(color: borderColor, width: 1.2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isDarkMode ? 0.16 : 0.04),
+                    color: Colors.black.withValues(
+                      alpha: isDarkMode ? 0.16 : 0.04,
+                    ),
                     blurRadius: 10,
                     offset: const Offset(0, 3),
                   ),
@@ -2732,10 +2973,14 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
-                      color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+                      color: isDarkMode
+                          ? const Color(0xFF27272A)
+                          : const Color(0xFFF4F4F5),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+                        color: isDarkMode
+                            ? const Color(0xFF3F3F46)
+                            : const Color(0xFFE4E4E7),
                       ),
                     ),
                     child: Center(
@@ -2763,9 +3008,14 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                             ),
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
-                                color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.1),
+                                color:
+                                    (isDarkMode ? Colors.white : Colors.black)
+                                        .withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
@@ -2773,7 +3023,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
-                                  color: isDarkMode ? Colors.white70 : Colors.black87,
+                                  color: isDarkMode
+                                      ? Colors.white70
+                                      : Colors.black87,
                                 ),
                               ),
                             ),
@@ -2787,7 +3039,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w400,
-                            color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                            color: isDarkMode
+                                ? const Color(0xFFA1A1AA)
+                                : const Color(0xFF71717A),
                             height: 1.3,
                           ),
                         ),
@@ -2798,7 +3052,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                   Icon(
                     appForwardIconOf(context),
                     size: 16,
-                    color: isDarkMode ? const Color(0xFF71717A) : const Color(0xFFD4D4D8),
+                    color: isDarkMode
+                        ? const Color(0xFF71717A)
+                        : const Color(0xFFD4D4D8),
                   ),
                 ],
               ),
@@ -2821,7 +3077,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 border: Border.all(color: borderColor, width: 1.2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isDarkMode ? 0.16 : 0.04),
+                    color: Colors.black.withValues(
+                      alpha: isDarkMode ? 0.16 : 0.04,
+                    ),
                     blurRadius: 10,
                     offset: const Offset(0, 3),
                   ),
@@ -2833,10 +3091,14 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
-                      color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+                      color: isDarkMode
+                          ? const Color(0xFF27272A)
+                          : const Color(0xFFF4F4F5),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+                        color: isDarkMode
+                            ? const Color(0xFF3F3F46)
+                            : const Color(0xFFE4E4E7),
                       ),
                     ),
                     child: Center(
@@ -2853,7 +3115,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isAr ? 'إشعار التطبيق (Notification)' : 'App Push Notification',
+                          isAr
+                              ? 'إشعار التطبيق (Notification)'
+                              : 'App Push Notification',
                           style: TextStyle(
                             fontSize: 16.5,
                             fontWeight: FontWeight.w800,
@@ -2868,7 +3132,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w400,
-                            color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                            color: isDarkMode
+                                ? const Color(0xFFA1A1AA)
+                                : const Color(0xFF71717A),
                             height: 1.3,
                           ),
                         ),
@@ -2879,7 +3145,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                   Icon(
                     appForwardIconOf(context),
                     size: 16,
-                    color: isDarkMode ? const Color(0xFF71717A) : const Color(0xFFD4D4D8),
+                    color: isDarkMode
+                        ? const Color(0xFF71717A)
+                        : const Color(0xFFD4D4D8),
                   ),
                 ],
               ),
@@ -2902,7 +3170,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     final viewInsetsBottom = MediaQuery.of(context).viewInsets.bottom;
     final safeAreaBottom = MediaQuery.of(context).padding.bottom;
 
-    final restingBottom = safeAreaBottom > 0 ? math.max(8.0, safeAreaBottom - 7.0) : 4.0;
+    final restingBottom = safeAreaBottom > 0
+        ? math.max(8.0, safeAreaBottom - 7.0)
+        : 4.0;
     final buttonBottom = math.max(restingBottom, viewInsetsBottom + 6.0);
 
     return Stack(
@@ -2913,7 +3183,8 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
             20,
             14,
             20,
-            (safeAreaBottom > 0 ? safeAreaBottom + 105 : 113) + viewInsetsBottom,
+            (safeAreaBottom > 0 ? safeAreaBottom + 105 : 113) +
+                viewInsetsBottom,
           ),
           children: [
             // Header Instruction Card
@@ -2928,7 +3199,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    isAr ? 'الرقم اللي بيظهر في رسائل بنكك' : 'Number from bank SMS',
+                    isAr
+                        ? 'الرقم اللي بيظهر في رسائل بنكك'
+                        : 'Number from bank SMS',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
@@ -2944,7 +3217,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w400,
-                      color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                      color: isDarkMode
+                          ? const Color(0xFFA1A1AA)
+                          : const Color(0xFF71717A),
                       height: 1.35,
                     ),
                   ),
@@ -2961,7 +3236,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                   child: _buildAdaptiveTextField(
                     controller: _smsNumberInputController,
                     focusNode: _smsNumberFocusNode,
-                    placeholder: isAr ? 'آخر 4 أرقام (مثال: 8920)' : 'Last 4 digits (e.g. 8920)',
+                    placeholder: isAr
+                        ? 'آخر 4 أرقام (مثال: 8920)'
+                        : 'Last 4 digits (e.g. 8920)',
                     isIOS: isIOS,
                     isDarkMode: isDarkMode,
                     keyboardType: TextInputType.number,
@@ -3023,9 +3300,13 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 runSpacing: 8,
                 children: _smsCardNumbers.map((cardNum) {
                   return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 7,
+                    ),
                     decoration: BoxDecoration(
-                      color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                      color: (isDarkMode ? Colors.white : Colors.black)
+                          .withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isDarkMode ? Colors.white24 : Colors.black26,
@@ -3049,13 +3330,16 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(2),
                             decoration: BoxDecoration(
-                              color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.15),
+                              color: (isDarkMode ? Colors.white : Colors.black)
+                                  .withValues(alpha: 0.15),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
                               Icons.close_rounded,
                               size: 13,
-                              color: isDarkMode ? Colors.white70 : Colors.black87,
+                              color: isDarkMode
+                                  ? Colors.white70
+                                  : Colors.black87,
                             ),
                           ),
                         ),
@@ -3077,9 +3361,13 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 },
                 borderRadius: BorderRadius.circular(14),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
-                    color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.04),
+                    color: (isDarkMode ? Colors.white : Colors.black)
+                        .withValues(alpha: 0.04),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: borderColor),
                   ),
@@ -3088,7 +3376,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       Icon(
                         Icons.lightbulb_outline_rounded,
                         size: 18,
-                        color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                        color: isDarkMode
+                            ? const Color(0xFFA1A1AA)
+                            : const Color(0xFF71717A),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -3099,7 +3389,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           style: TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w600,
-                            color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+                            color: isDarkMode
+                                ? const Color(0xFFE4E4E7)
+                                : const Color(0xFF27272A),
                           ),
                         ),
                       ),
@@ -3108,7 +3400,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                             ? Icons.keyboard_arrow_up_rounded
                             : Icons.keyboard_arrow_down_rounded,
                         size: 20,
-                        color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                        color: isDarkMode
+                            ? const Color(0xFFA1A1AA)
+                            : const Color(0xFF71717A),
                       ),
                     ],
                   ),
@@ -3122,7 +3416,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: isDarkMode ? const Color(0xFF141418) : const Color(0xFFF4F4F6),
+                  color: isDarkMode
+                      ? const Color(0xFF141418)
+                      : const Color(0xFFF4F4F6),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: borderColor),
                 ),
@@ -3131,7 +3427,8 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                   children: [
                     _buildSmsExampleItem(
                       bank: 'CIB',
-                      sms: 'شراء بمبلغ 350.00 ج.م من بطاقتك المنتهية بـ **8920 لدى Spinneys. الرصيد المتاح...',
+                      sms:
+                          'شراء بمبلغ 350.00 ج.م من بطاقتك المنتهية بـ **8920 لدى Spinneys. الرصيد المتاح...',
                       target: '8920',
                       isDarkMode: isDarkMode,
                       isAr: isAr,
@@ -3139,7 +3436,8 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     const Divider(height: 20),
                     _buildSmsExampleItem(
                       bank: isAr ? 'البنك الأهلي المصري' : 'NBE',
-                      sms: 'خصم مبلغ 120.00 جم كارت مشتريات رقم ****4311 في 23/10/2026...',
+                      sms:
+                          'خصم مبلغ 120.00 جم كارت مشتريات رقم ****4311 في 23/10/2026...',
                       target: '4311',
                       isDarkMode: isDarkMode,
                       isAr: isAr,
@@ -3147,7 +3445,8 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     const Divider(height: 20),
                     _buildSmsExampleItem(
                       bank: isAr ? 'بنك مصر' : 'Banque Misr',
-                      sms: 'تمت عملية خصم بمبلغ EGP 500 كارت رقم **7721 بنجاح...',
+                      sms:
+                          'تمت عملية خصم بمبلغ EGP 500 كارت رقم **7721 بنجاح...',
                       target: '7721',
                       isDarkMode: isDarkMode,
                       isAr: isAr,
@@ -3209,14 +3508,19 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 },
                 style: TextButton.styleFrom(
                   visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                 ),
                 child: Text(
                   isAr ? 'تخطي دلوقتي' : 'Skip for now',
                   style: TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w600,
-                    color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                    color: isDarkMode
+                        ? const Color(0xFFA1A1AA)
+                        : const Color(0xFF71717A),
                   ),
                 ),
               ),
@@ -3251,7 +3555,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.1),
+                color: (isDarkMode ? Colors.white : Colors.black).withValues(
+                  alpha: 0.1,
+                ),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
@@ -3271,7 +3577,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
           style: TextStyle(
             fontSize: 12,
             fontFamily: 'monospace',
-            color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+            color: isDarkMode
+                ? const Color(0xFFA1A1AA)
+                : const Color(0xFF71717A),
           ),
         ),
       ],
@@ -3305,13 +3613,16 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
             const SizedBox(height: 20),
 
             // Investment / Property Configuration Summary Pill
-            if (type.id == 'investment' && _selectedPropertyCategory != null) ...[
+            if (type.id == 'investment' &&
+                _selectedPropertyCategory != null) ...[
               _buildPropertyConfigSummaryBadge(isDarkMode, isAr),
               const SizedBox(height: 16),
             ],
 
             // 2. BANK OR APP SELECTOR (للديبيت كارد أو الكريدت كارد أو الشهادات البنكية)
-            if (type.id == 'bank' || type.id == 'credit_card' || type.id == 'certificate') ...[
+            if (type.id == 'bank' ||
+                type.id == 'credit_card' ||
+                type.id == 'certificate') ...[
               _buildBankSelector(isDarkMode, isAr),
               const SizedBox(height: 18),
             ],
@@ -3322,14 +3633,18 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
               style: TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
-                color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+                color: isDarkMode
+                    ? const Color(0xFFE4E4E7)
+                    : const Color(0xFF27272A),
               ),
             ),
             const SizedBox(height: 8),
             _buildAdaptiveTextField(
               controller: _nameController,
               focusNode: _nameFocusNode,
-              placeholder: isAr ? type.namePlaceholderAr : type.namePlaceholderEn,
+              placeholder: isAr
+                  ? type.namePlaceholderAr
+                  : type.namePlaceholderEn,
               isIOS: isIOS,
               isDarkMode: isDarkMode,
               textInputAction: TextInputAction.next,
@@ -3345,13 +3660,16 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.12),
+                            color: (isDarkMode ? Colors.white : Colors.black)
+                                .withValues(alpha: 0.12),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             Icons.close_rounded,
                             size: 14,
-                            color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                            color: isDarkMode
+                                ? const Color(0xFFA1A1AA)
+                                : const Color(0xFF71717A),
                           ),
                         ),
                       ),
@@ -3377,7 +3695,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700,
-                  color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+                  color: isDarkMode
+                      ? const Color(0xFFE4E4E7)
+                      : const Color(0xFF27272A),
                 ),
               ),
               const SizedBox(height: 8),
@@ -3387,7 +3707,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 placeholder: isAr ? 'مثال: 50,000' : 'e.g. 50,000',
                 isIOS: isIOS,
                 isDarkMode: isDarkMode,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 textInputAction: TextInputAction.next,
                 suffix: _buildSuffixPill(_selectedCurrency, isDarkMode),
                 onChanged: (_) => setState(() {}),
@@ -3414,7 +3736,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           style: TextStyle(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w700,
-                            color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+                            color: isDarkMode
+                                ? const Color(0xFFE4E4E7)
+                                : const Color(0xFF27272A),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -3431,14 +3755,18 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                             FilteringTextInputFormatter.digitsOnly,
                             LengthLimitingTextInputFormatter(2),
                           ],
-                          suffix: _buildSuffixPill(isAr ? 'يوم' : 'Day', isDarkMode),
+                          suffix: _buildSuffixPill(
+                            isAr ? 'يوم' : 'Day',
+                            isDarkMode,
+                          ),
                           onChanged: (val) {
                             final n = int.tryParse(val);
                             if (n != null && n > 31) {
                               _billingDayController.text = '31';
-                              _billingDayController.selection = TextSelection.fromPosition(
-                                const TextPosition(offset: 2),
-                              );
+                              _billingDayController.selection =
+                                  TextSelection.fromPosition(
+                                    const TextPosition(offset: 2),
+                                  );
                             }
                             setState(() {});
                           },
@@ -3463,7 +3791,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           style: TextStyle(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w700,
-                            color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+                            color: isDarkMode
+                                ? const Color(0xFFE4E4E7)
+                                : const Color(0xFF27272A),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -3480,14 +3810,18 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                             FilteringTextInputFormatter.digitsOnly,
                             LengthLimitingTextInputFormatter(2),
                           ],
-                          suffix: _buildSuffixPill(isAr ? 'يوم' : 'Day', isDarkMode),
+                          suffix: _buildSuffixPill(
+                            isAr ? 'يوم' : 'Day',
+                            isDarkMode,
+                          ),
                           onChanged: (val) {
                             final n = int.tryParse(val);
                             if (n != null && n > 31) {
                               _dueDayController.text = '31';
-                              _dueDayController.selection = TextSelection.fromPosition(
-                                const TextPosition(offset: 2),
-                              );
+                              _dueDayController.selection =
+                                  TextSelection.fromPosition(
+                                    const TextPosition(offset: 2),
+                                  );
                             }
                             setState(() {});
                           },
@@ -3513,7 +3847,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w700,
-                      color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+                      color: isDarkMode
+                          ? const Color(0xFFE4E4E7)
+                          : const Color(0xFF27272A),
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -3522,7 +3858,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     style: TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w500,
-                      color: isDarkMode ? const Color(0xFF71717A) : const Color(0xFFA1A1AA),
+                      color: isDarkMode
+                          ? const Color(0xFF71717A)
+                          : const Color(0xFFA1A1AA),
                     ),
                   ),
                 ],
@@ -3534,7 +3872,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 placeholder: isAr ? 'مثال: 5' : 'e.g. 5',
                 isIOS: isIOS,
                 isDarkMode: isDarkMode,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 textInputAction: TextInputAction.next,
                 suffix: _buildSuffixPill('%', isDarkMode),
                 onChanged: (_) => setState(() {}),
@@ -3553,7 +3893,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700,
-                  color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+                  color: isDarkMode
+                      ? const Color(0xFFE4E4E7)
+                      : const Color(0xFF27272A),
                 ),
               ),
               const SizedBox(height: 8),
@@ -3563,7 +3905,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 placeholder: '0.00',
                 isIOS: isIOS,
                 isDarkMode: isDarkMode,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 style: TextStyle(
                   fontSize: 19,
                   fontWeight: FontWeight.w900,
@@ -3591,12 +3935,18 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
               // ==========================================
               Text(
                 isAr
-                    ? (type.id == 'investment' ? 'ما هي قيمته الآن؟' : 'رصيد البداية')
-                    : (type.id == 'investment' ? 'What is it worth now?' : 'Starting Balance'),
+                    ? (type.id == 'investment'
+                          ? 'ما هي قيمته الآن؟'
+                          : 'رصيد البداية')
+                    : (type.id == 'investment'
+                          ? 'What is it worth now?'
+                          : 'Starting Balance'),
                 style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700,
-                  color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+                  color: isDarkMode
+                      ? const Color(0xFFE4E4E7)
+                      : const Color(0xFF27272A),
                 ),
               ),
               const SizedBox(height: 8),
@@ -3606,7 +3956,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 placeholder: '0.00',
                 isIOS: isIOS,
                 isDarkMode: isDarkMode,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
@@ -3618,7 +3970,8 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
             ],
 
             // Stocks & Crypto: Invested Amount, Live P&L Preview, and Update Reminder
-            if (type.id == 'investment' && _selectedPropertyCategory == PropertyCategory.stocksCrypto) ...[
+            if (type.id == 'investment' &&
+                _selectedPropertyCategory == PropertyCategory.stocksCrypto) ...[
               const SizedBox(height: 18),
               Row(
                 children: [
@@ -3627,7 +3980,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w700,
-                      color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+                      color: isDarkMode
+                          ? const Color(0xFFE4E4E7)
+                          : const Color(0xFF27272A),
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -3636,7 +3991,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     style: TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w500,
-                      color: isDarkMode ? const Color(0xFF71717A) : const Color(0xFFA1A1AA),
+                      color: isDarkMode
+                          ? const Color(0xFF71717A)
+                          : const Color(0xFFA1A1AA),
                     ),
                   ),
                 ],
@@ -3648,7 +4005,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 placeholder: '0.00',
                 isIOS: isIOS,
                 isDarkMode: isDarkMode,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
@@ -3666,11 +4025,15 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
               _buildPnLPreviewBadge(isDarkMode, isAr),
               const SizedBox(height: 18),
               Text(
-                isAr ? 'كم مرة تريد تحديث قيمة المحفظة؟' : 'How often do you want to update it?',
+                isAr
+                    ? 'كم مرة تريد تحديث قيمة المحفظة؟'
+                    : 'How often do you want to update it?',
                 style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700,
-                  color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+                  color: isDarkMode
+                      ? const Color(0xFFE4E4E7)
+                      : const Color(0xFF27272A),
                 ),
               ),
               const SizedBox(height: 8),
@@ -3685,7 +4048,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700,
-                  color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+                  color: isDarkMode
+                      ? const Color(0xFFE4E4E7)
+                      : const Color(0xFF27272A),
                 ),
               ),
               const SizedBox(height: 8),
@@ -3700,21 +4065,29 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 keyboardType: TextInputType.text,
                 onChanged: (_) => setState(() {}),
               ),
-            ] else if (type.extraFieldLabelAr != null && type.id != 'gold' && type.id != 'silver') ...[
+            ] else if (type.extraFieldLabelAr != null &&
+                type.id != 'gold' &&
+                type.id != 'silver') ...[
               const SizedBox(height: 18),
               Text(
                 isAr ? type.extraFieldLabelAr! : type.extraFieldLabelEn!,
                 style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700,
-                  color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+                  color: isDarkMode
+                      ? const Color(0xFFE4E4E7)
+                      : const Color(0xFF27272A),
                 ),
               ),
               const SizedBox(height: 8),
               _buildAdaptiveTextField(
                 controller: _extraFieldController,
                 focusNode: _extraFieldFocusNode,
-                placeholder: (isAr ? type.extraFieldPlaceholderAr : type.extraFieldPlaceholderEn) ?? '',
+                placeholder:
+                    (isAr
+                        ? type.extraFieldPlaceholderAr
+                        : type.extraFieldPlaceholderEn) ??
+                    '',
                 isIOS: isIOS,
                 isDarkMode: isDarkMode,
                 keyboardType: type.extraFieldKeyboardType,
@@ -3810,11 +4183,10 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       child: Center(
                         child: AnimatedSwitcher(
                           duration: const Duration(milliseconds: 220),
-                          transitionBuilder: (child, anim) => ScaleTransition(
-                            scale: anim,
-                            child: child,
-                          ),
-                          child: _selectedEWallet != null &&
+                          transitionBuilder: (child, anim) =>
+                              ScaleTransition(scale: anim, child: child),
+                          child:
+                              _selectedEWallet != null &&
                                   !_hasUserManuallySelectedIcon
                               ? _buildEWalletBrandLogo(
                                   _selectedEWallet!,
@@ -3825,7 +4197,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                                   _selectedIcon,
                                   key: ValueKey(_selectedIcon.codePoint),
                                   size: 40,
-                                  color: isDarkMode ? Colors.white : Colors.black,
+                                  color: isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
                                 ),
                         ),
                       ),
@@ -3842,7 +4216,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           color: isDarkMode ? Colors.white : Colors.black,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: isDarkMode ? const Color(0xFF09090B) : Colors.white,
+                            color: isDarkMode
+                                ? const Color(0xFF09090B)
+                                : Colors.white,
                             width: 2.2,
                           ),
                           boxShadow: [
@@ -3872,8 +4248,10 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
               GestureDetector(
                 onTap: openPicker,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 11, vertical: 4.5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 11,
+                    vertical: 4.5,
+                  ),
                   decoration: BoxDecoration(
                     color: (isDarkMode ? Colors.white : Colors.black)
                         .withValues(alpha: 0.05),
@@ -3900,11 +4278,11 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       Text(
                         isAutoGuessed
                             ? (isAr
-                                ? 'تم اقتراح الأيقونة تلقائياً'
-                                : 'Auto-selected icon')
+                                  ? 'تم اقتراح الأيقونة تلقائياً'
+                                  : 'Auto-selected icon')
                             : (isAr
-                                ? 'اضغط لتغيير الأيقونة'
-                                : 'Tap to change icon'),
+                                  ? 'اضغط لتغيير الأيقونة'
+                                  : 'Tap to change icon'),
                         style: TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w600,
@@ -3933,9 +4311,11 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     double size = 44,
   }) {
     final radius = size * 0.28;
-    final netLogo = 'https://mahfazati.runasp.net/images/wallets/$providerId.png';
+    final netLogo =
+        'https://mahfazati.runasp.net/images/wallets/$providerId.png';
 
-    Widget buildWalletFallback() => _buildFallbackWalletIcon(isDarkMode, size, radius);
+    Widget buildWalletFallback() =>
+        _buildFallbackWalletIcon(isDarkMode, size, radius);
 
     return Container(
       width: size,
@@ -3967,8 +4347,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
             if (progress == null) return child;
             return buildWalletFallback();
           },
-          errorBuilder: (context, error, stackTrace) =>
-              buildWalletFallback(),
+          errorBuilder: (context, error, stackTrace) => buildWalletFallback(),
         ),
       ),
     );
@@ -4017,7 +4396,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
           style: TextStyle(
             fontSize: 13.5,
             fontWeight: FontWeight.w700,
-            color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+            color: isDarkMode
+                ? const Color(0xFFE4E4E7)
+                : const Color(0xFF27272A),
           ),
         ),
         const SizedBox(height: 8),
@@ -4056,7 +4437,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       children: [
                         Text(
                           _selectedBank ??
-                              (isAr ? 'اختر البنك أو المؤسسة' : 'Select Bank or Issuer'),
+                              (isAr
+                                  ? 'اختر البنك أو المؤسسة'
+                                  : 'Select Bank or Issuer'),
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: _selectedBank != null
@@ -4065,11 +4448,11 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                             letterSpacing: -0.2,
                             color: _selectedBank != null
                                 ? (isDarkMode
-                                    ? Colors.white
-                                    : const Color(0xFF09090B))
+                                      ? Colors.white
+                                      : const Color(0xFF09090B))
                                 : (isDarkMode
-                                    ? const Color(0xFF71717A)
-                                    : const Color(0xFFA1A1AA)),
+                                      ? const Color(0xFF71717A)
+                                      : const Color(0xFFA1A1AA)),
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -4077,8 +4460,8 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           _selectedBank != null
                               ? (isAr ? 'اضغط لتغيير البنك' : 'Tap to change')
                               : (isAr
-                                  ? 'مثل: الأهلي، مصر، CIB، QNB'
-                                  : 'e.g. CIB, NBE, Banque Misr'),
+                                    ? 'مثل: الأهلي، مصر، CIB، QNB'
+                                    : 'e.g. CIB, NBE, Banque Misr'),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -4144,7 +4527,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
         boxShadow: matchedBank != null
             ? [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: isDarkMode ? 0.35 : 0.06),
+                  color: Colors.black.withValues(
+                    alpha: isDarkMode ? 0.35 : 0.06,
+                  ),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -4239,7 +4624,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
           style: TextStyle(
             fontSize: 13.5,
             fontWeight: FontWeight.w700,
-            color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+            color: isDarkMode
+                ? const Color(0xFFE4E4E7)
+                : const Color(0xFF27272A),
           ),
         ),
         const SizedBox(height: 8),
@@ -4272,7 +4659,10 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 },
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: cardBgColor,
                     borderRadius: BorderRadius.circular(16),
@@ -4352,7 +4742,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       // Currency Symbol Badge
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
                           color: isDarkMode
                               ? Colors.white.withValues(alpha: 0.08)
@@ -4456,18 +4848,42 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
 
   String _formatMetalDate(DateTime date, bool isAr) {
     const arMonths = [
-      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+      'يناير',
+      'فبراير',
+      'مارس',
+      'أبريل',
+      'مايو',
+      'يونيو',
+      'يوليو',
+      'أغسطس',
+      'سبتمبر',
+      'أكتوبر',
+      'نوفمبر',
+      'ديسمبر',
     ];
     const enMonths = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final month = isAr ? arMonths[date.month - 1] : enMonths[date.month - 1];
     return '${date.day} $month ${date.year}';
   }
 
-  Future<void> _selectPurchaseDate(BuildContext context, bool isDarkMode, bool isAr) async {
+  Future<void> _selectPurchaseDate(
+    BuildContext context,
+    bool isDarkMode,
+    bool isAr,
+  ) async {
     HapticFeedback.selectionClick();
     final now = DateTime.now();
     final initial = _metalPurchaseDate ?? now;
@@ -4510,14 +4926,26 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     AccountTypeDefinition type,
   ) {
     final isGold = type.id == 'gold';
-    final karats = isGold ? ['18', '21', '22', '24'] : ['800', '900', '925', '999'];
+    final karats = isGold
+        ? ['18', '21', '22', '24']
+        : ['800', '900', '925', '999'];
     if (!karats.contains(_selectedMetalKarat)) {
       _selectedMetalKarat = isGold ? '21' : '925';
     }
 
-    final todayPrice = _getTodayMetalPrice(type.id, _selectedMetalKarat, _selectedCurrency);
-    final weight = double.tryParse(_metalWeightController.text.trim().replaceAll(',', '')) ?? 0.0;
-    final purchasePrice = double.tryParse(_metalPurchasePriceController.text.trim().replaceAll(',', ''));
+    final todayPrice = _getTodayMetalPrice(
+      type.id,
+      _selectedMetalKarat,
+      _selectedCurrency,
+    );
+    final weight =
+        double.tryParse(
+          _metalWeightController.text.trim().replaceAll(',', ''),
+        ) ??
+        0.0;
+    final purchasePrice = double.tryParse(
+      _metalPurchasePriceController.text.trim().replaceAll(',', ''),
+    );
     final estimatedTotal = weight * todayPrice;
 
     return Column(
@@ -4529,7 +4957,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
           style: TextStyle(
             fontSize: 13.5,
             fontWeight: FontWeight.w700,
-            color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+            color: isDarkMode
+                ? const Color(0xFFE4E4E7)
+                : const Color(0xFF27272A),
           ),
         ),
         const SizedBox(height: 8),
@@ -4569,7 +4999,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
               style: TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
-                color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+                color: isDarkMode
+                    ? const Color(0xFFE4E4E7)
+                    : const Color(0xFF27272A),
               ),
             ),
             const SizedBox(width: 6),
@@ -4578,7 +5010,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
               style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w500,
-                color: isDarkMode ? const Color(0xFF71717A) : const Color(0xFFA1A1AA),
+                color: isDarkMode
+                    ? const Color(0xFF71717A)
+                    : const Color(0xFFA1A1AA),
               ),
             ),
           ],
@@ -4640,7 +5074,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     final inactiveBorder = isDarkMode
         ? Colors.white.withValues(alpha: 0.10)
         : const Color(0xFFE4E4E7);
-    final inactiveFg = isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF52525B);
+    final inactiveFg = isDarkMode
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF52525B);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -4653,19 +5089,27 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
               style: TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
-                color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+                color: isDarkMode
+                    ? const Color(0xFFE4E4E7)
+                    : const Color(0xFF27272A),
               ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                color: (isDarkMode ? Colors.white : Colors.black).withValues(
+                  alpha: 0.08,
+                ),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
                 isGold
-                    ? (isAr ? 'عيار $_selectedMetalKarat' : '$_selectedMetalKarat Karat')
-                    : (isAr ? 'فضة عيار $_selectedMetalKarat' : 'Silver $_selectedMetalKarat'),
+                    ? (isAr
+                          ? 'عيار $_selectedMetalKarat'
+                          : '$_selectedMetalKarat Karat')
+                    : (isAr
+                          ? 'فضة عيار $_selectedMetalKarat'
+                          : 'Silver $_selectedMetalKarat'),
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
@@ -4738,7 +5182,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w900,
-                              color: isSelected ? activeFg : (isDarkMode ? Colors.white : Colors.black),
+                              color: isSelected
+                                  ? activeFg
+                                  : (isDarkMode ? Colors.white : Colors.black),
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -4746,7 +5192,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                             subtitle,
                             style: TextStyle(
                               fontSize: 10.5,
-                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                              fontWeight: isSelected
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
                               color: isSelected
                                   ? activeFg.withValues(alpha: 0.85)
                                   : inactiveFg,
@@ -4781,7 +5229,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
               style: TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
-                color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+                color: isDarkMode
+                    ? const Color(0xFFE4E4E7)
+                    : const Color(0xFF27272A),
               ),
             ),
             const SizedBox(width: 6),
@@ -4790,7 +5240,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
               style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w500,
-                color: isDarkMode ? const Color(0xFF71717A) : const Color(0xFFA1A1AA),
+                color: isDarkMode
+                    ? const Color(0xFF71717A)
+                    : const Color(0xFFA1A1AA),
               ),
             ),
           ],
@@ -4814,7 +5266,8 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.07),
+                      color: (isDarkMode ? Colors.white : Colors.black)
+                          .withValues(alpha: 0.07),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
@@ -4831,15 +5284,21 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                         Text(
                           _metalPurchaseDate != null
                               ? _formatMetalDate(_metalPurchaseDate!, isAr)
-                              : (isAr ? 'اضغط لاختيار تاريخ الشراء' : 'Tap to select purchase date'),
+                              : (isAr
+                                    ? 'اضغط لاختيار تاريخ الشراء'
+                                    : 'Tap to select purchase date'),
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: _metalPurchaseDate != null
                                 ? FontWeight.w800
                                 : FontWeight.w500,
                             color: _metalPurchaseDate != null
-                                ? (isDarkMode ? Colors.white : const Color(0xFF09090B))
-                                : (isDarkMode ? const Color(0xFF71717A) : const Color(0xFFA1A1AA)),
+                                ? (isDarkMode
+                                      ? Colors.white
+                                      : const Color(0xFF09090B))
+                                : (isDarkMode
+                                      ? const Color(0xFF71717A)
+                                      : const Color(0xFFA1A1AA)),
                           ),
                         ),
                       ],
@@ -4854,13 +5313,16 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.10),
+                          color: (isDarkMode ? Colors.white : Colors.black)
+                              .withValues(alpha: 0.10),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           Icons.close_rounded,
                           size: 14,
-                          color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                          color: isDarkMode
+                              ? const Color(0xFFA1A1AA)
+                              : const Color(0xFF71717A),
                         ),
                       ),
                     )
@@ -4868,7 +5330,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     Icon(
                       appForwardIconOf(context),
                       size: 13,
-                      color: isDarkMode ? const Color(0xFF71717A) : const Color(0xFFA1A1AA),
+                      color: isDarkMode
+                          ? const Color(0xFF71717A)
+                          : const Color(0xFFA1A1AA),
                     ),
                 ],
               ),
@@ -4907,7 +5371,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
               style: TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
-                color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+                color: isDarkMode
+                    ? const Color(0xFFE4E4E7)
+                    : const Color(0xFF27272A),
               ),
             ),
             // Live Indicator badge
@@ -4977,7 +5443,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                      color: isDarkMode
+                          ? const Color(0xFFA1A1AA)
+                          : const Color(0xFF71717A),
                     ),
                   ),
                 ],
@@ -4986,15 +5454,17 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
               Text(
                 isGold
                     ? (isAr
-                        ? 'محدث تلقائياً لذهب عيار $_selectedMetalKarat بالـ $_selectedCurrency'
-                        : 'Updated for $_selectedMetalKarat Karat Gold in $_selectedCurrency')
+                          ? 'محدث تلقائياً لذهب عيار $_selectedMetalKarat بالـ $_selectedCurrency'
+                          : 'Updated for $_selectedMetalKarat Karat Gold in $_selectedCurrency')
                     : (isAr
-                        ? 'محدث تلقائياً لفضة عيار $_selectedMetalKarat بالـ $_selectedCurrency'
-                        : 'Updated for $_selectedMetalKarat Silver in $_selectedCurrency'),
+                          ? 'محدث تلقائياً لفضة عيار $_selectedMetalKarat بالـ $_selectedCurrency'
+                          : 'Updated for $_selectedMetalKarat Silver in $_selectedCurrency'),
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
-                  color: isDarkMode ? const Color(0xFF71717A) : const Color(0xFFA1A1AA),
+                  color: isDarkMode
+                      ? const Color(0xFF71717A)
+                      : const Color(0xFFA1A1AA),
                 ),
               ),
             ],
@@ -5043,9 +5513,13 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
         : const Color(0xFFE4E4E7);
 
     final bool hasPurchasePrice = purchasePrice != null && purchasePrice > 0;
-    final double? totalCost = hasPurchasePrice && weight > 0 ? (weight * purchasePrice) : null;
+    final double? totalCost = hasPurchasePrice && weight > 0
+        ? (weight * purchasePrice)
+        : null;
     final double? pnl = totalCost != null ? (estimatedTotal - totalCost) : null;
-    final double? pnlPct = totalCost != null && totalCost > 0 ? (pnl! / totalCost) * 100 : null;
+    final double? pnlPct = totalCost != null && totalCost > 0
+        ? (pnl! / totalCost) * 100
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -5055,7 +5529,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
           style: TextStyle(
             fontSize: 13.5,
             fontWeight: FontWeight.w700,
-            color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+            color: isDarkMode
+                ? const Color(0xFFE4E4E7)
+                : const Color(0xFF27272A),
           ),
         ),
         const SizedBox(height: 8),
@@ -5087,7 +5563,8 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                          color: (isDarkMode ? Colors.white : Colors.black)
+                              .withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
@@ -5102,7 +5579,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                          color: isDarkMode
+                              ? const Color(0xFFA1A1AA)
+                              : const Color(0xFF71717A),
                         ),
                       ),
                     ],
@@ -5138,7 +5617,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
-                      color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                      color: isDarkMode
+                          ? const Color(0xFFA1A1AA)
+                          : const Color(0xFF71717A),
                     ),
                   ),
                 ],
@@ -5150,23 +5631,32 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
-                    color: isDarkMode ? const Color(0xFF71717A) : const Color(0xFFA1A1AA),
+                    color: isDarkMode
+                        ? const Color(0xFF71717A)
+                        : const Color(0xFFA1A1AA),
                   ),
                 ),
               ] else ...[
                 const SizedBox(height: 4),
                 Text(
-                  isAr ? 'أدخل الوزن بالجرام لحساب القيمة التقديرية' : 'Enter weight in grams to calculate value',
+                  isAr
+                      ? 'أدخل الوزن بالجرام لحساب القيمة التقديرية'
+                      : 'Enter weight in grams to calculate value',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
-                    color: isDarkMode ? const Color(0xFF71717A) : const Color(0xFFA1A1AA),
+                    color: isDarkMode
+                        ? const Color(0xFF71717A)
+                        : const Color(0xFFA1A1AA),
                   ),
                 ),
               ],
 
               // Profit/Loss & Cost Breakdown if purchase price is present
-              if (hasPurchasePrice && totalCost != null && pnl != null && pnlPct != null) ...[
+              if (hasPurchasePrice &&
+                  totalCost != null &&
+                  pnl != null &&
+                  pnlPct != null) ...[
                 const SizedBox(height: 12),
                 Divider(
                   height: 1,
@@ -5186,7 +5676,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
-                            color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                            color: isDarkMode
+                                ? const Color(0xFFA1A1AA)
+                                : const Color(0xFF71717A),
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -5201,12 +5693,23 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       ],
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
                       decoration: BoxDecoration(
-                        color: (pnl >= 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444)).withValues(alpha: 0.12),
+                        color:
+                            (pnl >= 0
+                                    ? const Color(0xFF10B981)
+                                    : const Color(0xFFEF4444))
+                                .withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: (pnl >= 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444)).withValues(alpha: 0.35),
+                          color:
+                              (pnl >= 0
+                                      ? const Color(0xFF10B981)
+                                      : const Color(0xFFEF4444))
+                                  .withValues(alpha: 0.35),
                           width: 0.8,
                         ),
                       ),
@@ -5214,9 +5717,13 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            pnl >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                            pnl >= 0
+                                ? Icons.trending_up_rounded
+                                : Icons.trending_down_rounded,
                             size: 14,
-                            color: pnl >= 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                            color: pnl >= 0
+                                ? const Color(0xFF10B981)
+                                : const Color(0xFFEF4444),
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -5224,7 +5731,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                             style: TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w800,
-                              color: pnl >= 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                              color: pnl >= 0
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFFEF4444),
                             ),
                           ),
                         ],
@@ -5254,7 +5763,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
             child: Icon(
               Icons.info_outline_rounded,
               size: 13,
-              color: isDarkMode ? const Color(0xFF71717A) : const Color(0xFFA1A1AA),
+              color: isDarkMode
+                  ? const Color(0xFF71717A)
+                  : const Color(0xFFA1A1AA),
             ),
           ),
           const SizedBox(width: 5),
@@ -5265,7 +5776,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 fontSize: 11.5,
                 height: 1.35,
                 fontWeight: FontWeight.w400,
-                color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                color: isDarkMode
+                    ? const Color(0xFFA1A1AA)
+                    : const Color(0xFF71717A),
               ),
             ),
           ),
@@ -5283,7 +5796,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
         decoration: BoxDecoration(
-          color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.07),
+          color: (isDarkMode ? Colors.white : Colors.black).withValues(
+            alpha: 0.07,
+          ),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
@@ -5346,8 +5861,10 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 borderRadius: BorderRadius.circular(15),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 160),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected ? selectedBg : unselectedBg,
                     borderRadius: BorderRadius.circular(15),
@@ -5361,8 +5878,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       text,
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight:
-                            isSelected ? FontWeight.w700 : FontWeight.w600,
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w600,
                         color: isSelected ? selectedFg : unselectedFg,
                       ),
                     ),
@@ -5405,11 +5923,21 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
       case 'silver':
         return isAr
             ? ['فضة الادخار', 'سبائك فضة', 'جنيهات فضة', 'مشغولات فضة']
-            : ['Silver Savings', 'Silver Bars', 'Silver Coins', 'Silver Jewelry'];
+            : [
+                'Silver Savings',
+                'Silver Bars',
+                'Silver Coins',
+                'Silver Jewelry',
+              ];
       case 'certificate':
         return isAr
             ? ['شهادة 27%', 'شهادة ثلاثية', 'وديعة بنكية', 'شهادة استثمار']
-            : ['27% Certificate', '3-Year CD', 'Bank Deposit', 'Investment Certificate'];
+            : [
+                '27% Certificate',
+                '3-Year CD',
+                'Bank Deposit',
+                'Investment Certificate',
+              ];
       case 'investment':
         return isAr
             ? ['محفظة ثندر', 'صناديق استثمار', 'أسهم البورصة']
@@ -5471,8 +5999,11 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
           keyboardType: keyboardType,
           textInputAction: textInputAction,
           cupertinoDecoration: cupertinoDeco,
-          padding: padding ?? const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-          style: style ??
+          padding:
+              padding ??
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          style:
+              style ??
               TextStyle(
                 fontSize: 15.5,
                 fontWeight: FontWeight.w600,
@@ -5496,11 +6027,17 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
       keyboardAppearance: isDarkMode ? Brightness.dark : Brightness.light,
       maxLength: maxLength,
       buildCounter: maxLength != null
-          ? (context, {required currentLength, required isFocused, required maxLength}) => null
+          ? (
+              context, {
+              required currentLength,
+              required isFocused,
+              required maxLength,
+            }) => null
           : null,
       inputFormatters: inputFormatters,
       onSubmitted: onSubmitted,
-      style: style ??
+      style:
+          style ??
           TextStyle(
             fontSize: 15.5,
             fontWeight: FontWeight.w600,
@@ -5514,7 +6051,8 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
         ),
         filled: true,
         fillColor: isDarkMode ? const Color(0xFF141418) : Colors.white,
-        contentPadding: padding ?? const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        contentPadding:
+            padding ?? const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         suffixIcon: suffix != null
             ? Padding(
                 padding: const EdgeInsetsDirectional.only(end: 8),
@@ -5569,8 +6107,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: (isDarkMode ? Colors.white : Colors.black)
-                    .withValues(alpha: isDarkMode ? 0.18 : 0.22),
+                color: (isDarkMode ? Colors.white : Colors.black).withValues(
+                  alpha: isDarkMode ? 0.18 : 0.22,
+                ),
                 blurRadius: 20,
                 offset: const Offset(0, 6),
               ),
@@ -5578,13 +6117,8 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
           ),
           child: Center(
             child: _isSubmitting
-                ? SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.2,
-                      color: isDarkMode ? Colors.black : Colors.white,
-                    ),
+                ? AppProgressIndicator.small(
+                    color: isDarkMode ? Colors.black : Colors.white,
                   )
                 : Row(
                     mainAxisSize: MainAxisSize.min,
@@ -5634,7 +6168,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
           style: TextStyle(
             fontSize: 13.5,
             fontWeight: FontWeight.w700,
-            color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+            color: isDarkMode
+                ? const Color(0xFFE4E4E7)
+                : const Color(0xFF27272A),
           ),
         ),
         const SizedBox(height: 10),
@@ -5659,15 +6195,19 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
               _buildToggleOptionTile(
                 icon: Icons.visibility_off_outlined,
                 title: isMetal
-                    ? (isAr ? 'استبعاد من صافي الثروة' : 'Exclude from Net Worth')
-                    : (isAr ? 'استبعاد من إجمالي الرصيد' : 'Exclude from Total Balance'),
+                    ? (isAr
+                          ? 'استبعاد من صافي الثروة'
+                          : 'Exclude from Net Worth')
+                    : (isAr
+                          ? 'استبعاد من إجمالي الرصيد'
+                          : 'Exclude from Total Balance'),
                 subtitle: isMetal
                     ? (isAr
-                        ? 'إخفاء من الإجمالي، ومش هيتحسب ضمن صافي الثروة في الصفحة الرئيسية'
-                        : 'Balance won\'t count toward your net worth on the home screen')
+                          ? 'إخفاء من الإجمالي، ومش هيتحسب ضمن صافي الثروة في الصفحة الرئيسية'
+                          : 'Balance won\'t count toward your net worth on the home screen')
                     : (isAr
-                        ? 'رصيده ومعاملاته مش هيتحسبوا في صافي الثروة بالصفحة الرئيسية'
-                        : 'Balance & transactions won\'t count toward your net worth'),
+                          ? 'رصيده ومعاملاته مش هيتحسبوا في صافي الثروة بالصفحة الرئيسية'
+                          : 'Balance & transactions won\'t count toward your net worth'),
                 value: _excludeFromTotal,
                 isDarkMode: isDarkMode,
                 onChanged: (val) => setState(() => _excludeFromTotal = val),
@@ -5685,7 +6225,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 ),
                 _buildToggleOptionTile(
                   icon: Icons.bolt_rounded,
-                  title: isAr ? 'إضافة عمولة إنستاباي تلقائياً' : 'Auto-add InstaPay transfer fee',
+                  title: isAr
+                      ? 'إضافة عمولة إنستاباي تلقائياً'
+                      : 'Auto-add InstaPay transfer fee',
                   subtitle: isAr
                       ? 'إنستاباي بيخصم عمولة 0.1% بحد أقصى 20 جنيه.\n• لو بنكك بيضيف العمولة دي في مبلغ الرسالة تلقائياً: اقفل ده.\n• لو بنكك بيعرض المبلغ الأصلي بس: سيبه مفعّل عشان نضيف العمولة تلقائياً ويطابق اللي اتخصم فعلياً.'
                       : 'InstaPay deducts a 0.1% fee (max 20 EGP).\n• If your bank includes this fee in the SMS amount, turn this off.\n• If your bank only shows the base transfer amount, leave this on so we auto-add the fee to match your actual deduction.',
@@ -5707,13 +6249,16 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 ),
                 _buildToggleOptionTile(
                   icon: Icons.local_atm_rounded,
-                  title: isAr ? 'سحوبات الـ ATM بتنزل هنا' : 'Deposit ATM Withdrawals Here',
+                  title: isAr
+                      ? 'سحوبات الـ ATM بتنزل هنا'
+                      : 'Deposit ATM Withdrawals Here',
                   subtitle: isAr
                       ? 'رسائل سحب الكاش من البنك هتتحول تلقائياً للحساب ده لتفادي ازدواج المصاريف'
                       : 'Cash withdrawals from bank will auto-transfer here to prevent double spending',
                   value: _receiveAtmWithdrawals,
                   isDarkMode: isDarkMode,
-                  onChanged: (val) => setState(() => _receiveAtmWithdrawals = val),
+                  onChanged: (val) =>
+                      setState(() => _receiveAtmWithdrawals = val),
                 ),
               ],
             ],
@@ -5835,11 +6380,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     if (!Platform.isIOS || !PlatformInfo.isIOS26OrHigher()) {
       return CupertinoSwitch(
         value: value,
-        activeTrackColor: activeColor ??
-            (isDarkMode ? Colors.white : Colors.black),
-        thumbColor: value
-            ? (isDarkMode ? Colors.black : Colors.white)
-            : null,
+        activeTrackColor:
+            activeColor ?? (isDarkMode ? Colors.white : Colors.black),
+        thumbColor: value ? (isDarkMode ? Colors.black : Colors.white) : null,
         onChanged: (val) {
           HapticFeedback.selectionClick();
           onChanged(val);
@@ -5858,7 +6401,8 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
           useOwnLayer: true,
           width: 58.0,
           height: 30.0,
-          activeColor: activeColor ??
+          activeColor:
+              activeColor ??
               (isDarkMode
                   ? Colors.white.withValues(alpha: 0.85)
                   : Colors.black.withValues(alpha: 0.85)),

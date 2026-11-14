@@ -46,11 +46,7 @@ class _SplashScreenState extends State<SplashScreen>
       final token = SharedPrefs.authToken;
 
       if (token == null || token.isEmpty) {
-        if (SharedPrefs.isFirstTime) {
-          return AppRoutes.onboarding;
-        } else {
-          return AppRoutes.email;
-        }
+        return AppRoutes.email;
       }
 
       // Resolve currency & user data in background
@@ -91,7 +87,7 @@ class _SplashScreenState extends State<SplashScreen>
 
       return AppRoutes.home;
     } catch (_) {
-      return AppRoutes.onboarding;
+      return AppRoutes.email;
     }
   }
 
@@ -105,16 +101,43 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: isDark ? Colors.black : Colors.white,
-      body: Center(
-        child: Image.asset(
-          isDark
-              ? 'assets/icons/mahfazti-logo-dark.png'
-              : 'assets/icons/mahfazti-logo-light.png',
-          width: 140,
-          height: 140,
-          fit: BoxFit.contain,
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: isDark ? Colors.black : Colors.white,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: Image.asset(
+                    isDark
+                        ? 'assets/icons/mahfazti-logo-light.png'
+                        : 'assets/icons/mahfazti-logo-dark.png',
+                    width: 84,
+                    height: 84,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.high,
+                  ),
+                ),
+                const SizedBox(width: 18),
+                Text(
+                  'Mahfazti',
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 36,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -1.3,
+                    height: 1,
+                  ).copyWith(color: isDark ? Colors.white : Colors.black),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

@@ -20,22 +20,28 @@ class WalletHomeData extends Equatable {
       recentTransactions: (json['recentTransactions'] as List)
           .map((e) => WalletTransaction.fromJson(e as Map<String, dynamic>))
           .toList(),
-      totalTransactionCount: (json['totalTransactionCount'] as num?)?.toInt() ?? 0,
+      totalTransactionCount:
+          (json['totalTransactionCount'] as num?)?.toInt() ?? 0,
     );
   }
 
-  factory WalletHomeData.fromMap(Map<String, dynamic> map) => WalletHomeData.fromJson(map);
+  factory WalletHomeData.fromMap(Map<String, dynamic> map) =>
+      WalletHomeData.fromJson(map);
 
   Map<String, dynamic> toJson() => {
-        'balance': balance.toJson(),
-        'recentTransactions': recentTransactions.map((t) => t.toJson()).toList(),
-        'totalTransactionCount': totalTransactionCount,
-      };
+    'balance': balance.toJson(),
+    'recentTransactions': recentTransactions.map((t) => t.toJson()).toList(),
+    'totalTransactionCount': totalTransactionCount,
+  };
 
   Map<String, dynamic> toMap() => toJson();
 
   @override
-  List<Object?> get props => [balance, recentTransactions, totalTransactionCount];
+  List<Object?> get props => [
+    balance,
+    recentTransactions,
+    totalTransactionCount,
+  ];
 }
 
 class WalletBalance extends Equatable {
@@ -58,10 +64,10 @@ class WalletBalance extends Equatable {
   }
 
   Map<String, dynamic> toJson() => {
-        'totalBalance': totalBalance,
-        'totalDeposits': totalDeposits,
-        'totalWithdrawals': totalWithdrawals,
-      };
+    'totalBalance': totalBalance,
+    'totalDeposits': totalDeposits,
+    'totalWithdrawals': totalWithdrawals,
+  };
 
   String get currencySymbol {
     final code = SharedPrefs.currency ?? 'USD';
@@ -88,6 +94,15 @@ class WalletTransaction extends Equatable {
   final DateTime? recurringEndDate;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final int? accountId;
+  final String? accountName;
+  final int? toAccountId;
+  final String? toAccountName;
+  final double transferFee;
+  final String currency;
+  final String? receiptImageUrl;
+  final int? recurringBillId;
+  final String? tags;
 
   const WalletTransaction({
     required this.id,
@@ -105,17 +120,30 @@ class WalletTransaction extends Equatable {
     this.recurringEndDate,
     this.createdAt,
     this.updatedAt,
+    this.accountId,
+    this.accountName,
+    this.toAccountId,
+    this.toAccountName,
+    this.transferFee = 0.0,
+    this.currency = 'EGP',
+    this.receiptImageUrl,
+    this.recurringBillId,
+    this.tags,
   });
 
   factory WalletTransaction.fromJson(Map<String, dynamic> json) {
     return WalletTransaction(
-      id: json['id'],
+      id: json['id'] is int
+          ? json['id']
+          : int.tryParse(json['id'].toString()) ?? 0,
       userId: json['userId']?.toString(),
-      title: json['title'],
+      title: json['title'] ?? '',
       description: json['description'],
-      amount: (json['amount'] as num).toDouble(),
-      transactionDate: DateTime.parse(json['transactionDate']),
-      type: json['type'],
+      amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+      transactionDate: json['transactionDate'] != null
+          ? DateTime.parse(json['transactionDate'])
+          : DateTime.now(),
+      type: json['type'] ?? 'Withdrawal',
       categoryId: json['categoryId'],
       categoryNameAr: json['categoryNameAr'],
       categoryNameEn: json['categoryNameEn'],
@@ -130,6 +158,15 @@ class WalletTransaction extends Equatable {
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'])
           : null,
+      accountId: json['accountId'],
+      accountName: json['accountName'],
+      toAccountId: json['toAccountId'],
+      toAccountName: json['toAccountName'],
+      transferFee: (json['transferFee'] as num?)?.toDouble() ?? 0.0,
+      currency: json['currency'] ?? 'EGP',
+      receiptImageUrl: json['receiptImageUrl'],
+      recurringBillId: json['recurringBillId'],
+      tags: json['tags'],
     );
   }
 
@@ -150,10 +187,22 @@ class WalletTransaction extends Equatable {
       'recurringEndDate': recurringEndDate!.toIso8601String(),
     if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
     if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
+    if (accountId != null) 'accountId': accountId,
+    if (accountName != null) 'accountName': accountName,
+    if (toAccountId != null) 'toAccountId': toAccountId,
+    if (toAccountName != null) 'toAccountName': toAccountName,
+    'transferFee': transferFee,
+    'currency': currency,
+    if (receiptImageUrl != null) 'receiptImageUrl': receiptImageUrl,
+    if (recurringBillId != null) 'recurringBillId': recurringBillId,
+    if (tags != null) 'tags': tags,
   };
 
-  bool get isDeposit => type.toLowerCase() == 'deposit';
-  bool get isWithdrawal => type.toLowerCase() == 'withdrawal';
+  bool get isDeposit =>
+      type.toLowerCase() == 'deposit' || type.toLowerCase() == 'income';
+  bool get isWithdrawal =>
+      type.toLowerCase() == 'withdrawal' || type.toLowerCase() == 'expense';
+  bool get isTransfer => type.toLowerCase() == 'transfer';
 
   String get formattedAmount {
     final code = SharedPrefs.currency ?? 'USD';
@@ -204,8 +253,18 @@ class WalletTransaction extends Equatable {
     recurringEndDate,
     createdAt,
     updatedAt,
+    accountId,
+    accountName,
+    toAccountId,
+    toAccountName,
+    transferFee,
+    currency,
+    receiptImageUrl,
+    recurringBillId,
+    tags,
   ];
 }
+
 class TransactionListResponse extends Equatable {
   final List<WalletTransaction> transactions;
   final int totalCount;
@@ -234,7 +293,13 @@ class TransactionListResponse extends Equatable {
   }
 
   @override
-  List<Object?> get props => [transactions, totalCount, page, pageSize, totalPages];
+  List<Object?> get props => [
+    transactions,
+    totalCount,
+    page,
+    pageSize,
+    totalPages,
+  ];
 }
 
 class WalletSummary extends Equatable {
@@ -271,14 +336,15 @@ class WalletSummary extends Equatable {
 
   @override
   List<Object?> get props => [
-        totalIncome,
-        totalExpenses,
-        netSavings,
-        expensesByCategory,
-        incomeByCategory,
-        transactionCount,
-      ];
+    totalIncome,
+    totalExpenses,
+    netSavings,
+    expensesByCategory,
+    incomeByCategory,
+    transactionCount,
+  ];
 }
+
 class CategorySummary extends Equatable {
   final int categoryId;
   final String categoryNameAr;
@@ -305,5 +371,11 @@ class CategorySummary extends Equatable {
   }
 
   @override
-  List<Object?> get props => [categoryId, categoryNameAr, categoryNameEn, total, count];
+  List<Object?> get props => [
+    categoryId,
+    categoryNameAr,
+    categoryNameEn,
+    total,
+    count,
+  ];
 }

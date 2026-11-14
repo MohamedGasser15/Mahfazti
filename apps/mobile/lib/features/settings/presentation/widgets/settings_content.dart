@@ -21,6 +21,7 @@ import 'package:my_wallet/features/profile/data/models/user_profile.dart';
 import 'package:my_wallet/features/profile/data/repositories/profile_repository.dart';
 import 'package:my_wallet/features/profile/presentation/screens/profile_edit_screen.dart';
 import 'package:my_wallet/features/settings/presentation/screens/categories_management_screen.dart';
+import 'package:my_wallet/features/subscription/presentation/screens/plans_screen.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/currency_picker_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -147,10 +148,7 @@ class _SettingsContentState extends State<SettingsContent> {
         );
       } catch (e) {
         if (!mounted) return;
-        MessageService.showError(
-          context: context,
-          message: e.toString(),
-        );
+        MessageService.showError(context: context, message: e.toString());
       }
     }
   }
@@ -201,7 +199,8 @@ class _SettingsContentState extends State<SettingsContent> {
   // External Links
   Future<void> _openStore() async {
     const appStoreUrl = 'https://apps.apple.com/app/idYOUR_APP_ID';
-    const playStoreUrl = 'https://play.google.com/store/apps/details?id=YOUR_PACKAGE_NAME';
+    const playStoreUrl =
+        'https://play.google.com/store/apps/details?id=YOUR_PACKAGE_NAME';
 
     try {
       if (Platform.isIOS) {
@@ -217,21 +216,6 @@ class _SettingsContentState extends State<SettingsContent> {
       if (!mounted) return;
       _showErrorSnackbar('${context.l10n.cannotOpenStore}: $e');
     }
-  }
-
-  Future<void> _openFacebook() async {
-    const url = 'https://facebook.com/YOUR_PAGE';
-    await _launchUrl(url);
-  }
-
-  Future<void> _openTwitter() async {
-    const url = 'https://twitter.com/YOUR_PAGE';
-    await _launchUrl(url);
-  }
-
-  Future<void> _openInstagram() async {
-    const url = 'https://instagram.com/YOUR_PAGE';
-    await _launchUrl(url);
   }
 
   Future<void> _openPrivacyPolicy() async {
@@ -263,7 +247,10 @@ class _SettingsContentState extends State<SettingsContent> {
   }
 
   void _showComingSoonSnackbar() {
-    MessageService.showInfo(context: context, message: context.l10n.featureComingSoon);
+    MessageService.showInfo(
+      context: context,
+      message: context.l10n.featureComingSoon,
+    );
   }
 
   // Adaptive Glass Switch with RTL/LTR normalization
@@ -276,8 +263,11 @@ class _SettingsContentState extends State<SettingsContent> {
     if (!Platform.isIOS || !PlatformInfo.isIOS26OrHigher()) {
       return CupertinoSwitch(
         value: value,
-        activeTrackColor: activeColor ??
-            (isDarkMode ? CupertinoColors.activeGreen : const Color(0xFF10B981)),
+        activeTrackColor:
+            activeColor ??
+            (isDarkMode
+                ? CupertinoColors.activeGreen
+                : const Color(0xFF10B981)),
         thumbColor: value
             ? (isDarkMode ? const Color(0xFF09090B) : Colors.white)
             : null,
@@ -296,7 +286,8 @@ class _SettingsContentState extends State<SettingsContent> {
           useOwnLayer: true,
           width: 68.0,
           height: 32.0,
-          activeColor: activeColor ??
+          activeColor:
+              activeColor ??
               (isDarkMode
                   ? const Color(0xFF6366F1).withValues(alpha: 0.75)
                   : const Color(0xFF10B981).withValues(alpha: 0.85)),
@@ -393,7 +384,9 @@ class _SettingsContentState extends State<SettingsContent> {
             Icon(
               Icons.keyboard_arrow_down_rounded,
               size: 16,
-              color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+              color: isDarkMode
+                  ? const Color(0xFFA1A1AA)
+                  : const Color(0xFF71717A),
             ),
           ],
         ),
@@ -421,7 +414,9 @@ class _SettingsContentState extends State<SettingsContent> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(
-              color: isDarkMode ? const Color(0xFF2E2E36) : const Color(0xFFE4E4E7),
+              color: isDarkMode
+                  ? const Color(0xFF2E2E36)
+                  : const Color(0xFFE4E4E7),
               width: 1,
             ),
           ),
@@ -437,7 +432,9 @@ class _SettingsContentState extends State<SettingsContent> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
-            color: isDarkMode ? const Color(0xFF2E2E36) : const Color(0xFFE4E4E7),
+            color: isDarkMode
+                ? const Color(0xFF2E2E36)
+                : const Color(0xFFE4E4E7),
             width: 1,
           ),
         ),
@@ -461,8 +458,12 @@ class _SettingsContentState extends State<SettingsContent> {
                     l10n.light,
                     style: TextStyle(
                       fontSize: 14,
-                      fontWeight: _currentTheme == ThemeService.light ? FontWeight.w700 : FontWeight.w500,
-                      color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                      fontWeight: _currentTheme == ThemeService.light
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color: isDarkMode
+                          ? Colors.white
+                          : const Color(0xFF09090B),
                     ),
                   ),
                 ),
@@ -489,8 +490,12 @@ class _SettingsContentState extends State<SettingsContent> {
                     l10n.dark,
                     style: TextStyle(
                       fontSize: 14,
-                      fontWeight: _currentTheme == ThemeService.dark ? FontWeight.w700 : FontWeight.w500,
-                      color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                      fontWeight: _currentTheme == ThemeService.dark
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color: isDarkMode
+                          ? Colors.white
+                          : const Color(0xFF09090B),
                     ),
                   ),
                 ),
@@ -518,8 +523,12 @@ class _SettingsContentState extends State<SettingsContent> {
                     l10n.system,
                     style: TextStyle(
                       fontSize: 14,
-                      fontWeight: _currentTheme == ThemeService.system ? FontWeight.w700 : FontWeight.w500,
-                      color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                      fontWeight: _currentTheme == ThemeService.system
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color: isDarkMode
+                          ? Colors.white
+                          : const Color(0xFF09090B),
                     ),
                   ),
                 ),
@@ -538,10 +547,14 @@ class _SettingsContentState extends State<SettingsContent> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+            color: isDarkMode
+                ? const Color(0xFF27272A)
+                : const Color(0xFFF4F4F5),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+              color: isDarkMode
+                  ? const Color(0xFF3F3F46)
+                  : const Color(0xFFE4E4E7),
               width: 1,
             ),
           ),
@@ -560,7 +573,9 @@ class _SettingsContentState extends State<SettingsContent> {
               Icon(
                 Icons.keyboard_arrow_down_rounded,
                 size: 16,
-                color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                color: isDarkMode
+                    ? const Color(0xFFA1A1AA)
+                    : const Color(0xFF71717A),
               ),
             ],
           ),
@@ -580,7 +595,9 @@ class _SettingsContentState extends State<SettingsContent> {
 
   Widget _buildIosLanguageButton() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final currentLanguageLabel = _isEnglish ? context.l10n.english : context.l10n.arabic;
+    final currentLanguageLabel = _isEnglish
+        ? context.l10n.english
+        : context.l10n.arabic;
 
     return Container(
       height: 32,
@@ -633,7 +650,9 @@ class _SettingsContentState extends State<SettingsContent> {
             Icon(
               Icons.keyboard_arrow_down_rounded,
               size: 16,
-              color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+              color: isDarkMode
+                  ? const Color(0xFFA1A1AA)
+                  : const Color(0xFF71717A),
             ),
           ],
         ),
@@ -643,7 +662,9 @@ class _SettingsContentState extends State<SettingsContent> {
 
   Widget _buildAndroidLanguageButton() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final currentLanguageLabel = _isEnglish ? context.l10n.english : context.l10n.arabic;
+    final currentLanguageLabel = _isEnglish
+        ? context.l10n.english
+        : context.l10n.arabic;
 
     return Theme(
       data: Theme.of(context).copyWith(
@@ -654,7 +675,9 @@ class _SettingsContentState extends State<SettingsContent> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(
-              color: isDarkMode ? const Color(0xFF2E2E36) : const Color(0xFFE4E4E7),
+              color: isDarkMode
+                  ? const Color(0xFF2E2E36)
+                  : const Color(0xFFE4E4E7),
               width: 1,
             ),
           ),
@@ -670,7 +693,9 @@ class _SettingsContentState extends State<SettingsContent> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
-            color: isDarkMode ? const Color(0xFF2E2E36) : const Color(0xFFE4E4E7),
+            color: isDarkMode
+                ? const Color(0xFF2E2E36)
+                : const Color(0xFFE4E4E7),
             width: 1,
           ),
         ),
@@ -697,8 +722,12 @@ class _SettingsContentState extends State<SettingsContent> {
                     context.l10n.arabic,
                     style: TextStyle(
                       fontSize: 14,
-                      fontWeight: !_isEnglish ? FontWeight.w700 : FontWeight.w500,
-                      color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                      fontWeight: !_isEnglish
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color: isDarkMode
+                          ? Colors.white
+                          : const Color(0xFF09090B),
                     ),
                   ),
                 ),
@@ -726,8 +755,12 @@ class _SettingsContentState extends State<SettingsContent> {
                     context.l10n.english,
                     style: TextStyle(
                       fontSize: 14,
-                      fontWeight: _isEnglish ? FontWeight.w700 : FontWeight.w500,
-                      color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                      fontWeight: _isEnglish
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color: isDarkMode
+                          ? Colors.white
+                          : const Color(0xFF09090B),
                     ),
                   ),
                 ),
@@ -746,10 +779,14 @@ class _SettingsContentState extends State<SettingsContent> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+            color: isDarkMode
+                ? const Color(0xFF27272A)
+                : const Color(0xFFF4F4F5),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+              color: isDarkMode
+                  ? const Color(0xFF3F3F46)
+                  : const Color(0xFFE4E4E7),
               width: 1,
             ),
           ),
@@ -768,7 +805,9 @@ class _SettingsContentState extends State<SettingsContent> {
               Icon(
                 Icons.keyboard_arrow_down_rounded,
                 size: 16,
-                color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                color: isDarkMode
+                    ? const Color(0xFFA1A1AA)
+                    : const Color(0xFF71717A),
               ),
             ],
           ),
@@ -809,8 +848,12 @@ class _SettingsContentState extends State<SettingsContent> {
     required List<Widget> children,
   }) {
     final cardBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
-    final borderColor = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
-    final headerColor = isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
+    final borderColor = isDarkMode
+        ? const Color(0xFF27272A)
+        : const Color(0xFFE4E4E7);
+    final headerColor = isDarkMode
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF71717A);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -843,9 +886,7 @@ class _SettingsContentState extends State<SettingsContent> {
                   ],
           ),
           clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: children,
-          ),
+          child: Column(children: children),
         ),
       ],
     );
@@ -863,14 +904,18 @@ class _SettingsContentState extends State<SettingsContent> {
     bool isDanger = false,
     bool showDivider = true,
   }) {
-    final pureRed = isDarkMode ? const Color(0xFFEF4444) : const Color(0xFFDC2626);
+    final pureRed = isDarkMode
+        ? const Color(0xFFEF4444)
+        : const Color(0xFFDC2626);
     final titleColor = isDanger
         ? pureRed
         : (isDarkMode ? Colors.white : const Color(0xFF09090B));
     final subColor = isDanger
         ? pureRed.withValues(alpha: 0.75)
         : (isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A));
-    final dividerColor = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF1F1F5);
+    final dividerColor = isDarkMode
+        ? const Color(0xFF27272A)
+        : const Color(0xFFF1F1F5);
     final chevronColor = isDanger
         ? pureRed
         : (isDarkMode ? const Color(0xFF71717A) : const Color(0xFFA1A1AA));
@@ -888,8 +933,14 @@ class _SettingsContentState extends State<SettingsContent> {
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            splashColor: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.05),
-            highlightColor: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.03),
+            splashFactory: Platform.isIOS ? NoSplash.splashFactory : null,
+            splashColor: Platform.isIOS
+                ? Colors.transparent
+                : (isDarkMode ? Colors.white : Colors.black).withValues(
+                    alpha: 0.05,
+                  ),
+            highlightColor: (isDarkMode ? Colors.white : Colors.black)
+                .withValues(alpha: 0.03),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
               child: Row(
@@ -901,16 +952,14 @@ class _SettingsContentState extends State<SettingsContent> {
                       color: effectiveIconBg,
                       borderRadius: BorderRadius.circular(11),
                       border: Border.all(
-                        color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+                        color: isDarkMode
+                            ? const Color(0xFF3F3F46)
+                            : const Color(0xFFE4E4E7),
                         width: 0.8,
                       ),
                     ),
                     child: Center(
-                      child: Icon(
-                        icon,
-                        size: 19,
-                        color: effectiveIconColor,
-                      ),
+                      child: Icon(icon, size: 19, color: effectiveIconColor),
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -959,11 +1008,7 @@ class _SettingsContentState extends State<SettingsContent> {
         if (showDivider)
           Padding(
             padding: const EdgeInsets.only(left: 68, right: 16),
-            child: Divider(
-              height: 1,
-              thickness: 1,
-              color: dividerColor,
-            ),
+            child: Divider(height: 1, thickness: 1, color: dividerColor),
           ),
       ],
     );
@@ -972,11 +1017,19 @@ class _SettingsContentState extends State<SettingsContent> {
   // Profile Header Card
   Widget _buildProfileHeader(bool isDarkMode) {
     final cardBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
-    final borderColor = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
+    final borderColor = isDarkMode
+        ? const Color(0xFF27272A)
+        : const Color(0xFFE4E4E7);
     final titleColor = isDarkMode ? Colors.white : const Color(0xFF09090B);
-    final subtitleColor = isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
-    final pillBg = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5);
-    final pillBorder = isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7);
+    final subtitleColor = isDarkMode
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF71717A);
+    final pillBg = isDarkMode
+        ? const Color(0xFF27272A)
+        : const Color(0xFFF4F4F5);
+    final pillBorder = isDarkMode
+        ? const Color(0xFF3F3F46)
+        : const Color(0xFFE4E4E7);
     final pillText = isDarkMode ? Colors.white : const Color(0xFF09090B);
 
     final initials = _getInitials(_profile?.fullName);
@@ -1004,14 +1057,18 @@ class _SettingsContentState extends State<SettingsContent> {
             padding: const EdgeInsets.all(2.5),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+              color: isDarkMode
+                  ? const Color(0xFF27272A)
+                  : const Color(0xFFE4E4E7),
             ),
             child: Container(
               width: 68,
               height: 68,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
+                color: isDarkMode
+                    ? const Color(0xFF18181B)
+                    : const Color(0xFFF4F4F5),
                 image: _profile?.profileImageUrl != null
                     ? DecorationImage(
                         image: NetworkImage(_profile!.profileImageUrl!),
@@ -1051,8 +1108,8 @@ class _SettingsContentState extends State<SettingsContent> {
                   _isLoadingProfile
                       ? context.l10n.loading
                       : (_profile?.fullName.isNotEmpty == true
-                          ? _profile!.fullName
-                          : context.l10n.user),
+                            ? _profile!.fullName
+                            : context.l10n.user),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -1081,16 +1138,31 @@ class _SettingsContentState extends State<SettingsContent> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => ProfileEditScreen(
-                            onProfileUpdated: _onProfileUpdated,
-                          ),
-                        ),
+                        Platform.isIOS
+                            ? CupertinoPageRoute(
+                                builder: (context) => ProfileEditScreen(
+                                  onProfileUpdated: _onProfileUpdated,
+                                ),
+                              )
+                            : MaterialPageRoute(
+                                builder: (context) => ProfileEditScreen(
+                                  onProfileUpdated: _onProfileUpdated,
+                                ),
+                              ),
                       );
                     },
                     borderRadius: BorderRadius.circular(20),
+                    splashFactory: Platform.isIOS
+                        ? NoSplash.splashFactory
+                        : null,
+                    splashColor: Platform.isIOS ? Colors.transparent : null,
+                    highlightColor: (isDarkMode ? Colors.white : Colors.black)
+                        .withValues(alpha: 0.06),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: pillBg,
                         borderRadius: BorderRadius.circular(20),
@@ -1126,6 +1198,59 @@ class _SettingsContentState extends State<SettingsContent> {
     );
   }
 
+  // Subscription / Plans Section
+  Widget _buildSubscriptionSection(bool isDarkMode) {
+    final badgeColor = isDarkMode
+        ? const Color(0xFFF59E0B)
+        : const Color(0xFFB45309);
+    final badgeBg = badgeColor.withValues(alpha: isDarkMode ? 0.16 : 0.10);
+
+    return _buildSectionContainer(
+      isDarkMode: isDarkMode,
+      title: context.l10n.subscription,
+      children: [
+        _buildSettingTile(
+          isDarkMode: isDarkMode,
+          icon: AppIcons.plans(isIOS: Platform.isIOS),
+          iconColor: badgeColor,
+          title: context.l10n.plansAndSubscriptions,
+          subtitle: context.l10n.plansAndSubscriptionsSubtitle,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: badgeBg,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'PRO',
+                  style: TextStyle(
+                    color: badgeColor,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(
+                appForwardIconOf(context),
+                size: 13,
+                color: isDarkMode
+                    ? const Color(0xFF71717A)
+                    : const Color(0xFFA1A1AA),
+              ),
+            ],
+          ),
+          onTap: () => PlansScreen.open(context),
+          showDivider: false,
+        ),
+      ],
+    );
+  }
+
   // App Settings Section
   Widget _buildAppSettings(bool isDarkMode) {
     return _buildSectionContainer(
@@ -1135,7 +1260,9 @@ class _SettingsContentState extends State<SettingsContent> {
         _buildSettingTile(
           isDarkMode: isDarkMode,
           icon: AppIcons.appearance(isDark: isDarkMode, isIOS: Platform.isIOS),
-          iconColor: isDarkMode ? const Color(0xFF8B5CF6) : const Color(0xFFF59E0B),
+          iconColor: isDarkMode
+              ? const Color(0xFF8B5CF6)
+              : const Color(0xFFF59E0B),
           title: context.l10n.darkMode,
           subtitle: isDarkMode ? context.l10n.dark : context.l10n.light,
           trailing: _buildThemeDropdown(isDarkMode),
@@ -1149,10 +1276,14 @@ class _SettingsContentState extends State<SettingsContent> {
           trailing: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+              color: isDarkMode
+                  ? const Color(0xFF27272A)
+                  : const Color(0xFFF4F4F5),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+                color: isDarkMode
+                    ? const Color(0xFF3F3F46)
+                    : const Color(0xFFE4E4E7),
                 width: 1,
               ),
             ),
@@ -1171,7 +1302,9 @@ class _SettingsContentState extends State<SettingsContent> {
                 Icon(
                   appForwardIconOf(context),
                   size: 11,
-                  color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                  color: isDarkMode
+                      ? const Color(0xFFA1A1AA)
+                      : const Color(0xFF71717A),
                 ),
               ],
             ),
@@ -1188,9 +1321,13 @@ class _SettingsContentState extends State<SettingsContent> {
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => const CategoriesManagementScreen(),
-              ),
+              Platform.isIOS
+                  ? CupertinoPageRoute(
+                      builder: (context) => const CategoriesManagementScreen(),
+                    )
+                  : MaterialPageRoute(
+                      builder: (context) => const CategoriesManagementScreen(),
+                    ),
             );
           },
           showDivider: false,
@@ -1214,11 +1351,17 @@ class _SettingsContentState extends State<SettingsContent> {
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => ProfileEditScreen(
-                  onProfileUpdated: _onProfileUpdated,
-                ),
-              ),
+              Platform.isIOS
+                  ? CupertinoPageRoute(
+                      builder: (context) => ProfileEditScreen(
+                        onProfileUpdated: _onProfileUpdated,
+                      ),
+                    )
+                  : MaterialPageRoute(
+                      builder: (context) => ProfileEditScreen(
+                        onProfileUpdated: _onProfileUpdated,
+                      ),
+                    ),
             );
           },
         ),
@@ -1272,7 +1415,8 @@ class _SettingsContentState extends State<SettingsContent> {
                 localizedReason: context.l10n.appLockPrompt,
               );
               if (!success && mounted) {
-                final isAvailable = await BiometricService.isDeviceLockAvailable();
+                final isAvailable =
+                    await BiometricService.isDeviceLockAvailable();
                 if (!isAvailable && mounted) {
                   MessageService.showWarning(
                     context: context,
@@ -1305,27 +1449,6 @@ class _SettingsContentState extends State<SettingsContent> {
           iconColor: const Color(0xFFF59E0B),
           title: context.l10n.rateUsOnAppStorePlayStore,
           onTap: _openStore,
-        ),
-        _buildSettingTile(
-          isDarkMode: isDarkMode,
-          icon: AppIcons.feedback(isIOS: Platform.isIOS),
-          iconColor: const Color(0xFF2563EB),
-          title: context.l10n.likeUsOnFacebook,
-          onTap: _openFacebook,
-        ),
-        _buildSettingTile(
-          isDarkMode: isDarkMode,
-          icon: AppIcons.website(isIOS: Platform.isIOS),
-          iconColor: const Color(0xFF0EA5E9),
-          title: context.l10n.followUsOnTwitter,
-          onTap: _openTwitter,
-        ),
-        _buildSettingTile(
-          isDarkMode: isDarkMode,
-          icon: AppIcons.camera(isIOS: Platform.isIOS),
-          iconColor: const Color(0xFFE1306C),
-          title: context.l10n.followUsOnInstagram,
-          onTap: _openInstagram,
         ),
         _buildSettingTile(
           isDarkMode: isDarkMode,
@@ -1397,7 +1520,9 @@ class _SettingsContentState extends State<SettingsContent> {
   }
 
   void _showAndroidCloseAccountDialog(bool isDarkMode) {
-    final pureRed = isDarkMode ? const Color(0xFFEF4444) : const Color(0xFFDC2626);
+    final pureRed = isDarkMode
+        ? const Color(0xFFEF4444)
+        : const Color(0xFFDC2626);
     final dialogBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
 
     showDialog(
@@ -1407,7 +1532,9 @@ class _SettingsContentState extends State<SettingsContent> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
           side: BorderSide(
-            color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+            color: isDarkMode
+                ? const Color(0xFF27272A)
+                : const Color(0xFFE4E4E7),
             width: 1,
           ),
         ),
@@ -1421,7 +1548,9 @@ class _SettingsContentState extends State<SettingsContent> {
         content: Text(
           context.l10n.closeAccountConfirmation,
           style: TextStyle(
-            color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+            color: isDarkMode
+                ? const Color(0xFFA1A1AA)
+                : const Color(0xFF71717A),
           ),
         ),
         actions: [
@@ -1430,7 +1559,9 @@ class _SettingsContentState extends State<SettingsContent> {
             child: Text(
               context.l10n.cancel,
               style: TextStyle(
-                color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                color: isDarkMode
+                    ? const Color(0xFFA1A1AA)
+                    : const Color(0xFF71717A),
               ),
             ),
           ),
@@ -1441,10 +1572,7 @@ class _SettingsContentState extends State<SettingsContent> {
             },
             child: Text(
               context.l10n.closeAccount,
-              style: TextStyle(
-                color: pureRed,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(color: pureRed, fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -1453,12 +1581,17 @@ class _SettingsContentState extends State<SettingsContent> {
   }
 
   Widget _buildLogoutButton(bool isDarkMode) {
-    final pureRed = isDarkMode ? const Color(0xFFEF4444) : const Color(0xFFDC2626);
+    final pureRed = isDarkMode
+        ? const Color(0xFFEF4444)
+        : const Color(0xFFDC2626);
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: () => _showLogoutDialog(isDarkMode),
         borderRadius: BorderRadius.circular(16),
+        splashFactory: Platform.isIOS ? NoSplash.splashFactory : null,
+        splashColor: Platform.isIOS ? Colors.transparent : null,
+        highlightColor: pureRed.withValues(alpha: 0.1),
         child: Container(
           height: 52,
           decoration: BoxDecoration(
@@ -1553,7 +1686,7 @@ class _SettingsContentState extends State<SettingsContent> {
     if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(
       context,
-      AppRoutes.onboarding,
+      AppRoutes.email,
       (route) => false,
     );
   }
@@ -1579,7 +1712,8 @@ class _SettingsContentState extends State<SettingsContent> {
                 final offset = _effectiveScrollController.hasClients
                     ? _effectiveScrollController.offset
                     : 0.0;
-                final isAr = Localizations.localeOf(context).languageCode == 'ar';
+                final isAr =
+                    Localizations.localeOf(context).languageCode == 'ar';
                 final t = (offset / 55.0).clamp(0.0, 1.0);
                 final curve = Curves.easeOutCubic.transform(t);
                 final deltaX = isAr ? -curve * 90.0 : curve * 90.0;
@@ -1591,12 +1725,10 @@ class _SettingsContentState extends State<SettingsContent> {
                   offset: Offset(deltaX, deltaY),
                   child: Transform.scale(
                     scale: scale,
-                    alignment:
-                        isAr ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Opacity(
-                      opacity: opacity,
-                      child: child,
-                    ),
+                    alignment: isAr
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
+                    child: Opacity(opacity: opacity, child: child),
                   ),
                 );
               },
@@ -1617,6 +1749,10 @@ class _SettingsContentState extends State<SettingsContent> {
 
             // Profile Card Header
             _buildProfileHeader(isDarkMode),
+            const SizedBox(height: 24),
+
+            // Subscription / Plans Section
+            _buildSubscriptionSection(isDarkMode),
             const SizedBox(height: 24),
 
             // App Section

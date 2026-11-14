@@ -9,7 +9,9 @@ import 'package:my_wallet/features/wallet/data/models/category_model.dart';
 class CategoryRepository {
   final ApiService _apiService = ApiService();
 
-  bool get _useMock => AppConstants.useMockBackend && !_apiService.hasTestingDio;
+  bool get _useMock =>
+      (AppConstants.useMockBackend || AppConstants.isTestingEnvironment) &&
+      !_apiService.hasTestingDio;
 
   Future<List<Category>> getAllCategories() async {
     if (_useMock) {
@@ -34,11 +36,10 @@ class CategoryRepository {
     }
 
     try {
-      final response = await _apiService.post(
-        ApiEndpoints.categories,
-        {'nameAr': nameAr, 'nameEn': nameEn},
-        requiresAuth: true,
-      );
+      final response = await _apiService.post(ApiEndpoints.categories, {
+        'nameAr': nameAr,
+        'nameEn': nameEn,
+      }, requiresAuth: true);
       return Category.fromJson(response.data);
     } on DioException catch (e) {
       throw Exception(ApiErrorHandler.getErrorMessage(e));
@@ -52,7 +53,7 @@ class CategoryRepository {
 
     try {
       final response = await _apiService.put(
-        '${ApiEndpoints.categoryById}/$id',
+        '${ApiEndpoints.categoryById}$id',
         {'id': id, 'nameAr': nameAr, 'nameEn': nameEn},
         requiresAuth: true,
       );
@@ -69,7 +70,7 @@ class CategoryRepository {
 
     try {
       await _apiService.delete(
-        '${ApiEndpoints.categoryById}/$id',
+        '${ApiEndpoints.categoryById}$id',
         requiresAuth: true,
       );
     } on DioException catch (e) {

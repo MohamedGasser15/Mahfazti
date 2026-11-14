@@ -6,13 +6,15 @@ import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/utils/app_responsive.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
 import 'package:my_wallet/core/widgets/app_back_button.dart';
+import 'package:my_wallet/core/widgets/app_progress_indicator.dart';
 import 'package:my_wallet/features/auth/data/repositories/auth_repository.dart';
 
 class CurrencySelectionScreen extends StatefulWidget {
   const CurrencySelectionScreen({super.key});
 
   @override
-  State<CurrencySelectionScreen> createState() => _CurrencySelectionScreenState();
+  State<CurrencySelectionScreen> createState() =>
+      _CurrencySelectionScreenState();
 }
 
 class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
@@ -44,39 +46,67 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
   void initState() {
     super.initState();
     _loadCurrentCurrency();
-    
+
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
 
     _logoFade = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _fadeController, curve: const Interval(0.0, 0.3, curve: Curves.easeOut)),
+      CurvedAnimation(
+        parent: _fadeController,
+        curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
+      ),
     );
-    _logoSlide = Tween<Offset>(begin: const Offset(0, -0.3), end: Offset.zero).animate(
-      CurvedAnimation(parent: _fadeController, curve: const Interval(0.0, 0.3, curve: Curves.easeOut)),
-    );
+    _logoSlide = Tween<Offset>(begin: const Offset(0, -0.3), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _fadeController,
+            curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
+          ),
+        );
 
     _titleFade = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _fadeController, curve: const Interval(0.2, 0.5, curve: Curves.easeOut)),
+      CurvedAnimation(
+        parent: _fadeController,
+        curve: const Interval(0.2, 0.5, curve: Curves.easeOut),
+      ),
     );
-    _titleSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
-      CurvedAnimation(parent: _fadeController, curve: const Interval(0.2, 0.5, curve: Curves.easeOut)),
-    );
+    _titleSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _fadeController,
+            curve: const Interval(0.2, 0.5, curve: Curves.easeOut),
+          ),
+        );
 
     _formFade = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _fadeController, curve: const Interval(0.4, 0.7, curve: Curves.easeOut)),
+      CurvedAnimation(
+        parent: _fadeController,
+        curve: const Interval(0.4, 0.7, curve: Curves.easeOut),
+      ),
     );
-    _formSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
-      CurvedAnimation(parent: _fadeController, curve: const Interval(0.4, 0.7, curve: Curves.easeOut)),
-    );
+    _formSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _fadeController,
+            curve: const Interval(0.4, 0.7, curve: Curves.easeOut),
+          ),
+        );
 
     _buttonFade = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _fadeController, curve: const Interval(0.6, 1.0, curve: Curves.easeOut)),
+      CurvedAnimation(
+        parent: _fadeController,
+        curve: const Interval(0.6, 1.0, curve: Curves.easeOut),
+      ),
     );
-    _buttonSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
-      CurvedAnimation(parent: _fadeController, curve: const Interval(0.6, 1.0, curve: Curves.easeOut)),
-    );
+    _buttonSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _fadeController,
+            curve: const Interval(0.6, 1.0, curve: Curves.easeOut),
+          ),
+        );
 
     _fadeController.forward();
   }
@@ -105,25 +135,38 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
   }
 
   Future<void> _saveCurrency() async {
-    if (_selectedCurrency == null) {
-      MessageService.showWarning(context: context, message: context.l10n.selectCurrencyWarning);
+    if (_selectedCurrency == null || _isLoading) {
+      if (_selectedCurrency == null) {
+        MessageService.showWarning(
+          context: context,
+          message: context.l10n.selectCurrencyWarning,
+        );
+      }
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      final token = SharedPrefs.authToken;
-      if (token == null) throw Exception('No token found');
-
-      await _authRepository.setUserCurrency(_selectedCurrency!);
+      // 1. Immediately save locally so the user is never trapped
       await SharedPrefs.setCurrency(_selectedCurrency!);
 
-      if (mounted) {
-        MessageService.showSuccess(context: context, message: context.l10n.currencySavedSuccess);
+      // 2. Sync to backend asynchronously if authenticated
+      final token = SharedPrefs.authToken;
+      if (token != null && token.isNotEmpty) {
+        _authRepository.setUserCurrency(_selectedCurrency!).catchError((e) {
+          debugPrint('Backend currency sync note: $e');
+        });
       }
 
-      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) {
+        MessageService.showSuccess(
+          context: context,
+          message: context.l10n.currencySavedSuccess,
+        );
+      }
+
+      await Future.delayed(const Duration(milliseconds: 250));
 
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
@@ -132,47 +175,15 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
           (route) => false,
         );
       }
-    } catch (e) {
-      if (!mounted) return;
-
-      final errorStr = e.toString().toLowerCase();
-      final isAuthError = errorStr.contains('401') ||
-          errorStr.contains('unauthorized') ||
-          errorStr.contains('token');
-
-      if (isAuthError) {
-        final refreshed = await _authRepository.refreshToken();
-        if (refreshed) {
-          try {
-            await _authRepository.setUserCurrency(_selectedCurrency!);
-            await SharedPrefs.setCurrency(_selectedCurrency!);
-            if (mounted) {
-              MessageService.showSuccess(context: context, message: context.l10n.currencySavedSuccess);
-              await Future.delayed(const Duration(milliseconds: 500));
-              if (mounted) {
-                Navigator.pushNamedAndRemoveUntil(context, AppRoutes.home, (route) => false);
-              }
-            }
-            return;
-          } catch (_) {}
-        }
-
-        await _authRepository.logout();
-        if (mounted) {
-          MessageService.showError(
-            context: context,
-            message: context.l10n.sessionExpired,
-          );
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            AppRoutes.email,
-            (route) => false,
-          );
-        }
-        return;
+    } catch (_) {
+      // Safe fallback navigation so user is never blocked
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.home,
+          (route) => false,
+        );
       }
-
-      MessageService.showError(context: context, message: '${context.l10n.failedToSaveCurrency}: ${e.toString()}');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -182,13 +193,20 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
 
   String _getCurrencyName(String? nameKey) {
     switch (nameKey) {
-      case 'currencyUSD': return context.l10n.currencyUSD;
-      case 'currencyEUR': return context.l10n.currencyEUR;
-      case 'currencyEGP': return context.l10n.currencyEGP;
-      case 'currencySAR': return context.l10n.currencySAR;
-      case 'currencyAED': return context.l10n.currencyAED;
-      case 'currencyKWD': return context.l10n.currencyKWD;
-      default: return '';
+      case 'currencyUSD':
+        return context.l10n.currencyUSD;
+      case 'currencyEUR':
+        return context.l10n.currencyEUR;
+      case 'currencyEGP':
+        return context.l10n.currencyEGP;
+      case 'currencySAR':
+        return context.l10n.currencySAR;
+      case 'currencyAED':
+        return context.l10n.currencyAED;
+      case 'currencyKWD':
+        return context.l10n.currencyKWD;
+      default:
+        return '';
     }
   }
 
@@ -208,9 +226,7 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          leading: AppGlassBackButton(
-            onPressed: _handleBack,
-          ),
+          leading: AppGlassBackButton(onPressed: _handleBack),
           actions: [
             IconButton(
               tooltip: context.l10n.logout,
@@ -233,239 +249,266 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen>
           ],
           title: null,
         ),
-      body: SafeArea(
-        child: ResponsiveWrapper(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 20),
+        body: SafeArea(
+          child: ResponsiveWrapper(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 20),
 
-                // Logo
-                SlideTransition(
-                  position: _logoSlide,
-                  child: FadeTransition(
-                    opacity: _logoFade,
-                    child: Center(
-                      child: Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              theme.colorScheme.primary,
-                              theme.colorScheme.primary.withValues(alpha: 0.7),
+                  // Logo
+                  SlideTransition(
+                    position: _logoSlide,
+                    child: FadeTransition(
+                      opacity: _logoFade,
+                      child: Center(
+                        child: Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                theme.colorScheme.primary,
+                                theme.colorScheme.primary.withValues(
+                                  alpha: 0.7,
+                                ),
+                              ],
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: theme.colorScheme.primary.withValues(
+                                  alpha: 0.3,
+                                ),
+                                blurRadius: 20,
+                                offset: const Offset(0, 8),
+                              ),
                             ],
                           ),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.currency_exchange_rounded,
-                          size: 40,
-                          color: theme.colorScheme.onPrimary,
+                          child: Icon(
+                            Icons.currency_exchange_rounded,
+                            size: 40,
+                            color: theme.colorScheme.onPrimary,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                // Title
-                SlideTransition(
-                  position: _titleSlide,
-                  child: FadeTransition(
-                    opacity: _titleFade,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          context.l10n.selectCurrency,
-                          style: theme.textTheme.displayMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.5,
+                  // Title
+                  SlideTransition(
+                    position: _titleSlide,
+                    child: FadeTransition(
+                      opacity: _titleFade,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            context.l10n.selectCurrency,
+                            style: theme.textTheme.displayMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.5,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          context.l10n.selectCurrencyDescription,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                          const SizedBox(height: 8),
+                          Text(
+                            context.l10n.selectCurrencyDescription,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.6,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                // Currency List
-                SlideTransition(
-                  position: _formSlide,
-                  child: FadeTransition(
-                    opacity: _formFade,
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: currencies.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final currency = currencies[index];
-                        final isSelected = _selectedCurrency == currency['code'];
-                        final currencyName = _getCurrencyName(currency['nameKey']);
+                  // Currency List
+                  SlideTransition(
+                    position: _formSlide,
+                    child: FadeTransition(
+                      opacity: _formFade,
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: currencies.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final currency = currencies[index];
+                          final isSelected =
+                              _selectedCurrency == currency['code'];
+                          final currencyName = _getCurrencyName(
+                            currency['nameKey'],
+                          );
 
-                        return Material(
-                          color: isSelected
-                              ? theme.colorScheme.primary.withValues(alpha: 0.05)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(16),
-                          child: InkWell(
+                          return Material(
+                            color: isSelected
+                                ? theme.colorScheme.primary.withValues(
+                                    alpha: 0.05,
+                                  )
+                                : Colors.transparent,
                             borderRadius: BorderRadius.circular(16),
-                            onTap: () {
-                              setState(() {
-                                _selectedCurrency = currency['code'];
-                              });
-                              HapticFeedback.selectionClick();
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? theme.colorScheme.primary
-                                      : theme.colorScheme.outline.withValues(alpha: 0.2),
-                                  width: isSelected ? 2 : 1,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: () async {
+                                setState(() {
+                                  _selectedCurrency = currency['code'];
+                                });
+                                HapticFeedback.selectionClick();
+                                await _saveCurrency();
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
                                 ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      color: theme.colorScheme.surface,
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.05),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        currency['flag']!,
-                                        style: const TextStyle(fontSize: 24),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          currencyName,
-                                          style: theme.textTheme.bodyLarge?.copyWith(
-                                            fontWeight: FontWeight.w600,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? theme.colorScheme.primary
+                                        : theme.colorScheme.outline.withValues(
+                                            alpha: 0.2,
                                           ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          currency['code']!,
-                                          style: theme.textTheme.bodyMedium?.copyWith(
-                                            color: theme.colorScheme.onSurface
-                                                .withValues(alpha: 0.6),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                    width: isSelected ? 2 : 1,
                                   ),
-                                  if (isSelected)
+                                ),
+                                child: Row(
+                                  children: [
                                     Container(
-                                      width: 28,
-                                      height: 28,
+                                      width: 48,
+                                      height: 48,
                                       decoration: BoxDecoration(
-                                        color: theme.colorScheme.primary,
+                                        color: theme.colorScheme.surface,
                                         shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.05,
+                                            ),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
                                       ),
-                                      child: Icon(
-                                        Icons.check,
-                                        color: isDark ? Colors.black : Colors.white,
-                                        size: 18,
+                                      child: Center(
+                                        child: Text(
+                                          currency['flag']!,
+                                          style: const TextStyle(fontSize: 24),
+                                        ),
                                       ),
                                     ),
-                                ],
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            currencyName,
+                                            style: theme.textTheme.bodyLarge
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            currency['code']!,
+                                            style: theme.textTheme.bodyMedium
+                                                ?.copyWith(
+                                                  color: theme
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withValues(alpha: 0.6),
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (isSelected)
+                                      Container(
+                                        width: 28,
+                                        height: 28,
+                                        decoration: BoxDecoration(
+                                          color: theme.colorScheme.primary,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.check,
+                                          color: isDark
+                                              ? Colors.black
+                                              : Colors.white,
+                                          size: 18,
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Button
-                SlideTransition(
-                  position: _buttonSlide,
-                  child: FadeTransition(
-                    opacity: _buttonFade,
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _saveCurrency,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                          disabledBackgroundColor: theme.colorScheme.primary.withValues(alpha: 0.4),
-                          disabledForegroundColor: theme.colorScheme.onPrimary.withValues(alpha: 0.4),
-                          minimumSize: const Size(double.infinity, 56),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 4,
-                          shadowColor: Colors.black26,
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  color: Colors.black,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Text(context.l10n.continueText, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                          );
+                        },
                       ),
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 40),
-              ],
+                  const SizedBox(height: 24),
+
+                  // Button
+                  SlideTransition(
+                    position: _buttonSlide,
+                    child: FadeTransition(
+                      opacity: _buttonFade,
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _saveCurrency,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.black,
+                            disabledBackgroundColor: theme.colorScheme.primary
+                                .withValues(alpha: 0.4),
+                            disabledForegroundColor: theme.colorScheme.onPrimary
+                                .withValues(alpha: 0.4),
+                            minimumSize: const Size(double.infinity, 56),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 4,
+                            shadowColor: Colors.black26,
+                          ),
+                          child: _isLoading
+                              ? const AppProgressIndicator.small(
+                                  color: Colors.black,
+                                )
+                              : Text(
+                                  context.l10n.continueText,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 40),
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

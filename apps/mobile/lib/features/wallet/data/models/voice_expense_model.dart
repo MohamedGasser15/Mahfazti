@@ -23,7 +23,9 @@ class VoiceExpenseResult {
 
   factory VoiceExpenseResult.fromJson(Map<String, dynamic> json) {
     return VoiceExpenseResult(
-      amount: json['amount'] != null ? (json['amount'] as num).toDouble() : null,
+      amount: json['amount'] != null
+          ? (json['amount'] as num).toDouble()
+          : null,
       transactionType: json['transactionType'] ?? 'Withdrawal', // ✅
       categoryId: json['categoryId'],
       categoryNameAr: json['categoryNameAr'],

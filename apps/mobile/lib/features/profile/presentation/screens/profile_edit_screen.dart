@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:neo_cupertino/neo_cupertino.dart';
 import 'package:my_wallet/core/widgets/app_back_button.dart';
+import 'package:my_wallet/core/widgets/app_progress_indicator.dart';
 import 'package:my_wallet/core/extensions/context_extensions.dart';
 import 'package:my_wallet/core/services/message_service.dart';
 import 'package:my_wallet/core/utils/app_responsive.dart';
@@ -126,7 +127,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       if (mounted) {
         HapticFeedback.heavyImpact();
         setState(() {
-          _errorMessage = '${context.l10n.failedToUpdateProfile}: ${e.toString()}';
+          _errorMessage =
+              '${context.l10n.failedToUpdateProfile}: ${e.toString()}';
         });
       }
     } finally {
@@ -171,10 +173,16 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     String? Function(String?)? validator,
   }) {
     final textColor = isDarkMode ? Colors.white : const Color(0xFF09090B);
-    final labelColor = isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
-    final iconBg = isDarkMode ? const Color(0xFF1E1E24) : const Color(0xFFF4F4F6);
+    final labelColor = isDarkMode
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF71717A);
+    final iconBg = isDarkMode
+        ? const Color(0xFF1E1E24)
+        : const Color(0xFFF4F4F6);
     final iconColor = isDarkMode ? Colors.white : const Color(0xFF09090B);
-    final clearBtnColor = isDarkMode ? const Color(0xFF71717A) : const Color(0xFFA1A1AA);
+    final clearBtnColor = isDarkMode
+        ? const Color(0xFF71717A)
+        : const Color(0xFFA1A1AA);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -188,15 +196,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               color: iconBg,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isDarkMode ? const Color(0xFF2E2E36) : const Color(0xFFE4E4E7),
+                color: isDarkMode
+                    ? const Color(0xFF2E2E36)
+                    : const Color(0xFFE4E4E7),
                 width: 0.8,
               ),
             ),
-            child: Icon(
-              icon,
-              size: 20,
-              color: iconColor,
-            ),
+            child: Icon(icon, size: 20, color: iconColor),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -218,13 +224,17 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                   controller: controller,
                   enabled: enabled,
                   keyboardType: keyboardType,
-                  keyboardAppearance: isDarkMode ? Brightness.dark : Brightness.light,
+                  keyboardAppearance: isDarkMode
+                      ? Brightness.dark
+                      : Brightness.light,
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: enabled
                         ? textColor
-                        : (isDarkMode ? const Color(0xFF71717A) : const Color(0xFFA1A1AA)),
+                        : (isDarkMode
+                              ? const Color(0xFF71717A)
+                              : const Color(0xFFA1A1AA)),
                   ),
                   decoration: InputDecoration(
                     isDense: true,
@@ -233,7 +243,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     hintStyle: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
-                      color: isDarkMode ? const Color(0xFF52525B) : const Color(0xFFA1A1AA),
+                      color: isDarkMode
+                          ? const Color(0xFF52525B)
+                          : const Color(0xFFA1A1AA),
                     ),
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
@@ -244,7 +256,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     prefixStyle: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                      color: isDarkMode
+                          ? const Color(0xFFA1A1AA)
+                          : const Color(0xFF71717A),
                     ),
                   ),
                   validator: validator,
@@ -275,7 +289,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               child: Icon(
                 Icons.lock_outline_rounded,
                 size: 18,
-                color: isDarkMode ? const Color(0xFF71717A) : const Color(0xFFA1A1AA),
+                color: isDarkMode
+                    ? const Color(0xFF71717A)
+                    : const Color(0xFFA1A1AA),
               ),
             ),
         ],
@@ -300,8 +316,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     Widget? footer,
   }) {
     final cardBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
-    final borderColor = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
-    final headerColor = isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
+    final borderColor = isDarkMode
+        ? const Color(0xFF27272A)
+        : const Color(0xFFE4E4E7);
+    final headerColor = isDarkMode
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF71717A);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -333,9 +353,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     ),
                   ],
           ),
-          child: Column(
-            children: children,
-          ),
+          child: Column(children: children),
         ),
         if (footer != null) ...[
           const SizedBox(height: 8),
@@ -352,7 +370,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final l10n = context.l10n;
-    final bgColor = isDarkMode ? const Color(0xFF09090B) : const Color(0xFFF8F8FA);
+    final bgColor = isDarkMode
+        ? const Color(0xFF09090B)
+        : const Color(0xFFF8F8FA);
 
     final initials = _getInitials(_fullNameController.text);
 
@@ -383,7 +403,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     ? GlassButton.custom(
                         onTap: _resetForm,
                         height: 32,
-                        shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+                        shape: const LiquidRoundedSuperellipse(
+                          borderRadius: 16,
+                        ),
                         useOwnLayer: true,
                         settings: LiquidGlassSettings(
                           thickness: 14,
@@ -400,7 +422,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                               Icon(
                                 Icons.undo_rounded,
                                 size: 13,
-                                color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                                color: isDarkMode
+                                    ? Colors.white
+                                    : const Color(0xFF09090B),
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -408,7 +432,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                                  color: isDarkMode
+                                      ? Colors.white
+                                      : const Color(0xFF09090B),
                                 ),
                               ),
                             ],
@@ -420,14 +446,18 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                         icon: Icon(
                           Icons.undo_rounded,
                           size: 14,
-                          color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                          color: isDarkMode
+                              ? Colors.white
+                              : const Color(0xFF09090B),
                         ),
                         label: Text(
                           l10n.reset,
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                            color: isDarkMode
+                                ? Colors.white
+                                : const Color(0xFF09090B),
                           ),
                         ),
                       ),
@@ -437,8 +467,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       ),
       body: _isLoading
           ? Center(
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
+              child: AppProgressIndicator(
                 color: isDarkMode ? Colors.white : const Color(0xFF09090B),
               ),
             )
@@ -468,12 +497,16 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                 padding: const EdgeInsets.all(3),
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                                  color: isDarkMode
+                                      ? const Color(0xFF27272A)
+                                      : const Color(0xFFE4E4E7),
                                   boxShadow: isDarkMode
                                       ? null
                                       : [
                                           BoxShadow(
-                                            color: Colors.black.withValues(alpha: 0.04),
+                                            color: Colors.black.withValues(
+                                              alpha: 0.04,
+                                            ),
                                             blurRadius: 12,
                                             offset: const Offset(0, 3),
                                           ),
@@ -487,19 +520,25 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                     color: isDarkMode
                                         ? const Color(0xFF141418)
                                         : const Color(0xFFF4F4F5),
-                                    image: _profileImageUrl != null &&
+                                    image:
+                                        _profileImageUrl != null &&
                                             _profileImageUrl!.isNotEmpty
                                         ? DecorationImage(
-                                            image: NetworkImage(_profileImageUrl!),
+                                            image: NetworkImage(
+                                              _profileImageUrl!,
+                                            ),
                                             fit: BoxFit.cover,
                                           )
                                         : null,
                                   ),
-                                  child: (_profileImageUrl == null ||
+                                  child:
+                                      (_profileImageUrl == null ||
                                           _profileImageUrl!.isEmpty)
                                       ? Center(
                                           child: Text(
-                                            initials.isNotEmpty ? initials : '?',
+                                            initials.isNotEmpty
+                                                ? initials
+                                                : '?',
                                             style: TextStyle(
                                               fontSize: 28,
                                               fontWeight: FontWeight.w800,
@@ -524,7 +563,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: -0.3,
-                                  color: isDarkMode ? Colors.white : const Color(0xFF09090B),
+                                  color: isDarkMode
+                                      ? Colors.white
+                                      : const Color(0xFF09090B),
                                 ),
                               ),
                             ],
@@ -536,10 +577,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                         if (_errorMessage != null) ...[
                           Builder(
                             builder: (context) {
-                              final pureRed = isDarkMode ? const Color(0xFFEF4444) : const Color(0xFFDC2626);
+                              final pureRed = isDarkMode
+                                  ? const Color(0xFFEF4444)
+                                  : const Color(0xFFDC2626);
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 20),
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 12,
+                                ),
                                 decoration: BoxDecoration(
                                   color: pureRed.withValues(alpha: 0.10),
                                   borderRadius: BorderRadius.circular(16),
@@ -566,7 +612,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                       ),
                                     ),
                                     GestureDetector(
-                                      onTap: () => setState(() => _errorMessage = null),
+                                      onTap: () =>
+                                          setState(() => _errorMessage = null),
                                       child: Icon(
                                         Icons.close_rounded,
                                         color: pureRed,
@@ -684,8 +731,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           child: ElevatedButton(
             onPressed: (_isSaving || !_hasChanges) ? null : _saveProfile,
             style: ElevatedButton.styleFrom(
-              backgroundColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
-              foregroundColor: isDarkMode ? const Color(0xFF09090B) : Colors.white,
+              backgroundColor: isDarkMode
+                  ? Colors.white
+                  : const Color(0xFF09090B),
+              foregroundColor: isDarkMode
+                  ? const Color(0xFF09090B)
+                  : Colors.white,
               disabledBackgroundColor: isDarkMode
                   ? const Color(0xFF27272A).withValues(alpha: 0.6)
                   : const Color(0xFFE4E4E7),
@@ -696,16 +747,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 borderRadius: BorderRadius.circular(16),
               ),
               elevation: (_hasChanges && !_isSaving) ? 6 : 0,
-              shadowColor: Colors.black.withValues(alpha: isDarkMode ? 0.35 : 0.15),
+              shadowColor: Colors.black.withValues(
+                alpha: isDarkMode ? 0.35 : 0.15,
+              ),
             ),
             child: _isSaving
-                ? SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: isDarkMode ? const Color(0xFF09090B) : Colors.white,
-                    ),
+                ? AppProgressIndicator.small(
+                    color: isDarkMode ? const Color(0xFF09090B) : Colors.white,
                   )
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,

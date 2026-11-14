@@ -76,13 +76,17 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     ];
     final displayItems = isRtl ? baseTabItems.reversed.toList() : baseTabItems;
-    final activeIndex = isRtl ? (baseTabItems.length - 1 - _currentIndex) : _currentIndex;
+    final activeIndex = isRtl
+        ? (baseTabItems.length - 1 - _currentIndex)
+        : _currentIndex;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: isIOS,
       resizeToAvoidBottomInset: !isIOS,
-      bottomNavigationBar: isIOS ? null : _buildAndroidNavigationBar(context, isDarkMode),
+      bottomNavigationBar: isIOS
+          ? null
+          : _buildAndroidNavigationBar(context, isDarkMode),
       body: Stack(
         children: [
           PageView(
@@ -100,35 +104,43 @@ class _HomeScreenState extends State<HomeScreen> {
               left: 2,
               right: 2,
               bottom: 0,
-              child: ValueListenableBuilder<bool>(
-                valueListenable: NavigationService.isModalOpenNotifier,
-                builder: (context, isModalOpen, child) {
-                  return AnimatedSlide(
-                    offset: isModalOpen ? const Offset(0, 1.2) : Offset.zero,
-                    duration: const Duration(milliseconds: 250),
-                    curve: isModalOpen ? Curves.easeInCubic : Curves.easeOutCubic,
-                    child: AnimatedOpacity(
-                      opacity: isModalOpen ? 0.0 : 1.0,
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeInOut,
-                      child: IgnorePointer(
-                        ignoring: isModalOpen,
-                        child: child!,
+              child: RepaintBoundary(
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: NavigationService.isModalOpenNotifier,
+                  builder: (context, isModalOpen, child) {
+                    return AnimatedSlide(
+                      offset: isModalOpen ? const Offset(0, 1.2) : Offset.zero,
+                      duration: const Duration(milliseconds: 250),
+                      curve: isModalOpen
+                          ? Curves.easeInCubic
+                          : Curves.easeOutCubic,
+                      child: AnimatedOpacity(
+                        opacity: isModalOpen ? 0.0 : 1.0,
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeInOut,
+                        child: IgnorePointer(
+                          ignoring: isModalOpen,
+                          child: child!,
+                        ),
                       ),
-                    ),
-                  );
-                },
-                child: LiquidGlassBottomBar(
-                  key: ValueKey('tab_bar_${isRtl}_$isDarkMode'),
-                  height: 85,
-                  tint: isDarkMode ? Colors.white : Theme.of(context).primaryColor,
-                  style: LiquidGlassStyle.regular,
-                  items: displayItems,
-                  currentIndex: activeIndex,
-                  onTap: (index) {
-                    final targetIndex = isRtl ? (displayItems.length - 1 - index) : index;
-                    _navigateToTab(targetIndex);
+                    );
                   },
+                  child: LiquidGlassBottomBar(
+                    key: ValueKey('tab_bar_${isRtl}_$isDarkMode'),
+                    height: 85,
+                    tint: isDarkMode
+                        ? Colors.white
+                        : Theme.of(context).primaryColor,
+                    style: LiquidGlassStyle.regular,
+                    items: displayItems,
+                    currentIndex: activeIndex,
+                    onTap: (index) {
+                      final targetIndex = isRtl
+                          ? (displayItems.length - 1 - index)
+                          : index;
+                      _navigateToTab(targetIndex);
+                    },
+                  ),
                 ),
               ),
             ),
@@ -145,10 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
         width: size,
         height: size,
         filterQuality: FilterQuality.high,
-        errorBuilder: (_, __, ___) => Icon(
-          Icons.auto_awesome_rounded,
-          size: size,
-        ),
+        errorBuilder: (_, _, _) => Icon(Icons.auto_awesome_rounded, size: size),
       ),
     );
   }
@@ -162,7 +171,9 @@ class _HomeScreenState extends State<HomeScreen> {
         color: isDarkMode ? const Color(0xFF141418) : Colors.white,
         border: Border(
           top: BorderSide(
-            color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+            color: isDarkMode
+                ? const Color(0xFF27272A)
+                : const Color(0xFFE4E4E7),
             width: 0.8,
           ),
         ),

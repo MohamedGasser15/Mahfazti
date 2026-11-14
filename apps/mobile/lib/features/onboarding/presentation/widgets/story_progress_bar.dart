@@ -5,7 +5,7 @@ class StoryProgressBar extends StatefulWidget {
   final int totalPages;
   final AnimationController progressController;
   final Function(int) onPageTap;
-  
+
   const StoryProgressBar({
     super.key,
     required this.currentPage,
@@ -13,26 +13,23 @@ class StoryProgressBar extends StatefulWidget {
     required this.progressController,
     required this.onPageTap,
   });
-  
+
   @override
   State<StoryProgressBar> createState() => _StoryProgressBarState();
 }
 
-class _StoryProgressBarState extends State<StoryProgressBar> 
+class _StoryProgressBarState extends State<StoryProgressBar>
     with SingleTickerProviderStateMixin {
   late Animation<double> _progressAnimation;
-  
+
   @override
   void initState() {
     super.initState();
     _progressAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: widget.progressController,
-        curve: Curves.linear,
-      ),
+      CurvedAnimation(parent: widget.progressController, curve: Curves.linear),
     );
   }
-  
+
   @override
   void didUpdateWidget(StoryProgressBar oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -45,7 +42,7 @@ class _StoryProgressBarState extends State<StoryProgressBar>
       );
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -60,18 +57,22 @@ class _StoryProgressBarState extends State<StoryProgressBar>
                 child: Container(
                   height: 3,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(2),
                   ),
                   child: Stack(
                     children: [
                       Container(
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
-                      
+
                       if (index < widget.currentPage)
                         Container(
                           decoration: BoxDecoration(
@@ -79,7 +80,7 @@ class _StoryProgressBarState extends State<StoryProgressBar>
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
-                      
+
                       if (index == widget.currentPage)
                         AnimatedBuilder(
                           animation: _progressAnimation,

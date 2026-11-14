@@ -1,4 +1,5 @@
 part of '../screens/home_tab.dart';
+
 // ignore_for_file: annotate_overrides
 
 mixin _HomeTabWidgets on _HomeTabState {
@@ -47,8 +48,9 @@ mixin _HomeTabWidgets on _HomeTabState {
             Theme.of(dialogContext).brightness == Brightness.dark;
         return AlertDialog(
           backgroundColor: isDarkMode ? const Color(0xFF18181B) : Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Text(
             title,
             style: TextStyle(
@@ -98,88 +100,199 @@ mixin _HomeTabWidgets on _HomeTabState {
   Widget _buildSkeletonLoading(bool isDarkMode) {
     return Shimmer.fromColors(
       baseColor: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFE4E4E7),
-      highlightColor: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Top Bar Skeleton
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  width: 140,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
+      highlightColor: isDarkMode
+          ? const Color(0xFF27272A)
+          : const Color(0xFFF4F4F5),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_showAutoTrackingBanner && _dismissedGetStartedCards.length < 4)
+            ...[
+              _buildSkeletonSectionHeader(
+                titleWidth: 98,
+                trailingWidth: 42,
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                child: _buildSkeletonSurface(
+                  height: 138,
+                  radius: 18,
+                  isDarkMode: isDarkMode,
                 ),
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
+              ),
+              const SizedBox(height: 20),
+            ],
+          _buildSkeletonSectionHeader(titleWidth: 82, trailingWidth: 54),
+          const SizedBox(height: 4),
+          SizedBox(
+            height: 104,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              scrollDirection: Axis.horizontal,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: 4,
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
+              itemBuilder: (context, index) => _buildSkeletonSurface(
+                width: index == 3 ? 60 : 156,
+                radius: 16,
+                isDarkMode: isDarkMode,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSkeletonSectionHeader(
+                  titleWidth: 148,
+                  trailingWidth: 48,
+                  inset: 0,
+                ),
+                const SizedBox(height: 12),
+                if (_useGroupedRecentTransactions)
+                  _buildSkeletonGroupedTransactions(isDarkMode)
+                else
+                  ...List.generate(
+                    5,
+                    (index) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _buildSkeletonSurface(
+                        radius: 18,
+                        isDarkMode: isDarkMode,
+                        child: _buildSkeletonTransactionRow(),
+                      ),
+                    ),
                   ),
+                const SizedBox(height: 24),
+                _buildSkeletonSectionHeader(
+                  titleWidth: 92,
+                  trailingWidth: 48,
+                  inset: 0,
+                ),
+                const SizedBox(height: 12),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final cardWidth = (constraints.maxWidth - 12) / 2;
+                    return Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: List.generate(
+                        math.max(2, 6 - _hiddenInsights.length),
+                        (_) => _buildSkeletonSurface(
+                          width: cardWidth,
+                          height: 190,
+                          radius: 18,
+                          isDarkMode: isDarkMode,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            // Card Skeleton
-            Container(
-              height: 210,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Quick Actions Skeleton (3 pills)
-            Row(
-              children: List.generate(
-                3,
-                (index) => Expanded(
-                  child: Container(
-                    height: 52,
-                    margin: EdgeInsets.only(
-                      left: index == 0 ? 0 : 6,
-                      right: index == 2 ? 0 : 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 28),
-            // Filter Bar Skeleton
-            Container(
-              height: 46,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            const SizedBox(height: 20),
-            // Transaction Rows Skeleton
-            ...List.generate(
-              4,
-              (index) => Container(
-                height: 72,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-              ),
-            ),
-          ],
+          ),
+          const SizedBox(height: 120),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSkeletonSectionHeader({
+    required double titleWidth,
+    required double trailingWidth,
+    double inset = 20,
+  }) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: inset),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _buildSkeletonSurface(
+            width: titleWidth,
+            height: 17,
+            radius: 8,
+          ),
+          _buildSkeletonSurface(
+            width: trailingWidth,
+            height: 13,
+            radius: 7,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSkeletonGroupedTransactions(bool isDarkMode) {
+    return _buildSkeletonSurface(
+      radius: 20,
+      isDarkMode: isDarkMode,
+      child: Column(
+        children: List.generate(
+          5,
+          (index) => _buildSkeletonTransactionRow(
+            grouped: true,
+            isLast: index == 4,
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSkeletonTransactionRow({bool grouped = false, bool isLast = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              _buildSkeletonSurface(
+                width: 42,
+                height: 42,
+                radius: 21,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSkeletonSurface(width: 118, height: 13, radius: 7),
+                    const SizedBox(height: 8),
+                    _buildSkeletonSurface(width: 76, height: 10, radius: 6),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              _buildSkeletonSurface(width: 64, height: 13, radius: 7),
+            ],
+          ),
+          if (grouped && !isLast)
+            const Padding(
+              padding: EdgeInsets.only(left: 56, top: 13),
+              child: Divider(height: 1),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSkeletonSurface({
+    double? width,
+    double? height,
+    double radius = 12,
+    bool isDarkMode = false,
+    Widget? child,
+  }) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF222228) : const Color(0xFFF4F4F5),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+      child: child,
     );
   }
   //#endregion
@@ -187,6 +300,11 @@ mixin _HomeTabWidgets on _HomeTabState {
   //#region Atmospheric Hero Section (Say Style with Black Gradient Shadow in Light Mode)
   Widget _buildSayHeroSection(bool isDarkMode, HideBalanceService hideService) {
     final topPadding = MediaQuery.of(context).padding.top;
+    const lightHeroTint = Color(0xFF141418);
+    const lightHeroBase = Colors.white;
+    final lightHeroColors = [1.0, 0.99, 0.96, 0.91, 0.83, 0.72, 0.56, 0.36, 0.0]
+        .map((opacity) => Color.lerp(lightHeroBase, lightHeroTint, opacity)!)
+        .toList();
 
     return Container(
       width: double.infinity,
@@ -198,48 +316,24 @@ mixin _HomeTabWidgets on _HomeTabState {
               ? const [
                   Color(0xFF16161B), // Elegant deep graphite at status bar
                   Color(0xFF202026), // Soft natural lift into top bar
-                  Color(0xFF2A2A33), // Rising luminous tone approaching spent label
-                  Color(0xFF33333F), // Peak luminous aura centered across the price number
-                  Color(0xFF2A2A34), // Soft glow continuing through account selector
+                  Color(
+                    0xFF2A2A33,
+                  ), // Rising luminous tone approaching spent label
+                  Color(
+                    0xFF33333F,
+                  ), // Peak luminous aura centered across the price number
+                  Color(
+                    0xFF2A2A34,
+                  ), // Soft glow continuing through account selector
                   Color(0xFF1F1F26), // Gentle decay above action buttons
                   Color(0xFF15151A), // Soft ambient depth at buttons
                   Color(0xFF0E0E12), // Deep shadow below buttons
                   Color(0xFF09090B), // Flawless blend into page background
                 ]
-              : [
-                  const Color(0xFF141418),
-                  const Color(0xFF141418).withValues(alpha: 0.99),
-                  const Color(0xFF141418).withValues(alpha: 0.96),
-                  const Color(0xFF141418).withValues(alpha: 0.91),
-                  const Color(0xFF141418).withValues(alpha: 0.83),
-                  const Color(0xFF141418).withValues(alpha: 0.72),
-                  const Color(0xFF141418).withValues(alpha: 0.56),
-                  const Color(0xFF141418).withValues(alpha: 0.36),
-                  const Color(0xFF141418).withValues(alpha: 0.0),
-                ],
+              : lightHeroColors,
           stops: isDarkMode
-              ? const [
-                  0.0,
-                  0.16,
-                  0.30,
-                  0.44,
-                  0.58,
-                  0.70,
-                  0.82,
-                  0.92,
-                  1.0,
-                ]
-              : const [
-                  0.0,
-                  0.15,
-                  0.30,
-                  0.45,
-                  0.60,
-                  0.72,
-                  0.82,
-                  0.91,
-                  1.0,
-                ],
+              ? const [0.0, 0.16, 0.30, 0.44, 0.58, 0.70, 0.82, 0.92, 1.0]
+              : const [0.0, 0.15, 0.30, 0.45, 0.60, 0.72, 0.82, 0.91, 1.0],
         ),
       ),
       padding: EdgeInsets.only(
@@ -274,7 +368,7 @@ mixin _HomeTabWidgets on _HomeTabState {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
           // Left: User Profile Avatar
           isIOS
@@ -289,9 +383,8 @@ mixin _HomeTabWidgets on _HomeTabState {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => SettingsScreen(
-                          onLocaleChanged: (locale) {},
-                        ),
+                        builder: (context) =>
+                            SettingsScreen(onLocaleChanged: (locale) {}),
                       ),
                     );
                   },
@@ -307,9 +400,8 @@ mixin _HomeTabWidgets on _HomeTabState {
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => SettingsScreen(
-                          onLocaleChanged: (locale) {},
-                        ),
+                        builder: (context) =>
+                            SettingsScreen(onLocaleChanged: (locale) {}),
                       ),
                     ),
                     borderRadius: BorderRadius.circular(20),
@@ -335,117 +427,168 @@ mixin _HomeTabWidgets on _HomeTabState {
                   ),
                 ),
 
-          // Center: Date Range Selector Pill (Say Style / Native iOS Menu on iOS)
-          isIOS
-              ? IosSingleTapContextMenu(
-                  actions: [
-                    IosContextMenuAction(
-                      id: 'this_month',
-                      title: context.l10n.thisMonth,
-                      iconSystemName: 'calendar',
-                    ),
-                    IosContextMenuAction(
-                      id: 'last_month',
-                      title: context.l10n.lastMonth,
-                      iconSystemName: 'clock.arrow.circlepath',
-                    ),
-                    const IosContextMenuDivider(),
-                    IosContextMenuAction(
-                      id: 'by_month',
-                      title: context.l10n.byMonth,
-                      iconSystemName: 'calendar.day.timeline.left',
-                    ),
-                    IosContextMenuAction(
-                      id: 'custom_range',
-                      title: context.l10n.customRangeDots,
-                      iconSystemName: 'calendar.badge.clock',
-                    ),
-                  ],
-                  onSelected: (id) async {
-                    final now = DateTime.now();
-                    if (id == 'this_month') {
-                      setState(() {
-                        _startDate = DateTime(now.year, now.month, 1);
-                        _endDate = DateTime(now.year, now.month + 1, 0);
-                      });
-                    } else if (id == 'last_month') {
-                      setState(() {
-                        _startDate = DateTime(now.year, now.month - 1, 1);
-                        _endDate = DateTime(now.year, now.month, 0);
-                      });
-                    } else if (id == 'by_month') {
-                      await _pickMonthPicker(context);
-                    } else if (id == 'custom_range') {
-                      await _pickCustomDateRange(context);
-                    }
-                  },
-                  child: GlassContainer(
-                    height: 38,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    shape: const LiquidRoundedRectangle(borderRadius: 19),
-                    useOwnLayer: true,
-                    settings: topBarGlassSettings,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _formattedDateRange,
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                            letterSpacing: -0.2,
-                          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: isIOS
+                  ? IosSingleTapContextMenu(
+                      actions: [
+                        IosContextMenuAction(
+                          id: 'this_month',
+                          title: context.l10n.thisMonth,
+                          iconSystemName: 'calendar',
                         ),
-                        const SizedBox(width: 5),
-                        Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          size: 17,
-                          color: Colors.white.withValues(alpha: 0.9),
+                        IosContextMenuAction(
+                          id: 'last_month',
+                          title: context.l10n.lastMonth,
+                          iconSystemName: 'clock.arrow.circlepath',
+                        ),
+                        const IosContextMenuDivider(),
+                        IosContextMenuAction(
+                          id: 'by_month',
+                          title: context.l10n.byMonth,
+                          iconSystemName: 'calendar.day.timeline.left',
+                        ),
+                        IosContextMenuAction(
+                          id: 'custom_range',
+                          title: context.l10n.customRangeDots,
+                          iconSystemName: 'calendar.badge.clock',
                         ),
                       ],
-                    ),
-                  ),
-                )
-              : Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => _showDateRangeModalSheetAndroid(isDarkMode),
-                    borderRadius: BorderRadius.circular(19),
-                    child: Container(
-                      height: 38,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(19),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.28),
-                          width: 1.1,
+                      onSelected: (id) async {
+                        final now = DateTime.now();
+                        if (id == 'this_month') {
+                          setState(() {
+                            _startDate = DateTime(now.year, now.month, 1);
+                            _endDate = DateTime(now.year, now.month + 1, 0);
+                          });
+                          _refreshHeroSpend();
+                        } else if (id == 'last_month') {
+                          setState(() {
+                            _startDate = DateTime(now.year, now.month - 1, 1);
+                            _endDate = DateTime(now.year, now.month, 0);
+                          });
+                          _refreshHeroSpend();
+                        } else if (id == 'by_month') {
+                          // Let the iOS context-menu dismissal finish before
+                          // pushing the glass sheet onto the same navigator.
+                          await Future<void>.delayed(
+                            const Duration(milliseconds: 250),
+                          );
+                          if (!mounted) return;
+                          await _pickMonthPicker(context);
+                        } else if (id == 'custom_range') {
+                          await Future<void>.delayed(
+                            const Duration(milliseconds: 250),
+                          );
+                          if (!mounted) return;
+                          await _pickCustomDateRange(context);
+                        }
+                      },
+                      child: SizedBox(
+                        height: 42,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              Localizations.localeOf(context).languageCode ==
+                                      'ar'
+                                  ? 'الفترة'
+                                  : 'PERIOD',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white.withValues(alpha: 0.68),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  _formattedDateRange,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                    letterSpacing: -0.2,
+                                  ),
+                                ),
+                                const SizedBox(width: 3),
+                                Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  size: 16,
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _formattedDateRange,
-                            style: const TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              letterSpacing: -0.2,
-                            ),
+                    )
+                  : Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () =>
+                            _showDateRangeModalSheetAndroid(isDarkMode),
+                        borderRadius: BorderRadius.circular(19),
+                        child: SizedBox(
+                          height: 42,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                Localizations.localeOf(context).languageCode ==
+                                        'ar'
+                                    ? 'الفترة'
+                                    : 'PERIOD',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white.withValues(alpha: 0.68),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      _formattedDateRange,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                        letterSpacing: -0.2,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Icon(
+                                    Icons.keyboard_arrow_down_rounded,
+                                    size: 16,
+                                    color: Colors.white.withValues(alpha: 0.88),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 5),
-                          Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            size: 17,
-                            color: Colors.white.withValues(alpha: 0.88),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
+            ),
+          ),
 
           // Right: Analytics Chart Icon
           isIOS
@@ -509,16 +652,22 @@ mixin _HomeTabWidgets on _HomeTabState {
   void _showDateRangeModalSheetAndroid(bool isDarkMode) {
     HapticFeedback.selectionClick();
     final now = DateTime.now();
-    final isThisMonth = _startDate.year == now.year &&
+    final isThisMonth =
+        _startDate.year == now.year &&
         _startDate.month == now.month &&
         _startDate.day == 1 &&
         _endDate.day == DateTime(now.year, now.month + 1, 0).day;
     final prevMonthDate = DateTime(now.year, now.month - 1, 1);
-    final isLastMonth = _startDate.year == prevMonthDate.year &&
+    final isLastMonth =
+        _startDate.year == prevMonthDate.year &&
         _startDate.month == prevMonthDate.month &&
         _startDate.day == 1 &&
         _endDate.day == DateTime(now.year, now.month, 0).day;
-    final isByMonth = !isThisMonth && !isLastMonth && _startDate.day == 1 && _endDate.day == DateTime(_startDate.year, _startDate.month + 1, 0).day;
+    final isByMonth =
+        !isThisMonth &&
+        !isLastMonth &&
+        _startDate.day == 1 &&
+        _endDate.day == DateTime(_startDate.year, _startDate.month + 1, 0).day;
     final isCustom = !isThisMonth && !isLastMonth && !isByMonth;
 
     showModalBottomSheet(
@@ -530,7 +679,9 @@ mixin _HomeTabWidgets on _HomeTabState {
             color: isDarkMode ? const Color(0xFF18181B) : Colors.white,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             border: Border.all(
-              color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+              color: isDarkMode
+                  ? const Color(0xFF27272A)
+                  : const Color(0xFFE4E4E7),
               width: 1,
             ),
           ),
@@ -585,6 +736,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                     _startDate = DateTime(now.year, now.month, 1);
                     _endDate = DateTime(now.year, now.month + 1, 0);
                   });
+                  _refreshHeroSpend();
                 },
               ),
               const SizedBox(height: 8),
@@ -600,6 +752,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                     _startDate = DateTime(now.year, now.month - 1, 1);
                     _endDate = DateTime(now.year, now.month, 0);
                   });
+                  _refreshHeroSpend();
                 },
               ),
               const SizedBox(height: 8),
@@ -650,8 +803,12 @@ mixin _HomeTabWidgets on _HomeTabState {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             color: isSelected
-                ? (isDarkMode ? Colors.white.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.06))
-                : (isDarkMode ? const Color(0xFF27272A).withValues(alpha: 0.45) : const Color(0xFFF4F4F5)),
+                ? (isDarkMode
+                      ? Colors.white.withValues(alpha: 0.12)
+                      : Colors.black.withValues(alpha: 0.06))
+                : (isDarkMode
+                      ? const Color(0xFF27272A).withValues(alpha: 0.45)
+                      : const Color(0xFFF4F4F5)),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isSelected
@@ -702,7 +859,8 @@ mixin _HomeTabWidgets on _HomeTabState {
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
       onHorizontalDragStart: (_) => _heroDragDistance = 0,
-      onHorizontalDragUpdate: (details) => _heroDragDistance += details.primaryDelta ?? 0,
+      onHorizontalDragUpdate: (details) =>
+          _heroDragDistance += details.primaryDelta ?? 0,
       onHorizontalDragEnd: (details) {
         final velocity = details.primaryVelocity ?? 0;
         final isSwipeLeft = velocity < -120 || _heroDragDistance < -35;
@@ -728,7 +886,7 @@ mixin _HomeTabWidgets on _HomeTabState {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -736,207 +894,358 @@ mixin _HomeTabWidgets on _HomeTabState {
                 HapticFeedback.lightImpact();
                 hideService.toggle();
               },
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // "Wallet Balance" Label
-                  Text(
-                    context.l10n.balance,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white.withValues(alpha: 0.75),
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      Localizations.localeOf(context).languageCode == 'ar'
+                          ? 'مصروف الشهر'
+                          : 'Monthly spent',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withValues(alpha: 0.78),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-
-                  // Big Balance Amount: e.g. $ 12,450.00 (Animated on swipe/switch)
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    transitionBuilder: (child, animation) {
-                      final offsetTween = Tween<Offset>(
-                        begin: Offset(_heroSlideFromLeft ? -0.25 : 0.25, 0.0),
-                        end: Offset.zero,
-                      );
-                      return FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: offsetTween.animate(
-                            CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+                    const SizedBox(height: 5),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      transitionBuilder: (child, animation) {
+                        final offsetTween = Tween<Offset>(
+                          begin: Offset(_heroSlideFromLeft ? -0.18 : 0.18, 0),
+                          end: Offset.zero,
+                        );
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: offsetTween.animate(
+                              CurvedAnimation(
+                                parent: animation,
+                                curve: Curves.easeOutCubic,
+                              ),
+                            ),
+                            child: child,
                           ),
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: Row(
-                      key: ValueKey('balance_hero_$_selectedAccountId'),
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        _buildBlurrableNumber(
-                          _selectedAccount.balance,
+                        );
+                      },
+                      child: KeyedSubtree(
+                        key: ValueKey('spent_hero_$_selectedAccountId'),
+                        child: _buildBlurrableNumber(
+                          _heroPeriodSpent,
                           const TextStyle(
                             fontSize: 44,
                             fontWeight: FontWeight.w900,
-                            letterSpacing: -1.5,
+                            letterSpacing: -1.1,
                             color: Colors.white,
                           ),
                           hideService.isHidden,
-                          currencyCode: _selectedAccount.isAll ? null : _selectedAccount.currency,
+                          currencyCode:
+                              _currencyCode ?? _selectedAccount.currency,
+                        ),
+                      ),
+                    ),
+                    if (_heroPeriodIncludesToday) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        textDirection: isRtl
+                            ? ui.TextDirection.rtl
+                            : ui.TextDirection.ltr,
+                        children: [
+                          Text(
+                            context.l10n.today,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white.withValues(alpha: 0.76),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '·',
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: Colors.white.withValues(alpha: 0.62),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          _buildBlurrableNumber(
+                            _heroTodaySpent,
+                            TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white.withValues(alpha: 0.90),
+                            ),
+                            hideService.isHidden,
+                            currencyCode:
+                                _currencyCode ?? _selectedAccount.currency,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(top: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.07),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Transform.translate(
+                    offset: const Offset(6, 0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 200),
+                                transitionBuilder: (child, animation) =>
+                                    FadeTransition(
+                                      opacity: animation,
+                                      child: child,
+                                    ),
+                                child: KeyedSubtree(
+                                  key: ValueKey(
+                                    'account_switcher_$_selectedAccountId',
+                                  ),
+                                  child: isIOS
+                                      ? IosSingleTapContextMenu(
+                                          actions: [
+                                            ..._accounts.map((acc) {
+                                              final isSelected =
+                                                  acc.id == _selectedAccountId;
+                                              final label = acc.isMain
+                                                  ? '${acc.name} ⭐'
+                                                  : acc.name;
+                                              return IosContextMenuAction(
+                                                id: 'acc_${acc.id}',
+                                                title: label,
+                                                iconSystemName: isSelected
+                                                    ? 'checkmark.circle.fill'
+                                                    : 'circle',
+                                                showTrailingCheckmark:
+                                                    isSelected,
+                                              );
+                                            }),
+                                            const IosContextMenuDivider(),
+                                            IosContextMenuAction(
+                                              id: 'add_account',
+                                              title: context.l10n.addAccount,
+                                              iconSystemName: 'plus',
+                                            ),
+                                            IosContextMenuAction(
+                                              id: 'manage_accounts',
+                                              title:
+                                                  context.l10n.manageAccounts,
+                                              iconSystemName:
+                                                  'slider.horizontal.3',
+                                            ),
+                                          ],
+                                          onSelected: (id) {
+                                            if (id.startsWith('acc_')) {
+                                              final accId = id.substring(4);
+                                              final targetAcc = _accounts
+                                                  .firstWhere(
+                                                    (a) => a.id == accId,
+                                                    orElse: () =>
+                                                        _accounts.first,
+                                                  );
+                                              final curIdx = _accounts
+                                                  .indexWhere(
+                                                    (a) =>
+                                                        a.id ==
+                                                        _selectedAccountId,
+                                                  );
+                                              final targetIdx = _accounts
+                                                  .indexWhere(
+                                                    (a) => a.id == accId,
+                                                  );
+                                              final isMovingForward =
+                                                  targetIdx > curIdx;
+                                              setState(() {
+                                                _heroSlideFromLeft = isRtl
+                                                    ? isMovingForward
+                                                    : !isMovingForward;
+                                                _selectedAccountId =
+                                                    targetAcc.id;
+                                              });
+                                              _refreshHeroSpend();
+                                              _syncWalletsCarouselToSelected();
+                                            } else if (id == 'add_account') {
+                                              _showAddAccountModal();
+                                            } else if (id ==
+                                                'manage_accounts') {
+                                              _showManageAccountsModal();
+                                            }
+                                          },
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 2,
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  isRtl ? 'الحساب' : 'ACCOUNT',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.white
+                                                        .withValues(
+                                                          alpha: 0.90,
+                                                        ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 2),
+                                                Icon(
+                                                  Icons
+                                                      .keyboard_arrow_down_rounded,
+                                                  size: 15,
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.90),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        )
+                                      : Material(
+                                          color: Colors.transparent,
+                                          child: InkWell(
+                                            onTap: () {
+                                              HapticFeedback.selectionClick();
+                                              _showAccountSwitcherModal();
+                                            },
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 2,
+                                                  ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    isRtl
+                                                        ? 'الحساب'
+                                                        : 'ACCOUNT',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: Colors.white
+                                                          .withValues(
+                                                            alpha: 0.90,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 2),
+                                                  Icon(
+                                                    Icons
+                                                        .keyboard_arrow_down_rounded,
+                                                    size: 15,
+                                                    color: Colors.white
+                                                        .withValues(
+                                                          alpha: 0.90,
+                                                        ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Align(
+                                      alignment:
+                                          AlignmentDirectional.centerStart,
+                                      child: Text(
+                                        _selectedAccount.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Container(
+                          width: 1,
+                          height: 38,
+                          color: Colors.white.withValues(alpha: 0.16),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              hideService.toggle();
+                            },
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isRtl ? 'الرصيد' : 'BALANCE',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: isRtl ? 0 : 0.4,
+                                    color: Colors.white.withValues(alpha: 0.68),
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                                _buildBlurrableNumber(
+                                  _selectedAccount.balance,
+                                  const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.3,
+                                    color: Colors.white,
+                                  ),
+                                  hideService.isHidden,
+                                  currencyCode:
+                                      _currencyCode ??
+                                      _selectedAccount.currency,
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-            ),
-
-            const SizedBox(height: 8),
-
-            // Account Switcher (Clean text with chevron - animated on switch)
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              transitionBuilder: (child, animation) => FadeTransition(
-                opacity: animation,
-                child: child,
-              ),
-              child: KeyedSubtree(
-                key: ValueKey('account_switcher_$_selectedAccountId'),
-                child: isIOS
-                    ? IosSingleTapContextMenu(
-                        actions: [
-                          ..._accounts.map((acc) {
-                            final isSelected = acc.id == _selectedAccountId;
-                            final label = acc.isMain ? '${acc.name} ⭐' : acc.name;
-                            return IosContextMenuAction(
-                              id: 'acc_${acc.id}',
-                              title: label,
-                              iconSystemName: isSelected ? 'checkmark.circle.fill' : 'circle',
-                              showTrailingCheckmark: isSelected,
-                            );
-                          }),
-                          const IosContextMenuDivider(),
-                          IosContextMenuAction(
-                            id: 'add_account',
-                            title: context.l10n.addAccount,
-                            iconSystemName: 'plus',
-                          ),
-                          IosContextMenuAction(
-                            id: 'manage_accounts',
-                            title: context.l10n.manageAccounts,
-                            iconSystemName: 'slider.horizontal.3',
-                          ),
-                        ],
-                        onSelected: (id) {
-                          if (id.startsWith('acc_')) {
-                            final accId = id.substring(4);
-                            final targetAcc = _accounts.firstWhere((a) => a.id == accId, orElse: () => _accounts.first);
-                            final curIdx = _accounts.indexWhere((a) => a.id == _selectedAccountId);
-                            final targetIdx = _accounts.indexWhere((a) => a.id == accId);
-                            final isMovingForward = targetIdx > curIdx;
-                            setState(() {
-                              _heroSlideFromLeft = isRtl ? isMovingForward : !isMovingForward;
-                              _selectedAccountId = targetAcc.id;
-                            });
-                            _syncWalletsCarouselToSelected();
-                          } else if (id == 'add_account') {
-                            _showAddAccountModal();
-                          } else if (id == 'manage_accounts') {
-                            _showManageAccountsModal();
-                          }
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                _selectedAccount.name,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white.withValues(alpha: 0.90),
-                                ),
-                              ),
-                              const SizedBox(width: 3),
-                              Icon(
-                                Icons.keyboard_arrow_down_rounded,
-                                size: 15,
-                                color: Colors.white.withValues(alpha: 0.75),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    : Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            _showAccountSwitcherModal();
-                          },
-                          borderRadius: BorderRadius.circular(16),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  _selectedAccount.name,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white.withValues(alpha: 0.90),
-                                  ),
-                                ),
-                                const SizedBox(width: 3),
-                                Icon(
-                                  Icons.keyboard_arrow_down_rounded,
-                                  size: 15,
-                                  color: Colors.white.withValues(alpha: 0.75),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            // Carousel Dot Indicator
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: _accounts.map((acc) {
-                final isSelected = acc.id == _selectedAccountId;
-                return GestureDetector(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    final accounts = _accounts;
-                    final curIdx = accounts.indexWhere((a) => a.id == _selectedAccountId);
-                    final targetIdx = accounts.indexWhere((a) => a.id == acc.id);
-                    final isMovingForward = targetIdx > curIdx;
-                    setState(() {
-                      _heroSlideFromLeft = isRtl ? isMovingForward : !isMovingForward;
-                      _selectedAccountId = acc.id;
-                    });
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.symmetric(horizontal: 2.5),
-                    height: 4,
-                    width: isSelected ? 18 : 5,
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? Colors.white
-                          : Colors.white.withValues(alpha: 0.35),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                );
-              }).toList(),
             ),
           ],
         ),
@@ -954,15 +1263,96 @@ mixin _HomeTabWidgets on _HomeTabState {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          // 1. Add (+)
-          _buildCircularActionItem(
-            icon: AppIcons.add(isIOS: Platform.isIOS),
-            label: context.l10n.add,
-            isDarkMode: isDarkMode,
-            onTap: () {
-              HapticFeedback.lightImpact();
-              _showUnifiedAddModal();
-            },
+          // Primary action: visually distinct from the secondary quick actions.
+          Transform.translate(
+            offset: const Offset(0, -11),
+            child: Platform.isIOS
+                ? GlassButton.custom(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      _showUnifiedAddModal();
+                    },
+                    width: 172,
+                    height: 52,
+                    shape: const LiquidRoundedRectangle(borderRadius: 30),
+                    useOwnLayer: false,
+                    useSystemGlassStyle: false,
+                    persistPressOnDrag: false,
+                    interactionScale: 0.96,
+                    stretch: 0,
+                    settings: LiquidGlassSettings(
+                      thickness: 16,
+                      blur: 10,
+                      glassColor: Colors.white.withValues(alpha: 0.20),
+                    ),
+                    child: Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            AppIcons.add(isIOS: true),
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            context.l10n.addTransaction,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        _showUnifiedAddModal();
+                      },
+                      borderRadius: BorderRadius.circular(30),
+                      child: Container(
+                        width: 172,
+                        height: 54,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(30),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.22),
+                          ),
+                        ),
+                        child: Center(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                AppIcons.add(isIOS: false),
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                context.l10n.addTransaction,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
           ),
 
           // 2. Voice (🎙️)
@@ -976,7 +1366,8 @@ mixin _HomeTabWidgets on _HomeTabState {
               } else {
                 MessageService.showError(
                   context: context,
-                  message: result.errorMessage ?? context.l10n.voiceAnalysisFailed,
+                  message:
+                      result.errorMessage ?? context.l10n.voiceAnalysisFailed,
                 );
               }
             },
@@ -1009,9 +1400,13 @@ mixin _HomeTabWidgets on _HomeTabState {
               ? const BoxDecoration(color: Colors.transparent)
               : BoxDecoration(
                   color: isDarkMode ? const Color(0xFF15151A) : Colors.white,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(28),
+                  ),
                   border: Border.all(
-                    color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                    color: isDarkMode
+                        ? const Color(0xFF27272A)
+                        : const Color(0xFFE4E4E7),
                     width: 1.2,
                   ),
                 ),
@@ -1079,15 +1474,24 @@ mixin _HomeTabWidgets on _HomeTabState {
                       icon: const Icon(Icons.edit_note_rounded, size: 18),
                       label: Text(
                         context.l10n.manual,
-                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                        ),
                       ),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        foregroundColor: isDarkMode ? Colors.white : Colors.black,
+                        foregroundColor: isDarkMode
+                            ? Colors.white
+                            : Colors.black,
                         side: BorderSide(
-                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                          color: isDarkMode
+                              ? const Color(0xFF27272A)
+                              : const Color(0xFFE4E4E7),
                         ),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                     ),
                   ),
@@ -1116,9 +1520,13 @@ mixin _HomeTabWidgets on _HomeTabState {
                       ),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        backgroundColor: isDarkMode ? Colors.white : Colors.black,
+                        backgroundColor: isDarkMode
+                            ? Colors.white
+                            : Colors.black,
                         elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                     ),
                   ),
@@ -1143,7 +1551,7 @@ mixin _HomeTabWidgets on _HomeTabState {
             width: 52,
             height: 52,
             shape: const LiquidOval(),
-            useOwnLayer: true,
+            useOwnLayer: false,
             platformViewBackdrop: true,
             settings: LiquidGlassSettings(
               thickness: 16,
@@ -1226,7 +1634,7 @@ mixin _HomeTabWidgets on _HomeTabState {
           width: 52,
           height: 52,
           shape: const LiquidOval(),
-          useOwnLayer: true,
+          useOwnLayer: false,
           settings: LiquidGlassSettings(
             thickness: 16,
             blur: 10,
@@ -1282,7 +1690,9 @@ mixin _HomeTabWidgets on _HomeTabState {
             color: isDarkMode ? const Color(0xFF18181B) : Colors.white,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             border: Border.all(
-              color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+              color: isDarkMode
+                  ? const Color(0xFF27272A)
+                  : const Color(0xFFE4E4E7),
               width: 1,
             ),
           ),
@@ -1365,7 +1775,8 @@ mixin _HomeTabWidgets on _HomeTabState {
   }
 
   Future<void> _pickCustomDateRange(BuildContext context) async {
-    final isIOS = Platform.isIOS || Theme.of(context).platform == TargetPlatform.iOS;
+    final isIOS =
+        Platform.isIOS || Theme.of(context).platform == TargetPlatform.iOS;
     if (isIOS) {
       return _pickCustomDateRangeIOS(context);
     } else {
@@ -1374,7 +1785,8 @@ mixin _HomeTabWidgets on _HomeTabState {
   }
 
   Future<void> _pickMonthPicker(BuildContext context) async {
-    final isIOS = Platform.isIOS || Theme.of(context).platform == TargetPlatform.iOS;
+    final isIOS =
+        Platform.isIOS || Theme.of(context).platform == TargetPlatform.iOS;
     if (isIOS) {
       return _pickMonthPickerIOS(context);
     } else {
@@ -1386,9 +1798,13 @@ mixin _HomeTabWidgets on _HomeTabState {
   Future<void> _pickCustomDateRangeIOS(BuildContext context) async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
-    final borderColor = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
+    final borderColor = isDarkMode
+        ? Colors.white.withValues(alpha: 0.12)
+        : Colors.black.withValues(alpha: 0.08);
     final textPrimary = isDarkMode ? Colors.white : const Color(0xFF09090B);
-    final textSecondary = isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
+    final textSecondary = isDarkMode
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF71717A);
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -1397,6 +1813,8 @@ mixin _HomeTabWidgets on _HomeTabState {
 
     final GlobalKey fromCardKey = GlobalKey();
     final GlobalKey toCardKey = GlobalKey();
+    final sheetController = GlassModalSheetController();
+    var initialHalfPositionScheduled = false;
 
     String formatDatePill(DateTime d) {
       return DateFormat('d MMM yyyy', isAr ? 'ar' : 'en').format(d);
@@ -1404,9 +1822,25 @@ mixin _HomeTabWidgets on _HomeTabState {
 
     await showGlassModalSheet<void>(
       context: context,
-      halfSize: 0.52,
-      fullSize: 0.70,
+      controller: sheetController,
+      initialState: GlassSheetState.half,
+      halfSize: 0.50,
+      fullSize: 0.80,
+      bottomMargin: 0,
+      bottomBorderRadius: 24,
+      enableDrag: false,
+      showDragIndicator: false,
+      interactionScale: 1.0,
+      stretch: 0,
+      enableInteractionGlow: false,
+      enableSaturationGlow: false,
       builder: (ctx) {
+        if (!initialHalfPositionScheduled) {
+          initialHalfPositionScheduled = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            sheetController.snapToState(GlassSheetState.half, animate: false);
+          });
+        }
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
             final dayCount = tempEnd.difference(tempStart).inDays + 1;
@@ -1430,7 +1864,8 @@ mixin _HomeTabWidgets on _HomeTabState {
             Future<void> openCupertinoCalendar(bool isFrom) async {
               HapticFeedback.selectionClick();
               final key = isFrom ? fromCardKey : toCardKey;
-              final renderBox = key.currentContext?.findRenderObject() as RenderBox?;
+              final renderBox =
+                  key.currentContext?.findRenderObject() as RenderBox?;
 
               final picked = await showCupertinoCalendarPicker(
                 ctx,
@@ -1465,228 +1900,271 @@ mixin _HomeTabWidgets on _HomeTabState {
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // Header
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            context.l10n.customRange,
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3,
+                              color: textPrimary,
+                              decoration: TextDecoration.none,
+                              decorationColor: Colors.transparent,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isDarkMode
+                                  ? Colors.white.withValues(alpha: 0.08)
+                                  : Colors.black.withValues(alpha: 0.04),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: borderColor,
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Text(
+                              context.l10n.daysCount(dayCount),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: textPrimary,
+                                decoration: TextDecoration.none,
+                                decorationColor: Colors.transparent,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
 
-                  // Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        context.l10n.customRange,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.3,
-                          color: textPrimary,
+                      // Quick Presets Chips
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            _buildPresetChip(
+                              label: context.l10n.last7Days,
+                              isDarkMode: isDarkMode,
+                              borderColor: borderColor,
+                              textPrimary: textPrimary,
+                              textSecondary: textSecondary,
+                              onTap: () => applyDaysPreset(7),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildPresetChip(
+                              label: context.l10n.last30Days,
+                              isDarkMode: isDarkMode,
+                              borderColor: borderColor,
+                              textPrimary: textPrimary,
+                              textSecondary: textSecondary,
+                              onTap: () => applyDaysPreset(30),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildPresetChip(
+                              label: context.l10n.thisMonth,
+                              isDarkMode: isDarkMode,
+                              borderColor: borderColor,
+                              textPrimary: textPrimary,
+                              textSecondary: textSecondary,
+                              onTap: applyThisMonthPreset,
+                            ),
+                          ],
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F6),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: borderColor, width: 0.8),
-                        ),
-                        child: Text(
-                          context.l10n.daysCount(dayCount),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: textPrimary,
+                      const SizedBox(height: 16),
+
+                      // Dual From & To Cards
+                      Row(
+                        children: [
+                          // "From" Card
+                          Expanded(
+                            child: Material(
+                              key: fromCardKey,
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => openCupertinoCalendar(true),
+                                borderRadius: BorderRadius.circular(16),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isDarkMode
+                                        ? Colors.white.withValues(alpha: 0.06)
+                                        : Colors.white.withValues(alpha: 0.68),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: borderColor,
+                                      width: 0.9,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            context.l10n.from,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color: textSecondary,
+                                            ),
+                                          ),
+                                          Icon(
+                                            Icons.calendar_month_rounded,
+                                            size: 15,
+                                            color: textPrimary,
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        formatDatePill(tempStart),
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: -0.2,
+                                          color: textPrimary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // "To" Card
+                          Expanded(
+                            child: Material(
+                              key: toCardKey,
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => openCupertinoCalendar(false),
+                                borderRadius: BorderRadius.circular(16),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isDarkMode
+                                        ? Colors.white.withValues(alpha: 0.06)
+                                        : Colors.white.withValues(alpha: 0.68),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: borderColor,
+                                      width: 0.9,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            context.l10n.to,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color: textSecondary,
+                                            ),
+                                          ),
+                                          Icon(
+                                            Icons.calendar_month_rounded,
+                                            size: 15,
+                                            color: textPrimary,
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        formatDatePill(tempEnd),
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: -0.2,
+                                          color: textPrimary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Confirm Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            HapticFeedback.mediumImpact();
+                            setState(() {
+                              _startDate = tempStart;
+                              _endDate = DateTime(
+                                tempEnd.year,
+                                tempEnd.month,
+                                tempEnd.day,
+                                23,
+                                59,
+                                59,
+                              );
+                            });
+                            Navigator.pop(ctx);
+                            _refreshHeroSpend();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isDarkMode
+                                ? Colors.white
+                                : const Color(0xFF09090B),
+                            foregroundColor: isDarkMode
+                                ? const Color(0xFF09090B)
+                                : Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            context.l10n.confirm,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.2,
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
-
-                  // Quick Presets Chips
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _buildPresetChip(
-                          label: context.l10n.last7Days,
-                          isDarkMode: isDarkMode,
-                          borderColor: borderColor,
-                          textPrimary: textPrimary,
-                          textSecondary: textSecondary,
-                          onTap: () => applyDaysPreset(7),
-                        ),
-                        const SizedBox(width: 8),
-                        _buildPresetChip(
-                          label: context.l10n.last30Days,
-                          isDarkMode: isDarkMode,
-                          borderColor: borderColor,
-                          textPrimary: textPrimary,
-                          textSecondary: textSecondary,
-                          onTap: () => applyDaysPreset(30),
-                        ),
-                        const SizedBox(width: 8),
-                        _buildPresetChip(
-                          label: context.l10n.thisMonth,
-                          isDarkMode: isDarkMode,
-                          borderColor: borderColor,
-                          textPrimary: textPrimary,
-                          textSecondary: textSecondary,
-                          onTap: applyThisMonthPreset,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Dual From & To Cards
-                  Row(
-                    children: [
-                      // "From" Card
-                      Expanded(
-                        child: Material(
-                          key: fromCardKey,
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => openCupertinoCalendar(true),
-                            borderRadius: BorderRadius.circular(16),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: isDarkMode ? const Color(0xFF1E1E24) : const Color(0xFFF4F4F6),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: borderColor, width: 0.9),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        context.l10n.from,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          color: textSecondary,
-                                        ),
-                                      ),
-                                      Icon(
-                                        Icons.calendar_month_rounded,
-                                        size: 15,
-                                        color: textPrimary,
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    formatDatePill(tempStart),
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: -0.2,
-                                      color: textPrimary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      // "To" Card
-                      Expanded(
-                        child: Material(
-                          key: toCardKey,
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => openCupertinoCalendar(false),
-                            borderRadius: BorderRadius.circular(16),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: isDarkMode ? const Color(0xFF1E1E24) : const Color(0xFFF4F4F6),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: borderColor, width: 0.9),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        context.l10n.to,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          color: textSecondary,
-                                        ),
-                                      ),
-                                      Icon(
-                                        Icons.calendar_month_rounded,
-                                        size: 15,
-                                        color: textPrimary,
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    formatDatePill(tempEnd),
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: -0.2,
-                                      color: textPrimary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Confirm Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        HapticFeedback.mediumImpact();
-                        setState(() {
-                          _startDate = tempStart;
-                          _endDate = DateTime(tempEnd.year, tempEnd.month, tempEnd.day, 23, 59, 59);
-                        });
-                        Navigator.pop(ctx);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
-                        foregroundColor: isDarkMode ? const Color(0xFF09090B) : Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        context.l10n.confirm,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
-        );
+            );
           },
         );
       },
@@ -1696,224 +2174,324 @@ mixin _HomeTabWidgets on _HomeTabState {
   Future<void> _pickMonthPickerIOS(BuildContext context) async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
-    final borderColor = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
+    final borderColor = isDarkMode
+        ? Colors.white.withValues(alpha: 0.12)
+        : Colors.black.withValues(alpha: 0.08);
     final textPrimary = isDarkMode ? Colors.white : const Color(0xFF09090B);
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    int selectedYear = _startDate.year > now.year ? now.year : _startDate.year;
-    int selectedMonth = (selectedYear == now.year && _startDate.month > now.month)
-        ? now.month
-        : _startDate.month;
+    int selectedYear = _startDate.year.clamp(2020, now.year).toInt();
+    int selectedMonth = _startDate.month.clamp(
+      1,
+      selectedYear == now.year ? now.month : 12,
+    );
 
     final monthNamesAr = [
-      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+      'يناير',
+      'فبراير',
+      'مارس',
+      'أبريل',
+      'مايو',
+      'يونيو',
+      'يوليو',
+      'أغسطس',
+      'سبتمبر',
+      'أكتوبر',
+      'نوفمبر',
+      'ديسمبر',
     ];
     final monthNamesEn = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final monthNames = isAr ? monthNamesAr : monthNamesEn;
-
-    // Years only up to current year (cannot pick future year)
     final years = List.generate(now.year - 2020 + 1, (index) => 2020 + index);
+
+    final sheetController = GlassModalSheetController();
+    var initialHalfPositionScheduled = false;
 
     await showGlassModalSheet<void>(
       context: context,
-      halfSize: 0.46,
-      fullSize: 0.60,
+      controller: sheetController,
+      initialState: GlassSheetState.half,
+      halfSize: 0.50,
+      fullSize: 0.80,
+      bottomMargin: 0,
+      bottomBorderRadius: 24,
+      enableDrag: false,
+      showDragIndicator: false,
+      interactionScale: 1.0,
+      stretch: 0,
+      enableInteractionGlow: false,
+      enableSaturationGlow: false,
       builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setSheetState) {
-            return SafeArea(
-              top: false,
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
+        if (!initialHalfPositionScheduled) {
+          initialHalfPositionScheduled = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            sheetController.snapToState(GlassSheetState.half, animate: false);
+          });
+        }
+        return Directionality(
+          textDirection: isAr ? ui.TextDirection.rtl : ui.TextDirection.ltr,
+          child: StatefulBuilder(
+            builder: (ctx, setSheetState) {
+              return SafeArea(
+                top: false,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-
-                  // Header with selection pill
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        context.l10n.selectMonth,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.3,
-                          color: textPrimary,
-                        ),
+                      // Header with selection pill
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            context.l10n.selectMonth,
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3,
+                              color: textPrimary,
+                              decoration: TextDecoration.none,
+                              decorationColor: Colors.transparent,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isDarkMode
+                                  ? Colors.white.withValues(alpha: 0.08)
+                                  : Colors.black.withValues(alpha: 0.04),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: borderColor,
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Text(
+                              '${monthNames[selectedMonth - 1]} $selectedYear',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: textPrimary,
+                                decoration: TextDecoration.none,
+                                decorationColor: Colors.transparent,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+                      const SizedBox(height: 16),
+
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        height: 210,
                         decoration: BoxDecoration(
-                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F6),
-                          borderRadius: BorderRadius.circular(12),
+                          color: isDarkMode
+                              ? Colors.white.withValues(alpha: 0.06)
+                              : Colors.white.withValues(alpha: 0.68),
+                          borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: borderColor, width: 0.8),
                         ),
-                        child: Text(
-                          '${monthNames[selectedMonth - 1]} $selectedYear',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: textPrimary,
+                        clipBehavior: Clip.antiAlias,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: Builder(
+                                builder: (context) {
+                                  final availableMonthsCount =
+                                      selectedYear == now.year ? now.month : 12;
+                                  final clampedIndex = (selectedMonth - 1)
+                                      .clamp(0, availableMonthsCount - 1);
+                                  return CupertinoPicker(
+                                    key: ValueKey(
+                                      'month-picker-$selectedYear-$availableMonthsCount',
+                                    ),
+                                    scrollController:
+                                        FixedExtentScrollController(
+                                          initialItem: clampedIndex,
+                                        ),
+                                    itemExtent: 48,
+                                    diameterRatio: 1.25,
+                                    useMagnifier: true,
+                                    magnification: 1.12,
+                                    selectionOverlay: Container(
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            (isDarkMode
+                                                    ? Colors.white
+                                                    : Colors.black)
+                                                .withValues(alpha: 0.08),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    onSelectedItemChanged: (index) {
+                                      HapticFeedback.selectionClick();
+                                      setSheetState(
+                                        () => selectedMonth = index + 1,
+                                      );
+                                    },
+                                    children: List.generate(
+                                      availableMonthsCount,
+                                      (index) => Center(
+                                        child: Text(
+                                          monthNames[index],
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w700,
+                                            color: textPrimary,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            Container(
+                              width: 1,
+                              height: 140,
+                              color: borderColor,
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: CupertinoPicker(
+                                scrollController: FixedExtentScrollController(
+                                  initialItem: years.indexOf(selectedYear),
+                                ),
+                                itemExtent: 48,
+                                diameterRatio: 1.25,
+                                useMagnifier: true,
+                                magnification: 1.12,
+                                selectionOverlay: Container(
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        (isDarkMode
+                                                ? Colors.white
+                                                : Colors.black)
+                                            .withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                onSelectedItemChanged: (index) {
+                                  HapticFeedback.selectionClick();
+                                  setSheetState(() {
+                                    selectedYear = years[index];
+                                    if (selectedYear == now.year &&
+                                        selectedMonth > now.month) {
+                                      selectedMonth = now.month;
+                                    }
+                                  });
+                                },
+                                children: years
+                                    .map(
+                                      (year) => Center(
+                                        child: Text(
+                                          '$year',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w700,
+                                            color: textPrimary,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Confirm Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            HapticFeedback.mediumImpact();
+                            setState(() {
+                              _startDate = DateTime(
+                                selectedYear,
+                                selectedMonth,
+                                1,
+                              );
+                              final endDay = DateTime(
+                                selectedYear,
+                                selectedMonth + 1,
+                                0,
+                              );
+                              _endDate = endDay.isAfter(today)
+                                  ? DateTime(
+                                      today.year,
+                                      today.month,
+                                      today.day,
+                                      23,
+                                      59,
+                                      59,
+                                    )
+                                  : DateTime(
+                                      endDay.year,
+                                      endDay.month,
+                                      endDay.day,
+                                      23,
+                                      59,
+                                      59,
+                                    );
+                            });
+                            Navigator.pop(ctx);
+                            _refreshHeroSpend();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isDarkMode
+                                ? Colors.white
+                                : const Color(0xFF09090B),
+                            foregroundColor: isDarkMode
+                                ? const Color(0xFF09090B)
+                                : Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            context.l10n.confirm,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.2,
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-
-                  // Dual CupertinoPicker Wheels for Month & Year
-                  Container(
-                    height: 180,
-                    decoration: BoxDecoration(
-                      color: isDarkMode ? const Color(0xFF1B1B20) : const Color(0xFFF4F4F6),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: borderColor, width: 0.8),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: Row(
-                      children: [
-                        // Month Wheel
-                        Expanded(
-                          flex: 3,
-                          child: Builder(
-                            builder: (context) {
-                              final availableMonthsCount = selectedYear == now.year ? now.month : 12;
-                              final clampedIndex = (selectedMonth - 1).clamp(0, availableMonthsCount - 1);
-                              return CupertinoPicker(
-                                key: ValueKey('month-picker-$selectedYear-$availableMonthsCount'),
-                                scrollController: FixedExtentScrollController(
-                                  initialItem: clampedIndex,
-                                ),
-                                itemExtent: 42.0,
-                                diameterRatio: 1.2,
-                                selectionOverlay: Container(
-                                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                                  decoration: BoxDecoration(
-                                    color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.08),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                                onSelectedItemChanged: (index) {
-                                  HapticFeedback.selectionClick();
-                                  setSheetState(() => selectedMonth = index + 1);
-                                },
-                                children: List.generate(availableMonthsCount, (index) {
-                                  return Center(
-                                    child: Text(
-                                      monthNames[index],
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                        color: textPrimary,
-                                      ),
-                                    ),
-                                  );
-                                }),
-                              );
-                            },
-                          ),
-                        ),
-                        // Divider
-                        Container(
-                          width: 1,
-                          height: 120,
-                          color: borderColor,
-                        ),
-                        // Year Wheel
-                        Expanded(
-                          flex: 2,
-                          child: CupertinoPicker(
-                            scrollController: FixedExtentScrollController(
-                              initialItem: years.contains(selectedYear)
-                                  ? years.indexOf(selectedYear)
-                                  : 0,
-                            ),
-                            itemExtent: 42.0,
-                            diameterRatio: 1.2,
-                            selectionOverlay: Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 8),
-                              decoration: BoxDecoration(
-                                color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            onSelectedItemChanged: (index) {
-                              HapticFeedback.selectionClick();
-                              final pickedYear = years[index];
-                              setSheetState(() {
-                                selectedYear = pickedYear;
-                                if (selectedYear == now.year && selectedMonth > now.month) {
-                                  selectedMonth = now.month;
-                                }
-                              });
-                            },
-                            children: years.map((y) {
-                              return Center(
-                                child: Text(
-                                  '$y',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: textPrimary,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Confirm Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        HapticFeedback.mediumImpact();
-                        setState(() {
-                          _startDate = DateTime(selectedYear, selectedMonth, 1);
-                          final endDay = DateTime(selectedYear, selectedMonth + 1, 0);
-                          _endDate = endDay.isAfter(today)
-                              ? DateTime(today.year, today.month, today.day, 23, 59, 59)
-                              : DateTime(endDay.year, endDay.month, endDay.day, 23, 59, 59);
-                        });
-                        Navigator.pop(ctx);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
-                        foregroundColor: isDarkMode ? const Color(0xFF09090B) : Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        context.l10n.confirm,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
-        );
-          },
         );
       },
     );
@@ -1935,7 +2513,9 @@ mixin _HomeTabWidgets on _HomeTabState {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           decoration: BoxDecoration(
-            color: isDarkMode ? const Color(0xFF1E1E24) : const Color(0xFFF4F4F6),
+            color: isDarkMode
+                ? const Color(0xFF1E1E24)
+                : const Color(0xFFF4F4F6),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: borderColor, width: 0.8),
           ),
@@ -1958,9 +2538,13 @@ mixin _HomeTabWidgets on _HomeTabState {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final sheetBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
-    final borderColor = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
+    final borderColor = isDarkMode
+        ? const Color(0xFF27272A)
+        : const Color(0xFFE4E4E7);
     final textPrimary = isDarkMode ? Colors.white : const Color(0xFF09090B);
-    final textSecondary = isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
+    final textSecondary = isDarkMode
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF71717A);
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -1969,12 +2553,32 @@ mixin _HomeTabWidgets on _HomeTabState {
     DateTime viewingMonth = DateTime(tempStart.year, tempStart.month, 1);
 
     final monthNamesAr = [
-      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+      'يناير',
+      'فبراير',
+      'مارس',
+      'أبريل',
+      'مايو',
+      'يونيو',
+      'يوليو',
+      'أغسطس',
+      'سبتمبر',
+      'أكتوبر',
+      'نوفمبر',
+      'ديسمبر',
     ];
     final monthNamesEn = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     final weekDayNamesAr = ['ح', 'ن', 'ث', 'ر', 'خ', 'ج', 'س'];
     final weekDayNamesEn = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -1991,8 +2595,16 @@ mixin _HomeTabWidgets on _HomeTabState {
                 : '${monthNamesEn[viewingMonth.month - 1]} ${viewingMonth.year}';
             final weekDays = isAr ? weekDayNamesAr : weekDayNamesEn;
 
-            final firstDayOfMonth = DateTime(viewingMonth.year, viewingMonth.month, 1);
-            final daysInMonth = DateTime(viewingMonth.year, viewingMonth.month + 1, 0).day;
+            final firstDayOfMonth = DateTime(
+              viewingMonth.year,
+              viewingMonth.month,
+              1,
+            );
+            final daysInMonth = DateTime(
+              viewingMonth.year,
+              viewingMonth.month + 1,
+              0,
+            ).day;
             final leadingEmptyDays = firstDayOfMonth.weekday % 7; // Sunday = 0
 
             String formatDatePill(DateTime d) {
@@ -2000,8 +2612,10 @@ mixin _HomeTabWidgets on _HomeTabState {
             }
 
             final dayCount = tempEnd.difference(tempStart).inDays + 1;
-            final canGoNextMonth = viewingMonth.year < now.year ||
-                (viewingMonth.year == now.year && viewingMonth.month < now.month);
+            final canGoNextMonth =
+                viewingMonth.year < now.year ||
+                (viewingMonth.year == now.year &&
+                    viewingMonth.month < now.month);
 
             void applyDaysPreset(int days) {
               HapticFeedback.selectionClick();
@@ -2024,7 +2638,9 @@ mixin _HomeTabWidgets on _HomeTabState {
             return Container(
               decoration: BoxDecoration(
                 color: sheetBg,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
                 border: Border(top: BorderSide(color: borderColor, width: 1)),
               ),
               padding: EdgeInsets.fromLTRB(
@@ -2041,7 +2657,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                     width: 38,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+                      color: isDarkMode
+                          ? const Color(0xFF3F3F46)
+                          : const Color(0xFFE4E4E7),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -2062,9 +2680,14 @@ mixin _HomeTabWidgets on _HomeTabState {
                       ),
                       // Month Stepper Pill
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
-                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F6),
+                          color: isDarkMode
+                              ? const Color(0xFF27272A)
+                              : const Color(0xFFF4F4F6),
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(color: borderColor, width: 0.8),
                         ),
@@ -2074,16 +2697,29 @@ mixin _HomeTabWidgets on _HomeTabState {
                             IconButton(
                               visualDensity: VisualDensity.compact,
                               padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                              icon: Icon(appStepperIconOf(context, forward: false), size: 20, color: textPrimary),
+                              constraints: const BoxConstraints(
+                                minWidth: 28,
+                                minHeight: 28,
+                              ),
+                              icon: Icon(
+                                appStepperIconOf(context, forward: false),
+                                size: 20,
+                                color: textPrimary,
+                              ),
                               onPressed: () {
                                 setSheetState(() {
-                                  viewingMonth = DateTime(viewingMonth.year, viewingMonth.month - 1, 1);
+                                  viewingMonth = DateTime(
+                                    viewingMonth.year,
+                                    viewingMonth.month - 1,
+                                    1,
+                                  );
                                 });
                               },
                             ),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                              ),
                               child: Text(
                                 monthTitle,
                                 style: TextStyle(
@@ -2096,7 +2732,10 @@ mixin _HomeTabWidgets on _HomeTabState {
                             IconButton(
                               visualDensity: VisualDensity.compact,
                               padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                              constraints: const BoxConstraints(
+                                minWidth: 28,
+                                minHeight: 28,
+                              ),
                               icon: Icon(
                                 appStepperIconOf(context, forward: true),
                                 size: 20,
@@ -2107,7 +2746,11 @@ mixin _HomeTabWidgets on _HomeTabState {
                               onPressed: canGoNextMonth
                                   ? () {
                                       setSheetState(() {
-                                        viewingMonth = DateTime(viewingMonth.year, viewingMonth.month + 1, 1);
+                                        viewingMonth = DateTime(
+                                          viewingMonth.year,
+                                          viewingMonth.month + 1,
+                                          1,
+                                        );
                                       });
                                     }
                                   : null,
@@ -2158,16 +2801,25 @@ mixin _HomeTabWidgets on _HomeTabState {
                   // Selected Range Badge
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
-                      color: isDarkMode ? const Color(0xFF1E1E24) : const Color(0xFFF4F4F6),
+                      color: isDarkMode
+                          ? const Color(0xFF1E1E24)
+                          : const Color(0xFFF4F4F6),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: borderColor, width: 0.8),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.calendar_today_rounded, size: 14, color: textSecondary),
+                        Icon(
+                          Icons.calendar_today_rounded,
+                          size: 14,
+                          color: textSecondary,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           '${formatDatePill(tempStart)}  ←  ${formatDatePill(tempEnd)}',
@@ -2221,36 +2873,50 @@ mixin _HomeTabWidgets on _HomeTabState {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: leadingEmptyDays + daysInMonth,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 7,
-                      mainAxisSpacing: 3,
-                      crossAxisSpacing: 0,
-                      childAspectRatio: 1.15,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 7,
+                          mainAxisSpacing: 3,
+                          crossAxisSpacing: 0,
+                          childAspectRatio: 1.15,
+                        ),
                     itemBuilder: (context, index) {
                       if (index < leadingEmptyDays) {
                         return const SizedBox.shrink();
                       }
                       final dayNum = index - leadingEmptyDays + 1;
-                      final dayDate = DateTime(viewingMonth.year, viewingMonth.month, dayNum);
+                      final dayDate = DateTime(
+                        viewingMonth.year,
+                        viewingMonth.month,
+                        dayNum,
+                      );
                       final isFuture = dayDate.isAfter(today);
 
-                      final isStart = dayDate.year == tempStart.year &&
+                      final isStart =
+                          dayDate.year == tempStart.year &&
                           dayDate.month == tempStart.month &&
                           dayDate.day == tempStart.day;
-                      final isEnd = dayDate.year == tempEnd.year &&
+                      final isEnd =
+                          dayDate.year == tempEnd.year &&
                           dayDate.month == tempEnd.month &&
                           dayDate.day == tempEnd.day;
-                      final isSameDay = tempStart.year == tempEnd.year &&
+                      final isSameDay =
+                          tempStart.year == tempEnd.year &&
                           tempStart.month == tempEnd.month &&
                           tempStart.day == tempEnd.day;
-                      final isInBetween = dayDate.isAfter(tempStart) && dayDate.isBefore(tempEnd);
+                      final isInBetween =
+                          dayDate.isAfter(tempStart) &&
+                          dayDate.isBefore(tempEnd);
 
                       final ribbonBg = isDarkMode
                           ? Colors.white.withValues(alpha: 0.14)
                           : const Color(0xFFE4E4E7);
-                      final endpointBg = isDarkMode ? Colors.white : const Color(0xFF09090B);
-                      final endpointFg = isDarkMode ? const Color(0xFF09090B) : Colors.white;
+                      final endpointBg = isDarkMode
+                          ? Colors.white
+                          : const Color(0xFF09090B);
+                      final endpointFg = isDarkMode
+                          ? const Color(0xFF09090B)
+                          : Colors.white;
 
                       return Material(
                         color: Colors.transparent,
@@ -2291,8 +2957,12 @@ mixin _HomeTabWidgets on _HomeTabState {
                                     bottom: 3,
                                     child: Row(
                                       children: [
-                                        const Expanded(child: SizedBox.shrink()),
-                                        Expanded(child: Container(color: ribbonBg)),
+                                        const Expanded(
+                                          child: SizedBox.shrink(),
+                                        ),
+                                        Expanded(
+                                          child: Container(color: ribbonBg),
+                                        ),
                                       ],
                                     ),
                                   )
@@ -2302,8 +2972,12 @@ mixin _HomeTabWidgets on _HomeTabState {
                                     bottom: 3,
                                     child: Row(
                                       children: [
-                                        Expanded(child: Container(color: ribbonBg)),
-                                        const Expanded(child: SizedBox.shrink()),
+                                        Expanded(
+                                          child: Container(color: ribbonBg),
+                                        ),
+                                        const Expanded(
+                                          child: SizedBox.shrink(),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -2325,16 +2999,21 @@ mixin _HomeTabWidgets on _HomeTabState {
                                       '$dayNum',
                                       style: TextStyle(
                                         fontSize: 13,
-                                        fontWeight: (!isFuture && (isStart || isEnd))
+                                        fontWeight:
+                                            (!isFuture && (isStart || isEnd))
                                             ? FontWeight.w800
                                             : ((!isFuture && isInBetween)
-                                                ? FontWeight.w700
-                                                : FontWeight.w500),
+                                                  ? FontWeight.w700
+                                                  : FontWeight.w500),
                                         color: isFuture
-                                            ? textSecondary.withValues(alpha: 0.25)
+                                            ? textSecondary.withValues(
+                                                alpha: 0.25,
+                                              )
                                             : ((isStart || isEnd)
-                                                ? endpointFg
-                                                : (isInBetween ? textPrimary : textSecondary)),
+                                                  ? endpointFg
+                                                  : (isInBetween
+                                                        ? textPrimary
+                                                        : textSecondary)),
                                       ),
                                     ),
                                   ),
@@ -2357,13 +3036,25 @@ mixin _HomeTabWidgets on _HomeTabState {
                         HapticFeedback.mediumImpact();
                         setState(() {
                           _startDate = tempStart;
-                          _endDate = DateTime(tempEnd.year, tempEnd.month, tempEnd.day, 23, 59, 59);
+                          _endDate = DateTime(
+                            tempEnd.year,
+                            tempEnd.month,
+                            tempEnd.day,
+                            23,
+                            59,
+                            59,
+                          );
                         });
                         Navigator.pop(ctx);
+                        _refreshHeroSpend();
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
-                        foregroundColor: isDarkMode ? const Color(0xFF09090B) : Colors.white,
+                        backgroundColor: isDarkMode
+                            ? Colors.white
+                            : const Color(0xFF09090B),
+                        foregroundColor: isDarkMode
+                            ? const Color(0xFF09090B)
+                            : Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -2392,24 +3083,49 @@ mixin _HomeTabWidgets on _HomeTabState {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final sheetBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
-    final borderColor = isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
+    final borderColor = isDarkMode
+        ? const Color(0xFF27272A)
+        : const Color(0xFFE4E4E7);
     final textPrimary = isDarkMode ? Colors.white : const Color(0xFF09090B);
-    final textSecondary = isDarkMode ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
+    final textSecondary = isDarkMode
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF71717A);
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     int selectedYear = _startDate.year > now.year ? now.year : _startDate.year;
-    int selectedMonth = (selectedYear == now.year && _startDate.month > now.month)
+    int selectedMonth =
+        (selectedYear == now.year && _startDate.month > now.month)
         ? now.month
         : _startDate.month;
 
     final monthNamesAr = [
-      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+      'يناير',
+      'فبراير',
+      'مارس',
+      'أبريل',
+      'مايو',
+      'يونيو',
+      'يوليو',
+      'أغسطس',
+      'سبتمبر',
+      'أكتوبر',
+      'نوفمبر',
+      'ديسمبر',
     ];
     final monthNamesEn = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
 
     await showModalBottomSheet<void>(
@@ -2425,7 +3141,9 @@ mixin _HomeTabWidgets on _HomeTabState {
             return Container(
               decoration: BoxDecoration(
                 color: sheetBg,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
                 border: Border(top: BorderSide(color: borderColor, width: 1)),
               ),
               padding: EdgeInsets.fromLTRB(
@@ -2442,7 +3160,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                     width: 38,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: isDarkMode ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7),
+                      color: isDarkMode
+                          ? const Color(0xFF3F3F46)
+                          : const Color(0xFFE4E4E7),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -2463,9 +3183,14 @@ mixin _HomeTabWidgets on _HomeTabState {
                       ),
                       // Year stepper pill
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
-                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFF4F4F6),
+                          color: isDarkMode
+                              ? const Color(0xFF27272A)
+                              : const Color(0xFFF4F4F6),
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(color: borderColor, width: 0.8),
                         ),
@@ -2475,14 +3200,23 @@ mixin _HomeTabWidgets on _HomeTabState {
                             IconButton(
                               visualDensity: VisualDensity.compact,
                               padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                              icon: Icon(appStepperIconOf(context, forward: false), size: 20, color: textPrimary),
+                              constraints: const BoxConstraints(
+                                minWidth: 28,
+                                minHeight: 28,
+                              ),
+                              icon: Icon(
+                                appStepperIconOf(context, forward: false),
+                                size: 20,
+                                color: textPrimary,
+                              ),
                               onPressed: selectedYear > 2020
                                   ? () => setSheetState(() => selectedYear--)
                                   : null,
                             ),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                              ),
                               child: Text(
                                 '$selectedYear',
                                 style: TextStyle(
@@ -2495,7 +3229,10 @@ mixin _HomeTabWidgets on _HomeTabState {
                             IconButton(
                               visualDensity: VisualDensity.compact,
                               padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                              constraints: const BoxConstraints(
+                                minWidth: 28,
+                                minHeight: 28,
+                              ),
                               icon: Icon(
                                 appStepperIconOf(context, forward: true),
                                 size: 20,
@@ -2507,7 +3244,8 @@ mixin _HomeTabWidgets on _HomeTabState {
                                   ? () {
                                       setSheetState(() {
                                         selectedYear++;
-                                        if (selectedYear == now.year && selectedMonth > now.month) {
+                                        if (selectedYear == now.year &&
+                                            selectedMonth > now.month) {
                                           selectedMonth = now.month;
                                         }
                                       });
@@ -2524,21 +3262,26 @@ mixin _HomeTabWidgets on _HomeTabState {
                   // Months Bento Squircle Cards Grid (Only shows months up to current month in current year)
                   Builder(
                     builder: (context) {
-                      final displayedMonthsCount = selectedYear == now.year ? now.month : 12;
+                      final displayedMonthsCount = selectedYear == now.year
+                          ? now.month
+                          : 12;
                       return GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          mainAxisSpacing: 10,
-                          crossAxisSpacing: 10,
-                          childAspectRatio: 1.55,
-                        ),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              mainAxisSpacing: 10,
+                              crossAxisSpacing: 10,
+                              childAspectRatio: 1.55,
+                            ),
                         itemCount: displayedMonthsCount,
                         itemBuilder: (context, idx) {
                           final monthNum = idx + 1;
                           final isSelected = selectedMonth == monthNum;
-                          final numStr = monthNum < 10 ? '0$monthNum' : '$monthNum';
+                          final numStr = monthNum < 10
+                              ? '0$monthNum'
+                              : '$monthNum';
 
                           return Material(
                             color: Colors.transparent,
@@ -2550,22 +3293,35 @@ mixin _HomeTabWidgets on _HomeTabState {
                               borderRadius: BorderRadius.circular(16),
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 160),
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
                                 decoration: BoxDecoration(
                                   color: isSelected
-                                      ? (isDarkMode ? Colors.white : const Color(0xFF09090B))
-                                      : (isDarkMode ? const Color(0xFF1B1B20) : const Color(0xFFF4F4F6)),
+                                      ? (isDarkMode
+                                            ? Colors.white
+                                            : const Color(0xFF09090B))
+                                      : (isDarkMode
+                                            ? const Color(0xFF1B1B20)
+                                            : const Color(0xFFF4F4F6)),
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
                                     color: isSelected
-                                        ? (isDarkMode ? Colors.white : const Color(0xFF09090B))
+                                        ? (isDarkMode
+                                              ? Colors.white
+                                              : const Color(0xFF09090B))
                                         : borderColor,
                                     width: isSelected ? 1.4 : 0.8,
                                   ),
                                   boxShadow: isSelected
                                       ? [
                                           BoxShadow(
-                                            color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.12),
+                                            color:
+                                                (isDarkMode
+                                                        ? Colors.white
+                                                        : Colors.black)
+                                                    .withValues(alpha: 0.12),
                                             blurRadius: 10,
                                             offset: const Offset(0, 3),
                                           ),
@@ -2574,10 +3330,12 @@ mixin _HomeTabWidgets on _HomeTabState {
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
                                           numStr,
@@ -2587,7 +3345,13 @@ mixin _HomeTabWidgets on _HomeTabState {
                                             letterSpacing: 0.5,
                                             fontFamily: 'monospace',
                                             color: isSelected
-                                                ? (isDarkMode ? const Color(0xFF09090B).withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.7))
+                                                ? (isDarkMode
+                                                      ? const Color(
+                                                          0xFF09090B,
+                                                        ).withValues(alpha: 0.6)
+                                                      : Colors.white.withValues(
+                                                          alpha: 0.7,
+                                                        ))
                                                 : textSecondary,
                                           ),
                                         ),
@@ -2597,7 +3361,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                                             height: 5,
                                             decoration: BoxDecoration(
                                               shape: BoxShape.circle,
-                                              color: isDarkMode ? const Color(0xFF09090B) : Colors.white,
+                                              color: isDarkMode
+                                                  ? const Color(0xFF09090B)
+                                                  : Colors.white,
                                             ),
                                           ),
                                       ],
@@ -2606,10 +3372,14 @@ mixin _HomeTabWidgets on _HomeTabState {
                                       monthNames[idx],
                                       style: TextStyle(
                                         fontSize: 14,
-                                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                        fontWeight: isSelected
+                                            ? FontWeight.w800
+                                            : FontWeight.w600,
                                         letterSpacing: -0.2,
                                         color: isSelected
-                                            ? (isDarkMode ? const Color(0xFF09090B) : Colors.white)
+                                            ? (isDarkMode
+                                                  ? const Color(0xFF09090B)
+                                                  : Colors.white)
                                             : textPrimary,
                                       ),
                                     ),
@@ -2633,16 +3403,39 @@ mixin _HomeTabWidgets on _HomeTabState {
                         HapticFeedback.mediumImpact();
                         setState(() {
                           _startDate = DateTime(selectedYear, selectedMonth, 1);
-                          final endDay = DateTime(selectedYear, selectedMonth + 1, 0);
+                          final endDay = DateTime(
+                            selectedYear,
+                            selectedMonth + 1,
+                            0,
+                          );
                           _endDate = endDay.isAfter(today)
-                              ? DateTime(today.year, today.month, today.day, 23, 59, 59)
-                              : DateTime(endDay.year, endDay.month, endDay.day, 23, 59, 59);
+                              ? DateTime(
+                                  today.year,
+                                  today.month,
+                                  today.day,
+                                  23,
+                                  59,
+                                  59,
+                                )
+                              : DateTime(
+                                  endDay.year,
+                                  endDay.month,
+                                  endDay.day,
+                                  23,
+                                  59,
+                                  59,
+                                );
                         });
                         Navigator.pop(ctx);
+                        _refreshHeroSpend();
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isDarkMode ? Colors.white : const Color(0xFF09090B),
-                        foregroundColor: isDarkMode ? const Color(0xFF09090B) : Colors.white,
+                        backgroundColor: isDarkMode
+                            ? Colors.white
+                            : const Color(0xFF09090B),
+                        foregroundColor: isDarkMode
+                            ? const Color(0xFF09090B)
+                            : Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -2668,7 +3461,6 @@ mixin _HomeTabWidgets on _HomeTabState {
   }
   //#endregion
 
-
   Widget _buildCircularActionItem({
     required IconData icon,
     required String label,
@@ -2691,11 +3483,7 @@ mixin _HomeTabWidgets on _HomeTabState {
                 ? Colors.white.withValues(alpha: 0.18)
                 : Colors.white.withValues(alpha: 0.22),
           ),
-          icon: Icon(
-            icon,
-            size: 22,
-            color: Colors.white,
-          ),
+          icon: Icon(icon, size: 22, color: Colors.white),
         ),
         const SizedBox(height: 6),
         Text(
@@ -2721,7 +3509,11 @@ mixin _HomeTabWidgets on _HomeTabState {
   //#endregion
 
   //#region Auto-Tracking & Get Started Carousel
-  Future<void> _dismissGetStartedCard(String cardId, int cardIndex, int totalCards) async {
+  Future<void> _dismissGetStartedCard(
+    String cardId,
+    int cardIndex,
+    int totalCards,
+  ) async {
     if (_isDismissingCard) return;
 
     setState(() {
@@ -2792,15 +3584,15 @@ mixin _HomeTabWidgets on _HomeTabState {
   }
 
   //#region Compact Wallets Bar
-  Widget _buildWalletsCarousel(bool isDarkMode, HideBalanceService hideService) {
+  Widget _buildWalletsCarousel(
+    bool isDarkMode,
+    HideBalanceService hideService,
+  ) {
     final isRtl = Directionality.of(context) == ui.TextDirection.rtl;
     final isAr = isRtl || Localizations.localeOf(context).languageCode == 'ar';
     final wallets = _walletsCarouselList;
 
     if (wallets.isEmpty) return const SizedBox.shrink();
-
-
-
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2812,7 +3604,7 @@ mixin _HomeTabWidgets on _HomeTabState {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                context.l10n.myWallets,
+                isAr ? 'الحسابات' : context.l10n.accounts,
                 style: TextStyle(
                   color: isDarkMode ? Colors.white : Colors.black,
                   fontSize: 17,
@@ -2826,13 +3618,18 @@ mixin _HomeTabWidgets on _HomeTabState {
                   onTap: _showManageAccountsModal,
                   borderRadius: BorderRadius.circular(8),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 4,
+                    ),
                     child: Row(
                       children: [
                         Text(
                           context.l10n.viewAll,
                           style: TextStyle(
-                            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                            color: isDarkMode
+                                ? Colors.grey[400]
+                                : Colors.grey[600],
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                           ),
@@ -2841,7 +3638,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                         Icon(
                           appForwardIconOf(context),
                           size: 11,
-                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                          color: isDarkMode
+                              ? Colors.grey[400]
+                              : Colors.grey[600],
                         ),
                       ],
                     ),
@@ -2852,7 +3651,7 @@ mixin _HomeTabWidgets on _HomeTabState {
           ),
         ),
         const SizedBox(height: 4),
-        // Compact Clean Cards with Shadow on Active (no border on active, no clipping!)
+        // Compact account cards; the active card uses a clear adaptive outline.
         SizedBox(
           height: 104,
           child: ListView.separated(
@@ -2874,10 +3673,14 @@ mixin _HomeTabWidgets on _HomeTabState {
                     child: Container(
                       width: 60,
                       decoration: BoxDecoration(
-                        color: isDarkMode ? const Color(0xFF131317) : const Color(0xFFF8F9FB),
+                        color: isDarkMode
+                            ? const Color(0xFF131317)
+                            : const Color(0xFFF8F9FB),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: isDarkMode ? const Color(0xFF222228) : const Color(0xFFE5E7EB),
+                          color: isDarkMode
+                              ? const Color(0xFF222228)
+                              : const Color(0xFFE5E7EB),
                           width: 1,
                         ),
                       ),
@@ -2888,7 +3691,8 @@ mixin _HomeTabWidgets on _HomeTabState {
                             width: 28,
                             height: 28,
                             decoration: BoxDecoration(
-                              color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                              color: (isDarkMode ? Colors.white : Colors.black)
+                                  .withValues(alpha: 0.08),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
@@ -2903,7 +3707,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                             style: TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w700,
-                              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                              color: isDarkMode
+                                  ? Colors.grey[400]
+                                  : Colors.grey[600],
                             ),
                           ),
                         ],
@@ -2924,26 +3730,38 @@ mixin _HomeTabWidgets on _HomeTabState {
                     _heroSlideFromLeft = false;
                     _selectedAccountId = acc.id;
                   });
+                  _refreshHeroSpend();
                 },
-                actions: [
-                  IosContextMenuAction(
-                    id: 'transfer',
-                    title: isAr ? 'تحويل' : 'Transfer',
-                    iconSystemName: 'arrow.left.arrow.right',
-                  ),
-                  IosContextMenuAction(
-                    id: 'adjust_balance',
-                    title: isAr ? 'تعديل الرصيد' : 'Adjust Balance',
-                    iconSystemName: 'slider.horizontal.3',
-                  ),
-                  IosContextMenuAction(
-                    id: 'edit_account',
-                    title: isAr ? 'تعديل الحساب' : 'Edit Account',
-                    iconSystemName: 'pencil',
-                  ),
-                ],
+                actions: acc.isAll
+                    ? [
+                        IosContextMenuAction(
+                          id: 'manage_accounts',
+                          title: context.l10n.manageAccounts,
+                          iconSystemName: 'slider.horizontal.3',
+                        ),
+                      ]
+                    : [
+                        IosContextMenuAction(
+                          id: 'transfer',
+                          title: isAr ? 'تحويل' : 'Transfer',
+                          iconSystemName: 'arrow.left.arrow.right',
+                        ),
+                        IosContextMenuAction(
+                          id: 'adjust_balance',
+                          title: isAr ? 'تعديل الرصيد' : 'Adjust Balance',
+                          iconSystemName: 'slider.horizontal.3',
+                        ),
+                        IosContextMenuAction(
+                          id: 'edit_account',
+                          title: isAr ? 'تعديل الحساب' : 'Edit Account',
+                          iconSystemName: 'pencil',
+                        ),
+                      ],
                 onSelected: (actionId) {
                   switch (actionId) {
+                    case 'manage_accounts':
+                      _showManageAccountsModal();
+                      break;
                     case 'transfer':
                       _showUnifiedAddModal(
                         initialType: TransactionType.transfer,
@@ -2959,109 +3777,123 @@ mixin _HomeTabWidgets on _HomeTabState {
                   }
                 },
                 child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
-                    width: 156,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                    decoration: BoxDecoration(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  width: 156,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 9,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? (isDarkMode ? const Color(0xFF25252D) : Colors.white)
+                        : (isDarkMode
+                              ? const Color(0xFF131317)
+                              : const Color(0xFFF9FAFC)),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
                       color: isSelected
-                          ? (isDarkMode ? const Color(0xFF1C1C24) : Colors.white)
-                          : (isDarkMode ? const Color(0xFF131317) : const Color(0xFFF9FAFC)),
-                      borderRadius: BorderRadius.circular(16),
-                      // NO border when active, shadow only!
-                      border: isSelected
-                          ? null
-                          : Border.all(
-                              color: isDarkMode ? const Color(0xFF222228) : const Color(0xFFEBECEF),
-                              width: 1,
-                            ),
-                      boxShadow: isSelected
-                          ? [
-                              // Ambient 360-degree soft black shadow: clearly defines all 4 edges against bg
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: isDarkMode ? 0.45 : 0.09),
-                                blurRadius: 12,
-                                spreadRadius: 1,
-                                offset: Offset.zero,
-                              ),
-                              // Directional depth shadow
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: isDarkMode ? 0.60 : 0.12),
-                                blurRadius: 16,
-                                offset: const Offset(0, 5),
-                              ),
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: isDarkMode ? 0.30 : 0.05),
-                                blurRadius: 4,
-                                offset: const Offset(0, 1),
-                              ),
-                            ]
-                          : [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: isDarkMode ? 0.15 : 0.03),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                          ? (isDarkMode
+                                ? Colors.white.withValues(alpha: 0.22)
+                                : Colors.black.withValues(alpha: 0.14))
+                          : (isDarkMode
+                                ? const Color(0xFF222228)
+                                : const Color(0xFFEBECEF)),
+                      width: isSelected ? 1.2 : 1,
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Top Row: Icon + Title next to it
-                        Row(
-                          children: [
-                            Container(
-                              width: 26,
-                              height: 26,
-                              decoration: BoxDecoration(
-                                color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: isSelected ? 0.12 : 0.06),
-                                borderRadius: BorderRadius.circular(7),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: Colors.black.withValues(
+                                alpha: isDarkMode ? 0.26 : 0.09,
                               ),
-                              child: Icon(
-                                acc.icon,
-                                color: isDarkMode ? Colors.white : Colors.black,
-                                size: 14,
-                              ),
+                              blurRadius: 14,
+                              offset: const Offset(0, 4),
                             ),
-                            const SizedBox(width: 7),
-                            Expanded(
-                              child: Text(
-                                acc.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                                  color: isDarkMode
-                                      ? (isSelected ? Colors.white : Colors.grey[300])
-                                      : (isSelected ? Colors.black : Colors.grey[800]),
-                                ),
+                            if (isDarkMode)
+                              BoxShadow(
+                                color: Colors.white.withValues(alpha: 0.035),
+                                blurRadius: 0,
+                                spreadRadius: 1,
                               ),
+                          ]
+                        : [
+                            BoxShadow(
+                              color: Colors.black.withValues(
+                                alpha: isDarkMode ? 0.15 : 0.03,
+                              ),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
                             ),
                           ],
-                        ),
-                        const SizedBox(height: 6),
-                        // Bottom: Balance & Currency under the icon
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
-                          child: _buildBlurrableNumber(
-                            acc.balance,
-                            TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w900,
-                              color: isDarkMode ? Colors.white : Colors.black,
-                              letterSpacing: -0.3,
-                            ),
-                            hideService.isHidden,
-                            currencyCode: acc.currency,
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
-                );
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Top Row: Icon + Title next to it
+                      Row(
+                        children: [
+                          Container(
+                            width: 26,
+                            height: 26,
+                            decoration: BoxDecoration(
+                              color: (isDarkMode ? Colors.white : Colors.black)
+                                  .withValues(alpha: isSelected ? 0.12 : 0.06),
+                              borderRadius: BorderRadius.circular(7),
+                            ),
+                            child: Icon(
+                              acc.icon,
+                              color: isDarkMode ? Colors.white : Colors.black,
+                              size: 14,
+                            ),
+                          ),
+                          const SizedBox(width: 7),
+                          Expanded(
+                            child: Text(
+                              acc.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.w600,
+                                color: isDarkMode
+                                    ? (isSelected
+                                          ? Colors.white
+                                          : Colors.grey[300])
+                                    : (isSelected
+                                          ? Colors.black
+                                          : Colors.grey[800]),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      // Bottom: Balance & Currency under the icon
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: isAr
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: _buildBlurrableNumber(
+                          acc.balance,
+                          TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: isDarkMode ? Colors.white : Colors.black,
+                            letterSpacing: -0.3,
+                          ),
+                          hideService.isHidden,
+                          currencyCode: _currencyCode ?? acc.currency,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
             },
           ),
         ),
@@ -3118,7 +3950,9 @@ mixin _HomeTabWidgets on _HomeTabState {
       ),
     ];
 
-    final cards = allCards.where((c) => !_dismissedGetStartedCards.contains(c.id)).toList();
+    final cards = allCards
+        .where((c) => !_dismissedGetStartedCards.contains(c.id))
+        .toList();
 
     if (!_showAutoTrackingBanner || cards.isEmpty) {
       return const SizedBox.shrink();
@@ -3164,7 +3998,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                         decoration: BoxDecoration(
                           color: isActive
                               ? (isDarkMode ? Colors.white : Colors.black)
-                              : (isDarkMode ? Colors.grey[800] : Colors.grey[300]),
+                              : (isDarkMode
+                                    ? Colors.grey[800]
+                                    : Colors.grey[300]),
                           borderRadius: BorderRadius.circular(3),
                         ),
                       ),
@@ -3204,15 +4040,21 @@ mixin _HomeTabWidgets on _HomeTabState {
                       key: ValueKey(card.id),
                       clipBehavior: Clip.antiAlias,
                       decoration: BoxDecoration(
-                        color: isDarkMode ? const Color(0xFF16161B) : Colors.white,
+                        color: isDarkMode
+                            ? const Color(0xFF16161B)
+                            : Colors.white,
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(
-                          color: isDarkMode ? const Color(0xFF26262E) : const Color(0xFFE8EAEE),
+                          color: isDarkMode
+                              ? const Color(0xFF26262E)
+                              : const Color(0xFFE8EAEE),
                           width: 1,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: isDarkMode ? 0.40 : 0.06),
+                            color: Colors.black.withValues(
+                              alpha: isDarkMode ? 0.40 : 0.06,
+                            ),
                             blurRadius: 12,
                             offset: const Offset(0, 3),
                           ),
@@ -3230,7 +4072,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                                 child: Icon(
                                   card.icon,
                                   size: 100,
-                                  color: isDarkMode ? Colors.white : Colors.black,
+                                  color: isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
                                 ),
                               ),
                             ),
@@ -3238,7 +4082,10 @@ mixin _HomeTabWidgets on _HomeTabState {
 
                           // Main Card Content
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -3254,16 +4101,28 @@ mixin _HomeTabWidgets on _HomeTabState {
                                           width: 30,
                                           height: 30,
                                           decoration: BoxDecoration(
-                                            color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.07),
-                                            borderRadius: BorderRadius.circular(9),
+                                            color:
+                                                (isDarkMode
+                                                        ? Colors.white
+                                                        : Colors.black)
+                                                    .withValues(alpha: 0.07),
+                                            borderRadius: BorderRadius.circular(
+                                              9,
+                                            ),
                                             border: Border.all(
-                                              color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.07),
+                                              color:
+                                                  (isDarkMode
+                                                          ? Colors.white
+                                                          : Colors.black)
+                                                      .withValues(alpha: 0.07),
                                               width: 1,
                                             ),
                                           ),
                                           child: Icon(
                                             card.icon,
-                                            color: isDarkMode ? Colors.white : Colors.black,
+                                            color: isDarkMode
+                                                ? Colors.white
+                                                : Colors.black,
                                             size: 16,
                                           ),
                                         ),
@@ -3276,21 +4135,31 @@ mixin _HomeTabWidgets on _HomeTabState {
                                             style: TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w800,
-                                              color: isDarkMode ? Colors.white : Colors.black,
+                                              color: isDarkMode
+                                                  ? Colors.white
+                                                  : Colors.black,
                                               letterSpacing: -0.2,
                                             ),
                                           ),
                                         ),
                                         const SizedBox(width: 6),
                                         InkWell(
-                                          onTap: () => _dismissGetStartedCard(card.id, index, cards.length),
-                                          borderRadius: BorderRadius.circular(12),
+                                          onTap: () => _dismissGetStartedCard(
+                                            card.id,
+                                            index,
+                                            cards.length,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                           child: Padding(
                                             padding: const EdgeInsets.all(4),
                                             child: Icon(
                                               Icons.close_rounded,
                                               size: 16,
-                                              color: isDarkMode ? Colors.grey[500] : Colors.grey[400],
+                                              color: isDarkMode
+                                                  ? Colors.grey[500]
+                                                  : Colors.grey[400],
                                             ),
                                           ),
                                         ),
@@ -3305,7 +4174,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                                       style: TextStyle(
                                         fontSize: 11.5,
                                         height: 1.3,
-                                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                        color: isDarkMode
+                                            ? Colors.grey[400]
+                                            : Colors.grey[600],
                                       ),
                                     ),
                                   ],
@@ -3320,10 +4191,17 @@ mixin _HomeTabWidgets on _HomeTabState {
                                       onTap: card.onTap,
                                       borderRadius: BorderRadius.circular(9),
                                       child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 7,
+                                        ),
                                         decoration: BoxDecoration(
-                                          color: isDarkMode ? Colors.white : Colors.black,
-                                          borderRadius: BorderRadius.circular(9),
+                                          color: isDarkMode
+                                              ? Colors.white
+                                              : Colors.black,
+                                          borderRadius: BorderRadius.circular(
+                                            9,
+                                          ),
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
@@ -3333,16 +4211,26 @@ mixin _HomeTabWidgets on _HomeTabState {
                                               style: TextStyle(
                                                 fontSize: 12,
                                                 fontWeight: FontWeight.w800,
-                                                color: isDarkMode ? Colors.black : Colors.white,
+                                                color: isDarkMode
+                                                    ? Colors.black
+                                                    : Colors.white,
                                               ),
                                             ),
                                             const SizedBox(width: 5),
                                             Icon(
                                               Platform.isIOS
-                                                  ? (isAr ? CupertinoIcons.arrow_left : CupertinoIcons.arrow_right)
-                                                  : (isAr ? Icons.arrow_back : Icons.arrow_forward),
+                                                  ? (isAr
+                                                        ? CupertinoIcons
+                                                              .arrow_left
+                                                        : CupertinoIcons
+                                                              .arrow_right)
+                                                  : (isAr
+                                                        ? Icons.arrow_back
+                                                        : Icons.arrow_forward),
                                               size: 13,
-                                              color: isDarkMode ? Colors.black : Colors.white,
+                                              color: isDarkMode
+                                                  ? Colors.black
+                                                  : Colors.white,
                                             ),
                                           ],
                                         ),
@@ -3456,13 +4344,18 @@ mixin _HomeTabWidgets on _HomeTabState {
                   },
                   borderRadius: BorderRadius.circular(8),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 4,
+                    ),
                     child: Row(
                       children: [
                         Text(
                           context.l10n.viewAll,
                           style: TextStyle(
-                            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                            color: isDarkMode
+                                ? Colors.grey[400]
+                                : Colors.grey[600],
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                           ),
@@ -3496,7 +4389,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                         Icon(
                           appForwardIconOf(context),
                           size: 11,
-                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                          color: isDarkMode
+                              ? Colors.grey[400]
+                              : Colors.grey[600],
                         ),
                       ],
                     ),
@@ -3519,30 +4414,40 @@ mixin _HomeTabWidgets on _HomeTabState {
   }
   //#endregion
 
-
   //#region Financial Insights 2x2 Bento Grid (Realistic Data & App Theme)
-  Widget _buildInsightsGridSection(bool isDarkMode, HideBalanceService hideService) {
+  Widget _buildInsightsGridSection(
+    bool isDarkMode,
+    HideBalanceService hideService,
+  ) {
     final isRtl = Directionality.of(context) == ui.TextDirection.rtl;
     final isAr = isRtl || Localizations.localeOf(context).languageCode == 'ar';
     final isIOS = Platform.isIOS;
 
     // Rich Seeding Support: Use real user data if present, or vibrant default seed
-    final effectiveBudget = (_budgetData != null && _budgetData!.monthlyBudget > 0)
+    final effectiveBudget =
+        (_budgetData != null && _budgetData!.monthlyBudget > 0)
         ? _budgetData!
         : BudgetDto.defaultSeed();
 
     final rawBalance = _homeData?.balance;
-    final hasRealBalance = rawBalance != null &&
-        (rawBalance.totalBalance > 0 || rawBalance.totalDeposits > 0 || rawBalance.totalWithdrawals > 0);
+    final hasRealBalance =
+        rawBalance != null &&
+        (rawBalance.totalBalance > 0 ||
+            rawBalance.totalDeposits > 0 ||
+            rawBalance.totalWithdrawals > 0);
 
     final totalIncome = hasRealBalance ? rawBalance.totalDeposits : 88100.0;
     final totalExpense = hasRealBalance ? rawBalance.totalWithdrawals : 19965.5;
-    final totalSpent = (_budgetData?.currentSpending != null && _budgetData!.currentSpending > 0)
+    final totalSpent =
+        (_budgetData?.currentSpending != null &&
+            _budgetData!.currentSpending > 0)
         ? _budgetData!.currentSpending
         : effectiveBudget.currentSpending;
     final monthlyBudget = effectiveBudget.monthlyBudget;
     final remaining = (monthlyBudget - totalSpent).clamp(0.0, double.infinity);
-    final ratio = monthlyBudget > 0 ? (totalSpent / monthlyBudget).clamp(0.0, 1.0) : 0.0;
+    final ratio = monthlyBudget > 0
+        ? (totalSpent / monthlyBudget).clamp(0.0, 1.0)
+        : 0.0;
     final percentage = (ratio * 100).toInt();
     final isOverBudget = monthlyBudget > 0 && totalSpent > monthlyBudget;
     final hasBudget = monthlyBudget > 0;
@@ -3567,28 +4472,45 @@ mixin _HomeTabWidgets on _HomeTabState {
     final netCashFlow = totalIncome - totalExpense;
     final isPositiveFlow = netCashFlow >= 0;
     final savingsRate = totalIncome > 0
-        ? ((netCashFlow.clamp(0.0, double.infinity) / totalIncome) * 100).toInt().clamp(0, 100)
+        ? ((netCashFlow.clamp(0.0, double.infinity) / totalIncome) * 100)
+              .toInt()
+              .clamp(0, 100)
         : 0;
 
     // Top Spending Category calculation (CategoryBudgets or RecentTransactions)
     IconData getCatIcon(int catId, String name) {
       final lower = name.toLowerCase();
-      if (catId == 1 || lower.contains('food') || lower.contains('طعام') || lower.contains('مطاعم')) {
+      if (catId == 1 ||
+          lower.contains('food') ||
+          lower.contains('طعام') ||
+          lower.contains('مطاعم')) {
         return Icons.restaurant_rounded;
       }
-      if (catId == 2 || lower.contains('shop') || lower.contains('تسوق') || lower.contains('مستلزمات')) {
+      if (catId == 2 ||
+          lower.contains('shop') ||
+          lower.contains('تسوق') ||
+          lower.contains('مستلزمات')) {
         return Icons.shopping_cart_rounded;
       }
-      if (catId == 3 || lower.contains('bill') || lower.contains('فواتير') || lower.contains('خدمات')) {
+      if (catId == 3 ||
+          lower.contains('bill') ||
+          lower.contains('فواتير') ||
+          lower.contains('خدمات')) {
         return Icons.receipt_long_rounded;
       }
-      if (lower.contains('trans') || lower.contains('مواصلات') || lower.contains('سيارة')) {
+      if (lower.contains('trans') ||
+          lower.contains('مواصلات') ||
+          lower.contains('سيارة')) {
         return Icons.directions_car_rounded;
       }
-      if (lower.contains('health') || lower.contains('صحة') || lower.contains('طبي')) {
+      if (lower.contains('health') ||
+          lower.contains('صحة') ||
+          lower.contains('طبي')) {
         return Icons.medical_services_rounded;
       }
-      if (lower.contains('entertain') || lower.contains('ترفيه') || lower.contains('سينما')) {
+      if (lower.contains('entertain') ||
+          lower.contains('ترفيه') ||
+          lower.contains('سينما')) {
         return Icons.movie_rounded;
       }
       return Icons.category_rounded;
@@ -3603,29 +4525,40 @@ mixin _HomeTabWidgets on _HomeTabState {
 
     double topCatSpent = hasMultiCats ? (topCat?.spent ?? 6395.0) : 6395.0;
     String finalTopCatName = hasMultiCats
-        ? (topCat != null ? (isAr ? topCat.categoryNameAr : topCat.categoryNameEn) : (isAr ? 'تسوق' : 'Shopping'))
+        ? (topCat != null
+              ? (isAr ? topCat.categoryNameAr : topCat.categoryNameEn)
+              : (isAr ? 'تسوق' : 'Shopping'))
         : (isAr ? 'تسوق' : 'Shopping');
     IconData finalTopCatIcon = hasMultiCats
-        ? (topCat != null ? getCatIcon(topCat.categoryId, finalTopCatName) : Icons.shopping_cart_rounded)
+        ? (topCat != null
+              ? getCatIcon(topCat.categoryId, finalTopCatName)
+              : Icons.shopping_cart_rounded)
         : Icons.shopping_cart_rounded;
 
-    if (hasMultiCats && topCat == null && _homeData?.recentTransactions != null && _homeData!.recentTransactions.isNotEmpty) {
+    if (hasMultiCats &&
+        topCat == null &&
+        _homeData?.recentTransactions != null &&
+        _homeData!.recentTransactions.isNotEmpty) {
       final Map<String, double> catTotals = {};
       final Map<String, IconData> catIcons = {};
       for (final tx in _homeData!.recentTransactions) {
         if (!tx.isDeposit && tx.amount > 0) {
           final cName = isAr
-              ? (tx.categoryNameAr ?? tx.categoryNameEn ?? (isAr ? 'عام' : 'General'))
+              ? (tx.categoryNameAr ??
+                    tx.categoryNameEn ??
+                    (isAr ? 'عام' : 'General'))
               : (tx.categoryNameEn ?? tx.categoryNameAr ?? 'General');
           catTotals[cName] = (catTotals[cName] ?? 0.0) + tx.amount;
           catIcons[cName] = getCatIcon(tx.categoryId ?? 0, cName);
         }
       }
       if (catTotals.isNotEmpty) {
-        final sorted = catTotals.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+        final sorted = catTotals.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
         finalTopCatName = sorted.first.key;
         topCatSpent = sorted.first.value;
-        finalTopCatIcon = catIcons[finalTopCatName] ?? Icons.pie_chart_outline_rounded;
+        finalTopCatIcon =
+            catIcons[finalTopCatName] ?? Icons.pie_chart_outline_rounded;
       }
     }
 
@@ -3636,7 +4569,10 @@ mixin _HomeTabWidgets on _HomeTabState {
     // Accounts
     final accountsList = _accounts.where((a) => !a.isAll).toList();
     accountsList.sort((a, b) => b.balance.compareTo(a.balance));
-    final totalAccBalance = accountsList.fold<double>(0.0, (s, a) => s + (a.balance > 0 ? a.balance : 0.0));
+    final totalAccBalance = accountsList.fold<double>(
+      0.0,
+      (s, a) => s + (a.balance > 0 ? a.balance : 0.0),
+    );
 
     // Unified Mahfazti Obsidian Card Decoration
     final cardDecoration = BoxDecoration(
@@ -3670,11 +4606,7 @@ mixin _HomeTabWidgets on _HomeTabState {
               color: iconBgColor,
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              icon,
-              size: 14.5,
-              color: iconColor,
-            ),
+            child: Icon(icon, size: 14.5, color: iconColor),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -3717,23 +4649,28 @@ mixin _HomeTabWidgets on _HomeTabState {
       VoidCallback? onLongPress,
     }) {
       return Expanded(
-        child: _PressableCard(
-          decoration: cardDecoration,
-          onTap: () {
-            HapticFeedback.selectionClick();
-            onTap();
-          },
-          onLongPress: onLongPress == null
-              ? null
-              : () {
-                  HapticFeedback.mediumImpact();
-                  onLongPress();
-                },
-          child: SizedBox(
-            height: 190,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-              child: child,
+        child: RepaintBoundary(
+          child: _PressableCard(
+            decoration: cardDecoration,
+            onTap: () {
+              HapticFeedback.selectionClick();
+              onTap();
+            },
+            onLongPress: onLongPress == null
+                ? null
+                : () {
+                    HapticFeedback.mediumImpact();
+                    onLongPress();
+                  },
+            child: SizedBox(
+              height: 190,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 13,
+                ),
+                child: child,
+              ),
             ),
           ),
         ),
@@ -3742,8 +4679,12 @@ mixin _HomeTabWidgets on _HomeTabState {
 
     // 1. Top Spending Card (Subtle Purple/Violet Accent + Segmented Donut Pie)
     Widget buildTopSpendingCard() {
-      final violetAccent = isDarkMode ? const Color(0xFFA78BFA) : const Color(0xFF7C3AED);
-      final violetBg = (isDarkMode ? const Color(0xFF8B5CF6) : const Color(0xFF7C3AED)).withValues(alpha: isDarkMode ? 0.18 : 0.10);
+      final violetAccent = isDarkMode
+          ? const Color(0xFFA78BFA)
+          : const Color(0xFF7C3AED);
+      final violetBg =
+          (isDarkMode ? const Color(0xFF8B5CF6) : const Color(0xFF7C3AED))
+              .withValues(alpha: isDarkMode ? 0.18 : 0.10);
 
       // Multiple category slices for rich segmented donut (pie chart)
       final List<double> topSpendingSlices = [];
@@ -3769,7 +4710,9 @@ mixin _HomeTabWidgets on _HomeTabState {
         for (int i = 0; i < expenseCats.length; i++) {
           if (expenseCats[i].spent > 0) {
             topSpendingSlices.add(expenseCats[i].spent);
-            topSpendingColors.add(slicePalette[topSpendingColors.length % slicePalette.length]);
+            topSpendingColors.add(
+              slicePalette[topSpendingColors.length % slicePalette.length],
+            );
           }
         }
       }
@@ -3790,7 +4733,10 @@ mixin _HomeTabWidgets on _HomeTabState {
             ),
           );
         },
-        onLongPress: () => _askRemoveInsight('top_spending', isAr ? 'أعلى صرف' : 'Top Spending'),
+        onLongPress: () => _askRemoveInsight(
+          'top_spending',
+          isAr ? 'أعلى صرف' : 'Top Spending',
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -3836,7 +4782,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                 const SizedBox(width: 5),
                 Expanded(
                   child: Text(
-                    finalTopCatName.isNotEmpty ? finalTopCatName : (isAr ? 'تسوق' : 'Shopping'),
+                    finalTopCatName.isNotEmpty
+                        ? finalTopCatName
+                        : (isAr ? 'تسوق' : 'Shopping'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -3855,8 +4803,12 @@ mixin _HomeTabWidgets on _HomeTabState {
 
     // 2. Subscriptions Card (Subtle Sky Blue Accent)
     Widget buildSubscriptionsCard() {
-      final blueAccent = isDarkMode ? const Color(0xFF38BDF8) : const Color(0xFF0284C7);
-      final blueBg = (isDarkMode ? const Color(0xFF0EA5E9) : const Color(0xFF0284C7)).withValues(alpha: isDarkMode ? 0.18 : 0.10);
+      final blueAccent = isDarkMode
+          ? const Color(0xFF38BDF8)
+          : const Color(0xFF0284C7);
+      final blueBg =
+          (isDarkMode ? const Color(0xFF0EA5E9) : const Color(0xFF0284C7))
+              .withValues(alpha: isDarkMode ? 0.18 : 0.10);
       final hasSubscriptions = effectiveSubscriptions.isNotEmpty;
 
       return buildBaseCard(
@@ -3867,7 +4819,10 @@ mixin _HomeTabWidgets on _HomeTabState {
             MaterialPageRoute(builder: (_) => const SubscriptionsTab()),
           );
         },
-        onLongPress: () => _askRemoveInsight('subscriptions', isAr ? 'الاشتراكات' : 'Subscriptions'),
+        onLongPress: () => _askRemoveInsight(
+          'subscriptions',
+          isAr ? 'الاشتراكات' : 'Subscriptions',
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -3882,10 +4837,17 @@ mixin _HomeTabWidgets on _HomeTabState {
               upcoming != null
                   ? _formatAmount(upcoming.amount)
                   : (hasSubscriptions
-                      ? _formatAmount(effectiveSubscriptions.fold(0.0, (s, e) => s + e.amount))
-                      : (isAr ? 'لا يوجد مستحق' : 'Nothing due')),
+                        ? _formatAmount(
+                            effectiveSubscriptions.fold(
+                              0.0,
+                              (s, e) => s + e.amount,
+                            ),
+                          )
+                        : (isAr ? 'لا يوجد مستحق' : 'Nothing due')),
               color: !hasSubscriptions
-                  ? (isDarkMode ? const Color(0xFF71717A) : const Color(0xFF94A3B8))
+                  ? (isDarkMode
+                        ? const Color(0xFF71717A)
+                        : const Color(0xFF94A3B8))
                   : null,
             ),
             const SizedBox(height: 6),
@@ -3901,36 +4863,50 @@ mixin _HomeTabWidgets on _HomeTabState {
                                 width: 22,
                                 height: 22,
                                 decoration: BoxDecoration(
-                                  color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                                  color:
+                                      (isDarkMode ? Colors.white : Colors.black)
+                                          .withValues(alpha: 0.08),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Icon(
                                   upcoming?.icon ?? Icons.autorenew_rounded,
                                   size: 12,
-                                  color: isDarkMode ? Colors.white : Colors.black,
+                                  color: isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
                                 ),
                               ),
                               const SizedBox(width: 7),
                               Expanded(
                                 child: Text(
-                                  upcoming?.title ?? effectiveSubscriptions.first.title,
+                                  upcoming?.title ??
+                                      effectiveSubscriptions.first.title,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w700,
-                                    color: isDarkMode ? Colors.white : const Color(0xFF18181B),
+                                    color: isDarkMode
+                                        ? Colors.white
+                                        : const Color(0xFF18181B),
                                   ),
                                 ),
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                hideService.isHidden ? '••••' : _formatAmount(upcoming?.amount ?? effectiveSubscriptions.first.amount),
+                                hideService.isHidden
+                                    ? '••••'
+                                    : _formatAmount(
+                                        upcoming?.amount ??
+                                            effectiveSubscriptions.first.amount,
+                                      ),
                                 textDirection: ui.TextDirection.ltr,
                                 style: TextStyle(
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w800,
-                                  color: isDarkMode ? Colors.white : const Color(0xFF18181B),
+                                  color: isDarkMode
+                                      ? Colors.white
+                                      : const Color(0xFF18181B),
                                 ),
                               ),
                             ],
@@ -3943,13 +4919,19 @@ mixin _HomeTabWidgets on _HomeTabState {
                                   width: 22,
                                   height: 22,
                                   decoration: BoxDecoration(
-                                    color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                                    color:
+                                        (isDarkMode
+                                                ? Colors.white
+                                                : Colors.black)
+                                            .withValues(alpha: 0.08),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Icon(
                                     effectiveSubscriptions[1].icon,
                                     size: 12,
-                                    color: isDarkMode ? Colors.white : Colors.black,
+                                    color: isDarkMode
+                                        ? Colors.white
+                                        : Colors.black,
                                   ),
                                 ),
                                 const SizedBox(width: 7),
@@ -3961,18 +4943,26 @@ mixin _HomeTabWidgets on _HomeTabState {
                                     style: TextStyle(
                                       fontSize: 11.5,
                                       fontWeight: FontWeight.w700,
-                                      color: isDarkMode ? Colors.white : const Color(0xFF18181B),
+                                      color: isDarkMode
+                                          ? Colors.white
+                                          : const Color(0xFF18181B),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  hideService.isHidden ? '••••' : _formatAmount(effectiveSubscriptions[1].amount),
+                                  hideService.isHidden
+                                      ? '••••'
+                                      : _formatAmount(
+                                          effectiveSubscriptions[1].amount,
+                                        ),
                                   textDirection: ui.TextDirection.ltr,
                                   style: TextStyle(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w800,
-                                    color: isDarkMode ? Colors.white : const Color(0xFF18181B),
+                                    color: isDarkMode
+                                        ? Colors.white
+                                        : const Color(0xFF18181B),
                                   ),
                                 ),
                               ],
@@ -3983,39 +4973,60 @@ mixin _HomeTabWidgets on _HomeTabState {
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
-                        children: List.generate(3, (i) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 13,
-                                height: 13,
-                                decoration: BoxDecoration(
-                                  color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: isDarkMode ? 0.12 : 0.08),
-                                  shape: BoxShape.circle,
+                        children: List.generate(
+                          3,
+                          (i) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 13,
+                                  height: 13,
+                                  decoration: BoxDecoration(
+                                    color:
+                                        (isDarkMode
+                                                ? Colors.white
+                                                : Colors.black)
+                                            .withValues(
+                                              alpha: isDarkMode ? 0.12 : 0.08,
+                                            ),
+                                    shape: BoxShape.circle,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                width: 48,
-                                height: 10,
-                                decoration: BoxDecoration(
-                                  color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: isDarkMode ? 0.08 : 0.06),
-                                  borderRadius: BorderRadius.circular(5),
+                                const SizedBox(width: 8),
+                                Container(
+                                  width: 48,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    color:
+                                        (isDarkMode
+                                                ? Colors.white
+                                                : Colors.black)
+                                            .withValues(
+                                              alpha: isDarkMode ? 0.08 : 0.06,
+                                            ),
+                                    borderRadius: BorderRadius.circular(5),
+                                  ),
                                 ),
-                              ),
-                              const Spacer(),
-                              Container(
-                                width: 28,
-                                height: 10,
-                                decoration: BoxDecoration(
-                                  color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: isDarkMode ? 0.08 : 0.06),
-                                  borderRadius: BorderRadius.circular(5),
+                                const Spacer(),
+                                Container(
+                                  width: 28,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    color:
+                                        (isDarkMode
+                                                ? Colors.white
+                                                : Colors.black)
+                                            .withValues(
+                                              alpha: isDarkMode ? 0.08 : 0.06,
+                                            ),
+                                    borderRadius: BorderRadius.circular(5),
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        )),
+                        ),
                       ),
               ),
             ),
@@ -4023,12 +5034,16 @@ mixin _HomeTabWidgets on _HomeTabState {
             Text(
               hasSubscriptions
                   ? (upcoming != null
-                      ? (daysUntil == 0
-                          ? (isAr ? 'مستحق اليوم!' : 'Due today!')
-                          : (daysUntil == 1
-                              ? (isAr ? 'مستحق غداً' : 'Due tomorrow')
-                              : (isAr ? 'تجديد خلال $daysUntil يوم' : 'Due in $daysUntil days')))
-                      : context.l10n.activeSubscriptionsCount(effectiveSubscriptions.length))
+                        ? (daysUntil == 0
+                              ? (isAr ? 'مستحق اليوم!' : 'Due today!')
+                              : (daysUntil == 1
+                                    ? (isAr ? 'مستحق غداً' : 'Due tomorrow')
+                                    : (isAr
+                                          ? 'تجديد خلال $daysUntil يوم'
+                                          : 'Due in $daysUntil days')))
+                        : context.l10n.activeSubscriptionsCount(
+                            effectiveSubscriptions.length,
+                          ))
                   : (isAr ? 'لا توجد اشتراكات بعد' : 'No subscriptions yet'),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -4047,8 +5062,12 @@ mixin _HomeTabWidgets on _HomeTabState {
 
     // 3. Budget Card (Subtle Amber / Gold Accent)
     Widget buildBudgetCard() {
-      final amberAccent = isDarkMode ? const Color(0xFFFBBF24) : const Color(0xFFD97706);
-      final amberBg = (isDarkMode ? const Color(0xFFF59E0B) : const Color(0xFFD97706)).withValues(alpha: isDarkMode ? 0.18 : 0.10);
+      final amberAccent = isDarkMode
+          ? const Color(0xFFFBBF24)
+          : const Color(0xFFD97706);
+      final amberBg =
+          (isDarkMode ? const Color(0xFFF59E0B) : const Color(0xFFD97706))
+              .withValues(alpha: isDarkMode ? 0.18 : 0.10);
 
       return buildBaseCard(
         onTap: () {
@@ -4056,7 +5075,8 @@ mixin _HomeTabWidgets on _HomeTabState {
             widget.onNavigateToTab!(2); // Budgets Tab
           }
         },
-        onLongPress: () => _askRemoveInsight('budget', isAr ? 'الميزانية' : 'Budget'),
+        onLongPress: () =>
+            _askRemoveInsight('budget', isAr ? 'الميزانية' : 'Budget'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -4088,9 +5108,11 @@ mixin _HomeTabWidgets on _HomeTabState {
                           isOverBudget
                               ? const Color(0xFFEF4444)
                               : (ratio > 0.85
-                                  ? const Color(0xFFF59E0B)
-                                  : const Color(0xFF10B981)),
-                          isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                                    ? const Color(0xFFF59E0B)
+                                    : const Color(0xFF10B981)),
+                          isDarkMode
+                              ? const Color(0xFF27272A)
+                              : const Color(0xFFE4E4E7),
                         ],
                         size: 52,
                         strokeWidth: 6.5,
@@ -4111,14 +5133,16 @@ mixin _HomeTabWidgets on _HomeTabState {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.10),
+                            color: (isDarkMode ? Colors.white : Colors.black)
+                                .withValues(alpha: 0.10),
                             width: 2,
                           ),
                         ),
                         child: Icon(
                           Icons.speed_rounded,
                           size: 20,
-                          color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.35),
+                          color: (isDarkMode ? Colors.white : Colors.black)
+                              .withValues(alpha: 0.35),
                         ),
                       ),
               ),
@@ -4127,9 +5151,11 @@ mixin _HomeTabWidgets on _HomeTabState {
             Text(
               hasBudget
                   ? (isOverBudget
-                      ? (isAr ? 'تجاوزت الحد المسموح' : 'Over limit')
-                      : '~${hideService.isHidden ? '••••' : _formatAmount(dailySafeSpend)} / ${isAr ? 'يوم' : 'day'}')
-                  : (isAr ? 'اضغط لتحديد ميزانية شهرية' : 'Tap to set monthly budget'),
+                        ? (isAr ? 'تجاوزت الحد المسموح' : 'Over limit')
+                        : '~${hideService.isHidden ? '••••' : _formatAmount(dailySafeSpend)} / ${isAr ? 'يوم' : 'day'}')
+                  : (isAr
+                        ? 'اضغط لتحديد ميزانية شهرية'
+                        : 'Tap to set monthly budget'),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -4178,7 +5204,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                     height: 8.5,
                     child: LinearProgressIndicator(
                       value: value1,
-                      backgroundColor: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                      backgroundColor: isDarkMode
+                          ? const Color(0xFF27272A)
+                          : const Color(0xFFE4E4E7),
                       valueColor: AlwaysStoppedAnimation<Color>(color1),
                     ),
                   ),
@@ -4208,7 +5236,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                     height: 8.5,
                     child: LinearProgressIndicator(
                       value: value2,
-                      backgroundColor: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                      backgroundColor: isDarkMode
+                          ? const Color(0xFF27272A)
+                          : const Color(0xFFE4E4E7),
                       valueColor: AlwaysStoppedAnimation<Color>(color2),
                     ),
                   ),
@@ -4222,12 +5252,20 @@ mixin _HomeTabWidgets on _HomeTabState {
 
     // 4. Money Flow Card (Subtle Cyan / Teal Accent)
     Widget buildMoneyFlowCard() {
-      final cyanAccent = isDarkMode ? const Color(0xFF22D3EE) : const Color(0xFF0891B2);
-      final cyanBg = (isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0891B2)).withValues(alpha: isDarkMode ? 0.18 : 0.10);
+      final cyanAccent = isDarkMode
+          ? const Color(0xFF22D3EE)
+          : const Color(0xFF0891B2);
+      final cyanBg =
+          (isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0891B2))
+              .withValues(alpha: isDarkMode ? 0.18 : 0.10);
       final maxFlow = math.max(totalIncome, totalExpense);
       final safeMaxFlow = maxFlow > 0 ? maxFlow : 1.0;
-      final inRatio = totalIncome > 0 ? (totalIncome / safeMaxFlow).clamp(0.05, 1.0) : 0.0;
-      final outRatio = totalExpense > 0 ? (totalExpense / safeMaxFlow).clamp(0.05, 1.0) : 0.0;
+      final inRatio = totalIncome > 0
+          ? (totalIncome / safeMaxFlow).clamp(0.05, 1.0)
+          : 0.0;
+      final outRatio = totalExpense > 0
+          ? (totalExpense / safeMaxFlow).clamp(0.05, 1.0)
+          : 0.0;
 
       return buildBaseCard(
         onTap: () {
@@ -4235,7 +5273,10 @@ mixin _HomeTabWidgets on _HomeTabState {
             widget.onNavigateToTab!(1); // Analytics Tab
           }
         },
-        onLongPress: () => _askRemoveInsight('money_flow', isAr ? 'حركة الأموال' : 'Money Flow'),
+        onLongPress: () => _askRemoveInsight(
+          'money_flow',
+          isAr ? 'حركة الأموال' : 'Money Flow',
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -4251,7 +5292,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                 netCashFlow.abs(),
                 prefix: isPositiveFlow ? '+ ' : '- ',
               ),
-              color: isPositiveFlow ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+              color: isPositiveFlow
+                  ? const Color(0xFF10B981)
+                  : const Color(0xFFEF4444),
             ),
             const SizedBox(height: 6),
             Expanded(
@@ -4273,7 +5316,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                   width: 6,
                   height: 6,
                   decoration: BoxDecoration(
-                    color: isPositiveFlow ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                    color: isPositiveFlow
+                        ? const Color(0xFF10B981)
+                        : const Color(0xFFEF4444),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -4285,7 +5330,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: isPositiveFlow ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                    color: isPositiveFlow
+                        ? const Color(0xFF10B981)
+                        : const Color(0xFFEF4444),
                   ),
                 ),
               ],
@@ -4297,10 +5344,16 @@ mixin _HomeTabWidgets on _HomeTabState {
 
     // 5. Income Breakdown Card (Subtle Emerald Accent)
     Widget buildIncomeBreakdownCard() {
-      final emeraldAccent = isDarkMode ? const Color(0xFF34D399) : const Color(0xFF059669);
-      final emeraldBg = (isDarkMode ? const Color(0xFF10B981) : const Color(0xFF059669)).withValues(alpha: isDarkMode ? 0.18 : 0.10);
+      final emeraldAccent = isDarkMode
+          ? const Color(0xFF34D399)
+          : const Color(0xFF059669);
+      final emeraldBg =
+          (isDarkMode ? const Color(0xFF10B981) : const Color(0xFF059669))
+              .withValues(alpha: isDarkMode ? 0.18 : 0.10);
       final inRatio5 = totalIncome > 0 ? 1.0 : 0.0;
-      final outRatio5 = totalIncome > 0 ? (totalExpense / totalIncome).clamp(0.0, 1.0) : 0.0;
+      final outRatio5 = totalIncome > 0
+          ? (totalExpense / totalIncome).clamp(0.0, 1.0)
+          : 0.0;
 
       return buildBaseCard(
         onTap: () {
@@ -4308,7 +5361,10 @@ mixin _HomeTabWidgets on _HomeTabState {
             widget.onNavigateToTab!(1); // Analytics Tab
           }
         },
-        onLongPress: () => _askRemoveInsight('income_breakdown', isAr ? 'توزيع الدخل' : 'Income breakdown'),
+        onLongPress: () => _askRemoveInsight(
+          'income_breakdown',
+          isAr ? 'توزيع الدخل' : 'Income breakdown',
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -4368,14 +5424,19 @@ mixin _HomeTabWidgets on _HomeTabState {
 
     // 6. Accounts Card (Subtle Indigo Accent)
     Widget buildAccountsCard() {
-      final indigoAccent = isDarkMode ? const Color(0xFF818CF8) : const Color(0xFF4F46E5);
-      final indigoBg = (isDarkMode ? const Color(0xFF6366F1) : const Color(0xFF4F46E5)).withValues(alpha: isDarkMode ? 0.18 : 0.10);
+      final indigoAccent = isDarkMode
+          ? const Color(0xFF818CF8)
+          : const Color(0xFF4F46E5);
+      final indigoBg =
+          (isDarkMode ? const Color(0xFF6366F1) : const Color(0xFF4F46E5))
+              .withValues(alpha: isDarkMode ? 0.18 : 0.10);
 
       return buildBaseCard(
         onTap: () {
           _showManageAccountsModal();
         },
-        onLongPress: () => _askRemoveInsight('accounts', isAr ? 'الحسابات' : 'Accounts'),
+        onLongPress: () =>
+            _askRemoveInsight('accounts', isAr ? 'الحسابات' : 'Accounts'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -4399,7 +5460,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                           Icon(
                             accountsList[0].icon,
                             size: 13,
-                            color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+                            color: isDarkMode
+                                ? Colors.grey[300]
+                                : Colors.grey[700],
                           ),
                           const SizedBox(width: 6),
                           Expanded(
@@ -4410,18 +5473,29 @@ mixin _HomeTabWidgets on _HomeTabState {
                               style: TextStyle(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w700,
-                                color: isDarkMode ? Colors.white : const Color(0xFF18181B),
+                                color: isDarkMode
+                                    ? Colors.white
+                                    : const Color(0xFF18181B),
                               ),
                             ),
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            hideService.isHidden ? '••••' : _formatAmount(accountsList[0].balance, currencyCode: accountsList[0].currency),
+                            hideService.isHidden
+                                ? '••••'
+                                : _formatAmount(
+                                    accountsList[0].balance,
+                                    currencyCode:
+                                        _currencyCode ??
+                                        accountsList[0].currency,
+                                  ),
                             textDirection: ui.TextDirection.ltr,
                             style: TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w800,
-                              color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+                              color: isDarkMode
+                                  ? Colors.grey[300]
+                                  : Colors.grey[800],
                             ),
                           ),
                         ],
@@ -4433,7 +5507,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                           Icon(
                             accountsList[1].icon,
                             size: 13,
-                            color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+                            color: isDarkMode
+                                ? Colors.grey[300]
+                                : Colors.grey[700],
                           ),
                           const SizedBox(width: 6),
                           Expanded(
@@ -4444,18 +5520,29 @@ mixin _HomeTabWidgets on _HomeTabState {
                               style: TextStyle(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w700,
-                                color: isDarkMode ? Colors.white : const Color(0xFF18181B),
+                                color: isDarkMode
+                                    ? Colors.white
+                                    : const Color(0xFF18181B),
                               ),
                             ),
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            hideService.isHidden ? '••••' : _formatAmount(accountsList[1].balance, currencyCode: accountsList[1].currency),
+                            hideService.isHidden
+                                ? '••••'
+                                : _formatAmount(
+                                    accountsList[1].balance,
+                                    currencyCode:
+                                        _currencyCode ??
+                                        accountsList[1].currency,
+                                  ),
                             textDirection: ui.TextDirection.ltr,
                             style: TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w800,
-                              color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+                              color: isDarkMode
+                                  ? Colors.grey[300]
+                                  : Colors.grey[800],
                             ),
                           ),
                         ],
@@ -4486,7 +5573,8 @@ mixin _HomeTabWidgets on _HomeTabState {
     List<Widget> buildInsightRows() {
       final cards = <Widget>[
         if (!_hiddenInsights.contains('top_spending')) buildTopSpendingCard(),
-        if (!_hiddenInsights.contains('subscriptions')) buildSubscriptionsCard(),
+        if (!_hiddenInsights.contains('subscriptions'))
+          buildSubscriptionsCard(),
         if (!_hiddenInsights.contains('budget')) buildBudgetCard(),
         if (!_hiddenInsights.contains('money_flow')) buildMoneyFlowCard(),
         if (!_hiddenInsights.contains('income_breakdown'))
@@ -4552,14 +5640,19 @@ mixin _HomeTabWidgets on _HomeTabState {
                   },
                   borderRadius: BorderRadius.circular(8),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 4,
+                    ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           isAr ? 'التحليلات' : 'Analytics',
                           style: TextStyle(
-                            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                            color: isDarkMode
+                                ? Colors.grey[400]
+                                : Colors.grey[600],
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                           ),
@@ -4568,7 +5661,9 @@ mixin _HomeTabWidgets on _HomeTabState {
                         Icon(
                           appForwardIconOf(context),
                           size: 11,
-                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                          color: isDarkMode
+                              ? Colors.grey[400]
+                              : Colors.grey[600],
                         ),
                       ],
                     ),
@@ -4630,7 +5725,9 @@ mixin _HomeTabWidgets on _HomeTabState {
               },
               backgroundColor: const Color(0xFFEF4444),
               foregroundColor: Colors.white,
-              borderRadius: grouped ? BorderRadius.zero : BorderRadius.circular(18),
+              borderRadius: grouped
+                  ? BorderRadius.zero
+                  : BorderRadius.circular(18),
               padding: EdgeInsets.zero,
               child: const Icon(
                 CupertinoIcons.trash_fill,
@@ -4644,111 +5741,279 @@ mixin _HomeTabWidgets on _HomeTabState {
           // Grouped rows inherit the shared card container from the section.
           decoration: grouped
               ? null
-              : AppSurfaces.cardDecoration(
-                  isDarkMode: isDarkMode,
-                  radius: 18,
-                ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () {
-                HapticFeedback.selectionClick();
-                _showEditTransactionDialog(transaction);
-              },
-              borderRadius: grouped ? BorderRadius.zero : BorderRadius.circular(18),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Row(
-          children: [
-            // Category Mono Icon Container
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(
-                transaction.icon,
-                color: isDarkMode ? Colors.white : Colors.black,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 14),
-            // Title · Category
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    transaction.title.isNotEmpty ? transaction.title : categoryName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: isDarkMode ? Colors.white : Colors.black,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.2,
+              : AppSurfaces.cardDecoration(isDarkMode: isDarkMode, radius: 18),
+          child: Platform.isIOS
+              ? IosHoldContextMenu(
+                  borderRadius: grouped
+                      ? BorderRadius.zero
+                      : BorderRadius.circular(18),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    _showEditTransactionDialog(transaction);
+                  },
+                  actions: [
+                    IosContextMenuAction(
+                      id: 'edit',
+                      title: locale == 'ar'
+                          ? 'تعديل المعاملة'
+                          : 'Edit Transaction',
+                      iconSystemName: 'pencil',
                     ),
-                  ),
-                  if (categoryName.isNotEmpty) ...[
-                    const SizedBox(height: 3),
-                    Text(
-                      categoryName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
+                    IosContextMenuAction(
+                      id: 'copy',
+                      title: locale == 'ar' ? 'نسخ المبلغ' : 'Copy Amount',
+                      iconSystemName: 'doc.on.doc',
+                    ),
+                    IosContextMenuAction(
+                      id: 'delete',
+                      title: locale == 'ar'
+                          ? 'حذف المعاملة'
+                          : 'Delete Transaction',
+                      iconSystemName: 'trash',
+                      destructive: true,
                     ),
                   ],
-                  const SizedBox(height: 2),
-                  InferredWalletLabel(
-                    transaction: transaction,
-                    isDarkMode: isDarkMode,
+                  onSelected: (actionId) {
+                    switch (actionId) {
+                      case 'edit':
+                        _showEditTransactionDialog(transaction);
+                        break;
+                      case 'copy':
+                        HapticFeedback.selectionClick();
+                        final amountStr = transaction.amount % 1 == 0
+                            ? transaction.amount.toInt().toString()
+                            : transaction.amount.toStringAsFixed(2);
+                        Clipboard.setData(ClipboardData(text: amountStr));
+                        break;
+                      case 'delete':
+                        _showDeleteConfirmationDialog(transaction);
+                        break;
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        // Category Mono Icon Container
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: isDarkMode
+                                ? const Color(0xFF27272A)
+                                : const Color(0xFFE4E4E7),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(
+                            transaction.icon,
+                            color: isDarkMode ? Colors.white : Colors.black,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        // Title · Category
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                transaction.title.isNotEmpty
+                                    ? transaction.title
+                                    : categoryName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                              if (categoryName.isNotEmpty) ...[
+                                const SizedBox(height: 3),
+                                Text(
+                                  categoryName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: isDarkMode
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600],
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 2),
+                              InferredWalletLabel(
+                                transaction: transaction,
+                                isDarkMode: isDarkMode,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        // Amount · Date (date sits under the price)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildBlurrableNumber(
+                              transaction.amount,
+                              TextStyle(
+                                color: isIncome
+                                    ? (isDarkMode
+                                          ? const Color(0xFF10B981)
+                                          : const Color(0xFF059669))
+                                    : (isDarkMode
+                                          ? const Color(0xFFEF4444)
+                                          : const Color(0xFFDC2626)),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.3,
+                              ),
+                              hideService.isHidden,
+                              prefix: isIncome ? '+ ' : '- ',
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              _formatDate(transaction.transactionDate),
+                              style: TextStyle(
+                                color: isDarkMode
+                                    ? Colors.grey[500]
+                                    : Colors.grey[500],
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            // Amount · Date (date sits under the price)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildBlurrableNumber(
-                  transaction.amount,
-                  TextStyle(
-                    color: isIncome
-                        ? (isDarkMode ? const Color(0xFF10B981) : const Color(0xFF059669))
-                        : (isDarkMode ? const Color(0xFFEF4444) : const Color(0xFFDC2626)),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.3,
+                )
+              : Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      _showEditTransactionDialog(transaction);
+                    },
+                    onLongPress: () {
+                      _showDeleteConfirmationDialog(transaction);
+                    },
+                    borderRadius: grouped
+                        ? BorderRadius.zero
+                        : BorderRadius.circular(18),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
+                        children: [
+                          // Category Mono Icon Container
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: isDarkMode
+                                  ? const Color(0xFF27272A)
+                                  : const Color(0xFFE4E4E7),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Icon(
+                              transaction.icon,
+                              color: isDarkMode ? Colors.white : Colors.black,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          // Title · Category
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  transaction.title.isNotEmpty
+                                      ? transaction.title
+                                      : categoryName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: isDarkMode
+                                        ? Colors.white
+                                        : Colors.black,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -0.2,
+                                  ),
+                                ),
+                                if (categoryName.isNotEmpty) ...[
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    categoryName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: isDarkMode
+                                          ? Colors.grey[400]
+                                          : Colors.grey[600],
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 2),
+                                InferredWalletLabel(
+                                  transaction: transaction,
+                                  isDarkMode: isDarkMode,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          // Amount · Date (date sits under the price)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildBlurrableNumber(
+                                transaction.amount,
+                                TextStyle(
+                                  color: isIncome
+                                      ? (isDarkMode
+                                            ? const Color(0xFF10B981)
+                                            : const Color(0xFF059669))
+                                      : (isDarkMode
+                                            ? const Color(0xFFEF4444)
+                                            : const Color(0xFFDC2626)),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.3,
+                                ),
+                                hideService.isHidden,
+                                prefix: isIncome ? '+ ' : '- ',
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                _formatDate(transaction.transactionDate),
+                                style: TextStyle(
+                                  color: isDarkMode
+                                      ? Colors.grey[500]
+                                      : Colors.grey[500],
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  hideService.isHidden,
-                  prefix: isIncome ? '+ ' : '- ',
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  _formatDate(transaction.transactionDate),
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ],
         ),
       ),
-    ),
-    ),
-    ),
-    ),
     );
   }
   //#endregion
@@ -4763,10 +6028,14 @@ mixin _HomeTabWidgets on _HomeTabState {
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: isDarkMode ? const Color(0xFF18181B) : const Color(0xFFF4F4F5),
+                color: isDarkMode
+                    ? const Color(0xFF18181B)
+                    : const Color(0xFFF4F4F5),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                  color: isDarkMode
+                      ? const Color(0xFF27272A)
+                      : const Color(0xFFE4E4E7),
                   width: 1,
                 ),
               ),
@@ -4847,7 +6116,10 @@ mixin _HomeTabWidgets on _HomeTabState {
               style: ElevatedButton.styleFrom(
                 backgroundColor: isDarkMode ? Colors.white : Colors.black,
                 foregroundColor: isDarkMode ? Colors.black : Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -4869,7 +6141,11 @@ mixin _HomeTabWidgets on _HomeTabState {
     String prefix = '',
     String? currencyCode,
   }) {
-    final formatted = _formatAmount(amount, currencyCode: currencyCode, prefix: prefix);
+    final formatted = _formatAmount(
+      amount,
+      currencyCode: currencyCode,
+      prefix: prefix,
+    );
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: blurred ? 0 : 8, end: blurred ? 8 : 0),
       duration: const Duration(milliseconds: 250),
@@ -4916,19 +6192,21 @@ class _MiniDonutChart extends StatelessWidget {
     return SizedBox(
       width: size,
       height: size,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          CustomPaint(
-            size: Size(size, size),
-            painter: _MiniDonutChartPainter(
-              values: values,
-              colors: colors,
-              strokeWidth: strokeWidth,
+      child: RepaintBoundary(
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            CustomPaint(
+              size: Size(size, size),
+              painter: _MiniDonutChartPainter(
+                values: values,
+                colors: colors,
+                strokeWidth: strokeWidth,
+              ),
             ),
-          ),
-          if (centerChild != null) centerChild!,
-        ],
+            if (centerChild != null) centerChild!,
+          ],
+        ),
       ),
     );
   }
@@ -4953,7 +6231,9 @@ class _MiniDonutChartPainter extends CustomPainter {
 
     // Base subtle track ring
     final trackPaint = Paint()
-      ..color = (colors.isNotEmpty ? colors.first : Colors.grey).withValues(alpha: 0.10)
+      ..color = (colors.isNotEmpty ? colors.first : Colors.grey).withValues(
+        alpha: 0.10,
+      )
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth;
     canvas.drawCircle(center, radius, trackPaint);
@@ -4973,8 +6253,12 @@ class _MiniDonutChartPainter extends CustomPainter {
       final val = values[i];
       if (val <= 0) continue;
       final sweepAngle = (val / total) * 2 * math.pi;
-      final actualSweep = hasMultiple ? math.max(0.04, sweepAngle - gapAngle) : sweepAngle;
-      final actualStart = hasMultiple ? currentAngle + (gapAngle / 2) : currentAngle;
+      final actualSweep = hasMultiple
+          ? math.max(0.04, sweepAngle - gapAngle)
+          : sweepAngle;
+      final actualStart = hasMultiple
+          ? currentAngle + (gapAngle / 2)
+          : currentAngle;
 
       final paint = Paint()
         ..color = colors[i % colors.length]
@@ -4996,8 +6280,8 @@ class _MiniDonutChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _MiniDonutChartPainter oldDelegate) {
-    return oldDelegate.values != values ||
-        oldDelegate.colors != colors ||
+    return !listEquals(oldDelegate.values, values) ||
+        !listEquals(oldDelegate.colors, colors) ||
         oldDelegate.strokeWidth != strokeWidth;
   }
 }
@@ -5027,9 +6311,7 @@ class _SlidableSeamlessStretchMotion extends StatelessWidget {
           child: child,
         );
       },
-      child: const ClipRect(
-        child: BehindMotion(),
-      ),
+      child: const ClipRect(child: BehindMotion()),
     );
   }
 }

@@ -3,14 +3,8 @@ import 'package:flutter/material.dart';
 class AuthHeader extends StatelessWidget {
   final String title;
   final String subtitle;
-  final IconData icon;
 
-  const AuthHeader({
-    super.key,
-    required this.title,
-    required this.subtitle,
-    this.icon = Icons.account_balance_wallet_rounded,
-  });
+  const AuthHeader({super.key, required this.title, required this.subtitle});
 
   @override
   Widget build(BuildContext context) {
@@ -20,43 +14,21 @@ class AuthHeader extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Branded Logo Icon Badge
-        Container(
-          width: 76,
-          height: 76,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: isDark
-                  ? [
-                      Colors.white,
-                      Colors.grey.shade300,
-                    ]
-                  : [
-                      theme.colorScheme.primary,
-                      const Color(0xFF1E293B),
-                    ],
-            ),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: (isDark ? Colors.white : theme.colorScheme.primary)
-                    .withValues(alpha: isDark ? 0.2 : 0.28),
-                blurRadius: 24,
-                spreadRadius: 2,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Center(
-            child: Icon(
-              icon,
-              size: 38,
-              color: isDark ? Colors.black : Colors.white,
-            ),
+        // Brand mark
+        ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: Image.asset(
+            // Light mode shows the black tile (like the app icon), dark mode
+            // shows the white one.
+            isDark
+                ? 'assets/icons/mahfazti-logo-light.png'
+                : 'assets/icons/mahfazti-logo-dark.png',
+            width: 76,
+            height: 76,
+            filterQuality: FilterQuality.high,
           ),
         ),
+
         const SizedBox(height: 18),
         Text(
           title,
