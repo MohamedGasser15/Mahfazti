@@ -8,6 +8,7 @@ import 'package:neo_cupertino/neo_cupertino.dart';
 
 import 'package:my_wallet/core/themes/app_icons.dart';
 import 'package:my_wallet/core/widgets/app_back_button.dart';
+import 'package:my_wallet/features/wallet/data/repositories/ai_financial_repository.dart';
 import 'package:my_wallet/features/wallet/presentation/widgets/ask_background.dart';
 import 'package:my_wallet/features/wallet/presentation/widgets/ask_chat_models.dart';
 import 'package:my_wallet/core/utils/shared_prefs.dart';
@@ -19,12 +20,14 @@ class AskChatScreen extends StatefulWidget {
   final String? firstName;
   final String? initialPrompt;
   final List<AskMessage>? initialMessages;
+  final String? conversationId;
 
   const AskChatScreen({
     super.key,
     this.firstName,
     this.initialPrompt,
     this.initialMessages,
+    this.conversationId,
   });
 
   @override
@@ -35,9 +38,11 @@ class _AskChatScreenState extends State<AskChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   final ScrollController _scroll = ScrollController();
+  final AiFinancialRepository _aiRepo = AiFinancialRepository();
 
   final List<AskMessage> _messages = [];
   late String _assistantName = _readAssistantName();
+  String? _activeConversationId;
 
   String _readAssistantName() {
     try {
@@ -53,7 +58,6 @@ class _AskChatScreenState extends State<AskChatScreen> {
   bool _isTyping = false;
   bool _showFollowUps = false;
 
-  Timer? _replyTimer;
   Timer? _streamTimer;
   String _pendingReply = '';
   int _streamIndex = 0;
@@ -63,9 +67,26 @@ class _AskChatScreenState extends State<AskChatScreen> {
   @override
   void initState() {
     super.initState();
+    _activeConversationId = widget.conversationId;
 
-    if (widget.initialMessages != null) {
+    if (widget.initialMessages != null && widget.initialMessages!.isNotEmpty) {
       _messages.addAll(widget.initialMessages!);
+      if (widget.conversationId != null &&
+          widget.initialMessages!.length <= 1) {
+        _loadRemoteMessages(widget.conversationId!);
+      }
+    } else if (widget.conversationId != null) {
+      _loadRemoteMessages(widget.conversationId!);
+    } else if (widget.initialPrompt == null) {
+      // Reopen last active conversation if user is returning to chat
+      final active = AskHistoryStore.getActiveConversation();
+      if (active != null && active.messages.isNotEmpty) {
+        _activeConversationId = active.id;
+        _messages.addAll(active.messages);
+        if (active.id != null && active.messages.length <= 1) {
+          _loadRemoteMessages(active.id!);
+        }
+      }
     }
 
     if (widget.initialPrompt != null) {
@@ -74,12 +95,64 @@ class _AskChatScreenState extends State<AskChatScreen> {
         _controller.text = widget.initialPrompt!;
         _send();
       });
+    } else if (_messages.isNotEmpty && !_messages.last.isUser) {
+      _showFollowUps = true;
     }
+  }
+
+  Future<void> _loadRemoteMessages(String convId) async {
+    setState(() => _isTyping = true);
+    try {
+      final remoteMsgs = await _aiRepo.getMessages(convId);
+      if (remoteMsgs.isNotEmpty && mounted) {
+        setState(() {
+          _messages.clear();
+          for (final m in remoteMsgs) {
+            _messages.add(AskMessage(text: m.content, isUser: m.isUser));
+          }
+          if (_messages.isNotEmpty && !_messages.last.isUser) {
+            _showFollowUps = true;
+          }
+        });
+        _scrollToBottom(animate: false);
+        _saveToHistoryStore();
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _isTyping = false);
+    }
+  }
+
+  void _saveToHistoryStore() {
+    if (_messages.isEmpty) return;
+    final validMessages = _messages.where((m) => m.text.isNotEmpty).toList();
+    if (validMessages.isEmpty) return;
+
+    final firstUser = validMessages.firstWhere(
+      (m) => m.isUser,
+      orElse: () => validMessages.first,
+    );
+    AskHistoryStore.save(
+      firstUser.text.trim().isNotEmpty
+          ? firstUser.text.trim()
+          : (_isAr ? 'محادثة' : 'Chat'),
+      validMessages,
+      id: _activeConversationId,
+    );
   }
 
   @override
   void dispose() {
-    _replyTimer?.cancel();
+    if (_streamTimer != null &&
+        _streamTimer!.isActive &&
+        _pendingReply.isNotEmpty &&
+        _messages.isNotEmpty) {
+      _messages[_messages.length - 1] = AskMessage(
+        text: _pendingReply,
+        isUser: false,
+      );
+    }
+    _saveToHistoryStore();
     _streamTimer?.cancel();
     _copiedTimer?.cancel();
     _controller.dispose();
@@ -105,14 +178,8 @@ class _AskChatScreenState extends State<AskChatScreen> {
   }
 
   void _startNewChat() {
-    if (_messages.isNotEmpty) {
-      final firstUser = _messages.firstWhere(
-        (m) => m.isUser,
-        orElse: () => _messages.first,
-      );
-      AskHistoryStore.save(firstUser.text, _messages);
-    }
-    _replyTimer?.cancel();
+    _saveToHistoryStore();
+    _activeConversationId = null;
     _streamTimer?.cancel();
     HapticFeedback.selectionClick();
     setState(() {
@@ -142,19 +209,25 @@ class _AskChatScreenState extends State<AskChatScreen> {
   }
 
   void _loadConversation(AskConversation conversation) {
-    _replyTimer?.cancel();
+    _activeConversationId = conversation.id;
     _streamTimer?.cancel();
     setState(() {
       _messages
         ..clear()
         ..addAll(conversation.messages);
       _isTyping = false;
-      _showFollowUps = false;
+      _showFollowUps =
+          conversation.messages.isNotEmpty &&
+          !conversation.messages.last.isUser;
     });
     _scrollToBottom();
+
+    if (conversation.id != null && conversation.messages.length <= 1) {
+      _loadRemoteMessages(conversation.id!);
+    }
   }
 
-  void _send() {
+  Future<void> _send() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
@@ -168,20 +241,38 @@ class _AskChatScreenState extends State<AskChatScreen> {
     });
     _scrollToBottom();
 
-    _replyTimer?.cancel();
-    _replyTimer = Timer(const Duration(milliseconds: 900), () {
+    try {
+      final response = await _aiRepo.sendMessage(
+        text,
+        conversationId: _activeConversationId,
+        language: _isAr ? 'ar' : 'en',
+      );
+      _activeConversationId = response.conversationId;
+
       if (!mounted) return;
       setState(() {
         _isTyping = false;
         _messages.add(const AskMessage(text: '', isUser: false));
       });
       _scrollToBottom();
-      _streamReply(
-        _isAr
-            ? 'أنا لسه بتعلّم أقرأ مصاريفك — قريب هقدر أجاوبك بالتفاصيل والأرقام، وأقولك فين بتروح فلوسك بالظبط وإزاي توفّر أكتر.'
-            : "I'm still learning to read your spending — soon I'll answer with real numbers, tell you exactly where your money goes and how to save more.",
-      );
-    });
+      _streamReply(response.reply);
+    } catch (e) {
+      if (!mounted) return;
+      final cleanMsg = e.toString().replaceAll('Exception: ', '');
+      setState(() {
+        _isTyping = false;
+        _messages.add(
+          AskMessage(
+            text: _isAr
+                ? 'عذراً، حدث خطأ أثناء الاتصال بمحفظتي AI:\n$cleanMsg'
+                : 'Sorry, could not connect to Mahfazti AI:\n$cleanMsg',
+            isUser: false,
+          ),
+        );
+      });
+      _scrollToBottom();
+      _saveToHistoryStore();
+    }
   }
 
   void _streamReply(String text) {
@@ -198,10 +289,13 @@ class _AskChatScreenState extends State<AskChatScreen> {
       if (remaining <= 0) {
         timer.cancel();
         setState(() {
-          _messages[_messages.length - 1] =
-              AskMessage(text: _pendingReply, isUser: false);
+          _messages[_messages.length - 1] = AskMessage(
+            text: _pendingReply,
+            isUser: false,
+          );
           _showFollowUps = true;
         });
+        _saveToHistoryStore();
         _scrollToBottom();
         return;
       }
@@ -215,6 +309,151 @@ class _AskChatScreenState extends State<AskChatScreen> {
       });
       _scrollToBottom(animate: false);
     });
+  }
+
+  List<String> _getDynamicFollowUps(bool isAr) {
+    String lastUserText = '';
+    for (int i = _messages.length - 1; i >= 0; i--) {
+      if (_messages[i].isUser) {
+        lastUserText = _messages[i].text.toLowerCase();
+        break;
+      }
+    }
+
+    final List<String> candidates = [];
+
+    // Contextual checks based on what the user asked
+    if (lastUserText.contains('لخص') ||
+        lastUserText.contains('ملخص') ||
+        lastUserText.contains('شهر') ||
+        lastUserText.contains('summary') ||
+        lastUserText.contains('month')) {
+      if (isAr) {
+        candidates.addAll([
+          'إيه أكتر تصنيف صرفت فيه؟',
+          'ازاي أوفّر الشهر الجاي؟',
+          'قارن مصاريفي بالشهر اللي فات',
+          'حطلي خطة ميزانية للشهر الجديد',
+        ]);
+      } else {
+        candidates.addAll([
+          'Which category cost the most?',
+          'How can I save next month?',
+          'Compare with last month',
+          'Plan a budget for next month',
+        ]);
+      }
+    } else if (lastUserText.contains('وفر') ||
+        lastUserText.contains('توفير') ||
+        lastUserText.contains('ميزان') ||
+        lastUserText.contains('تحويش') ||
+        lastUserText.contains('save') ||
+        lastUserText.contains('budget')) {
+      if (isAr) {
+        candidates.addAll([
+          'قسّم دخلي بقاعدة 50/30/20',
+          'إيه المصاريف اللي ممكن استغنى عنها؟',
+          'إزاي أعمل صندوق طوارئ؟',
+          'أقدر أحوّش كام كل شهر؟',
+        ]);
+      } else {
+        candidates.addAll([
+          'Apply the 50/30/20 budget rule',
+          'Which expenses can I cut down?',
+          'How to build an emergency fund?',
+          'How much can I realistically save?',
+        ]);
+      }
+    } else if (lastUserText.contains('استثمار') ||
+        lastUserText.contains('دهب') ||
+        lastUserText.contains('ذهب') ||
+        lastUserText.contains('شهادات') ||
+        lastUserText.contains('تضخم') ||
+        lastUserText.contains('بورصة') ||
+        lastUserText.contains('invest') ||
+        lastUserText.contains('gold')) {
+      if (isAr) {
+        candidates.addAll([
+          'إيه الفرق بين الدهب والشهادات؟',
+          'إزاي أحمي فلوسي من التضخم؟',
+          'أنسب طريقة لتوزيع مدخراتي',
+          'أبدأ استثمار بمبلغ كام؟',
+        ]);
+      } else {
+        candidates.addAll([
+          'Gold vs bank certificates?',
+          'How to protect savings from inflation?',
+          'Best way to diversify my savings',
+          'Minimum amount to start investing?',
+        ]);
+      }
+    } else if (lastUserText.contains('أكبر') ||
+        lastUserText.contains('فين') ||
+        lastUserText.contains('مصروف') ||
+        lastUserText.contains('صرف') ||
+        lastUserText.contains('expense') ||
+        lastUserText.contains('spend')) {
+      if (isAr) {
+        candidates.addAll([
+          'أقدر أصرف كام الأسبوع ده؟',
+          'إزاي أقلل مصاريف الأكل والخروج؟',
+          'لخّص الشهر ده',
+          'إيه أكبر بند أخد من فلوسي؟',
+        ]);
+      } else {
+        candidates.addAll([
+          'How much can I spend this week?',
+          'Tips to cut dining & takeout costs',
+          'Summarize this month',
+          'What was my single biggest expense?',
+        ]);
+      }
+    }
+
+    final pool = isAr
+        ? [
+            'إيه أكبر مصروف عندي؟',
+            'فين بتروح فلوسي؟',
+            'ازاي أوفّر أكتر؟',
+            'لخّص الشهر ده',
+            'أقدر أصرف كام الأسبوع ده؟',
+            'إزاي أعمل ميزانية شهرية؟',
+          ]
+        : [
+            'What is my biggest expense?',
+            'Where is my money going?',
+            'How can I save more?',
+            'Summarize this month',
+            'How much can I spend this week?',
+            'How do I build a monthly budget?',
+          ];
+
+    for (final p in pool) {
+      if (!candidates.contains(p)) {
+        candidates.add(p);
+      }
+    }
+
+    // Filter out questions the user has already asked in this chat
+    final userQuestions = _messages
+        .where((m) => m.isUser)
+        .map((m) => m.text.trim().toLowerCase())
+        .toSet();
+
+    final result = candidates
+        .where((c) {
+          final cl = c.trim().toLowerCase();
+          return !userQuestions.any(
+            (uq) =>
+                uq == cl ||
+                (uq.length > 5 && cl.contains(uq)) ||
+                (cl.length > 5 && uq.contains(cl)),
+          );
+        })
+        .take(3)
+        .toList();
+
+    return result.isNotEmpty ? result : candidates.take(3).toList();
   }
 
   void _askNow(String prompt) {
@@ -233,9 +472,12 @@ class _AskChatScreenState extends State<AskChatScreen> {
 
     final bg = isDark ? const Color(0xFF09090B) : const Color(0xFFF8F8FA);
     final textPrimary = isDark ? Colors.white : const Color(0xFF09090B);
-    final textMuted = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
-    final textSecondary =
-        isDark ? const Color(0xFFB4B4BC) : const Color(0xFF52525B);
+    final textMuted = isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF71717A);
+    final textSecondary = isDark
+        ? const Color(0xFFB4B4BC)
+        : const Color(0xFF52525B);
     final border = isDark ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
     final card = isDark ? const Color(0xFF141418) : Colors.white;
 
@@ -500,13 +742,7 @@ class _AskChatScreenState extends State<AskChatScreen> {
     required Color card,
     required double bottomClearance,
   }) {
-    final followUps = isAr
-        ? const ['إزاي أوفّر أكتر؟', 'إيه أكبر مصروف؟', 'لخّص الشهر ده']
-        : const [
-            'How can I save more?',
-            'What is my biggest expense?',
-            'Summarize this month',
-          ];
+    final followUps = _getDynamicFollowUps(isAr);
 
     return ListView(
       controller: _scroll,
@@ -530,16 +766,22 @@ class _AskChatScreenState extends State<AskChatScreen> {
             card: card,
             textMuted: textMuted,
           ),
-        if (_showFollowUps) ...[
-          const SizedBox(height: 6),
-          Text(
-            isAr ? 'Try next' : 'Try next',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.4,
-              color: textMuted,
-            ),
+        if (_showFollowUps && followUps.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(Icons.auto_awesome_rounded, size: 14, color: textMuted),
+              const SizedBox(width: 6),
+              Text(
+                isAr ? 'جرّب تسأل كمان:' : 'Try next:',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                  color: textMuted,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           Wrap(
@@ -557,9 +799,7 @@ class _AskChatScreenState extends State<AskChatScreen> {
             ],
           ),
         ],
-        if (!_isTyping &&
-            _messages.isNotEmpty &&
-            !_messages.last.isUser) ...[
+        if (!_isTyping && _messages.isNotEmpty && !_messages.last.isUser) ...[
           const SizedBox(height: 14),
           Row(
             children: [
@@ -644,8 +884,7 @@ class _AskChatScreenState extends State<AskChatScreen> {
               textInputAction: TextInputAction.send,
               textCapitalization: TextCapitalization.sentences,
               onSubmitted: (_) => _send(),
-              keyboardAppearance:
-                  isDark ? Brightness.dark : Brightness.light,
+              keyboardAppearance: isDark ? Brightness.dark : Brightness.light,
               cursorColor: textPrimary,
               style: TextStyle(
                 fontSize: 15,
@@ -689,8 +928,8 @@ class _AskChatScreenState extends State<AskChatScreen> {
                   color: hasText
                       ? textPrimary
                       : (isDark
-                          ? Colors.white.withValues(alpha: 0.10)
-                          : Colors.black.withValues(alpha: 0.06)),
+                            ? Colors.white.withValues(alpha: 0.10)
+                            : Colors.black.withValues(alpha: 0.06)),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -804,8 +1043,8 @@ class _ChatBubble extends StatelessWidget {
               bottomEnd: Radius.circular(6),
             ),
           ),
-          child: Text(
-            message.text,
+          child: _FormattedMessageText(
+            text: message.text,
             style: TextStyle(
               fontSize: 15,
               height: 1.45,
@@ -833,8 +1072,8 @@ class _ChatBubble extends StatelessWidget {
           ),
           border: Border.all(color: border, width: 1),
         ),
-        child: Text(
-          message.text,
+        child: _FormattedMessageText(
+          text: message.text,
           style: TextStyle(
             fontSize: 15,
             height: 1.45,
@@ -844,6 +1083,58 @@ class _ChatBubble extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Renders message text parsing markdown bold (**text**) and bullet lists cleanly.
+class _FormattedMessageText extends StatelessWidget {
+  final String text;
+  final TextStyle style;
+
+  const _FormattedMessageText({required this.text, required this.style});
+
+  @override
+  Widget build(BuildContext context) {
+    // Clean list bullets: turn leading "* " or "- " into a clean bullet "• "
+    final cleanText = text.replaceAll(RegExp(r'(^|\n)[\*\-]\s+'), r'$1• ');
+
+    // Match **bold**
+    final boldRegex = RegExp(r'\*\*(.*?)\*\*');
+    final spans = <TextSpan>[];
+    int lastMatchEnd = 0;
+
+    for (final match in boldRegex.allMatches(cleanText)) {
+      if (match.start > lastMatchEnd) {
+        spans.add(
+          TextSpan(
+            text: cleanText.substring(lastMatchEnd, match.start),
+            style: style,
+          ),
+        );
+      }
+
+      final boldContent = match.group(1) ?? '';
+      spans.add(
+        TextSpan(
+          text: boldContent,
+          style: style.copyWith(fontWeight: FontWeight.w800),
+        ),
+      );
+
+      lastMatchEnd = match.end;
+    }
+
+    if (lastMatchEnd < cleanText.length) {
+      spans.add(
+        TextSpan(text: cleanText.substring(lastMatchEnd), style: style),
+      );
+    }
+
+    if (spans.isEmpty) {
+      return Text(cleanText, style: style);
+    }
+
+    return Text.rich(TextSpan(children: spans), style: style);
   }
 }
 
@@ -891,11 +1182,10 @@ class _TypingBubbleState extends State<_TypingBubble>
             for (var i = 0; i < 3; i++) ...[
               if (i > 0) const SizedBox(width: 5),
               Opacity(
-                opacity: 0.25 +
+                opacity:
+                    0.25 +
                     0.75 *
-                        ((math.sin(
-                                    _controller.value * 2 * math.pi -
-                                        i * 0.7) +
+                        ((math.sin(_controller.value * 2 * math.pi - i * 0.7) +
                                 1) /
                             2),
                 child: Container(
@@ -953,7 +1243,9 @@ class _SuggestionPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final border = isDark ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
-    final textColor = isDark ? const Color(0xFFE4E4E7) : const Color(0xFF27272A);
+    final textColor = isDark
+        ? const Color(0xFFE4E4E7)
+        : const Color(0xFF27272A);
 
     void handleTap() {
       HapticFeedback.selectionClick();

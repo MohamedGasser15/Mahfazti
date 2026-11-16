@@ -103,7 +103,9 @@ class _AssistantNameSheetState extends State<_AssistantNameSheet> {
     final card = isDark ? const Color(0xFF141418) : Colors.white;
     final border = isDark ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
     final textPrimary = isDark ? Colors.white : const Color(0xFF09090B);
-    final textMuted = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
+    final textMuted = isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF71717A);
     final surface = isDark ? const Color(0xFF1A1A1E) : const Color(0xFFF3F3F6);
 
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
@@ -151,11 +153,7 @@ class _AssistantNameSheetState extends State<_AssistantNameSheet> {
                 ? 'سمّيه أي حاجة، وهو هيتجاوب عليها.'
                 : 'Call it whatever you want, it will answer to it.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13.5,
-              height: 1.4,
-              color: textMuted,
-            ),
+            style: TextStyle(fontSize: 13.5, height: 1.4, color: textMuted),
           ),
           const SizedBox(height: 18),
           widget.isGlass
@@ -173,8 +171,9 @@ class _AssistantNameSheetState extends State<_AssistantNameSheet> {
                       focusNode: _focusNode,
                       textAlign: TextAlign.center,
                       textCapitalization: TextCapitalization.words,
-                      keyboardAppearance:
-                          isDark ? Brightness.dark : Brightness.light,
+                      keyboardAppearance: isDark
+                          ? Brightness.dark
+                          : Brightness.light,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -210,8 +209,9 @@ class _AssistantNameSheetState extends State<_AssistantNameSheet> {
                     focusNode: _focusNode,
                     textAlign: TextAlign.center,
                     textCapitalization: TextCapitalization.words,
-                    keyboardAppearance:
-                        isDark ? Brightness.dark : Brightness.light,
+                    keyboardAppearance: isDark
+                        ? Brightness.dark
+                        : Brightness.light,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,

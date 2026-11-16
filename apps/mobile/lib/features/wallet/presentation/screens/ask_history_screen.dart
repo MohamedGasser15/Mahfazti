@@ -22,6 +22,14 @@ class AskHistoryScreen extends StatefulWidget {
 
 class _AskHistoryScreenState extends State<AskHistoryScreen> {
   @override
+  void initState() {
+    super.initState();
+    AskHistoryStore.syncFromBackend().then((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isAr = widget.isAr;
@@ -29,9 +37,12 @@ class _AskHistoryScreenState extends State<AskHistoryScreen> {
 
     final bg = isDark ? const Color(0xFF09090B) : const Color(0xFFF8F8FA);
     final textPrimary = isDark ? Colors.white : const Color(0xFF09090B);
-    final textMuted = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
-    final textSecondary =
-        isDark ? const Color(0xFFB4B4BC) : const Color(0xFF52525B);
+    final textMuted = isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF71717A);
+    final textSecondary = isDark
+        ? const Color(0xFFB4B4BC)
+        : const Color(0xFF52525B);
     final border = isDark ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
     final card = isDark ? const Color(0xFF141418) : Colors.white;
 
@@ -39,7 +50,8 @@ class _AskHistoryScreenState extends State<AskHistoryScreen> {
     final today = <AskConversation>[];
     final earlier = <AskConversation>[];
     for (final item in AskHistoryStore.items) {
-      final sameDay = item.createdAt.year == now.year &&
+      final sameDay =
+          item.createdAt.year == now.year &&
           item.createdAt.month == now.month &&
           item.createdAt.day == now.day;
       (sameDay ? today : earlier).add(item);
@@ -139,10 +151,7 @@ class _AskHistoryScreenState extends State<AskHistoryScreen> {
                     padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
                     children: [
                       if (today.isNotEmpty) ...[
-                        _sectionLabel(
-                          isAr ? 'اليوم' : 'TODAY',
-                          textMuted,
-                        ),
+                        _sectionLabel(isAr ? 'اليوم' : 'TODAY', textMuted),
                         _buildGroupedSection(
                           items: today,
                           isAr: isAr,
@@ -157,10 +166,7 @@ class _AskHistoryScreenState extends State<AskHistoryScreen> {
                         const SizedBox(height: 24),
                       ],
                       if (earlier.isNotEmpty) ...[
-                        _sectionLabel(
-                          isAr ? 'أقدم' : 'EARLIER',
-                          textMuted,
-                        ),
+                        _sectionLabel(isAr ? 'أقدم' : 'EARLIER', textMuted),
                         _buildGroupedSection(
                           items: earlier,
                           isAr: isAr,
@@ -247,9 +253,7 @@ class _AskHistoryScreenState extends State<AskHistoryScreen> {
             ? LiquidGlassSettings.ios27Dark
             : LiquidGlassSettings.ios27Light,
         useOwnLayer: true,
-        child: Column(
-          children: children,
-        ),
+        child: Column(children: children),
       );
     }
 
@@ -259,9 +263,7 @@ class _AskHistoryScreenState extends State<AskHistoryScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: border, width: 1),
       ),
-      child: Column(
-        children: children,
-      ),
+      child: Column(children: children),
     );
   }
 
@@ -275,7 +277,8 @@ class _AskHistoryScreenState extends State<AskHistoryScreen> {
     bool padded = false,
   }) {
     final now = DateTime.now();
-    final sameDay = item.createdAt.year == now.year &&
+    final sameDay =
+        item.createdAt.year == now.year &&
         item.createdAt.month == now.month &&
         item.createdAt.day == now.day;
     final preview = item.messages.isEmpty ? '' : item.messages.last.text;
@@ -291,7 +294,8 @@ class _AskHistoryScreenState extends State<AskHistoryScreen> {
       },
       onLongPress: () {
         HapticFeedback.mediumImpact();
-        setState(() => AskHistoryStore.items.remove(item));
+        AskHistoryStore.delete(item);
+        setState(() {});
       },
       child: Padding(
         padding: EdgeInsets.symmetric(

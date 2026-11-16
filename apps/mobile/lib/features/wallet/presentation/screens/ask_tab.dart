@@ -22,7 +22,11 @@ class AskTab extends StatefulWidget {
   State<AskTab> createState() => _AskTabState();
 }
 
-class _AskTabState extends State<AskTab> {
+class _AskTabState extends State<AskTab>
+    with AutomaticKeepAliveClientMixin<AskTab> {
+  @override
+  bool get wantKeepAlive => true;
+
   String? _firstName;
 
   final TextEditingController _controller = TextEditingController();
@@ -32,6 +36,9 @@ class _AskTabState extends State<AskTab> {
   void initState() {
     super.initState();
     _firstName = _readFirstName();
+    AskHistoryStore.syncFromBackend().then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -46,7 +53,7 @@ class _AskTabState extends State<AskTab> {
   void _submit() {
     final text = _controller.text.trim();
     if (text.isEmpty) {
-      _focusNode.requestFocus();
+      _openChat();
       return;
     }
     _controller.clear();
@@ -70,6 +77,7 @@ class _AskTabState extends State<AskTab> {
   Future<void> _openChat({
     String? prompt,
     List<AskMessage>? messages,
+    String? conversationId,
   }) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -77,6 +85,7 @@ class _AskTabState extends State<AskTab> {
           firstName: _firstName,
           initialPrompt: prompt,
           initialMessages: messages,
+          conversationId: conversationId,
         ),
       ),
     );
@@ -91,21 +100,25 @@ class _AskTabState extends State<AskTab> {
       ),
     );
     if (picked != null && mounted) {
-      _openChat(messages: picked.messages);
+      _openChat(messages: picked.messages, conversationId: picked.id);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final isIOS = Platform.isIOS;
 
     final bg = isDark ? const Color(0xFF09090B) : const Color(0xFFF8F8FA);
     final textPrimary = isDark ? Colors.white : const Color(0xFF09090B);
-    final textMuted = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
-    final textSecondary =
-        isDark ? const Color(0xFFB4B4BC) : const Color(0xFF52525B);
+    final textMuted = isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF71717A);
+    final textSecondary = isDark
+        ? const Color(0xFFB4B4BC)
+        : const Color(0xFF52525B);
     final border = isDark ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
 
     final prompts = isAr
@@ -272,7 +285,7 @@ class _AskTabState extends State<AskTab> {
           behavior: HitTestBehavior.opaque,
           onTap: () {
             HapticFeedback.selectionClick();
-            _openChat(messages: items[i].messages);
+            _openChat(messages: items[i].messages, conversationId: items[i].id);
           },
           child: Padding(
             padding: EdgeInsets.symmetric(
@@ -453,8 +466,7 @@ class _AskTabState extends State<AskTab> {
                 textInputAction: TextInputAction.send,
                 textCapitalization: TextCapitalization.sentences,
                 onSubmitted: (_) => _submit(),
-                keyboardAppearance:
-                    isDark ? Brightness.dark : Brightness.light,
+                keyboardAppearance: isDark ? Brightness.dark : Brightness.light,
                 cursorColor: textPrimary,
                 style: TextStyle(
                   fontSize: 15,
@@ -540,7 +552,9 @@ class _SuggestionPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final border = isDark ? const Color(0xFF27272A) : const Color(0xFFE4E4E7);
-    final textColor = isDark ? const Color(0xFFE4E4E7) : const Color(0xFF27272A);
+    final textColor = isDark
+        ? const Color(0xFFE4E4E7)
+        : const Color(0xFF27272A);
 
     void handleTap() {
       HapticFeedback.selectionClick();
