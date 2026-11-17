@@ -350,6 +350,12 @@ abstract class AppLocalizations {
   /// **'Cancel'**
   String get cancel;
 
+  /// No description provided for @cancelAnytime.
+  ///
+  /// In en, this message translates to:
+  /// **'You can cancel anytime'**
+  String get cancelAnytime;
+
   /// No description provided for @cannotOpenStore.
   ///
   /// In en, this message translates to:
@@ -637,6 +643,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Current Icon'**
   String get currentIcon;
+
+  /// No description provided for @currentPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Plan'**
+  String get currentPlan;
 
   /// No description provided for @currentPasscode.
   ///
@@ -1100,6 +1112,12 @@ abstract class AppLocalizations {
   /// **'We\'ll send a new verification code to your email to reset your PIN.'**
   String get forgotPinDescription;
 
+  /// No description provided for @free.
+  ///
+  /// In en, this message translates to:
+  /// **'Free'**
+  String get free;
+
   /// No description provided for @from.
   ///
   /// In en, this message translates to:
@@ -1310,6 +1328,12 @@ abstract class AppLocalizations {
   /// **'Lost access to your email?'**
   String get lostAccessToEmail;
 
+  /// No description provided for @mahfaztiPro.
+  ///
+  /// In en, this message translates to:
+  /// **'Mahfazti Pro'**
+  String get mahfaztiPro;
+
   /// No description provided for @manage.
   ///
   /// In en, this message translates to:
@@ -1351,6 +1375,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Monthly Income'**
   String get monthlyIncome;
+
+  /// No description provided for @mostPopular.
+  ///
+  /// In en, this message translates to:
+  /// **'Most Popular'**
+  String get mostPopular;
 
   /// No description provided for @name.
   ///
@@ -1556,6 +1586,18 @@ abstract class AppLocalizations {
   /// **'Plan Your Future'**
   String get planYourFuture;
 
+  /// No description provided for @plansAndSubscriptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Plans & Subscriptions'**
+  String get plansAndSubscriptions;
+
+  /// No description provided for @plansAndSubscriptionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the plan that fits your needs'**
+  String get plansAndSubscriptionsSubtitle;
+
   /// No description provided for @pleaseConfirmNewPasscode.
   ///
   /// In en, this message translates to:
@@ -1754,6 +1796,12 @@ abstract class AppLocalizations {
   /// **'Save'**
   String get save;
 
+  /// No description provided for @save35.
+  ///
+  /// In en, this message translates to:
+  /// **'Save 35%'**
+  String get save35;
+
   /// No description provided for @search.
   ///
   /// In en, this message translates to:
@@ -1885,6 +1933,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sort'**
   String get sort;
+
+  /// No description provided for @subscribeNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscribe Now'**
+  String get subscribeNow;
+
+  /// No description provided for @subscription.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription'**
+  String get subscription;
 
   /// No description provided for @spendingInsights.
   ///
@@ -3392,6 +3452,12 @@ abstract class AppLocalizations {
   /// **'/ month'**
   String get perMonth;
 
+  /// No description provided for @perYear.
+  ///
+  /// In en, this message translates to:
+  /// **'/ year'**
+  String get perYear;
+
   /// No description provided for @nextDueBill.
   ///
   /// In en, this message translates to:
@@ -3589,6 +3655,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No categories found'**
   String get noCategoriesFound;
+
+  /// No description provided for @restorePurchases.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore Purchases'**
+  String get restorePurchases;
+
+  /// No description provided for @restoringPurchases.
+  ///
+  /// In en, this message translates to:
+  /// **'Restoring purchases...'**
+  String get restoringPurchases;
+
+  /// No description provided for @subscriptionSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription activated successfully! Welcome to Mahfazti Pro.'**
+  String get subscriptionSuccess;
+
+  /// No description provided for @subscriptionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase failed or was canceled.'**
+  String get subscriptionFailed;
+
+  /// No description provided for @noPurchasesToRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'No active purchases found to restore.'**
+  String get noPurchasesToRestore;
+
+  /// No description provided for @upgradeToPro.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade to Pro'**
+  String get upgradeToPro;
+
+  /// No description provided for @purchasing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing purchase...'**
+  String get purchasing;
+
+  /// No description provided for @storeUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'In-app purchases are not available at this moment.'**
+  String get storeUnavailable;
+
+  /// No description provided for @loadingPrices.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading store prices...'**
+  String get loadingPrices;
+
+  /// No description provided for @cancelSubscription.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel Subscription'**
+  String get cancelSubscription;
+
+  /// No description provided for @subscriptionCanceled.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription canceled successfully'**
+  String get subscriptionCanceled;
+
+  /// No description provided for @cancelSubscriptionConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to cancel your active subscription?'**
+  String get cancelSubscriptionConfirm;
 }
 
 class _AppLocalizationsDelegate

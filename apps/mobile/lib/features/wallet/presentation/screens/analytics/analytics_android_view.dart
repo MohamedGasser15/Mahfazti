@@ -21,7 +21,11 @@ class AnalyticsAndroidView extends StatefulWidget {
   State<AnalyticsAndroidView> createState() => _AnalyticsAndroidViewState();
 }
 
-class _AnalyticsAndroidViewState extends State<AnalyticsAndroidView> {
+class _AnalyticsAndroidViewState extends State<AnalyticsAndroidView>
+    with AutomaticKeepAliveClientMixin<AnalyticsAndroidView> {
+  @override
+  bool get wantKeepAlive => true;
+
   static const Color _green = Color(0xFF10B981);
   static const Color _red = Color(0xFFF87171);
 
@@ -60,8 +64,7 @@ class _AnalyticsAndroidViewState extends State<AnalyticsAndroidView> {
   Color get _background =>
       _isDark ? const Color(0xFF09090C) : const Color(0xFFF8F8FA);
 
-  Color get _cardBg =>
-      _isDark ? const Color(0xFF131317) : Colors.white;
+  Color get _cardBg => _isDark ? const Color(0xFF131317) : Colors.white;
 
   Color get _textPrimary =>
       _isDark ? const Color(0xFFEDEDF0) : const Color(0xFF141416);
@@ -89,6 +92,7 @@ class _AnalyticsAndroidViewState extends State<AnalyticsAndroidView> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final l10n = context.l10n;
     final isAr = context.isArabic;
     final bottomPadding = _canPop
@@ -177,7 +181,8 @@ class _AnalyticsAndroidViewState extends State<AnalyticsAndroidView> {
             await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const AddAccountScreen(thingsYouOwnFirst: true),
+                builder: (context) =>
+                    const AddAccountScreen(thingsYouOwnFirst: true),
               ),
             );
             _controller.refresh();
@@ -186,18 +191,18 @@ class _AnalyticsAndroidViewState extends State<AnalyticsAndroidView> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: _isDark ? const Color(0xFF181820) : const Color(0xFFF0F0F4),
+              color: _isDark
+                  ? const Color(0xFF181820)
+                  : const Color(0xFFF0F0F4),
               shape: BoxShape.circle,
               border: Border.all(
-                color: _isDark ? const Color(0xFF2A2A36) : const Color(0xFFE2E2E8),
+                color: _isDark
+                    ? const Color(0xFF2A2A36)
+                    : const Color(0xFFE2E2E8),
                 width: 0.8,
               ),
             ),
-            child: Icon(
-              Icons.add_rounded,
-              size: 22,
-              color: _accent,
-            ),
+            child: Icon(Icons.add_rounded, size: 22, color: _accent),
           ),
         ),
       ],
@@ -236,7 +241,9 @@ class _AnalyticsAndroidViewState extends State<AnalyticsAndroidView> {
                     borderRadius: BorderRadius.circular(10.5),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: _isDark ? 0.35 : 0.08),
+                        color: Colors.black.withValues(
+                          alpha: _isDark ? 0.35 : 0.08,
+                        ),
                         blurRadius: 6,
                         offset: const Offset(0, 2),
                       ),
@@ -259,7 +266,9 @@ class _AnalyticsAndroidViewState extends State<AnalyticsAndroidView> {
                           duration: const Duration(milliseconds: 200),
                           style: TextStyle(
                             fontSize: 13.5,
-                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                            fontWeight: isSelected
+                                ? FontWeight.w800
+                                : FontWeight.w600,
                             color: isSelected ? Colors.black : _textSecondary,
                             fontFamily: isAr ? 'Cairo' : null,
                           ),
@@ -283,29 +292,41 @@ class _AnalyticsAndroidViewState extends State<AnalyticsAndroidView> {
   //#endregion
 
   //#region Hero Balance Display
-  Widget _buildHeroMetrics({required bool isAr, required AppLocalizations l10n}) {
+  Widget _buildHeroMetrics({
+    required bool isAr,
+    required AppLocalizations l10n,
+  }) {
     final isScrubbing = _scrubbedIndex != null && _scrubbedValue != null;
-    final currentAmount = _scrubbedValue ??
+    final currentAmount =
+        _scrubbedValue ??
         (_controller.wealthTab == WealthTab.debt
             ? _controller.totalDebt
             : (_controller.wealthTab == WealthTab.assets
-                ? _controller.totalAssets
-                : _controller.netWorth));
+                  ? _controller.totalAssets
+                  : _controller.netWorth));
 
     final subtitleText = isScrubbing
         ? (isAr ? 'نقطة بيانية محددة من السجل' : 'Historical chart point')
         : (_controller.wealthTab == WealthTab.netWorth
-            ? '${_controller.formatAmount(_controller.spendable, isAr: isAr, decimals: false)} ${isAr ? "متاح الآن" : "available now"}'
-            : (_controller.wealthTab == WealthTab.assets
-                ? (isAr ? 'إجمالي الأصول المملوكة' : 'Total owned assets')
-                : (isAr ? 'إجمالي الالتزامات والديون' : 'Total outstanding debt')));
+              ? '${_controller.formatAmount(_controller.spendable, isAr: isAr, decimals: false)} ${isAr ? "متاح الآن" : "available now"}'
+              : (_controller.wealthTab == WealthTab.assets
+                    ? (isAr ? 'إجمالي الأصول المملوكة' : 'Total owned assets')
+                    : (isAr
+                          ? 'إجمالي الالتزامات والديون'
+                          : 'Total outstanding debt')));
 
     final double deltaVal;
     final double deltaPct;
     final bool isPositive;
     if (isScrubbing) {
-      deltaVal = _controller.deltaForPointIndex(_scrubbedIndex!, _scrubbedValue!);
-      deltaPct = _controller.deltaPercentForPointIndex(_scrubbedIndex!, _scrubbedValue!);
+      deltaVal = _controller.deltaForPointIndex(
+        _scrubbedIndex!,
+        _scrubbedValue!,
+      );
+      deltaPct = _controller.deltaPercentForPointIndex(
+        _scrubbedIndex!,
+        _scrubbedValue!,
+      );
       isPositive = deltaVal >= 0;
     } else {
       deltaVal = _controller.deltaAmount;
@@ -313,9 +334,13 @@ class _AnalyticsAndroidViewState extends State<AnalyticsAndroidView> {
       isPositive = _controller.deltaIsPositive;
     }
 
-    final deltaColor = isPositive ? _green : _red;
-    final deltaSign = isPositive ? '+' : '';
-    final deltaFormatted = '$deltaSign${_controller.formatAmount(deltaVal, isAr: isAr, decimals: false)} (${deltaPct.abs().toStringAsFixed(1)}%)';
+    final isZeroDelta = deltaVal == 0.0;
+    final deltaColor = isZeroDelta
+        ? _textSecondary
+        : (isPositive ? _green : _red);
+    final deltaSign = isPositive && !isZeroDelta ? '+' : '';
+    final deltaFormatted =
+        '$deltaSign${_controller.formatAmount(deltaVal, isAr: isAr, decimals: false)} (${deltaPct.abs().toStringAsFixed(1)}%)';
     final periodOrDateLabel = isScrubbing
         ? _controller.formatPointDate(_scrubbedIndex!, isAr: isAr)
         : (isAr ? 'هذا الشهر' : 'this month');
@@ -362,14 +387,16 @@ class _AnalyticsAndroidViewState extends State<AnalyticsAndroidView> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    isPositive
-                        ? Icons.arrow_drop_up_rounded
-                        : Icons.arrow_drop_down_rounded,
-                    size: 16,
-                    color: deltaColor,
-                  ),
-                  const SizedBox(width: 2),
+                  if (!isZeroDelta) ...[
+                    Icon(
+                      isPositive
+                          ? Icons.arrow_drop_up_rounded
+                          : Icons.arrow_drop_down_rounded,
+                      size: 16,
+                      color: deltaColor,
+                    ),
+                    const SizedBox(width: 2),
+                  ],
                   Text(
                     deltaFormatted,
                     style: TextStyle(
@@ -508,7 +535,9 @@ class _AnalyticsAndroidViewState extends State<AnalyticsAndroidView> {
                     borderRadius: BorderRadius.circular(9),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: _isDark ? 0.35 : 0.08),
+                        color: Colors.black.withValues(
+                          alpha: _isDark ? 0.35 : 0.08,
+                        ),
                         blurRadius: 5,
                         offset: const Offset(0, 1.5),
                       ),
@@ -531,7 +560,9 @@ class _AnalyticsAndroidViewState extends State<AnalyticsAndroidView> {
                           duration: const Duration(milliseconds: 180),
                           style: TextStyle(
                             fontSize: 12.5,
-                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                            fontWeight: isSelected
+                                ? FontWeight.w800
+                                : FontWeight.w600,
                             color: isSelected ? Colors.black : _textSecondary,
                             fontFamily: isAr ? 'Cairo' : null,
                           ),
@@ -600,16 +631,14 @@ class _AnalyticsAndroidViewState extends State<AnalyticsAndroidView> {
                       width: 0.8,
                     ),
                   ),
-                  child: Icon(
-                    Icons.home_rounded,
-                    size: 20,
-                    color: _accent,
-                  ),
+                  child: Icon(Icons.home_rounded, size: 20, color: _accent),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    isAr ? 'لا توجد أصول مضافة بعد' : 'Nothing you own is here yet',
+                    isAr
+                        ? 'لا توجد أصول مضافة بعد'
+                        : 'Nothing you own is here yet',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
@@ -641,7 +670,8 @@ class _AnalyticsAndroidViewState extends State<AnalyticsAndroidView> {
                   await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const AddAccountScreen(thingsYouOwnFirst: true),
+                      builder: (context) =>
+                          const AddAccountScreen(thingsYouOwnFirst: true),
                     ),
                   );
                   _controller.refresh();
@@ -704,7 +734,10 @@ class _AnalyticsAndroidViewState extends State<AnalyticsAndroidView> {
                 ),
                 TextButton(
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
@@ -713,7 +746,8 @@ class _AnalyticsAndroidViewState extends State<AnalyticsAndroidView> {
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const AddAccountScreen(thingsYouOwnFirst: true),
+                        builder: (context) =>
+                            const AddAccountScreen(thingsYouOwnFirst: true),
                       ),
                     );
                     _controller.refresh();
@@ -833,10 +867,7 @@ class _AnalyticsAndroidViewState extends State<AnalyticsAndroidView> {
                     isAr
                         ? 'أنت حر من الالتزامات المالية والديون حالياً.'
                         : 'You are currently debt-free.',
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      color: _textSecondary,
-                    ),
+                    style: TextStyle(fontSize: 12.5, color: _textSecondary),
                   ),
                 ],
               )
@@ -981,11 +1012,7 @@ class _AnalyticsAndroidViewState extends State<AnalyticsAndroidView> {
                                 width: 0.8,
                               ),
                             ),
-                            child: Icon(
-                              item.icon,
-                              size: 16,
-                              color: item.color,
-                            ),
+                            child: Icon(item.icon, size: 16, color: item.color),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
@@ -1000,7 +1027,8 @@ class _AnalyticsAndroidViewState extends State<AnalyticsAndroidView> {
                                     color: _textPrimary,
                                   ),
                                 ),
-                                if (item.displaySubtitle(isAr: isAr) != null) ...[
+                                if (item.displaySubtitle(isAr: isAr) !=
+                                    null) ...[
                                   const SizedBox(height: 1),
                                   Text(
                                     item.displaySubtitle(isAr: isAr)!,
@@ -1048,14 +1076,12 @@ class _AnalyticsAndroidViewState extends State<AnalyticsAndroidView> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.add_rounded,
-                            size: 16,
-                            color: _accent,
-                          ),
+                          Icon(Icons.add_rounded, size: 16, color: _accent),
                           const SizedBox(width: 6),
                           Text(
-                            isAr ? 'إضافة حساب أو محفظة' : 'Add account or wallet',
+                            isAr
+                                ? 'إضافة حساب أو محفظة'
+                                : 'Add account or wallet',
                             style: TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.w700,

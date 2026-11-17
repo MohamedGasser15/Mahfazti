@@ -140,6 +140,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get cancel => 'إلغاء';
 
   @override
+  String get cancelAnytime => 'يمكنك الإلغاء في أي وقت';
+
+  @override
   String get cannotOpenStore => 'لا يمكن فتح المتجر';
 
   @override
@@ -289,6 +292,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get currentIcon => 'الأيقونة الحالية';
+
+  @override
+  String get currentPlan => 'الباقة الحالية';
 
   @override
   String get currentPasscode => 'رمز المرور الحالي';
@@ -558,6 +564,9 @@ class AppLocalizationsAr extends AppLocalizations {
       'سنرسل رمز تحقق جديد إلى بريدك الإلكتروني لإعادة تعيين الرمز.';
 
   @override
+  String get free => 'مجاني';
+
+  @override
   String get from => 'من';
 
   @override
@@ -664,6 +673,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get lostAccessToEmail => 'فقدت الوصول إلى بريدك الإلكتروني؟';
 
   @override
+  String get mahfaztiPro => 'محفظتي برو';
+
+  @override
   String get manage => 'إدارة';
 
   @override
@@ -683,6 +695,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get monthlyIncome => 'الدخل الشهري';
+
+  @override
+  String get mostPopular => 'الأكثر شعبية';
 
   @override
   String get name => 'الاسم';
@@ -789,6 +804,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get planYourFuture => 'خطط لمستقبلك';
 
   @override
+  String get plansAndSubscriptions => 'الباقات والاشتراكات';
+
+  @override
+  String get plansAndSubscriptionsSubtitle =>
+      'اختر الباقة التي تناسب احتياجاتك';
+
+  @override
   String get pleaseConfirmNewPasscode => 'الرجاء تأكيد رمز المرور الجديد';
 
   @override
@@ -893,6 +915,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get save => 'حفظ';
 
   @override
+  String get save35 => 'وفّر 35%';
+
+  @override
   String get search => 'بحث';
 
   @override
@@ -960,6 +985,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get sort => 'ترتيب';
+
+  @override
+  String get subscribeNow => 'اشترك الآن';
+
+  @override
+  String get subscription => 'الاشتراك';
 
   @override
   String get spendingInsights => 'رؤى الإنفاق';
@@ -1778,6 +1809,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get perMonth => '/ شهر';
 
   @override
+  String get perYear => '/ سنة';
+
+  @override
   String nextDueBill(Object title) {
     return 'الفاتورة القادمة: $title';
   }
@@ -1932,4 +1966,44 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get noCategoriesFound => 'لم يتم العثور على فئات';
+
+  @override
+  String get restorePurchases => 'استعادة المشتريات';
+
+  @override
+  String get restoringPurchases => 'جاري استعادة المشتريات...';
+
+  @override
+  String get subscriptionSuccess =>
+      'تم تفعيل الاشتراك بنجاح! أهلاً بك في باقة المحترفين.';
+
+  @override
+  String get subscriptionFailed => 'فشلت عملية الشراء أو تم إلغاؤها.';
+
+  @override
+  String get noPurchasesToRestore =>
+      'لم يتم العثور على مشتريات سابقة لاستعادتها.';
+
+  @override
+  String get upgradeToPro => 'الترقية إلى Pro';
+
+  @override
+  String get purchasing => 'جاري معالجة الشراء...';
+
+  @override
+  String get storeUnavailable =>
+      'عمليات الشراء داخل التطبيق غير متوفرة حالياً.';
+
+  @override
+  String get loadingPrices => 'جاري تحميل الأسعار من المتجر...';
+
+  @override
+  String get cancelSubscription => 'إلغاء الاشتراك';
+
+  @override
+  String get subscriptionCanceled => 'تم إلغاء الاشتراك بنجاح';
+
+  @override
+  String get cancelSubscriptionConfirm =>
+      'هل أنت متأكد من رغبتك في إلغاء الاشتراك الحالي؟';
 }

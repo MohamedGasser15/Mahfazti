@@ -23,7 +23,11 @@ class AnalyticsIosView extends StatefulWidget {
   State<AnalyticsIosView> createState() => _AnalyticsIosViewState();
 }
 
-class _AnalyticsIosViewState extends State<AnalyticsIosView> {
+class _AnalyticsIosViewState extends State<AnalyticsIosView>
+    with AutomaticKeepAliveClientMixin<AnalyticsIosView> {
+  @override
+  bool get wantKeepAlive => true;
+
   Color get _accent => _isDark ? Colors.white : Colors.black;
 
   late final AnalyticsController _controller =
@@ -58,8 +62,7 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
   Color get _background =>
       _isDark ? const Color(0xFF09090C) : const Color(0xFFF8F8FA);
 
-  Color get _cardBg =>
-      _isDark ? const Color(0xFF131317) : Colors.white;
+  Color get _cardBg => _isDark ? const Color(0xFF131317) : Colors.white;
 
   Color get _textPrimary =>
       _isDark ? const Color(0xFFEDEDF0) : const Color(0xFF141416);
@@ -87,6 +90,7 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final l10n = context.l10n;
     final isAr = context.isArabic;
     final topPadding = MediaQuery.paddingOf(context).top;
@@ -143,7 +147,9 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
                 useOwnLayer: true,
                 shape: GlassIconButtonShape.circle,
                 icon: Icon(
-                  isAr ? CupertinoIcons.chevron_right : CupertinoIcons.chevron_left,
+                  isAr
+                      ? CupertinoIcons.chevron_right
+                      : CupertinoIcons.chevron_left,
                   size: 20,
                   color: _textPrimary,
                 ),
@@ -171,17 +177,14 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
           iconSize: 20,
           useOwnLayer: true,
           shape: GlassIconButtonShape.circle,
-          icon: Icon(
-            CupertinoIcons.add,
-            size: 20,
-            color: _textPrimary,
-          ),
+          icon: Icon(CupertinoIcons.add, size: 20, color: _textPrimary),
           onPressed: () async {
             HapticFeedback.selectionClick();
             await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const AddAccountScreen(thingsYouOwnFirst: true),
+                builder: (context) =>
+                    const AddAccountScreen(thingsYouOwnFirst: true),
               ),
             );
             _controller.refresh();
@@ -222,9 +225,7 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
         backgroundColor: _isDark
             ? Colors.white.withValues(alpha: 0.08)
             : Colors.black.withValues(alpha: 0.06),
-        indicatorColor: _isDark
-            ? const Color(0xFF27272A)
-            : Colors.white,
+        indicatorColor: _isDark ? const Color(0xFF27272A) : Colors.white,
         selectedTextStyle: TextStyle(
           fontSize: 14.5,
           fontWeight: FontWeight.w700,
@@ -292,12 +293,14 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
                           duration: const Duration(milliseconds: 200),
                           style: TextStyle(
                             fontSize: 14,
-                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
                             color: isSelected
                                 ? (_isDark ? Colors.white : Colors.black)
                                 : (_isDark
-                                    ? Colors.white.withValues(alpha: 0.6)
-                                    : Colors.black.withValues(alpha: 0.55)),
+                                      ? Colors.white.withValues(alpha: 0.6)
+                                      : Colors.black.withValues(alpha: 0.55)),
                             fontFamily: isAr ? 'Cairo' : null,
                           ),
                           child: Text(
@@ -320,29 +323,41 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
   //#endregion
 
   //#region Hero Balance Display
-  Widget _buildHeroMetrics({required bool isAr, required AppLocalizations l10n}) {
+  Widget _buildHeroMetrics({
+    required bool isAr,
+    required AppLocalizations l10n,
+  }) {
     final isScrubbing = _scrubbedIndex != null && _scrubbedValue != null;
-    final currentAmount = _scrubbedValue ??
+    final currentAmount =
+        _scrubbedValue ??
         (_controller.wealthTab == WealthTab.debt
             ? _controller.totalDebt
             : (_controller.wealthTab == WealthTab.assets
-                ? _controller.totalAssets
-                : _controller.netWorth));
+                  ? _controller.totalAssets
+                  : _controller.netWorth));
 
     final subtitleText = isScrubbing
         ? (isAr ? 'نقطة بيانية محددة من السجل' : 'Historical chart point')
         : (_controller.wealthTab == WealthTab.netWorth
-            ? (isAr ? 'إجمالي صافي الثروة' : 'Total Net Worth')
-            : (_controller.wealthTab == WealthTab.assets
-                ? (isAr ? 'إجمالي الأصول المملوكة' : 'Total owned assets')
-                : (isAr ? 'إجمالي الالتزامات والديون' : 'Total outstanding debt')));
+              ? (isAr ? 'إجمالي صافي الثروة' : 'Total Net Worth')
+              : (_controller.wealthTab == WealthTab.assets
+                    ? (isAr ? 'إجمالي الأصول المملوكة' : 'Total owned assets')
+                    : (isAr
+                          ? 'إجمالي الالتزامات والديون'
+                          : 'Total outstanding debt')));
 
     final double deltaVal;
     final double deltaPct;
     final bool isPositive;
     if (isScrubbing) {
-      deltaVal = _controller.deltaForPointIndex(_scrubbedIndex!, _scrubbedValue!);
-      deltaPct = _controller.deltaPercentForPointIndex(_scrubbedIndex!, _scrubbedValue!);
+      deltaVal = _controller.deltaForPointIndex(
+        _scrubbedIndex!,
+        _scrubbedValue!,
+      );
+      deltaPct = _controller.deltaPercentForPointIndex(
+        _scrubbedIndex!,
+        _scrubbedValue!,
+      );
       isPositive = deltaVal >= 0;
     } else {
       deltaVal = _controller.deltaAmount;
@@ -350,9 +365,11 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
       isPositive = _controller.deltaIsPositive;
     }
 
+    final isZeroDelta = deltaVal == 0.0;
     final deltaColor = _textPrimary;
-    final deltaSign = isPositive ? '+' : '';
-    final deltaFormatted = '$deltaSign${_controller.formatAmount(deltaVal, isAr: isAr, decimals: false)} (${deltaPct.abs().toStringAsFixed(1)}%)';
+    final deltaSign = isPositive && !isZeroDelta ? '+' : '';
+    final deltaFormatted =
+        '$deltaSign${_controller.formatAmount(deltaVal, isAr: isAr, decimals: false)} (${deltaPct.abs().toStringAsFixed(1)}%)';
     final periodOrDateLabel = isScrubbing
         ? _controller.formatPointDate(_scrubbedIndex!, isAr: isAr)
         : (isAr ? 'هذا الشهر' : 'this month');
@@ -390,16 +407,16 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
                 _controller.totalDebt == 0 &&
                 !isScrubbing)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 9,
+                  vertical: 3.5,
+                ),
                 decoration: BoxDecoration(
                   color: _isDark
                       ? Colors.white.withValues(alpha: 0.08)
                       : Colors.black.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: _border,
-                    width: 0.8,
-                  ),
+                  border: Border.all(color: _border, width: 0.8),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -423,28 +440,30 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
               )
             else
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 9,
+                  vertical: 3.5,
+                ),
                 decoration: BoxDecoration(
                   color: _isDark
                       ? Colors.white.withValues(alpha: 0.08)
                       : Colors.black.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: _border,
-                    width: 0.8,
-                  ),
+                  border: Border.all(color: _border, width: 0.8),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      isPositive
-                          ? CupertinoIcons.arrowtriangle_up_fill
-                          : CupertinoIcons.arrowtriangle_down_fill,
-                      size: 9,
-                      color: deltaColor,
-                    ),
-                    const SizedBox(width: 4),
+                    if (!isZeroDelta) ...[
+                      Icon(
+                        isPositive
+                            ? CupertinoIcons.arrowtriangle_up_fill
+                            : CupertinoIcons.arrowtriangle_down_fill,
+                        size: 9,
+                        color: deltaColor,
+                      ),
+                      const SizedBox(width: 4),
+                    ],
                     Text(
                       deltaFormatted,
                       style: TextStyle(
@@ -573,9 +592,7 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
         backgroundColor: _isDark
             ? Colors.white.withValues(alpha: 0.08)
             : Colors.black.withValues(alpha: 0.06),
-        indicatorColor: _isDark
-            ? const Color(0xFF27272A)
-            : Colors.white,
+        indicatorColor: _isDark ? const Color(0xFF27272A) : Colors.white,
         selectedTextStyle: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w700,
@@ -627,7 +644,9 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: _isDark ? 0.35 : 0.08),
+                        color: Colors.black.withValues(
+                          alpha: _isDark ? 0.35 : 0.08,
+                        ),
                         blurRadius: 5,
                         offset: const Offset(0, 1.5),
                       ),
@@ -650,12 +669,14 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
                           duration: const Duration(milliseconds: 180),
                           style: TextStyle(
                             fontSize: 12.5,
-                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
                             color: isSelected
                                 ? (_isDark ? Colors.white : Colors.black)
                                 : (_isDark
-                                    ? Colors.white.withValues(alpha: 0.6)
-                                    : Colors.black.withValues(alpha: 0.55)),
+                                      ? Colors.white.withValues(alpha: 0.6)
+                                      : Colors.black.withValues(alpha: 0.55)),
                             fontFamily: isAr ? 'Cairo' : null,
                           ),
                           child: Text(p.label(isAr: isAr)),
@@ -692,19 +713,30 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
 
     final statusText = isRunwaySafe
         ? (isAr ? 'أمان ممتاز' : 'Safe')
-        : (isRunwayModerate ? (isAr ? 'مقبول' : 'Fair') : (isAr ? 'يحتاج دعم' : 'Low'));
+        : (isRunwayModerate
+              ? (isAr ? 'مقبول' : 'Fair')
+              : (isAr ? 'يحتاج دعم' : 'Low'));
 
-    final totalAssets = _controller.totalAssets > 0 ? _controller.totalAssets : 1.0;
+    final totalAssets = _controller.totalAssets > 0
+        ? _controller.totalAssets
+        : 1.0;
     final cashPct = ((_controller.liquidCashTotal / totalAssets) * 100).round();
     final goldPct = ((_controller.goldAssetsTotal / totalAssets) * 100).round();
-    final certPct = ((_controller.certificatesTotal / totalAssets) * 100).round();
+    final certPct = ((_controller.certificatesTotal / totalAssets) * 100)
+        .round();
     final propPct = ((_controller.propertiesTotal / totalAssets) * 100).round();
 
     // Monochrome allocation palette (executive grayscale obsidian)
     final cashColor = _isDark ? Colors.white : const Color(0xFF18181B);
-    final goldColor = _isDark ? Colors.white.withValues(alpha: 0.65) : const Color(0xFF52525B);
-    final certColor = _isDark ? Colors.white.withValues(alpha: 0.40) : const Color(0xFF8E8E93);
-    final propColor = _isDark ? Colors.white.withValues(alpha: 0.20) : const Color(0xFFC7C7CC);
+    final goldColor = _isDark
+        ? Colors.white.withValues(alpha: 0.65)
+        : const Color(0xFF52525B);
+    final certColor = _isDark
+        ? Colors.white.withValues(alpha: 0.40)
+        : const Color(0xFF8E8E93);
+    final propColor = _isDark
+        ? Colors.white.withValues(alpha: 0.20)
+        : const Color(0xFFC7C7CC);
 
     return Container(
       decoration: BoxDecoration(
@@ -752,16 +784,16 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
                       isAr
                           ? 'السيولة تكفي نفقاتك لمدة ${runway.toStringAsFixed(1)} شهر بدون دخل'
                           : 'Liquid cash covers ${runway.toStringAsFixed(1)} months of burn rate',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: _textSecondary,
-                      ),
+                      style: TextStyle(fontSize: 11.5, color: _textSecondary),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 3.5,
+                ),
                 decoration: BoxDecoration(
                   color: _isDark
                       ? Colors.white.withValues(alpha: 0.08)
@@ -848,10 +880,11 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
                       flex: propPct,
                       child: Container(color: propColor),
                     ),
-                  if (cashPct == 0 && goldPct == 0 && certPct == 0 && propPct == 0)
-                    Expanded(
-                      child: Container(color: cashColor),
-                    ),
+                  if (cashPct == 0 &&
+                      goldPct == 0 &&
+                      certPct == 0 &&
+                      propPct == 0)
+                    Expanded(child: Container(color: cashColor)),
                 ],
               ),
             ),
@@ -943,7 +976,9 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  certTotal > 0 ? CupertinoIcons.sparkles : CupertinoIcons.chart_pie_fill,
+                  certTotal > 0
+                      ? CupertinoIcons.sparkles
+                      : CupertinoIcons.chart_pie_fill,
                   size: 16,
                   color: _textPrimary,
                 ),
@@ -955,8 +990,12 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
                   children: [
                     Text(
                       certTotal > 0
-                          ? (isAr ? 'الدخل السلبي المتوقع' : 'Estimated Passive Income')
-                          : (isAr ? 'تنمية أصولك الاستثمارية' : 'Grow Your Asset Yield'),
+                          ? (isAr
+                                ? 'الدخل السلبي المتوقع'
+                                : 'Estimated Passive Income')
+                          : (isAr
+                                ? 'تنمية أصولك الاستثمارية'
+                                : 'Grow Your Asset Yield'),
                       style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w800,
@@ -967,15 +1006,12 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
                     Text(
                       certTotal > 0
                           ? (isAr
-                              ? 'عوائد شهرية تقديرية من شهاداتك وودائعك البنكية'
-                              : 'Estimated monthly cash payout from bank certificates')
+                                ? 'عوائد شهرية تقديرية من شهاداتك وودائعك البنكية'
+                                : 'Estimated monthly cash payout from bank certificates')
                           : (isAr
-                              ? 'أضف شهادة بنكية أو صندوق استثماري لحساب عوائدك التلقائية'
-                              : 'Add CDs, funds, or gold to track effortless monthly yield'),
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: _textSecondary,
-                      ),
+                                ? 'أضف شهادة بنكية أو صندوق استثماري لحساب عوائدك التلقائية'
+                                : 'Add CDs, funds, or gold to track effortless monthly yield'),
+                      style: TextStyle(fontSize: 11.5, color: _textSecondary),
                     ),
                   ],
                 ),
@@ -997,14 +1033,24 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
             const SizedBox(height: 10),
             Row(
               children: [
-                Icon(CupertinoIcons.shield_fill, size: 14, color: _textSecondary),
+                Icon(
+                  CupertinoIcons.shield_fill,
+                  size: 14,
+                  color: _textSecondary,
+                ),
                 const SizedBox(width: 6),
                 Text(
-                  isAr ? 'ملاذ التحوط من التضخم (ذهب): ' : 'Inflation hedge (Gold): ',
+                  isAr
+                      ? 'ملاذ التحوط من التضخم (ذهب): '
+                      : 'Inflation hedge (Gold): ',
                   style: TextStyle(fontSize: 11.5, color: _textSecondary),
                 ),
                 Text(
-                  _controller.formatAmount(goldTotal, isAr: isAr, decimals: false),
+                  _controller.formatAmount(
+                    goldTotal,
+                    isAr: isAr,
+                    decimals: false,
+                  ),
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -1042,7 +1088,9 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
               shape: BoxShape.circle,
             ),
             child: Icon(
-              isZero ? CupertinoIcons.checkmark_shield_fill : CupertinoIcons.gauge_badge_plus,
+              isZero
+                  ? CupertinoIcons.checkmark_shield_fill
+                  : CupertinoIcons.gauge_badge_plus,
               size: 16,
               color: _textPrimary,
             ),
@@ -1064,15 +1112,12 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
                 Text(
                   isZero
                       ? (isAr
-                          ? 'أنت حر مالياً 100% وبدون أي التزامات مسجلة'
-                          : 'Zero outstanding liabilities — 100% debt-free')
+                            ? 'أنت حر مالياً 100% وبدون أي التزامات مسجلة'
+                            : 'Zero outstanding liabilities — 100% debt-free')
                       : (isAr
-                          ? 'الديون تمثل ${debtRatio.toStringAsFixed(1)}% من ثروتك (الأمان تحت 30%)'
-                          : 'Debt represents ${debtRatio.toStringAsFixed(1)}% of assets (Keep under 30%)'),
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    color: _textSecondary,
-                  ),
+                            ? 'الديون تمثل ${debtRatio.toStringAsFixed(1)}% من ثروتك (الأمان تحت 30%)'
+                            : 'Debt represents ${debtRatio.toStringAsFixed(1)}% of assets (Keep under 30%)'),
+                  style: TextStyle(fontSize: 11.5, color: _textSecondary),
                 ),
               ],
             ),
@@ -1160,7 +1205,9 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    isAr ? 'لا توجد أصول مضافة بعد' : 'Nothing you own is here yet',
+                    isAr
+                        ? 'لا توجد أصول مضافة بعد'
+                        : 'Nothing you own is here yet',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
@@ -1192,7 +1239,8 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
                   await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const AddAccountScreen(thingsYouOwnFirst: true),
+                      builder: (context) =>
+                          const AddAccountScreen(thingsYouOwnFirst: true),
                     ),
                   );
                   _controller.refresh();
@@ -1255,7 +1303,10 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
                 ),
                 TextButton(
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
@@ -1264,7 +1315,8 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const AddAccountScreen(thingsYouOwnFirst: true),
+                        builder: (context) =>
+                            const AddAccountScreen(thingsYouOwnFirst: true),
                       ),
                     );
                     _controller.refresh();
@@ -1394,10 +1446,7 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
                         ? 'أنت حر من الالتزامات المالية والديون حالياً.'
                         : 'You are currently debt-free.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      color: _textSecondary,
-                    ),
+                    style: TextStyle(fontSize: 12.5, color: _textSecondary),
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
@@ -1422,14 +1471,13 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(
-                            color: _border,
-                            width: 0.8,
-                          ),
+                          side: BorderSide(color: _border, width: 0.8),
                         ),
                       ),
                       child: Text(
-                        isAr ? 'تسجيل كارت مشتريات أو التزام' : 'Add credit card or liability',
+                        isAr
+                            ? 'تسجيل كارت مشتريات أو التزام'
+                            : 'Add credit card or liability',
                         style: const TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
@@ -1456,7 +1504,10 @@ class _AnalyticsIosViewState extends State<AnalyticsIosView> {
                       ),
                       TextButton(
                         style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           minimumSize: Size.zero,
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),

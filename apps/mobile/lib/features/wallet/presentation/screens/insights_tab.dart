@@ -36,6 +36,7 @@ class _InsightsPageState extends State<InsightsPage> {
   @override
   void initState() {
     super.initState();
+    SharedPrefs.currencyNotifier.addListener(_onCurrencyPreferenceChanged);
     _init();
     _syncSubscription = WalletDataSyncService.onDataChanged.listen((_) {
       if (mounted) {
@@ -46,8 +47,14 @@ class _InsightsPageState extends State<InsightsPage> {
 
   @override
   void dispose() {
+    SharedPrefs.currencyNotifier.removeListener(_onCurrencyPreferenceChanged);
     _syncSubscription?.cancel();
     super.dispose();
+  }
+
+  void _onCurrencyPreferenceChanged() {
+    if (mounted)
+      setState(() => _currencyCode = SharedPrefs.currencyNotifier.value);
   }
 
   Future<void> _init() async {
@@ -58,112 +65,118 @@ class _InsightsPageState extends State<InsightsPage> {
     }
   }
 
-Future<void> _loadData({bool forceRefresh = false}) async {
-  if (!forceRefresh) {
-    final cachedCurrent = await WalletCacheService.getInsightsCurrent();
-    final cachedLast = await WalletCacheService.getInsightsLast();
+  Future<void> _loadData({bool forceRefresh = false}) async {
+    if (!forceRefresh) {
+      final cachedCurrent = await WalletCacheService.getInsightsCurrent();
+      final cachedLast = await WalletCacheService.getInsightsLast();
 
-    if (cachedCurrent != null && cachedLast != null) {
-      _applyData(cachedCurrent, cachedLast);
-      setState(() => _isLoading = false);
-      _refreshInBackground();
-      return;
+      if (cachedCurrent != null && cachedLast != null) {
+        _applyData(cachedCurrent, cachedLast);
+        setState(() => _isLoading = false);
+        _refreshInBackground();
+        return;
+      }
     }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    await _fetchFromApi();
   }
 
-  setState(() {
-    _isLoading = true;
-    _errorMessage = null;
-  });
-  await _fetchFromApi();
-}
+  Future<void> _fetchFromApi({bool silent = false}) async {
+    try {
+      final now = DateTime.now();
 
-Future<void> _fetchFromApi({bool silent = false}) async {
-  try {
-    final now = DateTime.now();
+      final thisMonthStart = DateTime(now.year, now.month, 1);
+      final thisMonthEnd = DateTime(
+        now.year,
+        now.month + 1,
+        1,
+      ).subtract(const Duration(days: 1));
+      final lastMonthStart = DateTime(now.year, now.month - 1, 1);
+      final lastMonthEnd = DateTime(
+        now.year,
+        now.month,
+        1,
+      ).subtract(const Duration(days: 1));
 
-    final thisMonthStart = DateTime(now.year, now.month, 1);
-    final thisMonthEnd = DateTime(now.year, now.month + 1, 1)
-        .subtract(const Duration(days: 1));
-    final lastMonthStart = DateTime(now.year, now.month - 1, 1);
-    final lastMonthEnd = DateTime(now.year, now.month, 1)
-        .subtract(const Duration(days: 1));
+      final results = await Future.wait([
+        _repository.getSummary(fromDate: thisMonthStart, toDate: thisMonthEnd),
+        _repository.getSummary(fromDate: lastMonthStart, toDate: lastMonthEnd),
+      ]);
 
-    final results = await Future.wait([
-      _repository.getSummary(fromDate: thisMonthStart, toDate: thisMonthEnd),
-      _repository.getSummary(fromDate: lastMonthStart, toDate: lastMonthEnd),
-    ]);
+      final current = results[0];
+      final last = results[1];
 
-    final current = results[0];
-    final last = results[1];
-
-    final currentMap = {
-      'totalIncome': current.totalIncome,
-      'totalExpenses': current.totalExpenses,
-      'netSavings': current.netSavings,
-      'expensesByCategory': current.expensesByCategory
-          .map((e) => {
+      final currentMap = {
+        'totalIncome': current.totalIncome,
+        'totalExpenses': current.totalExpenses,
+        'netSavings': current.netSavings,
+        'expensesByCategory': current.expensesByCategory
+            .map(
+              (e) => {
                 'nameAr': e.categoryNameAr,
                 'nameEn': e.categoryNameEn,
                 'total': e.total,
-              })
-          .toList(),
-    };
+              },
+            )
+            .toList(),
+      };
 
-    final lastMap = {
-      'totalExpenses': last.totalExpenses,
-    };
+      final lastMap = {'totalExpenses': last.totalExpenses};
 
-    await WalletCacheService.saveInsightsCurrent(currentMap);
-    await WalletCacheService.saveInsightsLast(lastMap);
+      await WalletCacheService.saveInsightsCurrent(currentMap);
+      await WalletCacheService.saveInsightsLast(lastMap);
 
-    if (mounted) {
-      _applyData(currentMap, lastMap);
-      if (!silent) setState(() => _isLoading = false);
-    }
-  } catch (e) {
-    if (mounted && !silent) {
-      
-      setState(() {
-       _errorMessage = context.l10n.failedToLoadInsights(e.toString());
-        _isLoading = false;
-      });
+      if (mounted) {
+        _applyData(currentMap, lastMap);
+        if (!silent) setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      if (mounted && !silent) {
+        setState(() {
+          _errorMessage = context.l10n.failedToLoadInsights(e.toString());
+          _isLoading = false;
+        });
+      }
     }
   }
-}
 
-Future<void> _refreshInBackground() async {
-  try {
-    await _fetchFromApi(silent: true);
-  } catch (_) {}
-}
-
-void _applyData(
-  Map<String, dynamic> currentMap,
-  Map<String, dynamic> lastMap,
-) {
-  final expenses = (currentMap['expensesByCategory'] as List)
-      .map((e) => e as Map<String, dynamic>)
-      .toList()
-    ..sort((a, b) =>
-        (b['total'] as num).compareTo(a['total'] as num));
-
-  double highest = 0;
-  String highestCat = '';
-  if (expenses.isNotEmpty) {
-    highest = (expenses.first['total'] as num).toDouble();
-    highestCat = expenses.first['nameEn'] as String;
+  Future<void> _refreshInBackground() async {
+    try {
+      await _fetchFromApi(silent: true);
+    } catch (_) {}
   }
 
-  setState(() {
-    _totalExpenses = (currentMap['totalExpenses'] as num).toDouble();
-    _totalIncome = (currentMap['totalIncome'] as num).toDouble();
-    _topCategories = expenses.take(3).toList();
-    _highestTransaction = highest;
-    _highestTransactionCategory = highestCat;
-    _lastMonthExpenses = (lastMap['totalExpenses'] as num).toDouble();
-  });
-}
+  void _applyData(
+    Map<String, dynamic> currentMap,
+    Map<String, dynamic> lastMap,
+  ) {
+    final expenses =
+        (currentMap['expensesByCategory'] as List)
+            .map((e) => e as Map<String, dynamic>)
+            .toList()
+          ..sort((a, b) => (b['total'] as num).compareTo(a['total'] as num));
+
+    double highest = 0;
+    String highestCat = '';
+    if (expenses.isNotEmpty) {
+      highest = (expenses.first['total'] as num).toDouble();
+      highestCat = expenses.first['nameEn'] as String;
+    }
+
+    setState(() {
+      _totalExpenses = (currentMap['totalExpenses'] as num).toDouble();
+      _totalIncome = (currentMap['totalIncome'] as num).toDouble();
+      _topCategories = expenses.take(3).toList();
+      _highestTransaction = highest;
+      _highestTransactionCategory = highestCat;
+      _lastMonthExpenses = (lastMap['totalExpenses'] as num).toDouble();
+    });
+  }
+
   String _formatCurrency(double amount) {
     final symbol = currencySymbols[_currencyCode] ?? '\$';
     final formatter = NumberFormat('#,##0', 'en_US');
@@ -187,7 +200,9 @@ void _applyData(
       highlightColor: isDark ? Colors.grey[700]! : Colors.grey[100]!,
       child: SingleChildScrollView(
         padding: const EdgeInsets.only(
-          left: 20, right: 20, top: 24,
+          left: 20,
+          right: 20,
+          top: 24,
           bottom: 110,
         ),
         child: ResponsiveWrapper(
@@ -196,36 +211,43 @@ void _applyData(
             children: [
               // month label
               Container(
-                  width: 120,
-                  height: 16,
-                  decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(4))),
+                width: 120,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
               const SizedBox(height: 20),
               // 2 stat cards
-              Row(children: [
-                Expanded(child: _shimmerCard(isDark, height: 110)),
-                const SizedBox(width: 12),
-                Expanded(child: _shimmerCard(isDark, height: 110)),
-              ]),
+              Row(
+                children: [
+                  Expanded(child: _shimmerCard(isDark, height: 110)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _shimmerCard(isDark, height: 110)),
+                ],
+              ),
               const SizedBox(height: 12),
-              Row(children: [
-                Expanded(child: _shimmerCard(isDark, height: 110)),
-                const SizedBox(width: 12),
-                Expanded(child: _shimmerCard(isDark, height: 110)),
-              ]),
+              Row(
+                children: [
+                  Expanded(child: _shimmerCard(isDark, height: 110)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _shimmerCard(isDark, height: 110)),
+                ],
+              ),
               const SizedBox(height: 28),
               // section title
               Container(
-                  width: 160,
-                  height: 18,
-                  decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(4))),
+                width: 160,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
               const SizedBox(height: 14),
               // 3 category rows
-              ...List.generate(
-                  3, (_) => _shimmerCategoryRow(isDark)),
+              ...List.generate(3, (_) => _shimmerCategoryRow(isDark)),
             ],
           ),
         ),
@@ -273,8 +295,11 @@ void _applyData(
           ),
         ),
         actions: [
-         IconButton(
-            icon: Icon(Icons.refresh, color: isDark ? Colors.white : Colors.black),
+          IconButton(
+            icon: Icon(
+              Icons.refresh,
+              color: isDark ? Colors.white : Colors.black,
+            ),
             onPressed: () => _loadData(forceRefresh: true),
           ),
         ],
@@ -282,8 +307,8 @@ void _applyData(
       body: _isLoading
           ? _buildShimmer(isDark)
           : _errorMessage != null
-              ? _buildError(isDark)
-              : _buildContent(isDark),
+          ? _buildError(isDark)
+          : _buildContent(isDark),
     );
   }
 
@@ -294,14 +319,17 @@ void _applyData(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline,
-                size: 64,
-                color: isDark ? Colors.white54 : Colors.black38),
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: isDark ? Colors.white54 : Colors.black38,
+            ),
             const SizedBox(height: 16),
-            Text(_errorMessage!,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: isDark ? Colors.white70 : Colors.black54)),
+            Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+            ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _loadData,
@@ -324,167 +352,169 @@ void _applyData(
     final isUp = diff >= 0;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.only(
-        left: 20, right: 20, top: 24,
-        bottom: 110,
-      ),
+      padding: const EdgeInsets.only(left: 20, right: 20, top: 24, bottom: 110),
       child: ResponsiveWrapper(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-          // Month label
-          Text(
-            monthLabel,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: isDark ? Colors.grey[400] : Colors.grey[600],
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // ── 4 stat cards ──────────────────────────
-          Row(children: [
-            Expanded(
-              child: _statCard(
-                isDark: isDark,
-                icon: Icons.trending_down_rounded,
-                iconColor: Colors.red,
-                label: context.l10n.thisMonth,
-                value: _formatCurrency(_totalExpenses),
+            // Month label
+            Text(
+              monthLabel,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _statCard(
-                isDark: isDark,
-                icon: Icons.trending_up_rounded,
-                iconColor: Colors.green,
-                label: context.l10n.income,
-                value: _formatCurrency(_totalIncome),
+
+            const SizedBox(height: 20),
+
+            // ── 4 stat cards ──────────────────────────
+            Row(
+              children: [
+                Expanded(
+                  child: _statCard(
+                    isDark: isDark,
+                    icon: Icons.trending_down_rounded,
+                    iconColor: Colors.red,
+                    label: context.l10n.thisMonth,
+                    value: _formatCurrency(_totalExpenses),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _statCard(
+                    isDark: isDark,
+                    icon: Icons.trending_up_rounded,
+                    iconColor: Colors.green,
+                    label: context.l10n.income,
+                    value: _formatCurrency(_totalIncome),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            Row(
+              children: [
+                Expanded(
+                  child: _statCard(
+                    isDark: isDark,
+                    icon: Icons.calendar_today_rounded,
+                    iconColor: Colors.blue,
+                    label: context.l10n.dailyAverage,
+                    value: _formatCurrency(_dailyAverage),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _statCard(
+                    isDark: isDark,
+                    icon: isUp
+                        ? Icons.arrow_upward_rounded
+                        : Icons.arrow_downward_rounded,
+                    iconColor: isUp ? Colors.orange : Colors.green,
+                    label: context.l10n.vsLastMonth,
+                    value: _lastMonthExpenses == 0
+                        ? context.l10n.noData
+                        : '${isUp ? '+' : ''}${diff.toStringAsFixed(1)}%',
+                    valueColor: _lastMonthExpenses == 0
+                        ? null
+                        : (isUp ? Colors.orange : Colors.green),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 28),
+
+            // ── Top spending categories ───────────────
+            Text(
+              context.l10n.topSpendingCategories,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : Colors.black,
               ),
             ),
-          ]),
 
-          const SizedBox(height: 12),
+            const SizedBox(height: 14),
 
-          Row(children: [
-            Expanded(
-              child: _statCard(
-                isDark: isDark,
-                icon: Icons.calendar_today_rounded,
-                iconColor: Colors.blue,
-                label: context.l10n.dailyAverage,
-                value: _formatCurrency(_dailyAverage),
+            if (_topCategories.isEmpty)
+              _emptyState(isDark, context.l10n.noExpensesThisMonth)
+            else
+              ..._topCategories.asMap().entries.map((entry) {
+                final rank = entry.key + 1;
+                final cat = entry.value;
+                final locale = Localizations.localeOf(context).languageCode;
+                final name = locale == 'ar'
+                    ? cat['nameAr'] as String
+                    : cat['nameEn'] as String;
+                final total = cat['total'] as double;
+                final percent = _totalExpenses > 0
+                    ? (total / _totalExpenses * 100)
+                    : 0.0;
+
+                return _categoryRow(
+                  isDark: isDark,
+                  rank: rank,
+                  name: name,
+                  total: total,
+                  percent: percent,
+                );
+              }),
+
+            const SizedBox(height: 28),
+
+            // ── Quick facts ───────────────────────────
+            Text(
+              context.l10n.quickFacts,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : Colors.black,
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _statCard(
-                isDark: isDark,
-                icon: isUp
-                    ? Icons.arrow_upward_rounded
-                    : Icons.arrow_downward_rounded,
-                iconColor: isUp ? Colors.orange : Colors.green,
-                label: context.l10n.vsLastMonth,
-                value: _lastMonthExpenses == 0
-                    ? context.l10n.noData
-                    : '${isUp ? '+' : ''}${diff.toStringAsFixed(1)}%',
-                valueColor: _lastMonthExpenses == 0
-                    ? null
-                    : (isUp ? Colors.orange : Colors.green),
-              ),
+
+            const SizedBox(height: 14),
+
+            _factCard(
+              isDark: isDark,
+              icon: Icons.local_fire_department_rounded,
+              iconColor: Colors.deepOrange,
+              title: context.l10n.biggestSpend,
+              subtitle: _highestTransactionCategory.isEmpty
+                  ? context.l10n.noData
+                  : '$_highestTransactionCategory — ${_formatCurrency(_highestTransaction)}',
             ),
-          ]),
 
-          const SizedBox(height: 28),
+            const SizedBox(height: 10),
 
-          // ── Top spending categories ───────────────
-          Text(
-            context.l10n.topSpendingCategories,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: isDark ? Colors.white : Colors.black,
+            _factCard(
+              isDark: isDark,
+              icon: Icons.savings_rounded,
+              iconColor: Colors.teal,
+              title: context.l10n.netSavings,
+              subtitle: _formatCurrency(_totalIncome - _totalExpenses),
+              subtitleColor: (_totalIncome - _totalExpenses) >= 0
+                  ? Colors.green[700]
+                  : Colors.red[700],
             ),
-          ),
 
-          const SizedBox(height: 14),
+            const SizedBox(height: 10),
 
-          if (_topCategories.isEmpty)
-            _emptyState(isDark, context.l10n.noExpensesThisMonth)
-          else
-            ..._topCategories.asMap().entries.map((entry) {
-              final rank = entry.key + 1;
-              final cat = entry.value;
-              final locale =
-                  Localizations.localeOf(context).languageCode;
-              final name = locale == 'ar'
-                  ? cat['nameAr'] as String
-                  : cat['nameEn'] as String;
-              final total = cat['total'] as double;
-              final percent = _totalExpenses > 0
-                  ? (total / _totalExpenses * 100)
-                  : 0.0;
-
-              return _categoryRow(
-                isDark: isDark,
-                rank: rank,
-                name: name,
-                total: total,
-                percent: percent,
-              );
-            }),
-
-          const SizedBox(height: 28),
-
-          // ── Quick facts ───────────────────────────
-          Text(
-            context.l10n.quickFacts,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: isDark ? Colors.white : Colors.black,
+            _factCard(
+              isDark: isDark,
+              icon: Icons.compare_arrows_rounded,
+              iconColor: Colors.purple,
+              title: context.l10n.lastMonthExpenses,
+              subtitle: _lastMonthExpenses == 0
+                  ? context.l10n.noData
+                  : _formatCurrency(_lastMonthExpenses),
             ),
-          ),
-
-          const SizedBox(height: 14),
-
-          _factCard(
-            isDark: isDark,
-            icon: Icons.local_fire_department_rounded,
-            iconColor: Colors.deepOrange,
-            title: context.l10n.biggestSpend,
-            subtitle: _highestTransactionCategory.isEmpty
-                ? context.l10n.noData
-                : '$_highestTransactionCategory — ${_formatCurrency(_highestTransaction)}',
-          ),
-
-          const SizedBox(height: 10),
-
-          _factCard(
-            isDark: isDark,
-            icon: Icons.savings_rounded,
-            iconColor: Colors.teal,
-            title: context.l10n.netSavings,
-            subtitle: _formatCurrency(_totalIncome - _totalExpenses),
-            subtitleColor: (_totalIncome - _totalExpenses) >= 0
-                ? Colors.green[700]
-                : Colors.red[700],
-          ),
-
-          const SizedBox(height: 10),
-
-          _factCard(
-            isDark: isDark,
-            icon: Icons.compare_arrows_rounded,
-            iconColor: Colors.purple,
-            title: context.l10n.lastMonthExpenses,
-            subtitle: _lastMonthExpenses == 0 ? context.l10n.noData : _formatCurrency(_lastMonthExpenses),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -534,8 +564,7 @@ void _applyData(
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w800,
-              color: valueColor ??
-                  (isDark ? Colors.white : Colors.black),
+              color: valueColor ?? (isDark ? Colors.white : Colors.black),
             ),
           ),
         ],
@@ -624,8 +653,7 @@ void _applyData(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: (percent / 100).clamp(0.0, 1.0),
-              backgroundColor:
-                  isDark ? Colors.grey[800] : Colors.grey[200],
+              backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
               valueColor: AlwaysStoppedAnimation<Color>(color),
               minHeight: 5,
             ),
@@ -681,8 +709,8 @@ void _applyData(
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: subtitleColor ??
-                        (isDark ? Colors.white : Colors.black),
+                    color:
+                        subtitleColor ?? (isDark ? Colors.white : Colors.black),
                   ),
                 ),
               ],
@@ -706,9 +734,7 @@ void _applyData(
       child: Center(
         child: Text(
           message,
-          style: TextStyle(
-            color: isDark ? Colors.grey[500] : Colors.grey[500],
-          ),
+          style: TextStyle(color: isDark ? Colors.grey[500] : Colors.grey[500]),
         ),
       ),
     );

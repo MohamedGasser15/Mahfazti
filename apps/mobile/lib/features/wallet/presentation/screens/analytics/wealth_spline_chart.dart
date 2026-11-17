@@ -56,7 +56,8 @@ class _WealthSplineChartState extends State<WealthSplineChart> {
     }
 
     final double effectiveMinY = widget.minY ?? 0.0;
-    double effectiveMaxY = widget.maxY ??
+    double effectiveMaxY =
+        widget.maxY ??
         (effectivePoints.isEmpty ? 100.0 : effectivePoints.reduce(math.max));
     if (effectiveMaxY <= effectiveMinY) {
       effectiveMaxY = effectiveMinY + 100.0;
@@ -135,27 +136,32 @@ class _WealthSplineChartState extends State<WealthSplineChart> {
           }
         }
       },
-      getTouchedSpotIndicator: (LineChartBarData barData, List<int> spotIndexes) {
-        return spotIndexes.map((index) {
-          return TouchedSpotIndicatorData(
-            FlLine(
-              color: widget.lineColor.withValues(alpha: widget.isDark ? 0.35 : 0.25),
-              strokeWidth: 1.5,
-              dashArray: [4, 4],
-            ),
-            FlDotData(
-              show: true,
-              getDotPainter: (spot, percent, barData, index) =>
-                  FlDotCirclePainter(
-                radius: 6.5,
-                color: widget.lineColor,
-                strokeWidth: 3.2,
-                strokeColor: widget.isDark ? const Color(0xFF09090C) : Colors.white,
-              ),
-            ),
-          );
-        }).toList();
-      },
+      getTouchedSpotIndicator:
+          (LineChartBarData barData, List<int> spotIndexes) {
+            return spotIndexes.map((index) {
+              return TouchedSpotIndicatorData(
+                FlLine(
+                  color: widget.lineColor.withValues(
+                    alpha: widget.isDark ? 0.35 : 0.25,
+                  ),
+                  strokeWidth: 1.5,
+                  dashArray: [4, 4],
+                ),
+                FlDotData(
+                  show: true,
+                  getDotPainter: (spot, percent, barData, index) =>
+                      FlDotCirclePainter(
+                        radius: 6.5,
+                        color: widget.lineColor,
+                        strokeWidth: 3.2,
+                        strokeColor: widget.isDark
+                            ? const Color(0xFF09090C)
+                            : Colors.white,
+                      ),
+                ),
+              );
+            }).toList();
+          },
       touchTooltipData: LineTouchTooltipData(
         getTooltipColor: (_) => Colors.transparent,
         getTooltipItems: (touchedSpots) =>

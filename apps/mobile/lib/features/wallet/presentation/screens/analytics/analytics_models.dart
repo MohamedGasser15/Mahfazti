@@ -68,8 +68,7 @@ class WealthItem {
     this.subtitleEn,
   });
 
-  String displayName({required bool isAr}) =>
-      isAr ? name : (nameEn ?? name);
+  String displayName({required bool isAr}) => isAr ? name : (nameEn ?? name);
 
   String? displaySubtitle({required bool isAr}) =>
       isAr ? subtitle : (subtitleEn ?? subtitle);

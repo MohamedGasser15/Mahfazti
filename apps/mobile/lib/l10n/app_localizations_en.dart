@@ -141,6 +141,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cancel => 'Cancel';
 
   @override
+  String get cancelAnytime => 'You can cancel anytime';
+
+  @override
   String get cannotOpenStore => 'Cannot open store';
 
   @override
@@ -290,6 +293,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get currentIcon => 'Current Icon';
+
+  @override
+  String get currentPlan => 'Current Plan';
 
   @override
   String get currentPasscode => 'Current passcode';
@@ -559,6 +565,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'We\'ll send a new verification code to your email to reset your PIN.';
 
   @override
+  String get free => 'Free';
+
+  @override
   String get from => 'From';
 
   @override
@@ -666,6 +675,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lostAccessToEmail => 'Lost access to your email?';
 
   @override
+  String get mahfaztiPro => 'Mahfazti Pro';
+
+  @override
   String get manage => 'Manage';
 
   @override
@@ -685,6 +697,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get monthlyIncome => 'Monthly Income';
+
+  @override
+  String get mostPopular => 'Most Popular';
 
   @override
   String get name => 'Name';
@@ -793,6 +808,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planYourFuture => 'Plan Your Future';
 
   @override
+  String get plansAndSubscriptions => 'Plans & Subscriptions';
+
+  @override
+  String get plansAndSubscriptionsSubtitle =>
+      'Choose the plan that fits your needs';
+
+  @override
   String get pleaseConfirmNewPasscode => 'Please confirm your new passcode';
 
   @override
@@ -898,6 +920,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get save => 'Save';
 
   @override
+  String get save35 => 'Save 35%';
+
+  @override
   String get search => 'Search';
 
   @override
@@ -964,6 +989,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sort => 'Sort';
+
+  @override
+  String get subscribeNow => 'Subscribe Now';
+
+  @override
+  String get subscription => 'Subscription';
 
   @override
   String get spendingInsights => 'Spending Insights';
@@ -1784,6 +1815,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get perMonth => '/ month';
 
   @override
+  String get perYear => '/ year';
+
+  @override
   String nextDueBill(Object title) {
     return 'Next due: $title';
   }
@@ -1928,4 +1962,43 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noCategoriesFound => 'No categories found';
+
+  @override
+  String get restorePurchases => 'Restore Purchases';
+
+  @override
+  String get restoringPurchases => 'Restoring purchases...';
+
+  @override
+  String get subscriptionSuccess =>
+      'Subscription activated successfully! Welcome to Mahfazti Pro.';
+
+  @override
+  String get subscriptionFailed => 'Purchase failed or was canceled.';
+
+  @override
+  String get noPurchasesToRestore => 'No active purchases found to restore.';
+
+  @override
+  String get upgradeToPro => 'Upgrade to Pro';
+
+  @override
+  String get purchasing => 'Processing purchase...';
+
+  @override
+  String get storeUnavailable =>
+      'In-app purchases are not available at this moment.';
+
+  @override
+  String get loadingPrices => 'Loading store prices...';
+
+  @override
+  String get cancelSubscription => 'Cancel Subscription';
+
+  @override
+  String get subscriptionCanceled => 'Subscription canceled successfully';
+
+  @override
+  String get cancelSubscriptionConfirm =>
+      'Are you sure you want to cancel your active subscription?';
 }

@@ -9,6 +9,9 @@ import 'package:neo_cupertino/neo_cupertino.dart';
 import 'package:my_wallet/core/services/wallet_data_sync_service.dart';
 import 'package:my_wallet/core/widgets/app_back_button.dart';
 import 'package:my_wallet/features/wallet/data/repositories/wallet_repository.dart';
+import 'package:my_wallet/features/wallet/data/models/category_group_model.dart';
+import 'package:my_wallet/features/wallet/data/repositories/category_group_service.dart';
+import 'package:my_wallet/features/settings/presentation/screens/categories_management_screen.dart';
 import 'package:my_wallet/features/wallet/presentation/utils/category_icon_helper.dart';
 
 //#region Models
@@ -91,6 +94,7 @@ class SpendingBreakdownSeed {
     return [
       SpendingCategoryItem(
         id: 'shopping',
+        categoryId: 2,
         nameAr: 'تسوق ومستلزمات',
         nameEn: 'Shopping',
         emoji: '🛒',
@@ -194,6 +198,7 @@ class SpendingBreakdownSeed {
       ),
       SpendingCategoryItem(
         id: 'food',
+        categoryId: 1,
         nameAr: 'طعام ومطاعم',
         nameEn: 'Food',
         emoji: '🍔',
@@ -243,6 +248,7 @@ class SpendingBreakdownSeed {
       ),
       SpendingCategoryItem(
         id: 'education',
+        categoryId: 6,
         nameAr: 'تعليم وتطوير',
         nameEn: 'Education',
         emoji: '🎓',
@@ -280,6 +286,7 @@ class SpendingBreakdownSeed {
       ),
       SpendingCategoryItem(
         id: 'car',
+        categoryId: 4,
         nameAr: 'مصاريف سيارة',
         nameEn: 'Car Things',
         emoji: '🚗',
@@ -311,6 +318,7 @@ class SpendingBreakdownSeed {
       ),
       SpendingCategoryItem(
         id: 'electricity',
+        categoryId: 5,
         nameAr: 'كهرباء وفواتير',
         nameEn: 'Electricity',
         emoji: '⚡',
@@ -336,6 +344,7 @@ class SpendingBreakdownSeed {
       ),
       SpendingCategoryItem(
         id: 'transport',
+        categoryId: 7,
         nameAr: 'مواصلات',
         nameEn: 'Transportation',
         emoji: '🚙',
@@ -367,6 +376,7 @@ class SpendingBreakdownSeed {
       ),
       SpendingCategoryItem(
         id: 'fuel',
+        categoryId: 8,
         nameAr: 'بنزين ووقود',
         nameEn: 'Fuel',
         emoji: '⛽',
@@ -386,6 +396,7 @@ class SpendingBreakdownSeed {
       ),
       SpendingCategoryItem(
         id: 'entertainment',
+        categoryId: 9,
         nameAr: 'ترفيه واشتراكات',
         nameEn: 'Entertainment',
         emoji: '🎬',
@@ -411,6 +422,7 @@ class SpendingBreakdownSeed {
       ),
       SpendingCategoryItem(
         id: 'health',
+        categoryId: 10,
         nameAr: 'صحة وعناية',
         nameEn: 'Health & Medical',
         emoji: '🏥',
@@ -436,6 +448,7 @@ class SpendingBreakdownSeed {
       ),
       SpendingCategoryItem(
         id: 'others',
+        categoryId: 11,
         nameAr: 'أخرى ومتنوعات',
         nameEn: 'Other',
         emoji: '📦',
@@ -461,6 +474,7 @@ class SpendingBreakdownSeed {
       ),
       SpendingCategoryItem(
         id: 'tech',
+        categoryId: 12,
         nameAr: 'خدمات إلكترونية',
         nameEn: 'Digital Services',
         emoji: '💻',
@@ -494,10 +508,7 @@ class SpendingBreakdownScreen extends StatefulWidget {
   final String currency;
   static ScrollController? debugScrollController;
 
-  const SpendingBreakdownScreen({
-    super.key,
-    this.currency = 'EGP',
-  });
+  const SpendingBreakdownScreen({super.key, this.currency = 'EGP'});
 
   /// Opens the Glass Modal Sheet on iOS matching the edit category logic
   /// (starts half-expanded, draggable to full screen).
@@ -528,14 +539,19 @@ class SpendingBreakdownScreen extends StatefulWidget {
   }
 
   @override
-  State<SpendingBreakdownScreen> createState() => _SpendingBreakdownScreenState();
+  State<SpendingBreakdownScreen> createState() =>
+      _SpendingBreakdownScreenState();
 }
 
 class _SpendingBreakdownScreenState extends State<SpendingBreakdownScreen> {
   final WalletRepository _walletRepository = WalletRepository();
   StreamSubscription<void>? _syncSubscription;
+  StreamSubscription<void>? _groupsSubscription;
   DateTime _selectedDate = DateTime(2026, 10, 1);
   List<SpendingCategoryItem> _categories = [];
+  List<CategoryGroup> _groups = [];
+  Map<int, String> _categoryGroupMap = {};
+  bool _showByGroups = false;
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -545,39 +561,76 @@ class _SpendingBreakdownScreenState extends State<SpendingBreakdownScreen> {
     // Initial optimistic population so test and UI start with instant data
     _categories = SpendingBreakdownSeed.getCategories(widget.currency);
     _loadData();
+    _loadGroups();
     _syncSubscription = WalletDataSyncService.onDataChanged.listen((_) {
-      if (mounted) _loadData();
+      if (mounted) {
+        _loadData();
+        _loadGroups();
+      }
     });
+    _groupsSubscription = CategoryGroupService.onGroupsChanged.listen((_) {
+      if (mounted) {
+        _loadGroups();
+      }
+    });
+  }
+
+  Future<void> _loadGroups() async {
+    try {
+      final groups = await CategoryGroupService.getGroups();
+      final mappings = await CategoryGroupService.getCategoryGroupMappings();
+      if (mounted) {
+        setState(() {
+          _groups = groups;
+          _categoryGroupMap = mappings;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadData() async {
     final fromDate = DateTime(_selectedDate.year, _selectedDate.month, 1);
-    final toDate = DateTime(_selectedDate.year, _selectedDate.month + 1, 0, 23, 59, 59);
+    final toDate = DateTime(
+      _selectedDate.year,
+      _selectedDate.month + 1,
+      0,
+      23,
+      59,
+      59,
+    );
 
     try {
-      final summary = await _walletRepository.getSummary(fromDate: fromDate, toDate: toDate);
+      final summary = await _walletRepository.getSummary(
+        fromDate: fromDate,
+        toDate: toDate,
+      );
       final total = summary.totalExpenses;
 
       final items = <SpendingCategoryItem>[];
       for (final cat in summary.expensesByCategory) {
-        final meta = CategoryIconHelper.getMeta(cat.categoryId, cat.categoryNameEn);
+        final meta = CategoryIconHelper.getMeta(
+          cat.categoryId,
+          cat.categoryNameEn,
+        );
         final pct = total > 0 ? (cat.total / total) * 100 : 0.0;
 
-        items.add(SpendingCategoryItem(
-          id: cat.categoryId.toString(),
-          categoryId: cat.categoryId,
-          nameAr: cat.categoryNameAr,
-          nameEn: cat.categoryNameEn,
-          emoji: '',
-          icon: meta.icon,
-          color: meta.color,
-          amount: cat.total,
-          transactionCount: cat.count,
-          percentage: pct,
-        ));
+        items.add(
+          SpendingCategoryItem(
+            id: cat.categoryId.toString(),
+            categoryId: cat.categoryId,
+            nameAr: cat.categoryNameAr,
+            nameEn: cat.categoryNameEn,
+            emoji: '',
+            icon: meta.icon,
+            color: meta.color,
+            amount: cat.total,
+            transactionCount: cat.count,
+            percentage: pct,
+          ),
+        );
       }
 
-      if (mounted) {
+      if (mounted && items.isNotEmpty) {
         setState(() {
           _categories = items;
         });
@@ -588,9 +641,85 @@ class _SpendingBreakdownScreenState extends State<SpendingBreakdownScreen> {
   @override
   void dispose() {
     _syncSubscription?.cancel();
+    _groupsSubscription?.cancel();
     SpendingBreakdownScreen.debugScrollController = null;
     _scrollController.dispose();
     super.dispose();
+  }
+
+  List<SpendingCategoryItem> get _displayItems {
+    if (!_showByGroups || _groups.isEmpty) {
+      return _categories;
+    }
+
+    final total = _totalSpent;
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final result = <SpendingCategoryItem>[];
+
+    for (final g in _groups) {
+      final gCats = _categories.where((c) {
+        if (c.categoryId == null) return false;
+        return _categoryGroupMap[c.categoryId] == g.id;
+      }).toList();
+
+      final gAmount = gCats.fold<double>(0.0, (s, c) => s + c.amount);
+      final gTxCount = gCats.fold<int>(0, (s, c) => s + c.transactionCount);
+      final gPct = total > 0 ? (gAmount / total) * 100 : 0.0;
+      final icons = CategoriesManagementScreen.availableCategoryIcons;
+      final gIcon = (g.iconIndex >= 0 && g.iconIndex < icons.length)
+          ? icons[g.iconIndex]
+          : Icons.folder_rounded;
+      final gTx = gCats.expand((c) => c.transactions).toList();
+
+      result.add(
+        SpendingCategoryItem(
+          id: 'group_${g.id}',
+          nameAr: g.name,
+          nameEn: g.name,
+          emoji: '',
+          icon: gIcon,
+          color: Color(g.colorValue),
+          amount: gAmount,
+          transactionCount: gTxCount,
+          percentage: gPct,
+          transactions: gTx,
+        ),
+      );
+    }
+
+    // Ungrouped categories
+    final ungroupedCats = _categories.where((c) {
+      if (c.categoryId == null) return false;
+      return _categoryGroupMap[c.categoryId] == null;
+    }).toList();
+
+    if (ungroupedCats.isNotEmpty) {
+      final uAmount = ungroupedCats.fold<double>(0.0, (s, c) => s + c.amount);
+      final uTxCount = ungroupedCats.fold<int>(
+        0,
+        (s, c) => s + c.transactionCount,
+      );
+      final uPct = total > 0 ? (uAmount / total) * 100 : 0.0;
+      final uTx = ungroupedCats.expand((c) => c.transactions).toList();
+
+      result.add(
+        SpendingCategoryItem(
+          id: 'group_ungrouped',
+          nameAr: isAr ? 'غير مصنفة' : 'Ungrouped',
+          nameEn: isAr ? 'غير مصنفة' : 'Ungrouped',
+          emoji: '',
+          icon: CupertinoIcons.square_stack_3d_down_dottedline,
+          color: isDarkMode ? const Color(0xFF71717A) : const Color(0xFF94A3B8),
+          amount: uAmount,
+          transactionCount: uTxCount,
+          percentage: uPct,
+          transactions: uTx,
+        ),
+      );
+    }
+
+    return result;
   }
 
   double get _totalSpent => _categories.fold(0.0, (s, c) => s + c.amount);
@@ -626,12 +755,19 @@ class _SpendingBreakdownScreenState extends State<SpendingBreakdownScreen> {
   Future<void> _openCategoryDetail(SpendingCategoryItem category) async {
     HapticFeedback.selectionClick();
     final fromDate = DateTime(_selectedDate.year, _selectedDate.month, 1);
-    final toDate = DateTime(_selectedDate.year, _selectedDate.month + 1, 0, 23, 59, 59);
+    final toDate = DateTime(
+      _selectedDate.year,
+      _selectedDate.month + 1,
+      0,
+      23,
+      59,
+      59,
+    );
 
     List<CategoryTransactionItem> mappedTx = category.transactions;
 
-    // Fetch dynamic transactions from WalletRepository if category has an ID
-    if (category.categoryId != null) {
+    // Fetch dynamic transactions from WalletRepository if category has an ID and no transactions yet
+    if (category.categoryId != null && category.transactions.isEmpty) {
       try {
         final res = await _walletRepository.getTransactions(
           categoryId: category.categoryId,
@@ -642,7 +778,9 @@ class _SpendingBreakdownScreenState extends State<SpendingBreakdownScreen> {
         if (res.transactions.isNotEmpty) {
           mappedTx = res.transactions.map((t) {
             final dateStr = DateFormat('MMM dd').format(t.transactionDate);
-            final desc = (t.description != null && t.description!.isNotEmpty) ? ' · ${t.description}' : '';
+            final desc = (t.description != null && t.description!.isNotEmpty)
+                ? ' · ${t.description}'
+                : '';
             return CategoryTransactionItem(
               title: t.title,
               subtitle: '$dateStr$desc',
@@ -695,10 +833,14 @@ class _SpendingBreakdownScreenState extends State<SpendingBreakdownScreen> {
     final monthStr = monthFormat.format(_selectedDate);
 
     // Warm Apple System Grouped Background in Light Mode (#F2F2F7), True Obsidian in Dark Mode
-    final bgScaffold = isDarkMode ? const Color(0xFF000000) : const Color(0xFFF2F2F7);
+    final bgScaffold = isDarkMode
+        ? const Color(0xFF000000)
+        : const Color(0xFFF2F2F7);
     final cardBg = isDarkMode ? const Color(0xFF141418) : Colors.white;
     final textPrimary = isDarkMode ? Colors.white : const Color(0xFF111827);
-    final textSecondary = isDarkMode ? Colors.grey[400] : const Color(0xFF6B7280);
+    final textSecondary = isDarkMode
+        ? Colors.grey[400]
+        : const Color(0xFF6B7280);
 
     return Scaffold(
       backgroundColor: bgScaffold,
@@ -710,7 +852,9 @@ class _SpendingBreakdownScreenState extends State<SpendingBreakdownScreen> {
             CustomScrollView(
               controller: _scrollController,
               physics: isIOS
-                  ? const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics())
+                  ? const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
+                    )
                   : const ClampingScrollPhysics(),
               slivers: [
                 // 1. Pinned Sliver App Bar (Header stays cleanly pinned so back button is always accessible)
@@ -750,7 +894,9 @@ class _SpendingBreakdownScreenState extends State<SpendingBreakdownScreen> {
                         padding: const EdgeInsetsDirectional.only(end: 16),
                         child: _buildCircleGlassButton(
                           context: context,
-                          icon: isIOS ? CupertinoIcons.line_horizontal_3 : Icons.menu_rounded,
+                          icon: isIOS
+                              ? CupertinoIcons.line_horizontal_3
+                              : Icons.menu_rounded,
                           onPressed: () {
                             HapticFeedback.selectionClick();
                           },
@@ -766,7 +912,7 @@ class _SpendingBreakdownScreenState extends State<SpendingBreakdownScreen> {
                 SliverToBoxAdapter(
                   child: Center(
                     child: Padding(
-                      padding: const EdgeInsets.only(top: 2, bottom: 10),
+                      padding: const EdgeInsets.only(top: 2, bottom: 8),
                       child: Text(
                         isAr ? 'جميع الحسابات' : 'All accounts',
                         style: TextStyle(
@@ -779,6 +925,22 @@ class _SpendingBreakdownScreenState extends State<SpendingBreakdownScreen> {
                   ),
                 ),
 
+                // 2.5 View Switcher: Categories vs Groups (when user has groups)
+                if (_groups.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 2, bottom: 12),
+                      child: _buildGroupTabSwitcher(
+                        context: context,
+                        isDarkMode: isDarkMode,
+                        isAr: isAr,
+                        isIOS: isIOS,
+                        showByGroups: _showByGroups,
+                        onChanged: (val) => setState(() => _showByGroups = val),
+                      ),
+                    ),
+                  ),
+
                 // 3. Main Donut Chart (Scrolls naturally with the rest of the page!)
                 SliverToBoxAdapter(
                   child: Padding(
@@ -790,12 +952,30 @@ class _SpendingBreakdownScreenState extends State<SpendingBreakdownScreen> {
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
-                            CustomPaint(
-                              size: const Size(220, 220),
-                              painter: _SpendingDonutChartPainter(
-                                categories: _categories,
-                                strokeWidth: 32,
-                                isDarkMode: isDarkMode,
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 280),
+                              switchInCurve: Curves.easeOutCubic,
+                              switchOutCurve: Curves.easeInCubic,
+                              transitionBuilder: (child, animation) {
+                                return FadeTransition(
+                                  opacity: animation,
+                                  child: ScaleTransition(
+                                    scale: Tween<double>(
+                                      begin: 0.94,
+                                      end: 1.0,
+                                    ).animate(animation),
+                                    child: child,
+                                  ),
+                                );
+                              },
+                              child: CustomPaint(
+                                key: ValueKey<bool>(_showByGroups),
+                                size: const Size(220, 220),
+                                painter: _SpendingDonutChartPainter(
+                                  categories: _displayItems,
+                                  strokeWidth: 32,
+                                  isDarkMode: isDarkMode,
+                                ),
                               ),
                             ),
                             Container(
@@ -806,7 +986,9 @@ class _SpendingBreakdownScreenState extends State<SpendingBreakdownScreen> {
                                 color: cardBg,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withValues(alpha: isDarkMode ? 0.3 : 0.04),
+                                    color: Colors.black.withValues(
+                                      alpha: isDarkMode ? 0.3 : 0.04,
+                                    ),
                                     blurRadius: 10,
                                   ),
                                 ],
@@ -842,9 +1024,7 @@ class _SpendingBreakdownScreenState extends State<SpendingBreakdownScreen> {
                   ),
                 ),
 
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: 16),
-                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
                 // 4. Inset White / Obsidian Category Breakdown Card (Not full-width, matches reference layout)
                 SliverPadding(
@@ -856,104 +1036,133 @@ class _SpendingBreakdownScreenState extends State<SpendingBreakdownScreen> {
                         borderRadius: BorderRadius.circular(28),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: isDarkMode ? 0.35 : 0.04),
+                            color: Colors.black.withValues(
+                              alpha: isDarkMode ? 0.35 : 0.04,
+                            ),
                             blurRadius: 16,
                             offset: const Offset(0, 4),
                           ),
                         ],
                         border: Border.all(
-                          color: isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE2E8F0),
+                          color: isDarkMode
+                              ? const Color(0xFF27272A)
+                              : const Color(0xFFE2E8F0),
                           width: 1,
                         ),
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(28),
-                        child: ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
-                          itemCount: _categories.length,
-                          separatorBuilder: (context, index) => Divider(
-                            height: 1,
-                            thickness: 0.5,
-                            color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.06),
-                          ),
-                          itemBuilder: (context, index) {
-                            final item = _categories[index];
-                            return Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () => _openCategoryDetail(item),
-                                borderRadius: BorderRadius.circular(14),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
-                                  child: Row(
-                                    children: [
-                                      // Colored Dot indicator
-                                      Container(
-                                        width: 10,
-                                        height: 10,
-                                        decoration: BoxDecoration(
-                                          color: item.color,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-
-                                      // Category Icon (Our Mahfazti Icon)
-                                      Icon(
-                                        item.icon,
-                                        size: 20,
-                                        color: isDarkMode
-                                            ? const Color(0xFFD4D4D8)
-                                            : const Color(0xFF3F3F46),
-                                      ),
-                                      const SizedBox(width: 12),
-
-                                      // Category Name & Transactions
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              item.localizedName(isAr),
-                                              style: TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.w700,
-                                                color: textPrimary,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              isAr
-                                                  ? '${item.transactionCount} معاملة · ${item.percentage.toInt()}%'
-                                                  : '${item.transactionCount} transactions · ${item.percentage.toInt()}%',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w500,
-                                                color: textSecondary,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-
-                                      // Amount
-                                      Text(
-                                        _formatAmount(item.amount),
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing: -0.2,
-                                          color: textPrimary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 280),
+                          switchInCurve: Curves.easeOutCubic,
+                          switchOutCurve: Curves.easeInCubic,
+                          transitionBuilder: (child, animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: child,
                             );
                           },
+                          child: KeyedSubtree(
+                            key: ValueKey<bool>(_showByGroups),
+                            child: ListView.separated(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              padding: const EdgeInsets.fromLTRB(
+                                16,
+                                8,
+                                16,
+                                110,
+                              ),
+                              itemCount: _displayItems.length,
+                              separatorBuilder: (context, index) => Divider(
+                                height: 1,
+                                thickness: 0.5,
+                                color:
+                                    (isDarkMode ? Colors.white : Colors.black)
+                                        .withValues(alpha: 0.06),
+                              ),
+                              itemBuilder: (context, index) {
+                                final item = _displayItems[index];
+                                return Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: () => _openCategoryDetail(item),
+                                    borderRadius: BorderRadius.circular(14),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 13,
+                                        horizontal: 4,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          // Colored Dot indicator
+                                          Container(
+                                            width: 10,
+                                            height: 10,
+                                            decoration: BoxDecoration(
+                                              color: item.color,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+
+                                          // Category Icon (Our Mahfazti Icon)
+                                          Icon(
+                                            item.icon,
+                                            size: 20,
+                                            color: isDarkMode
+                                                ? const Color(0xFFD4D4D8)
+                                                : const Color(0xFF3F3F46),
+                                          ),
+                                          const SizedBox(width: 12),
+
+                                          // Category Name & Transactions
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  item.localizedName(isAr),
+                                                  style: TextStyle(
+                                                    fontSize: 15,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: textPrimary,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  isAr
+                                                      ? '${item.transactionCount} معاملة · ${item.percentage.toInt()}%'
+                                                      : '${item.transactionCount} transactions · ${item.percentage.toInt()}%',
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: textSecondary,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+
+                                          // Amount
+                                          Text(
+                                            _formatAmount(item.amount),
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w800,
+                                              letterSpacing: -0.2,
+                                              color: textPrimary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -963,9 +1172,11 @@ class _SpendingBreakdownScreenState extends State<SpendingBreakdownScreen> {
                 // Space for floating month selector when scrolled to bottom
                 SliverToBoxAdapter(
                   child: SizedBox(
-                    height: (MediaQuery.of(context).padding.bottom > 0
+                    height:
+                        (MediaQuery.of(context).padding.bottom > 0
                             ? MediaQuery.of(context).padding.bottom + 16
-                            : 32) + 64,
+                            : 32) +
+                        64,
                   ),
                 ),
               ],
@@ -975,7 +1186,8 @@ class _SpendingBreakdownScreenState extends State<SpendingBreakdownScreen> {
             Positioned(
               left: 29,
               right: 29,
-              bottom: (MediaQuery.of(context).padding.bottom > 0
+              bottom:
+                  (MediaQuery.of(context).padding.bottom > 0
                       ? MediaQuery.of(context).padding.bottom
                       : 24) -
                   4,
@@ -989,6 +1201,179 @@ class _SpendingBreakdownScreenState extends State<SpendingBreakdownScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGroupTabSwitcher({
+    required BuildContext context,
+    required bool isDarkMode,
+    required bool isAr,
+    required bool isIOS,
+    required bool showByGroups,
+    required ValueChanged<bool> onChanged,
+  }) {
+    final categoriesLabel = isAr ? 'الفئات' : 'Categories';
+    final groupsLabel = isAr ? 'المجموعات' : 'Groups';
+    final isGlass = isIOS && PlatformInfo.isIOS26OrHigher();
+
+    if (isGlass) {
+      return Center(
+        child: SizedBox(
+          width: 240,
+          child: GlassSegmentedControl(
+            selectedIndex: showByGroups ? 1 : 0,
+            onSegmentSelected: (idx) {
+              HapticFeedback.selectionClick();
+              onChanged(idx == 1);
+            },
+            segments: [
+              GlassSegment(label: categoriesLabel),
+              GlassSegment(label: groupsLabel),
+            ],
+            height: 38,
+            useOwnLayer: true,
+            backgroundColor: isDarkMode
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.06),
+            indicatorColor: isDarkMode ? const Color(0xFF27272A) : Colors.white,
+            selectedTextStyle: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+              color: isDarkMode ? Colors.white : Colors.black,
+              fontFamily: isAr ? 'Cairo' : null,
+            ),
+            unselectedTextStyle: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: isDarkMode
+                  ? Colors.white.withValues(alpha: 0.6)
+                  : Colors.black.withValues(alpha: 0.55),
+              fontFamily: isAr ? 'Cairo' : null,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Center(
+      child: Container(
+        width: 240,
+        height: 38,
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: isDarkMode
+              ? Colors.white.withValues(alpha: 0.08)
+              : Colors.black.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDarkMode
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.06),
+            width: 0.8,
+          ),
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final tabWidth = constraints.maxWidth / 2;
+            final selectedIndex = showByGroups ? 1 : 0;
+            return Stack(
+              children: [
+                AnimatedPositionedDirectional(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.fastOutSlowIn,
+                  start: selectedIndex * tabWidth,
+                  top: 0,
+                  bottom: 0,
+                  width: tabWidth,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDarkMode
+                          ? const Color(0xFF27272A)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(9.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(
+                            alpha: isDarkMode ? 0.35 : 0.08,
+                          ),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          if (showByGroups) {
+                            HapticFeedback.selectionClick();
+                            onChanged(false);
+                          }
+                        },
+                        child: Center(
+                          child: AnimatedDefaultTextStyle(
+                            duration: const Duration(milliseconds: 200),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: !showByGroups
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: !showByGroups
+                                  ? (isDarkMode
+                                        ? Colors.white
+                                        : const Color(0xFF0F172A))
+                                  : (isDarkMode
+                                        ? const Color(0xFF94A3B8)
+                                        : const Color(0xFF64748B)),
+                              fontFamily: isAr ? 'Cairo' : null,
+                            ),
+                            child: Text(categoriesLabel),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          if (!showByGroups) {
+                            HapticFeedback.selectionClick();
+                            onChanged(true);
+                          }
+                        },
+                        child: Center(
+                          child: AnimatedDefaultTextStyle(
+                            duration: const Duration(milliseconds: 200),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: showByGroups
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: showByGroups
+                                  ? (isDarkMode
+                                        ? Colors.white
+                                        : const Color(0xFF0F172A))
+                                  : (isDarkMode
+                                        ? const Color(0xFF94A3B8)
+                                        : const Color(0xFF64748B)),
+                              fontFamily: isAr ? 'Cairo' : null,
+                            ),
+                            child: Text(groupsLabel),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -1232,7 +1617,9 @@ class _SpendingDonutChartPainter extends CustomPainter {
 
     if (total <= 0 || categories.isEmpty) {
       final trackPaint = Paint()
-        ..color = (isDarkMode ? const Color(0xFF27272A) : const Color(0xFFE2E8F0))
+        ..color = (isDarkMode
+            ? const Color(0xFF27272A)
+            : const Color(0xFFE2E8F0))
         ..style = PaintingStyle.stroke
         ..strokeWidth = strokeWidth;
       canvas.drawCircle(center, radius, trackPaint);
@@ -1293,7 +1680,9 @@ class CategoryTransactionsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final bgScaffold = isDarkMode ? const Color(0xFF0F0F12) : const Color(0xFFF8FAFC);
+    final bgScaffold = isDarkMode
+        ? const Color(0xFF0F0F12)
+        : const Color(0xFFF8FAFC);
 
     return Scaffold(
       backgroundColor: bgScaffold,
@@ -1345,7 +1734,9 @@ class _CategoryTransactionsContent extends StatelessWidget {
     final monthStr = monthFormat.format(date);
 
     final textPrimary = isDarkMode ? Colors.white : const Color(0xFF111827);
-    final textSecondary = isDarkMode ? Colors.grey[400] : const Color(0xFF6B7280);
+    final textSecondary = isDarkMode
+        ? Colors.grey[400]
+        : const Color(0xFF6B7280);
 
     return CustomScrollView(
       physics: isIOS
@@ -1385,26 +1776,28 @@ class _CategoryTransactionsContent extends StatelessWidget {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: category.color.withValues(alpha: isDarkMode ? 0.22 : 0.12),
+                  color: category.color.withValues(
+                    alpha: isDarkMode ? 0.22 : 0.12,
+                  ),
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: category.color.withValues(alpha: isDarkMode ? 0.4 : 0.25),
+                    color: category.color.withValues(
+                      alpha: isDarkMode ? 0.4 : 0.25,
+                    ),
                     width: 1,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: category.color.withValues(alpha: isDarkMode ? 0.25 : 0.1),
+                      color: category.color.withValues(
+                        alpha: isDarkMode ? 0.25 : 0.1,
+                      ),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
                   ],
                 ),
                 child: Center(
-                  child: Icon(
-                    category.icon,
-                    size: 28,
-                    color: category.color,
-                  ),
+                  child: Icon(category.icon, size: 28, color: category.color),
                 ),
               ),
 
@@ -1437,7 +1830,9 @@ class _CategoryTransactionsContent extends StatelessWidget {
 
               // Transaction Count Subtitle
               Text(
-                isAr ? '${category.transactionCount} معاملة' : '${category.transactionCount} transactions',
+                isAr
+                    ? '${category.transactionCount} معاملة'
+                    : '${category.transactionCount} transactions',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -1460,13 +1855,17 @@ class _CategoryTransactionsContent extends StatelessWidget {
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isDarkMode ? 0.35 : 0.05),
+                    color: Colors.black.withValues(
+                      alpha: isDarkMode ? 0.35 : 0.05,
+                    ),
                     blurRadius: 16,
                     offset: const Offset(0, 4),
                   ),
                 ],
                 border: Border.all(
-                  color: isDarkMode ? const Color(0xFF2E2E36) : const Color(0xFFF1F5F9),
+                  color: isDarkMode
+                      ? const Color(0xFF2E2E36)
+                      : const Color(0xFFF1F5F9),
                   width: 1,
                 ),
               ),
@@ -1480,18 +1879,28 @@ class _CategoryTransactionsContent extends StatelessWidget {
                   separatorBuilder: (context, index) => Divider(
                     height: 1,
                     thickness: 0.5,
-                    color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.06),
+                    color: (isDarkMode ? Colors.white : Colors.black)
+                        .withValues(alpha: 0.06),
                   ),
                   itemBuilder: (context, index) {
                     final tx = category.transactions[index];
                     return Material(
                       color: Colors.transparent,
                       child: InkWell(
+                        splashFactory: isIOS ? NoSplash.splashFactory : null,
+                        splashColor: isIOS ? Colors.transparent : null,
+                        highlightColor: isIOS
+                            ? (isDarkMode ? Colors.white : Colors.black)
+                                  .withValues(alpha: 0.05)
+                            : null,
                         onTap: () {
                           HapticFeedback.selectionClick();
                         },
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
                           child: Row(
                             children: [
                               Expanded(
@@ -1534,7 +1943,9 @@ class _CategoryTransactionsContent extends StatelessWidget {
                                   Icon(
                                     appForwardIcon(isIOS: isIOS, isRtl: isAr),
                                     size: 16,
-                                    color: textSecondary?.withValues(alpha: 0.7),
+                                    color: textSecondary?.withValues(
+                                      alpha: 0.7,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1550,9 +1961,7 @@ class _CategoryTransactionsContent extends StatelessWidget {
           ),
         ),
 
-        const SliverToBoxAdapter(
-          child: SizedBox(height: 40),
-        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 40)),
       ],
     );
   }
