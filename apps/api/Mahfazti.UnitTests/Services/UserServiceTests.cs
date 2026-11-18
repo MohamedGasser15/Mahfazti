@@ -13,9 +13,11 @@ public class UserServiceTests
 {
     private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
     private readonly Mock<RoleManager<ApplicationRole>> _roleManagerMock;
-    private readonly IMemoryCache _cache;
+    private readonly Mock<IPasswordResetStore> _passwordResetStoreMock;
     private readonly Mock<IEmailSender> _emailSenderMock;
     private readonly Mock<IEmailTemplateService> _emailTemplateMock;
+    private readonly Mock<IAccountService> _accountServiceMock;
+    private readonly Mock<IEmailVerificationStore> _emailVerificationStoreMock;
     private readonly Mock<ILogger<UserService>> _loggerMock;
     private readonly UserService _sut;
 
@@ -23,17 +25,26 @@ public class UserServiceTests
     {
         _userManagerMock = MockUserManager();
         _roleManagerMock = MockRoleManager();
-        _cache = new MemoryCache(new MemoryCacheOptions());
+        _passwordResetStoreMock = new Mock<IPasswordResetStore>();
         _emailSenderMock = new Mock<IEmailSender>();
         _emailTemplateMock = new Mock<IEmailTemplateService>();
+        _accountServiceMock = new Mock<IAccountService>();
+        _emailVerificationStoreMock = new Mock<IEmailVerificationStore>();
         _loggerMock = new Mock<ILogger<UserService>>();
+
+        _emailVerificationStoreMock.Setup(x => x.CanSendCodeAsync(It.IsAny<string>(), It.IsAny<TimeSpan>()))
+            .ReturnsAsync(true);
+        _passwordResetStoreMock.Setup(x => x.CanSendCodeAsync(It.IsAny<string>(), It.IsAny<TimeSpan>()))
+            .ReturnsAsync(true);
 
         _sut = new UserService(
             _userManagerMock.Object,
             _roleManagerMock.Object,
-            _cache,
+            _passwordResetStoreMock.Object,
             _emailSenderMock.Object,
             _emailTemplateMock.Object,
+            _accountServiceMock.Object,
+            _emailVerificationStoreMock.Object,
             _loggerMock.Object
         );
     }
@@ -48,23 +59,24 @@ public class UserServiceTests
 
         Assert.True(result.Success);
         _emailSenderMock.Verify(x => x.SendEmailAsync("new@test.com", It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+        _emailVerificationStoreMock.Verify(x => x.SaveCodeAsync("new@test.com", It.IsAny<string>()), Times.Once);
     }
 
     [Fact]
     public async Task VerifyEmailCodeAsync_WhenCodeIsValid_ShouldConfirmEmail()
     {
-        _cache.Set("verify:user@test.com", "123456", TimeSpan.FromMinutes(10));
+        _emailVerificationStoreMock.Setup(x => x.VerifyCodeAsync("user@test.com", "123456"))
+            .ReturnsAsync(EmailCodeVerificationResult.Verified);
 
         var result = await _sut.VerifyEmailCodeAsync("user@test.com", "123456");
 
         Assert.True(result.Success);
-        Assert.True(_cache.TryGetValue("emailConfirmed:user@test.com", out _));
     }
 
     [Fact]
     public async Task Register_WhenEmailConfirmed_ShouldCreateUser()
     {
-        _cache.Set("emailConfirmed:user@test.com", true, TimeSpan.FromMinutes(30));
+        _emailVerificationStoreMock.Setup(x => x.IsVerifiedAsync("user@test.com")).ReturnsAsync(true);
         _userManagerMock.Setup(x => x.FindByEmailAsync("user@test.com")).ReturnsAsync((ApplicationUser?)null);
         _userManagerMock.Setup(x => x.CreateAsync(It.IsAny<ApplicationUser>(), "Password123!"))
             .ReturnsAsync(IdentityResult.Success);

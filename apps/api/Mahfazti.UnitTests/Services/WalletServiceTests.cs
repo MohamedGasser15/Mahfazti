@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Mahfazti.Core.DTOs.Wallet;
 using Mahfazti.Core.Entities;
@@ -11,6 +11,7 @@ public class WalletServiceTests
 {
     private readonly Mock<IRepository<WalletTransaction>> _txRepoMock;
     private readonly Mock<IRepository<Category>> _catRepoMock;
+    private readonly Mock<IRepository<Account>> _accountRepoMock;
     private readonly Mock<ILogger<WalletService>> _loggerMock;
     private readonly WalletService _sut;
 
@@ -18,8 +19,13 @@ public class WalletServiceTests
     {
         _txRepoMock = new Mock<IRepository<WalletTransaction>>();
         _catRepoMock = new Mock<IRepository<Category>>();
+        _accountRepoMock = new Mock<IRepository<Account>>();
+        _accountRepoMock.Setup(x => x.GetAllAsync(
+                It.IsAny<System.Linq.Expressions.Expression<System.Func<Account, bool>>>(),
+                It.IsAny<string>(), It.IsAny<bool>(), null, null, default))
+            .ReturnsAsync(new List<Account>());
         _loggerMock = new Mock<ILogger<WalletService>>();
-        _sut = new WalletService(_txRepoMock.Object, _catRepoMock.Object, _loggerMock.Object);
+        _sut = new WalletService(_txRepoMock.Object, _catRepoMock.Object, _accountRepoMock.Object, _loggerMock.Object);
     }
 
     [Fact]
@@ -77,8 +83,8 @@ public class WalletServiceTests
             .ReturnsAsync(transactions);
 
         _txRepoMock.Setup(x => x.GetAllAsync(
-                It.Is<System.Linq.Expressions.Expression<System.Func<WalletTransaction, bool>>>(e => true),
-                It.Is<string?>(s => s == "Category"),
+                It.IsAny<System.Linq.Expressions.Expression<System.Func<WalletTransaction, bool>>>(),
+                It.IsAny<string?>(),
                 false,
                 It.IsAny<System.Func<IQueryable<WalletTransaction>, IOrderedQueryable<WalletTransaction>>?>(),
                 5,
@@ -93,6 +99,41 @@ public class WalletServiceTests
     }
 
     [Fact]
+    public async Task GetHomeDataAsync_WithCustomDates_ShouldFilterTransactions()
+    {
+        var userId = "user1";
+        var from = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc);
+        var to = new DateTime(2026, 10, 31, 23, 59, 59, DateTimeKind.Utc);
+
+        var octTx = new List<WalletTransaction>
+        {
+            new() { Id = 1, UserId = userId, Type = "Deposit", Amount = 1000, TransactionDate = new DateTime(2026, 10, 10, 0, 0, 0, DateTimeKind.Utc), IsDeleted = false },
+            new() { Id = 2, UserId = userId, Type = "Withdrawal", Amount = 250, TransactionDate = new DateTime(2026, 10, 12, 0, 0, 0, DateTimeKind.Utc), IsDeleted = false }
+        };
+
+        _txRepoMock.Setup(x => x.GetAllAsync(
+                It.IsAny<System.Linq.Expressions.Expression<System.Func<WalletTransaction, bool>>>(),
+                null, false, null, null, default))
+            .ReturnsAsync(octTx);
+
+        _txRepoMock.Setup(x => x.GetAllAsync(
+                It.IsAny<System.Linq.Expressions.Expression<System.Func<WalletTransaction, bool>>>(),
+                It.IsAny<string?>(),
+                false,
+                It.IsAny<System.Func<IQueryable<WalletTransaction>, IOrderedQueryable<WalletTransaction>>?>(),
+                5,
+                default))
+            .ReturnsAsync(octTx);
+
+        var result = await _sut.GetHomeDataAsync(userId, null, from, to);
+
+        Assert.NotNull(result);
+        Assert.Equal(2, result.TotalTransactionCount);
+        Assert.Equal(1000m, result.Balance.TotalDeposits);
+        Assert.Equal(250m, result.Balance.TotalWithdrawals);
+    }
+
+    [Fact]
     public async Task GetTransactionByIdAsync_WhenExists_ShouldReturnTransaction()
     {
         var tx = new WalletTransaction
@@ -103,7 +144,7 @@ public class WalletServiceTests
 
         _txRepoMock.Setup(x => x.GetAsync(
                 It.IsAny<System.Linq.Expressions.Expression<System.Func<WalletTransaction, bool>>>(),
-                "Category", false, default))
+                It.IsAny<string>(), false, default))
             .ReturnsAsync(tx);
 
         var result = await _sut.GetTransactionByIdAsync(1, "user1");
@@ -118,7 +159,7 @@ public class WalletServiceTests
     {
         _txRepoMock.Setup(x => x.GetAsync(
                 It.IsAny<System.Linq.Expressions.Expression<System.Func<WalletTransaction, bool>>>(),
-                "Category", false, default))
+                It.IsAny<string>(), false, default))
             .ReturnsAsync((WalletTransaction?)null);
 
         var result = await _sut.GetTransactionByIdAsync(999, "user1");
@@ -239,7 +280,7 @@ public class WalletServiceTests
 
         _txRepoMock.Setup(x => x.GetAllAsync(
                 It.IsAny<System.Linq.Expressions.Expression<System.Func<WalletTransaction, bool>>>(),
-                "Category",
+                It.IsAny<string>(),
                 false,
                 It.IsAny<System.Func<IQueryable<WalletTransaction>, IOrderedQueryable<WalletTransaction>>?>(),
                 null,

@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_wallet/features/wallet/presentation/screens/spending_breakdown_screen.dart';
 import 'package:my_wallet/l10n/app_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   Widget buildTestWidget({required Widget child, bool isAr = false, Brightness brightness = Brightness.light}) {
@@ -125,5 +126,46 @@ void main() {
     expect(find.text('21 transactions'), findsOneWidget);
     expect(find.text('EGP 6,395'), findsOneWidget);
     expect(find.text('برجر'), findsOneWidget);
+  });
+
+  testWidgets('SpendingBreakdownScreen switches seamlessly between Categories and Groups', (tester) async {
+    tester.view.physicalSize = const Size(1170, 2532);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    SharedPreferences.setMockInitialValues({
+      'user_category_groups_v1': <String>[
+        '{"id":"test_group","name":"Test Group","colorValue":4281389441,"iconIndex":0,"createdAt":"2026-10-01T00:00:00.000"}'
+      ],
+      'user_category_group_mapping_v1': '{"2":"test_group"}',
+    });
+
+    await tester.pumpWidget(buildTestWidget(
+      child: const SpendingBreakdownScreen(currency: 'EGP'),
+      isAr: false,
+      brightness: Brightness.light,
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // Both tabs should be present
+    expect(find.text('Categories'), findsOneWidget);
+    expect(find.text('Groups'), findsOneWidget);
+
+    // Initial state: shows Categories (e.g. Shopping)
+    expect(find.text('Shopping'), findsOneWidget);
+
+    // Tap on Groups tab
+    await tester.tap(find.text('Groups'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    // Group items should now be visible
+    expect(find.text('Test Group'), findsOneWidget);
+    expect(find.text('Ungrouped'), findsOneWidget);
+
+    // Reset initial values
+    SharedPreferences.setMockInitialValues({});
   });
 }

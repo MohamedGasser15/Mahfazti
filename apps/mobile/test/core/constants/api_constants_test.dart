@@ -36,36 +36,42 @@ void main() {
 
     test('all endpoint strings start with api/', () {
       for (final endpoint in endpoints) {
-        expect(endpoint.startsWith('api/'), isTrue,
-            reason: '$endpoint does not start with api/');
+        expect(
+          endpoint.startsWith('api/'),
+          isTrue,
+          reason: '$endpoint does not start with api/',
+        );
       }
     });
 
     test('no endpoint string is empty', () {
       for (final endpoint in endpoints) {
-        expect(endpoint.isNotEmpty, isTrue,
-            reason: 'endpoint should not be empty');
+        expect(
+          endpoint.isNotEmpty,
+          isTrue,
+          reason: 'endpoint should not be empty',
+        );
       }
     });
 
     test('login has expected value', () {
-      expect(ApiEndpoints.login, 'api/Auth/Login');
+      expect(ApiEndpoints.login, 'api/auth/login');
     });
 
     test('register has expected value', () {
-      expect(ApiEndpoints.register, 'api/Auth/Register');
+      expect(ApiEndpoints.register, 'api/auth/register');
     });
 
     test('sendCode has expected value', () {
-      expect(ApiEndpoints.sendCode, 'api/Auth/send-code');
+      expect(ApiEndpoints.sendCode, 'api/auth/registration-codes');
     });
 
     test('verifyEmail has expected value', () {
-      expect(ApiEndpoints.verifyEmail, 'api/Auth/verify-email');
+      expect(ApiEndpoints.verifyEmail, 'api/auth/registration-codes/verify');
     });
 
     test('logout has expected value', () {
-      expect(ApiEndpoints.logout, 'api/Auth/logout');
+      expect(ApiEndpoints.logout, 'api/auth/logout');
     });
 
     test('checkEmail has expected value', () {
@@ -73,11 +79,22 @@ void main() {
     });
 
     test('forgotPassword has expected value', () {
-      expect(ApiEndpoints.forgotPassword, 'api/Auth/forgot-password');
+      expect(ApiEndpoints.forgotPassword, 'api/auth/password-reset-codes');
+    });
+
+    test('verifyResetCode has expected value', () {
+      expect(
+        ApiEndpoints.verifyResetCode,
+        'api/auth/password-reset-codes/verify',
+      );
     });
 
     test('resetPassword has expected value', () {
-      expect(ApiEndpoints.resetPassword, 'api/Auth/reset-password');
+      expect(ApiEndpoints.resetPassword, 'api/auth/password-reset');
+    });
+
+    test('refresh has expected value', () {
+      expect(ApiEndpoints.refresh, 'api/auth/token/refresh');
     });
 
     test('walletHome has expected value', () {
@@ -98,7 +115,9 @@ void main() {
 
     test('walletDeleteTransaction has expected value', () {
       expect(
-          ApiEndpoints.walletDeleteTransaction, 'api/wallet/transactions/delete');
+        ApiEndpoints.walletDeleteTransaction,
+        'api/wallet/transactions/delete',
+      );
     });
 
     test('walletSummary has expected value', () {
@@ -110,12 +129,18 @@ void main() {
     });
 
     test('setCurrency has expected value', () {
-      expect(ApiEndpoints.setCurrency, 'api/Auth/set-currency');
+      expect(ApiEndpoints.setCurrency, 'api/profile/currency');
+    });
+
+    test('setLanguage has expected value', () {
+      expect(ApiEndpoints.setLanguage, 'api/profile/language');
     });
 
     test('walletUpdateTransaction has expected value', () {
       expect(
-          ApiEndpoints.walletUpdateTransaction, 'api/wallet/transactions/update');
+        ApiEndpoints.walletUpdateTransaction,
+        'api/wallet/transactions/update',
+      );
     });
 
     test('categories has expected value', () {

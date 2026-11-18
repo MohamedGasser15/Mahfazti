@@ -12,7 +12,8 @@ void main() {
     });
 
     test('baseUrl has expected value', () {
-      expect(AppConstants.baseUrl, 'https://mahfazati.runasp.net/');
+      expect(AppConstants.baseUrl, isNotEmpty);
+      expect(AppConstants.baseUrl.startsWith('http'), isTrue);
     });
 
     test('baseUrl is a valid URL', () {

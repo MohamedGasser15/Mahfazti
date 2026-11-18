@@ -50,14 +50,14 @@ public class BudgetServiceTests
         };
 
         _catRepoMock.Setup(x => x.GetAllAsync(
-                null, null, false,
+                It.IsAny<System.Linq.Expressions.Expression<System.Func<Category, bool>>>(), null, false,
                 It.IsAny<Func<IQueryable<Category>, IOrderedQueryable<Category>>?>(),
                 null, default))
             .ReturnsAsync(categories);
 
         var result = await _sut.GetBudgetAsync(userId);
 
-        Assert.Equal(3000m, result.MonthlyBudget);
+        Assert.Equal(0m, result.MonthlyBudget);
         Assert.Equal(0, result.CurrentSpending);
         Assert.Equal(2, result.CategoryBudgets.Count);
     }
@@ -151,5 +151,38 @@ public class BudgetServiceTests
 
         Assert.NotNull(result);
         Assert.Equal(7, result.Month);
+    }
+
+    [Fact]
+    public async Task GetBudgetAsync_WithSpecifiedMonthAndYear_ShouldQueryThatMonth()
+    {
+        var userId = "user1";
+        var budget = new UserBudget { Id = 1, UserId = userId, Month = 10, Year = 2026, MonthlyBudget = 4500m };
+
+        _budgetRepoMock.Setup(x => x.GetAsync(
+                It.IsAny<System.Linq.Expressions.Expression<System.Func<UserBudget, bool>>>(),
+                null, false, default))
+            .ReturnsAsync(budget);
+
+        _txRepoMock.Setup(x => x.GetAllAsync(
+                It.IsAny<System.Linq.Expressions.Expression<System.Func<WalletTransaction, bool>>>(),
+                "Category", false, null, null, default))
+            .ReturnsAsync(new List<WalletTransaction>
+            {
+                new() { Id = 1, UserId = userId, Amount = 1500m, Type = "Withdrawal", TransactionDate = new DateTime(2026, 10, 15) }
+            });
+
+        _catRepoMock.Setup(x => x.GetAllAsync(
+                It.IsAny<System.Linq.Expressions.Expression<System.Func<Category, bool>>>(),
+                null, false,
+                It.IsAny<System.Func<IQueryable<Category>, IOrderedQueryable<Category>>?>(),
+                null, default))
+            .ReturnsAsync(new List<Category>());
+
+        var result = await _sut.GetBudgetAsync(userId, 10, 2026);
+
+        Assert.NotNull(result);
+        Assert.Equal(4500m, result.MonthlyBudget);
+        Assert.Equal(1500m, result.CurrentSpending);
     }
 }

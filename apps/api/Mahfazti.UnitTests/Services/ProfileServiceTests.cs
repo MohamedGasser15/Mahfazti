@@ -128,6 +128,54 @@ public class ProfileServiceTests
         Assert.False(result);
     }
 
+    [Fact]
+    public async Task SetUserCurrencyAsync_WhenUserExists_ShouldUpdateCurrency()
+    {
+        var user = new ApplicationUser { Id = 1, Currency = "USD" };
+        _userManagerMock.Setup(x => x.FindByIdAsync("1")).ReturnsAsync(user);
+        _userManagerMock.Setup(x => x.UpdateAsync(user)).ReturnsAsync(IdentityResult.Success);
+
+        var result = await _sut.SetUserCurrencyAsync("1", "EGP");
+
+        Assert.True(result.Success);
+        Assert.Equal("EGP", user.Currency);
+    }
+
+    [Fact]
+    public async Task SetUserCurrencyAsync_WhenUserNotFound_ShouldReturnFail()
+    {
+        _userManagerMock.Setup(x => x.FindByIdAsync("999")).ReturnsAsync((ApplicationUser?)null);
+
+        var result = await _sut.SetUserCurrencyAsync("999", "EGP");
+
+        Assert.False(result.Success);
+        Assert.Equal("المستخدم غير موجود", result.Message);
+    }
+
+    [Fact]
+    public async Task SetUserLanguageAsync_WhenUserExists_ShouldUpdateLanguage()
+    {
+        var user = new ApplicationUser { Id = 1, PreferredLanguage = "en" };
+        _userManagerMock.Setup(x => x.FindByIdAsync("1")).ReturnsAsync(user);
+        _userManagerMock.Setup(x => x.UpdateAsync(user)).ReturnsAsync(IdentityResult.Success);
+
+        var result = await _sut.SetUserLanguageAsync("1", "ar");
+
+        Assert.True(result.Success);
+        Assert.Equal("ar", user.PreferredLanguage);
+    }
+
+    [Fact]
+    public async Task SetUserLanguageAsync_WhenUserNotFound_ShouldReturnFail()
+    {
+        _userManagerMock.Setup(x => x.FindByIdAsync("999")).ReturnsAsync((ApplicationUser?)null);
+
+        var result = await _sut.SetUserLanguageAsync("999", "ar");
+
+        Assert.False(result.Success);
+        Assert.Equal("المستخدم غير موجود", result.Message);
+    }
+
     private static Mock<UserManager<ApplicationUser>> MockUserManager()
     {
         var store = new Mock<IUserStore<ApplicationUser>>();

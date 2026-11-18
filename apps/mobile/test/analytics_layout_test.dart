@@ -19,6 +19,7 @@ class _FakeRepository extends WalletRepository {
   Future<WalletSummary> getSummary({
     required DateTime fromDate,
     required DateTime toDate,
+    int? accountId,
   }) async {
     return WalletSummary(
       totalIncome: 8200,
